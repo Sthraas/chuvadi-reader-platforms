@@ -12,9 +12,9 @@ One value, four layouts — `ChuvadiReader.Platform.ShellLayout`:
 | `Phone` | Android, `FormFactor.Phone` | Portal & Android 12g-12j |
 | `Portal` | Web in a desktop-sized browser | Portal & Android 12a-12c |
 
-It is derived by `ShellLayouts.From(kind, formFactor)` — hosts report kind and form factor, nobody sets the layout by hand. **Web follows the browser (F-5):** a phone- or tablet-sized browser gets `Phone` / `Tablet`, and the portal chrome (account menu, sign-in, server status text) still shows — test it with `Info.IsPortal()` or `Chrome.AccountMenu`, never with `Shell == Portal`.
+It is derived by `ShellLayouts.From(kind, formFactor)` — hosts report kind and form factor, nobody sets the layout by hand. **Web follows the browser (F-5):** a phone- or tablet-sized browser gets `Phone` / `Tablet`, and the portal chrome (account menu, sign-in, server status text) still shows — test it with `Info.IsPortal()` or `Chrome.AccountMenu`, never with `Shell == Portal`. The value changes at run time when the host raises `FormFactorChanged` (Android fold/unfold, browser resize).
 
-Web this release: no server storage — Save and Save as are browser downloads (`Capabilities.SavesAsDownload`); the account menu has Get the desktop app, Account settings, Sign out only. It changes at run time when the host raises `FormFactorChanged` (Android fold/unfold, rotation if the host maps it).
+Web this release: no server storage — Save and Save as are browser downloads (`Capabilities.SavesAsDownload`); the account menu has Get the desktop app, Account settings, Sign out only.
 
 ## Three ways to read it
 1. **Razor, re-renders on change (preferred):** `[CascadingParameter] public PlatformState Platform { get; set; } = default!;` then `@switch (Platform.Shell) { … }`. `PlatformRoot` (in `App.razor`) cascades it.
