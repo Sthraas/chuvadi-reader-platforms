@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Permissions are deliberately minimal (Play data-safety: the app collects nothing).
+  Files arrive only through the Storage Access Framework or Open-with/Share intents, which
+  grant per-file access — no storage permission is requested.
+  INTERNET / Wi-Fi multicast are NOT declared yet: they belong to network printing, whose
+  design is waiting on Arun (docs/android/DECISIONS.md, A-04).
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <application
+      android:label="Chuvadi Reader"
+      android:icon="@mipmap/appicon"
+      android:roundIcon="@mipmap/appicon_round"
+      android:supportsRtl="true"
+      android:allowBackup="false"
+      android:dataExtractionRules="@xml/data_extraction_rules"
+      android:fullBackupContent="false"
+      android:enableOnBackInvokedCallback="true">
+    <provider
+        android:name="chuvadi.reader.ClipProvider"
+        android:authorities="${applicationId}.clip"
+        android:exported="false"
+        android:grantUriPermissions="true" />
+  </application>
+  <!-- Lets "Open" list other apps that can show a document when one is shared out. -->
+  <queries>
+    <intent>
+      <action android:name="android.intent.action.VIEW" />
+      <data android:scheme="https" />
+    </intent>
+    <intent>
+      <action android:name="android.intent.action.SENDTO" />
+      <data android:scheme="mailto" />
+    </intent>
+  </queries>
+</manifest>

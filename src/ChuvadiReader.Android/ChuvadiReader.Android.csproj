@@ -1,0 +1,57 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+  <!--
+    Chuvadi Reader — Android host (.NET MAUI Blazor Hybrid, Android WebView).
+
+    UI-only host: the whole interface is ChuvadiReader.Ui (unchanged) and all
+    document processing is ChuvadiReader.Core → Chuvadi libraries. This project
+    only supplies the Android window, the BlazorWebView and the platform services
+    (files via the Storage Access Framework, clipboard, links, printing hand-off).
+
+    Packages: only Microsoft's own MAUI / BlazorWebView packages, which the
+    maui-android workload provides (programme rule 3).
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-android</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <UseMaui>true</UseMaui>
+    <SingleProject>true</SingleProject>
+    <RootNamespace>ChuvadiReader.Android</RootNamespace>
+    <AssemblyName>ChuvadiReader.Android</AssemblyName>
+    <EnableDefaultCssItems>false</EnableDefaultCssItems>
+
+    <!-- Android 15 (API 35) is the floor; the target API is the SDK's own (API 36 for .NET 10). -->
+    <SupportedOSPlatformVersion>35</SupportedOSPlatformVersion>
+
+    <ApplicationTitle>Chuvadi Reader</ApplicationTitle>
+    <!--
+      PLACEHOLDER — the Play Store application id is permanent once published.
+      Arun to decide the final id (see docs/android/DECISIONS.md, A-01).
+    -->
+    <ApplicationId>in.chuvadi.reader</ApplicationId>
+    <ApplicationDisplayVersion>1.0.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
+
+    <!-- Warnings are bugs (programme rule 7). -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <!-- Play Store upload format. CI also produces a signed .apk for emulator tests. -->
+    <AndroidPackageFormats>aab;apk</AndroidPackageFormats>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="$(MauiVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ChuvadiReader.Ui\ChuvadiReader.Ui.csproj" />
+    <ProjectReference Include="..\ChuvadiReader.Core\ChuvadiReader.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <MauiIcon Include="Resources\AppIcon\appicon.png" />
+    <MauiSplashScreen Include="Resources\Splash\splash.png" Color="#F2EAD6" BaseSize="128,128" />
+  </ItemGroup>
+</Project>
