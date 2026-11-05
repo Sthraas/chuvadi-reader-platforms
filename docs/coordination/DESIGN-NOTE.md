@@ -28,5 +28,7 @@ Open any `.dc.html` in a browser with `support.js`, `lipicons.js` and `fonts/` b
 
 ## Gaps today (6 Nov)
 - The current Ui implements the desktop D-10 rails partly (SideRail, left bar, View rail, 5 themes). Arrange/Protect still live on separate Bench/Redact pages, and the Reader chat continues the desktop revamp.
-- **Not in the Ui yet:** Android phone layout (bottom bar, tool strip, View sheet), Android tablet touch sizing, web portal chrome (sign-in page, account menu, server status text), Mac system menu bar, Linux window chrome. Who builds these is **Arun's decision (pending)** — until he decides, design them as new components with a form-factor/platform switch and list every existing-file hook for his approval. Do not edit existing Ui files.
+- **Not in the Ui yet:** Android phone/tablet layouts, web portal chrome, Mac system menu bar, Linux window chrome.
+- **Ownership (decided 6 Nov):** the **Mobile app UI** chat builds the Android phone and tablet look (`platform/mobile-ui`); the **Web portal UI** chat builds the portal look (`platform/web-ui`); the Mac and Linux chats define their own chrome. All as new components behind the Foundation's platform + form-factor signal; existing-file hooks go to the coordinator as exact diffs with pros and cons.
+- **Web scope (Arun, 6 Nov):** no server storage this release — leave out quota, 'My files', 'autosaved to your storage' and storage in the account menu; no sharing ('Shared with me', 'Share a link').
 - Library-gated features stay locked as the handout says (regex redaction, Replace, shape primitives, image alpha, password API, Layout-based Office view).

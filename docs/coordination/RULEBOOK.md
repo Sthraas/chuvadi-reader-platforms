@@ -8,14 +8,14 @@ You are one chat in the **Chuvadi Reader platform programme**, run by a coordina
 1. **Design is final.** `ChuvadiReader.Ui` is the design — desktop, tablet and mobile layouts are all finalised. Do not change it. Only minor platform-native differences are allowed (e.g. Mac traffic lights on the left). Every platform must look the same and familiar.
 2. **The app is UI only.** All processing comes from the Chuvadi libraries. If a capability is missing, never work around it in the app — write it down as a library ask for Arun.
 3. **No externals.** All code is Arun's own, in C, C++ or C#. No third-party libraries, components or ported open-source code. Allowed: what ships in .NET itself (including MAUI, BlazorWebView / `Microsoft.AspNetCore.Components.WebView*`, Kestrel), OS components (WebView2, WKWebView, WebKitGTK, Android WebView, CUPS, Windows spooler). External tools are fine **for testing only**, never shipped.
-4. **Existing files need Arun's permission.** Never edit an existing file of chuvadi-reader without his explicit approval. List each change with pros and cons and wait. New files (new host projects, docs, CI) you may create yourself.
+4. **Existing files need approval.** Never edit an existing file of chuvadi-reader without approval. List each change with exact diffs, pros and cons, and risk to the Windows app, and send it to the coordinator. Arun has delegated decisions for this working repo to the coordinator (6 Nov); nothing reaches `arunshivab/chuvadi-reader` until Arun's final check. New files (new host projects, docs, CI) you may create yourself.
 5. **No behaviour/API change on your own.** Any change to existing behaviour, defaults or output — bug fixes included, marked "bug fix" — is listed for Arun with pros and cons before it ships.
 6. **The Reader chat is read-only for you.** You may ask it questions; never ask it to change anything, never edit its work.
 7. **Fix every bug you find, however small.** No errors, no warnings, nothing deferred silently. Bugs inside your own new code you fix yourself; bugs in existing code go to Arun as a listed change (rule 4).
-8. **Design decisions:** gather pros and cons and bring them to Arun in plain chat. Routine implementation inside your own new code you decide yourself, choosing the best option. Build the right thing first — no interim designs that get redone.
-9. **Questions to Arun:** in plain chat text. Never use pop-up / multiple-choice question widgets.
+8. **Options rule (Arun, standing):** whenever there are options — design, architecture, tooling — give pros and cons for each and your recommendation. The coordinator discusses and finalises. Routine implementation inside your own new code you decide yourself, choosing the best option. Build the right thing first — no interim designs that get redone.
+9. **Questions:** to the coordinator (or Arun) in plain chat text. Never use pop-up / multiple-choice question widgets.
 10. **Git:** commit messages and PR descriptions never contain `Co-Authored-By`, `Claude-Session` or "Generated with Claude Code" lines. Commits are authored by Arun alone.
-11. **Where to work:** the private working repo `chuvadi-reader-platforms` (owner given in your kickoff), on your own branch `platform/<name>`. **Never push to `arunshivab/chuvadi-reader`** — the single push there happens only after the test chat passes and Arun checks.
+11. **Where to work:** the private working repo `Sthraas/chuvadi-reader-platforms`, on your own branch `platform/<name>`. Pushes to your own branch are authorized at every phase, and CI runs there. **Never push to `arunshivab/chuvadi-reader`, and never to `main` of the working repo** (it holds the coordination docs) — the push to chuvadi-reader happens only after the test chat passes and Arun checks.
 12. **Documentation:** keep `docs/<platform>/BUILD-LOG.md` — a clean, dated, step-by-step record of everything done (what, why, commands, results). Plus `docs/<platform>/README.md`: how to build, run, package and install.
 
 ### Packages (from the library coordinator's report, 6 Nov 2026 — attached as `chuvadi-reader-platform-and-packages.md`)
@@ -29,3 +29,8 @@ You are one chat in the **Chuvadi Reader platform programme**, run by a coordina
 
 ### Reporting
 End every working session with a short status: done, in progress, blocked (and on what), questions for Arun. Keep the coordinator able to read your latest message and know exactly where you stand.
+
+### Arun's decisions so far (6 Nov)
+- Web: no server storage for now (files not kept after the session); users managed by Sangam; never change Sangam — integrate as a client with our own code; sharing not in this release; TLS source pending (Pezhai being checked).
+- Mac: universal app. Android: minimum Android 15, Play Store. Linux: Ubuntu x64 + ARM64, own WebKitGTK host.
+- Look: the handout in `docs/design-handoff/` (see `docs/coordination/DESIGN-NOTE.md`). Android phone/tablet look is built by the **Mobile app UI** chat (`platform/mobile-ui`); the web portal look by the **Web portal UI** chat (`platform/web-ui`); Mac and Linux chats define their own chrome.
