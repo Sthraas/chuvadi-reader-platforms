@@ -19,6 +19,8 @@
 @inject ChuvadiReader.Core.Documents.RecoveryService Recovery
 @inject RedactRequestService RedactHandoff
 @inject IEntitlements Entitlements
+@inject ChuvadiReader.Platform.IPlatformInfo Platform
+@inject ChuvadiReader.Platform.IClipboard TextClip
 @using ChuvadiReader.Core.Documents
 
 <PageTitle>Chuvadi · Reader</PageTitle>
@@ -85,7 +87,7 @@
             else
             {
                 <div class="bm-acts">
-                    <button class="bm-act" @onclick="BmAddCurrent" title="Add a bookmark at the current page (Ctrl B)"><Icon Name="plus" Size="13" /> Add</button>
+                    <button class="bm-act" @onclick="BmAddCurrent" title="Add a bookmark at the current page (@Platform.Keys.Format("Ctrl B"))"><Icon Name="plus" Size="13" /> Add</button>
                     <button class="bm-act" @onclick="() => BmMove(-1)" disabled="@(_bmSel is null)" title="Move up"><Icon Name="chevron-up" Size="13" /></button>
                     <button class="bm-act" @onclick="() => BmMove(1)" disabled="@(_bmSel is null)" title="Move down"><Icon Name="chevron-down" Size="13" /></button>
                     <button class="bm-act" @onclick="BmIndent" disabled="@(_bmSel is null)" title="Indent (nest under the entry above)"><Icon Name="chevron-right" Size="13" /></button>
@@ -1029,7 +1031,7 @@
             <button @onclick="() => RotateCurrent(90)" title="Rotate this page (view only)"><Icon Name="rotate-cw" Size="14" /> Rotate page</button>
             <button @onclick="() => ToggleSendMenu(CurPage - 1)" title="Send this page to a desk in Arrange"><Icon Name="grid-view" Size="14" /> To desk</button>
             <button @onclick="() => SetTool(ReaderTool.Snapshot)" title="Snapshot a region (S)"><Icon Name="snapshot" Size="14" /> Snapshot</button>
-            <button @onclick="AddBookmarkHere" title="Bookmark this page (Ctrl B)"><Icon Name="bookmark" Size="14" /> Bookmark</button>
+            <button @onclick="AddBookmarkHere" title="Bookmark this page (@Platform.Keys.Format("Ctrl B"))"><Icon Name="bookmark" Size="14" /> Bookmark</button>
             <button disabled title="Peek — coming soon"><Icon Name="eye" Size="14" /> Peek</button>
         </div>
     }

@@ -1,0 +1,41 @@
+@using ChuvadiReader.Platform
+@implements IDisposable
+@inject IPlatformInfo Platform
+@inject IWindowControls Win
+
+@*
+    Window buttons drawn by the Ui. Placed twice in the top bar (Side="Left" at the start,
+    Side="Right" at the end); only the one matching IPlatformInfo.Chrome.Buttons renders.
+    Right = Windows / Linux default, markup identical to the pre-platform top bar.
+    Left  = macOS order (close · minimise · zoom) and Linux desktops whose button layout is on the left.
+    None  = Android and Web: nothing (Web shows the account menu instead).
+*@
+
+@if (Platform.Chrome.Buttons == Side && Side == ChuvadiReader.Platform.WindowButtons.Right)
+{
+    <div class="traffic">
+        <button class="tl tl-min" @onclick="() => Win.Minimize()" aria-label="Minimize"><Icon Name="minus" Size="10" /></button>
+        <button class="tl tl-max" @onclick="() => Win.ToggleMaximize()" aria-label="@(Win.IsMaximized ? "Restore" : "Maximize")"><Icon Name="@(Win.IsMaximized ? "restore" : "square")" Size="9" /></button>
+        <button class="tl tl-close" @onclick="() => Win.Close()" aria-label="Close"><Icon Name="x" Size="10" /></button>
+    </div>
+}
+else if (Platform.Chrome.Buttons == Side && Side == ChuvadiReader.Platform.WindowButtons.Left)
+{
+    <div class="traffic traffic-left" @onmousedown:stopPropagation="true" @ondblclick:stopPropagation="true">
+        <button class="tl tl-close" @onclick="() => Win.Close()" aria-label="Close"><Icon Name="x" Size="10" /></button>
+        <button class="tl tl-min" @onclick="() => Win.Minimize()" aria-label="Minimize"><Icon Name="minus" Size="10" /></button>
+        <button class="tl tl-max" @onclick="() => Win.ToggleMaximize()" aria-label="@(Win.IsMaximized ? "Exit full screen" : "Zoom")"><Icon Name="@(Win.IsMaximized ? "restore" : "square")" Size="9" /></button>
+    </div>
+}
+
+@code {
+    /// <summary>Which end of the top bar this instance sits at.</summary>
+    [Parameter, EditorRequired]
+    public ChuvadiReader.Platform.WindowButtons Side { get; set; }
+
+    protected override void OnInitialized() => Win.StateChanged += OnWindowStateChanged;
+
+    private void OnWindowStateChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Win.StateChanged -= OnWindowStateChanged;
+}

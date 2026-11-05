@@ -11,6 +11,7 @@
 @inject SessionService Session
 @inject RedactRequestService RedactReq
 @inject BenchDropService BenchDrop
+@inject ChuvadiReader.Platform.IPlatformInfo Platform
 @implements IAsyncDisposable
 
 <PageTitle>Chuvadi · Bench</PageTitle>
@@ -215,7 +216,7 @@
                         <span class="desk-count">@desk.Pages.Count pg</span>
                         @if (!desk.IsEmpty)
                         {
-                            <button class="desk-sel" @onclick="() => BenchSvc.SelectAllInDesk(deskId)" title="Select all pages on this desk (Ctrl+A)" aria-label="Select all">All</button>
+                            <button class="desk-sel" @onclick="() => BenchSvc.SelectAllInDesk(deskId)" title="Select all pages on this desk (@Platform.Keys.Format("Ctrl A"))" aria-label="Select all">All</button>
                             <button class="desk-sel" @onclick="() => BenchSvc.InvertSelectionInDesk(deskId)" title="Invert selection on this desk" aria-label="Invert selection">Inv</button>
                         }
                         @if (!string.IsNullOrEmpty(desk.NormalizeSize))

@@ -15,4 +15,9 @@
     <PackageReference Include="Chuvadi.Docs" Version="1.1.0" />
     <PackageReference Include="Chuvadi.Sheets" Version="1.1.2" />
   </ItemGroup>
+
+  <ItemGroup>
+    <!-- Platform contracts every host implements (contracts only, no dependencies). -->
+    <ProjectReference Include="..\ChuvadiReader.Platform\ChuvadiReader.Platform.csproj" />
+  </ItemGroup>
 </Project>

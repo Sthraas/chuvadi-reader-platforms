@@ -13,6 +13,7 @@
 @inject CategoryService Categories
 @inject SaveFolderService SaveFolders
 @inject PreferencesService Prefs
+@inject ChuvadiReader.Platform.IPlatformInfo Platform
 
 <PageTitle>Chuvadi · Home</PageTitle>
 
@@ -42,7 +43,7 @@
                     <button type="button" class="btn" @onclick="ChooseLibraryFolder">Choose a library folder</button>
                 </span>
             </div>
-            <p class="tip">Tip: Ctrl K finds any file or action. Try typing “merge”.</p>
+            <p class="tip">Tip: @Platform.Keys.Format("Ctrl K") finds any file or action. Try typing “merge”.</p>
         }
         else
         {

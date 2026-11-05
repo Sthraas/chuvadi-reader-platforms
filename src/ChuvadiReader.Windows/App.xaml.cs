@@ -10,6 +10,8 @@ using ChuvadiReader.Core.Storage;
 using ChuvadiReader.Core.Theme;
 using ChuvadiReader.Core.Window;
 using ChuvadiReader.Windows.Platform;
+using ChuvadiReader.Hosting;
+using ChuvadiReader.Platform;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ChuvadiReader.Windows;
@@ -58,49 +60,24 @@ public partial class App : Application
                 "Chuvadi");
 
             var storage = new FileAppStorage(appDataDir);
+
+            // Every Core service, registered once for all hosts (ChuvadiReader.Hosting).
+            services.AddChuvadiReader(AppStateLifetime.Process);
+
+            // Windows implementations of the platform seams.
             services.AddSingleton<IAppStorage>(storage);
-            services.AddSingleton<SaveFolderService>();
-            services.AddSingleton<CategoryService>();
-            services.AddSingleton<ThemeService>();
-            services.AddSingleton<UserProfileService>();
-            services.AddSingleton<RecentFilesService>();
-            services.AddSingleton<PinnedService>();
-            services.AddSingleton<WatchedFolderService>();
-            services.AddSingleton<LibraryService>();
-            services.AddSingleton<TagService>();
-            services.AddSingleton<FolderSearchService>();
-            services.AddSingleton<DocumentPropertiesService>();
-            services.AddSingleton<ExportService>();
-            services.AddSingleton<ChuvadiReader.Core.Documents.RedactService>();
-            services.AddSingleton<ChuvadiReader.Core.Documents.StampService>();
-            services.AddSingleton<ChuvadiReader.Core.Documents.DocxViewService>();
-            services.AddSingleton<ChuvadiReader.Core.Documents.XlsxViewService>();
-            services.AddSingleton<ChuvadiReader.Core.Documents.FlattenService>();
-            services.AddSingleton<ChuvadiReader.Core.Documents.RecoveryService>();
-            services.AddSingleton<PressService>();
-            services.AddSingleton<IPdfReader, ChuvadiPdfReader>();
-            services.AddSingleton<TabsService>();
-            services.AddSingleton<PdfToolsService>();
-            services.AddSingleton<BenchComposer>();
-            services.AddSingleton<BenchService>();
-            services.AddSingleton<SessionService>();
-            services.AddSingleton<OpenDocumentService>();
-            services.AddSingleton<BenchDropService>();
-            services.AddSingleton<RedactRequestService>();
-            services.AddSingleton<ShellService>();
             services.AddSingleton<ChuvadiReader.Core.Window.IUiScale, ChuvadiReader.Windows.Platform.WpfUiScale>();
             services.AddSingleton<ChuvadiReader.Core.Window.IExternalLinks, ChuvadiReader.Windows.Platform.WpfExternalLinks>();
-            services.AddSingleton<ChuvadiReader.Core.Storage.PreferencesService>();
-            services.AddSingleton<ChuvadiReader.Core.Documents.TextViewService>();
-            services.AddSingleton<MeasureService>();
-            services.AddSingleton<SignatureCheckService>();
-            services.AddSingleton<ChuvadiReader.Core.Documents.PasswordService>();
-            services.AddSingleton<ChuvadiReader.Core.Documents.CertificateSignService>();
             services.AddSingleton<IPrintService, ChuvadiReader.Windows.Platform.WpfPrintService>();
-            services.AddSingleton<ChuvadiReader.Core.Licensing.IEntitlements, ChuvadiReader.Core.Licensing.DefaultEntitlements>();
             services.AddSingleton<IFilePicker, WpfFilePicker>();
             services.AddSingleton<IImageClipboard, WpfImageClipboard>();
-            services.AddSingleton<IAppReadySignal, AppReadySignal>();
+            services.AddSingleton<IClipboard, WpfClipboard>();
+            services.AddSingleton<IPlatformInfo>(new FixedPlatformInfo(
+                PlatformKind.Windows,
+                InputKinds.Mouse | InputKinds.Keyboard | InputKinds.Touch,
+                new ShellChrome(ChuvadiReader.Platform.WindowButtons.Right, NativeMenuBar: false, AccountMenu: false, TitleBarDrag: true, CornerRadiusPx: 0),
+                FixedPlatformInfo.DesktopCapabilities,
+                new CtrlKeyLabels()));
 
             _windowControls = new WpfWindowControls();
             services.AddSingleton<IWindowControls>(_windowControls);

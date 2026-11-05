@@ -15,6 +15,7 @@
 @inject ShellService Shell
 @inject BenchService Bench
 @inject UserProfileService Profile
+@inject ChuvadiReader.Platform.IPlatformInfo Platform
 
 @*
     D-10 shell. One thin 40 px top bar (wordmark · tabs · ‹ n / N › · Document ▾ · Ctrl K ·
@@ -29,6 +30,7 @@
 
     <header class="topbar @(_leftOpen ? "lb-open" : null)" @onmousedown="StartDrag">
         <div class="tb-left">
+            <WindowButtons Side="ChuvadiReader.Platform.WindowButtons.Left" />
             <div class="tb-brandbox">
                 <button class="tb-brand" @onclick='() => Go("/")' @onmousedown:stopPropagation="true" @ondblclick:stopPropagation="true" title="Home">
                     @if (_leftOpen)
@@ -58,7 +60,7 @@
                 {
                     <span class="rtab-more" title="@(Tabs.Tabs.Count - 1) more tabs">+@(Tabs.Tabs.Count - 1)</span>
                 }
-                <button class="rtab-add" @onmousedown:stopPropagation="true" @onclick="AddTab" title="Open document (Ctrl O)" aria-label="Open document"><Icon Name="plus" Size="13" /></button>
+                <button class="rtab-add" @onmousedown:stopPropagation="true" @onclick="AddTab" title="Open document (@Platform.Keys.Format("Ctrl O"))" aria-label="Open document"><Icon Name="plus" Size="13" /></button>
             </div>
             @if (Tabs.Tabs.Count > 0)
             {
@@ -68,10 +70,10 @@
                     {
                         <div class="pop-scrim" @onclick="CloseTabMenu"></div>
                         <div class="pop tabmenu-pop">
-                            <button class="pop-item" @onclick="MenuCloseActive"><Icon Name="close" Size="14" /><span class="pop-l">Close active tab</span><span class="pop-k">Ctrl W</span></button>
-                            <button class="pop-item" @onclick="MenuCloseOthers" disabled="@(Tabs.Tabs.Count < 2)"><Icon Name="close" Size="14" /><span class="pop-l">Close inactive tabs</span><span class="pop-k">Ctrl Alt W</span></button>
+                            <button class="pop-item" @onclick="MenuCloseActive"><Icon Name="close" Size="14" /><span class="pop-l">Close active tab</span><span class="pop-k">@Platform.Keys.Format("Ctrl W")</span></button>
+                            <button class="pop-item" @onclick="MenuCloseOthers" disabled="@(Tabs.Tabs.Count < 2)"><Icon Name="close" Size="14" /><span class="pop-l">Close inactive tabs</span><span class="pop-k">@Platform.Keys.Format("Ctrl Alt W")</span></button>
                             <div class="pop-sep"></div>
-                            <button class="pop-item" @onclick="MenuCloseAll"><Icon Name="close" Size="14" /><span class="pop-l">Close all tabs</span><span class="pop-k">Ctrl Shift W</span></button>
+                            <button class="pop-item" @onclick="MenuCloseAll"><Icon Name="close" Size="14" /><span class="pop-l">Close all tabs</span><span class="pop-k">@Platform.Keys.Format("Ctrl Shift W")</span></button>
                         </div>
                     }
                 </span>
@@ -108,7 +110,7 @@
                                 else
                                 {
                                     <button class="pop-item" disabled="@(!c.IsEnabled)" title="@(c.DisabledReason ?? c.Label)" @onclick="() => RunDocCommand(c)">
-                                        <Icon Name="@c.Icon" Size="15" /><span class="pop-l">@c.Label</span><span class="pop-k">@c.Keys</span>
+                                        <Icon Name="@c.Icon" Size="15" /><span class="pop-l">@c.Label</span><span class="pop-k">@(c.Keys is null ? null : Platform.Keys.Format(c.Keys))</span>
                                     </button>
                                 }
                             }
@@ -116,15 +118,11 @@
                     }
                 </span>
             }
-            <button class="tb-cmd" @onclick="OpenCommandBar" title="Find or do anything (Ctrl K)">
-                <Icon Name="search" Size="13" /><span class="tb-cmd-t">Find or do anything…</span><span class="kbd">Ctrl K</span>
+            <button class="tb-cmd" @onclick="OpenCommandBar" title="Find or do anything (@Platform.Keys.Format("Ctrl K"))">
+                <Icon Name="search" Size="13" /><span class="tb-cmd-t">Find or do anything…</span><span class="kbd">@Platform.Keys.Format("Ctrl K")</span>
             </button>
             <button class="tb-icon" @onclick="ToggleTheme" title="@(Theme.Current.IsDark() ? "Switch to Cream paper" : "Switch to Night paper")" aria-label="Toggle light and dark"><Icon Name="@(Theme.Current.IsDark() ? "shift-day" : "shift-night")" Size="16" /></button>
-            <div class="traffic">
-                <button class="tl tl-min" @onclick="() => Win.Minimize()" aria-label="Minimize"><Icon Name="minus" Size="10" /></button>
-                <button class="tl tl-max" @onclick="() => Win.ToggleMaximize()" aria-label="@(Win.IsMaximized ? "Restore" : "Maximize")"><Icon Name="@(Win.IsMaximized ? "restore" : "square")" Size="9" /></button>
-                <button class="tl tl-close" @onclick="() => Win.Close()" aria-label="Close"><Icon Name="x" Size="10" /></button>
-            </div>
+            <WindowButtons Side="ChuvadiReader.Platform.WindowButtons.Right" />
         </div>
     </header>
 
@@ -145,8 +143,8 @@
                 </button>
             }
             <span class="lb-sep"></span>
-            <button class="lb-btn" @onclick="AddTab" title="Open (Ctrl O)"><Icon Name="folder" Size="19" /><span class="lb-l">Open</span><span class="lb-k">Ctrl O</span></button>
-            <button class="lb-btn" @onclick="FindNow" title="Find (Ctrl F)"><Icon Name="find-in-page" Size="19" /><span class="lb-l">Find</span><span class="lb-k">Ctrl F</span></button>
+            <button class="lb-btn" @onclick="AddTab" title="Open (@Platform.Keys.Format("Ctrl O"))"><Icon Name="folder" Size="19" /><span class="lb-l">Open</span><span class="lb-k">@Platform.Keys.Format("Ctrl O")</span></button>
+            <button class="lb-btn" @onclick="FindNow" title="Find (@Platform.Keys.Format("Ctrl F"))"><Icon Name="find-in-page" Size="19" /><span class="lb-l">Find</span><span class="lb-k">@Platform.Keys.Format("Ctrl F")</span></button>
             <button class="lb-btn @(IsAt("/library") ? "here" : null)" @onclick='() => Go("/library")' title="Library"><Icon Name="library" Size="19" /><span class="lb-l">Library</span><span class="lb-k"></span></button>
             <button class="lb-btn @(IsAt("/") ? "here" : null)" @onclick='() => Go("/")' title="Home"><Icon Name="home" Size="19" /><span class="lb-l">Home</span><span class="lb-k"></span></button>
             <span class="lb-spacer"></span>
@@ -160,7 +158,7 @@
     </div>
 
     <footer class="statusbar">
-        <span class="sb-item"><span class="status-dot"></span>offline · on this device</span>
+        <StatusLocation />
         <span class="sb-div"></span>
         <span class="sb-item"><span class="sb-avatar">@Initials</span>@(Profile.Name ?? "This computer")</span>
         @if (!string.IsNullOrEmpty(Shell.Activity))
@@ -641,7 +639,7 @@
 
     private void StartDrag(MouseEventArgs e)
     {
-        if (e.Button != 0)
+        if (e.Button != 0 || !Platform.Chrome.TitleBarDrag)
         {
             return;
         }

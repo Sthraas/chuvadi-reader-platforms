@@ -27,5 +27,6 @@
   <ItemGroup>
     <ProjectReference Include="..\ChuvadiReader.Ui\ChuvadiReader.Ui.csproj" />
     <ProjectReference Include="..\ChuvadiReader.Core\ChuvadiReader.Core.csproj" />
+    <ProjectReference Include="..\ChuvadiReader.Hosting\ChuvadiReader.Hosting.csproj" />
   </ItemGroup>
 </Project>

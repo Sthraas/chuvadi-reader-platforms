@@ -514,7 +514,7 @@ public partial class Reader
     {
         try
         {
-            await JS.InvokeVoidAsync("navigator.clipboard.writeText", text);
+            await TextClip.SetTextAsync(text);
             Shell.Notify(done);
         }
         catch (Exception ex)

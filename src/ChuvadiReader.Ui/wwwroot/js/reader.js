@@ -5,6 +5,8 @@
 // keyboard shortcuts. During a toolbar-driven scroll the indicator tracking is
 // suppressed so it does not flicker through the pages it passes.
 
+import { isPrimary } from './platform.js';
+
 let lazy = null;
 let spy = null;
 let dotnet = null;
@@ -95,7 +97,7 @@ export function init(deskEl, dotnetRef) {
         if (e.key === 'Escape') { invoke('OnEscape'); return; }
 
         // Tab-close shortcuts: handle the Alt/Shift variants of W before the no-Alt block.
-        if (e.ctrlKey && !e.metaKey && e.key.toLowerCase() === 'w') {
+        if (isPrimary(e) && e.key.toLowerCase() === 'w') {
             e.preventDefault();
             if (e.altKey) invoke('CloseOtherTabs');
             else if (e.shiftKey) invoke('CloseAllTabs');
@@ -103,7 +105,7 @@ export function init(deskEl, dotnetRef) {
             return;
         }
 
-        if (e.ctrlKey && !e.altKey && !e.metaKey) {
+        if (isPrimary(e) && !e.altKey) {
             const k = e.key.toLowerCase();
             if (k === 'z') { e.preventDefault(); invoke('Undo'); }
             else if (e.key === 'Tab') { e.preventDefault(); invoke('CycleTab', e.shiftKey ? -1 : 1); }
@@ -114,7 +116,7 @@ export function init(deskEl, dotnetRef) {
             else if (k === 'f') { e.preventDefault(); invoke('OpenFind'); }   // app find, not WebView2's native find
             return;
         }
-        if (e.altKey || e.metaKey) return;
+        if (e.altKey || e.metaKey || e.ctrlKey) return;
 
         // Below here are bare navigation keys; don't steal them from focused controls.
         if (tag === 'BUTTON' || tag === 'A' || tag === 'SELECT') return;

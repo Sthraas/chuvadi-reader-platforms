@@ -1,0 +1,13 @@
+@using ChuvadiReader.Platform
+@inject IPlatformInfo Platform
+
+@*
+    Where processing happens, first item of the status bar.
+    Device builds: unchanged "offline · on this device". Web portal (design 12b): server wording.
+*@
+<span class="sb-item"><span class="status-dot"></span>@(Platform.Capabilities.ServerSide ? ServerText : DeviceText)</span>
+
+@code {
+    private const string DeviceText = "offline · on this device";
+    private const string ServerText = "processed on the server · encrypted at rest · only you can see it";
+}
