@@ -36,12 +36,20 @@ jobs:
       # versions without the macOS platform). Must be 26.5 or later for the pinned workload.
       - name: Select Xcode
         run: |
+          ls -d /Applications/Xcode*.app
+          ok=""
           for XC in $(ls -d /Applications/Xcode_*.app | sort -rV); do
-            if DEVELOPER_DIR="$XC/Contents/Developer" xcrun --sdk macosx --show-sdk-path >/dev/null 2>&1 \
-               && DEVELOPER_DIR="$XC/Contents/Developer" xcrun --find actool >/dev/null 2>&1; then
-              sudo xcode-select -s "$XC"; break
+            DD="$XC/Contents/Developer"
+            # First-launch setup (system components) — without it xcodebuild -find fails.
+            sudo DEVELOPER_DIR="$DD" xcodebuild -runFirstLaunch >/dev/null 2>&1 || true
+            # The same lookups the .NET build performs.
+            if DEVELOPER_DIR="$DD" xcodebuild -sdk macosx -find clang >/dev/null 2>&1 \
+               && DEVELOPER_DIR="$DD" xcodebuild -sdk macosx -find actool >/dev/null 2>&1; then
+              sudo xcode-select -s "$XC"; ok="$XC"; break
             fi
+            echo "skipping $XC (no working macOS toolchain)"
           done
+          [ -n "$ok" ] || { echo "no usable Xcode"; exit 1; }
           xcode-select -p
           xcodebuild -version
           xcrun --sdk macosx --show-sdk-version
