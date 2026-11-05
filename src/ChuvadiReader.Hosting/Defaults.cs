@@ -134,6 +134,7 @@ public sealed class FixedPlatformInfo(
         DropFiles = true,
         Share = false,
         MultipleWindows = false,
+        SavesAsDownload = false,
         ServerSide = false,
     };
 }

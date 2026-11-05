@@ -32,14 +32,14 @@ jobs:
       build: ChuvadiReader.slnx
       test: tests/ChuvadiReader.Tests/ChuvadiReader.Tests.csproj
 
-  # The full feed (chuvadi-pdf packed from the unchanged v3.31.1 tag + released packages) must stay reproducible.
-  feed:
+  # Check only: chuvadi-pdf re-packed from the unchanged v3.31.1 tag yields the same package set as ci/packages.
+  pack-check:
     uses: ./.github/workflows/platform-build.yml
     with:
       runner: ubuntu-latest
-      label: feed
+      label: pack-check
       build: ChuvadiReader.Platforms.slnx
-      full-feed: true
+      pack-check: true
 
   # ── Platform host jobs (added by each platform chat) ─────────────────────────────────────
   # mac:      runner macos-latest,     build src/ChuvadiReader.Mac/…,     workloads maui-maccatalyst

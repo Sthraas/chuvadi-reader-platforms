@@ -112,7 +112,8 @@ public sealed class HostingTests
     [InlineData(PlatformKind.Android, FormFactor.Tablet, ShellLayout.Tablet)]
     [InlineData(PlatformKind.Android, FormFactor.Phone, ShellLayout.Phone)]
     [InlineData(PlatformKind.Web, FormFactor.Desktop, ShellLayout.Portal)]
-    [InlineData(PlatformKind.Web, FormFactor.Phone, ShellLayout.Portal)]
+    [InlineData(PlatformKind.Web, FormFactor.Phone, ShellLayout.Phone)]
+    [InlineData(PlatformKind.Web, FormFactor.Tablet, ShellLayout.Tablet)]
     public void Shell_layout_derivation(PlatformKind kind, FormFactor ff, ShellLayout expected) =>
         Assert.Equal(expected, ShellLayouts.From(kind, ff));
 
