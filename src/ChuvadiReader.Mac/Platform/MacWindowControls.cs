@@ -24,6 +24,16 @@ public sealed class MacWindowControls : IWindowControls, IDisposable
         {
             _observers.Add(NSNotificationCenter.DefaultCenter.AddObserver(new NSString(name), _ => RaiseIfChanged()));
         }
+
+        // AppKit lays the window buttons out again on these; put them back in the top bar.
+        foreach (var name in new[]
+                 {
+                     "NSWindowDidResizeNotification", "NSWindowDidBecomeKeyNotification",
+                     "NSWindowDidExitFullScreenNotification", "NSWindowDidChangeBackingPropertiesNotification",
+                 })
+        {
+            _observers.Add(NSNotificationCenter.DefaultCenter.AddObserver(new NSString(name), _ => PlaceButtons()));
+        }
     }
 
     public void Minimize() => OnMain(() => AppKitBridge.Miniaturize(AppKitBridge.KeyWindow()));
@@ -34,10 +44,35 @@ public sealed class MacWindowControls : IWindowControls, IDisposable
 
     public void BeginDrag() => OnMain(() => AppKitBridge.BeginDrag(AppKitBridge.KeyWindow()));
 
-    /// <summary>Hides the native traffic lights while the HTML title bar carries the window
-    /// buttons (MacChrome.UseHtmlWindowButtons).</summary>
+    /// <summary>Mac chrome per the handout: no native title text or toolbar, the page runs to the
+    /// top edge, and the native traffic lights sit at the left of the Ui's own top bar. The Ui's
+    /// right-hand window dots are hidden by the host stylesheet (wwwroot/css/mac.css).</summary>
     public void ApplyChrome() => OnMain(() =>
-        AppKitBridge.SetStandardButtonsHidden(AppKitBridge.KeyWindow(), MacChrome.UseHtmlWindowButtons));
+    {
+        foreach (var scene in UIApplication.SharedApplication.ConnectedScenes)
+        {
+            if (scene is UIWindowScene { Titlebar: { } titlebar })
+            {
+                titlebar.TitleVisibility = UITitlebarTitleVisibility.Hidden;
+                titlebar.Toolbar = null;
+            }
+        }
+
+        PlaceButtons();
+    });
+
+    /// <summary>Re-centres the traffic lights when the interface size changes.</summary>
+    public void SetScale(double factor)
+    {
+        _scale = factor;
+        OnMain(PlaceButtons);
+    }
+
+    private double _scale = 1.0;
+
+    private void PlaceButtons()
+        => AppKitBridge.PositionStandardButtons(AppKitBridge.KeyWindow(),
+            MacChrome.ButtonsLeft, MacChrome.ButtonPitch, MacChrome.TopBarHeight * _scale);
 
     private void RaiseIfChanged()
     {
@@ -84,11 +119,17 @@ public sealed class MacWindowControls : IWindowControls, IDisposable
     }
 }
 
-/// <summary>Mac window-chrome choice, pending Arun's decision (docs/mac/README.md).
-/// true  = design untouched: HTML window dots (top right) drive the window; native buttons hidden.
-/// false = native traffic lights top-left; needs a host stylesheet that hides the HTML dots and
-///         insets the top bar (not built until Arun approves).</summary>
+/// <summary>Geometry of the native traffic lights inside the Ui's top bar. Must agree with
+/// wwwroot/css/mac.css (padding-left of the top bar = ButtonsLeft + 2 × ButtonPitch + button
+/// width 14 + the bar's 12 px gap = 80 px).</summary>
 internal static class MacChrome
 {
-    public const bool UseHtmlWindowButtons = true;
+    /// <summary>The Ui's top bar height (shell.css --sh-top) at 100 %.</summary>
+    public const double TopBarHeight = 40;
+
+    /// <summary>Left edge of the close button (handout: title bar padding 14 px).</summary>
+    public const double ButtonsLeft = 14;
+
+    /// <summary>Distance from one button to the next (12 px dot + ~8 px gap, macOS standard).</summary>
+    public const double ButtonPitch = 20;
 }

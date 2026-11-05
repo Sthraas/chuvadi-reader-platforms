@@ -104,8 +104,11 @@ public sealed class MacExternalLinks : IExternalLinks
 /// WebView2 ZoomFactor. The person's own pinch zoom of the page stays off.</summary>
 public sealed class MacUiScale : IUiScale
 {
+    private readonly MacWindowControls _window;
     private WKWebView? _view;
     private double _factor = 1.0;
+
+    public MacUiScale(MacWindowControls window) => _window = window;
 
     public bool IsSupported => true;
 
@@ -124,6 +127,7 @@ public sealed class MacUiScale : IUiScale
             150 => 1.5,
             _ => 1.0,
         };
+        _window.SetScale(_factor);
         Apply();
     }
 

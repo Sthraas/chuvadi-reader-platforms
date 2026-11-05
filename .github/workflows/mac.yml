@@ -32,11 +32,19 @@ jobs:
           # SDK band 10.0.4xx, matching the pinned workload set below.
           dotnet-version: '10.0.4xx'
 
-      - name: Select newest Xcode
+      # Newest installed Xcode that has a macOS SDK and actool (some images carry Xcode
+      # versions without the macOS platform). Must be 26.5 or later for the pinned workload.
+      - name: Select Xcode
         run: |
-          XC=$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)
-          sudo xcode-select -s "$XC"
+          for XC in $(ls -d /Applications/Xcode_*.app | sort -rV); do
+            if DEVELOPER_DIR="$XC/Contents/Developer" xcrun --sdk macosx --show-sdk-path >/dev/null 2>&1 \
+               && DEVELOPER_DIR="$XC/Contents/Developer" xcrun --find actool >/dev/null 2>&1; then
+              sudo xcode-select -s "$XC"; break
+            fi
+          done
+          xcode-select -p
           xcodebuild -version
+          xcrun --sdk macosx --show-sdk-version
           sw_vers
 
       # Pinned workload set: 10.0.401 carries .NET for Mac Catalyst 26.5, which builds with Xcode
