@@ -29,7 +29,8 @@ jobs:
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          # SDK band 10.0.4xx, matching the pinned workload set below.
+          dotnet-version: '10.0.4xx'
 
       - name: Select newest Xcode
         run: |
@@ -38,8 +39,14 @@ jobs:
           xcodebuild -version
           sw_vers
 
-      - name: Install MAUI Mac Catalyst workload
-        run: dotnet workload install maui-maccatalyst
+      # Pinned workload set: 10.0.401 carries .NET for Mac Catalyst 26.5, which builds with Xcode
+      # 26.5 or later. Newer sets (27.x) need Xcode 27.1, not yet on the runner image.
+      # Move the pin forward when the runner gets Xcode 27.1 (docs/mac/README.md).
+      - name: Install MAUI Mac Catalyst workload (pinned)
+        run: |
+          dotnet --version
+          dotnet workload install maui-maccatalyst --version 10.0.401
+          dotnet workload list
 
       - name: Restore
         run: |
