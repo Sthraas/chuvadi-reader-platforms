@@ -11,7 +11,21 @@ namespace ChuvadiReader.Mac;
 /// Windows host does, plus the Mac-side wiring (zoom, file drop, window chrome).</summary>
 public sealed class MainPage : ContentPage
 {
+    private static BlazorWebView? _web;
     private readonly IServiceProvider _services;
+
+    /// <summary>Runs <paramref name="action"/> on the Blazor renderer's dispatcher — used by the
+    /// native menu bar so a menu item behaves exactly like the same click inside the Ui.</summary>
+    public static void Dispatch(Func<Task> action)
+    {
+        var web = _web;
+        if (web is null)
+        {
+            return;
+        }
+
+        _ = web.TryDispatchAsync(_ => _ = action());
+    }
 
     public MainPage(IServiceProvider services)
     {
@@ -36,6 +50,7 @@ public sealed class MainPage : ContentPage
             ComponentType = typeof(ChuvadiReader.Ui.App),
         });
         web.BlazorWebViewInitialized += OnWebViewInitialized;
+        _web = web;
         Content = web;
     }
 
