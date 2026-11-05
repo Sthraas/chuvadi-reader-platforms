@@ -30,7 +30,11 @@ You are one chat in the **Chuvadi Reader platform programme**, run by a coordina
 ### Reporting
 End every working session with a short status: done, in progress, blocked (and on what), questions for Arun. Keep the coordinator able to read your latest message and know exactly where you stand.
 
+### Decision authority (Arun, 6 Nov 05:21)
+Arun has handed the calls on this programme to the coordinator. The coordinator decides **only after** the chat has laid out every option with pros and cons and a recommendation, and the coordinator has discussed it. No chat decides an option on its own, and the coordinator never decides without the pros and cons in front of it.
+
 ### Arun's decisions so far (6 Nov)
 - Web: no server storage for now (files not kept after the session); users managed by Sangam; never change Sangam — integrate as a client with our own code; sharing not in this release; TLS source pending (Pezhai being checked).
 - Mac: universal app. Android: minimum Android 15, Play Store. Linux: Ubuntu x64 + ARM64, own WebKitGTK host.
+- Everything follows the design handout; the only departure is per-user server storage on the web portal (none for now).
 - Look: the handout in `docs/design-handoff/` (see `docs/coordination/DESIGN-NOTE.md`). Android phone/tablet look is built by the **Mobile app UI** chat (`platform/mobile-ui`); the web portal look by the **Web portal UI** chat (`platform/web-ui`); Mac and Linux chats define their own chrome.
