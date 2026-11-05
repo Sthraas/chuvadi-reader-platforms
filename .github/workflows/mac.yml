@@ -34,15 +34,15 @@ jobs:
 
       # Newest installed Xcode that has a macOS SDK and actool (some images carry Xcode
       # versions without the macOS platform). Must be 26.5 or later for the pinned workload.
-      # The Xcode that matches the pinned Mac Catalyst workload (26.5 → Xcode 26.5). The image's
-      # Xcode_26.6.0 fails the build's own SDK lookup, so "newest" is not used.
+      # The pinned Mac Catalyst pack (26.5.10318) requires Xcode 26.6. The image carries two 26.6
+      # installs; Xcode_26.6.0.app fails the build's SDK lookup, so the exact app is named here.
       - name: Select Xcode
         env:
-          XCODE_WANTED: '26.5'
+          XCODE_APP: /Applications/Xcode_26.6.app
         run: |
           ls -d /Applications/Xcode*.app
-          XC=$(ls -d /Applications/Xcode_${XCODE_WANTED}*.app | sort -V | head -1)
-          [ -n "$XC" ] || { echo "Xcode $XCODE_WANTED not on this runner image"; exit 1; }
+          XC="$XCODE_APP"
+          [ -d "$XC" ] || { echo "$XC not on this runner image"; exit 1; }
           sudo xcode-select -s "$XC"
           sudo xcodebuild -runFirstLaunch
           ls -la "$XC/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs"
