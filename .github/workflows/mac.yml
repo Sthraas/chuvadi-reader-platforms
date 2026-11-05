@@ -34,28 +34,22 @@ jobs:
 
       # Newest installed Xcode that has a macOS SDK and actool (some images carry Xcode
       # versions without the macOS platform). Must be 26.5 or later for the pinned workload.
+      # The Xcode that matches the pinned Mac Catalyst workload (26.5 → Xcode 26.5). The image's
+      # Xcode_26.6.0 fails the build's own SDK lookup, so "newest" is not used.
       - name: Select Xcode
+        env:
+          XCODE_WANTED: '26.5'
         run: |
           ls -d /Applications/Xcode*.app
-          ok=""
-          for XC in $(ls -d /Applications/Xcode_*.app | sort -rV); do
-            DD="$XC/Contents/Developer"
-            # First-launch setup (system components) — without it xcodebuild -find fails.
-            sudo DEVELOPER_DIR="$DD" xcodebuild -runFirstLaunch >/dev/null 2>&1 || true
-            # The same lookups the .NET build performs: it names the SDK by its full path
-            # (…/SDKs/MacOSX.sdk), which some images lack even when "-sdk macosx" resolves.
-            SDK="$DD/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk"
-            if [ -e "$SDK" ] \
-               && DEVELOPER_DIR="$DD" xcodebuild -sdk "$SDK" -find clang >/dev/null 2>&1 \
-               && DEVELOPER_DIR="$DD" xcodebuild -sdk "$SDK" -find actool >/dev/null 2>&1; then
-              sudo xcode-select -s "$XC"; ok="$XC"; break
-            fi
-            echo "skipping $XC (no working macOS toolchain)"
-          done
-          [ -n "$ok" ] || { echo "no usable Xcode"; exit 1; }
+          XC=$(ls -d /Applications/Xcode_${XCODE_WANTED}*.app | sort -V | head -1)
+          [ -n "$XC" ] || { echo "Xcode $XCODE_WANTED not on this runner image"; exit 1; }
+          sudo xcode-select -s "$XC"
+          sudo xcodebuild -runFirstLaunch
+          ls -la "$XC/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs"
           xcode-select -p
           xcodebuild -version
           xcrun --sdk macosx --show-sdk-version
+          xcodebuild -sdk "$(xcrun --sdk macosx --show-sdk-path)" -find actool
           sw_vers
 
       # Pinned workload set: 10.0.401 carries .NET for Mac Catalyst 26.5, which builds with Xcode
