@@ -71,7 +71,9 @@ New contracts (`ChuvadiReader.Platform`):
 | `Share` | ✗ | ✓ | ✗ | ✓ | ✓ | ✗ |
 | `ServerSide` | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ |
 
-The Ui turns these into attributes on `<html>` (`data-platform`, `data-form-factor`, `data-input`) so CSS for the new components can follow the design (e.g. 72/72/60 px rails on tablet), and picks new components for the chrome that differs (§5). Existing desktop markup stays as is.
+**`ShellLayout`** (Desktop / Tablet / Phone / Portal) is the single value the Ui switches chrome on, derived by `ShellLayouts.From(kind, formFactor)`: Web → Portal; otherwise Tablet/Phone/Desktop from the form factor. It is cascaded as `PlatformState.Shell` and written as `<html data-shell>` (see `FOR-UI-CHATS.md`).
+
+The Ui turns these into attributes on `<html>` (`data-shell`, `data-platform`, `data-form-factor`, `data-input`) so CSS for the new components can follow the design (e.g. 72/72/60 px rails on tablet), and picks new components for the chrome that differs (§5). Existing desktop markup stays as is.
 
 ## 3. The file model — decision F-1
 
@@ -137,4 +139,5 @@ Per DESIGN-NOTE, these are built as **new components** (new files under `src/Chu
 - **F-3 Shared registration:** Windows switches to `AddChuvadiReader(...)` (one place, drift test retired) or keeps its own list (no Windows edit; the drift test keeps the kit in step).
 - **F-4 Printing per platform:** as §6.
 - **F-5 Web form factor and keys:** Web follows the browser (phone/tablet layouts on small screens, ⌘ labels for Mac browsers) or always desktop + Ctrl.
+- **F-7 Preview host for the UI chats:** a small Blazor Server dev host (Kestrel, .NET only, never shipped) that runs the real Ui with the platform and form factor chosen by URL, so phone/tablet/portal work can be seen and tested before the Android and Web hosts exist.
 - **F-6 `IClipboard` replaces `IImageClipboard`:** replace now (Windows edits) or keep both (Windows implements both; no Windows edit).

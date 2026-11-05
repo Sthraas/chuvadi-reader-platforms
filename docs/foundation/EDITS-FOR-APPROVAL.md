@@ -1,6 +1,6 @@
 # Foundation — existing-file edits for Arun's approval
 
-**Nothing here is applied to `platform/foundation`.** Group A is one patch with exact diffs: `docs/foundation/proposal/foundation-edits-1.patch` (apply with `git apply`). It assumes the recommended answers to decisions F-2 (a), F-3 (switch) and F-6 (keep both); if you choose differently I regenerate it.
+**Nothing here is applied to `platform/foundation`.** Approver: the coordinator (delegated by Arun, 6 Nov); nothing reaches `arunshivab/chuvadi-reader` before Arun's final check. Group A is one patch with exact diffs: `docs/foundation/proposal/foundation-edits-1.patch` (apply with `git apply`). It assumes the recommended answers to decisions F-2 (a), F-3 (switch) and F-6 (keep both); if you choose differently I regenerate it.
 Groups B and C depend on decision F-1 (file model) and are listed by site; their diffs are written after you decide, so nothing is built for an option you don't pick.
 
 ## How Group A was verified
@@ -17,7 +17,7 @@ Windows output is designed to be identical: `CtrlKeyLabels` returns "Ctrl …" t
 |---|---|---|---|---|---|---|
 | A1 | `Core/ChuvadiReader.Core.csproj` | + ProjectReference to `ChuvadiReader.Platform` | Core and Ui can use the new contracts | One-line, contracts-only project (F-2 a) | Core now builds a second small project | None |
 | A2 | `Ui/_Imports.razor` | + `@using ChuvadiReader.Ui.Components.Platform` | New components usable by tag | — | — | None |
-| A3 | `Ui/App.razor` | Wrap `<Router>` in `<PlatformRoot>` | Sets `data-platform / data-form-factor / data-input` on `<html>` and cascades form-factor changes so layouts re-render (Android fold, browser resize) | One place, no per-page code | One extra JS module load at start (~15 lines) | Very low: attributes only; no CSS uses them yet |
+| A3 | `Ui/App.razor` | Wrap `<Router>` in `<PlatformRoot>` | Sets `data-shell / data-platform / data-form-factor / data-input` on `<html>` and cascades form-factor changes so layouts re-render (Android fold, browser resize) | One place, no per-page code | One extra JS module load at start (~15 lines) | Very low: attributes only; no CSS uses them yet |
 | A4 | `Ui/Layout/MainLayout.razor` | (a) inject `IPlatformInfo`; (b) `<WindowButtons Side=Left/>` at the start of the top bar and `Side=Right` in place of the `traffic` div; (c) `<StatusLocation/>` in place of the status text; (d) `StartDrag` returns early when `Chrome.TitleBarDrag` is false; (e) 10 "Ctrl …" labels and the Document-menu key column go through `Keys.Format` | Mac buttons on the left, none on Android/Web, server wording on Web (12b), no drag logic where there's no window, ⌘ labels on Mac | Design-exact per platform without touching the desktop markup | MainLayout gains 2 component tags | Low: same markup on Windows. **Check:** buttons still at the right, maximise icon still flips, drag + double-click maximise still work |
 | A5 | `Ui/Components/Rails/RailButton.razor` | Shows `Keys.Format(Keys)` in the label and tooltip | Every rail button's shortcut (≈30) is fixed in one place | Keys stay canonical in all pages | — | None |
 | A6 | `Ui/Components/Shell/CommandBar.razor` | Shows `Keys.Format(cc.Keys)` | Same, for Ctrl K results | Command `Keys` stay canonical — they are also the dispatch keys from `shell.js` | — | None |
