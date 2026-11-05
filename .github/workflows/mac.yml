@@ -1,0 +1,103 @@
+name: Mac
+
+# Builds the Mac Catalyst host (universal: Apple Silicon + Intel), runs the test suite on macOS,
+# launches the app once as a smoke test (records startup timings), and uploads the unsigned
+# (ad-hoc signed) .app as a zip for manual testing. No Apple Developer account is used.
+
+on:
+  push:
+    branches: [platform/mac]
+  pull_request:
+    paths:
+      - 'src/ChuvadiReader.Mac/**'
+      - '.github/workflows/mac.yml'
+  workflow_dispatch:
+
+jobs:
+  mac:
+    name: build, test, smoke, package
+    runs-on: macos-26
+    timeout-minutes: 60
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      DOTNET_NOLOGO: '1'
+      APP: src/ChuvadiReader.Mac/bin/Release/net10.0-maccatalyst/ChuvadiReader.Mac.app
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Select newest Xcode
+        run: |
+          XC=$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)
+          sudo xcode-select -s "$XC"
+          xcodebuild -version
+          sw_vers
+
+      - name: Install MAUI Mac Catalyst workload
+        run: dotnet workload install maui-maccatalyst
+
+      - name: Restore
+        run: |
+          dotnet restore tests/ChuvadiReader.Tests/ChuvadiReader.Tests.csproj --configfile ci/nuget.config
+          dotnet restore src/ChuvadiReader.Mac/ChuvadiReader.Mac.csproj --configfile ci/nuget.config
+
+      - name: Test (Core, on macOS)
+        run: dotnet test tests/ChuvadiReader.Tests/ChuvadiReader.Tests.csproj -c Release --no-restore --logger "trx;LogFileName=test-results.trx"
+
+      - name: Build universal app
+        run: dotnet build src/ChuvadiReader.Mac/ChuvadiReader.Mac.csproj -c Release --no-restore
+
+      - name: Verify both architectures
+        run: |
+          BIN="$APP/Contents/MacOS/ChuvadiReader.Mac"
+          ARCHS=$(lipo -archs "$BIN")
+          echo "architectures: $ARCHS"
+          [[ "$ARCHS" == *arm64* && "$ARCHS" == *x86_64* ]] || { echo "not universal"; exit 1; }
+
+      - name: Ad-hoc sign (no developer account; arm64 code must carry a signature to run)
+        run: |
+          codesign --force --deep --sign - --entitlements src/ChuvadiReader.Mac/Platforms/MacCatalyst/Entitlements.plist "$APP"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+
+      - name: Smoke run (launch to first render, record startup)
+        run: |
+          set +e
+          # macOS has no GNU timeout; perl's alarm gives a 120 s limit.
+          CHUVADI_SMOKE_EXIT=1 perl -e 'alarm shift; exec @ARGV' 120 "$APP/Contents/MacOS/ChuvadiReader.Mac" > smoke.log 2>&1
+          CODE=$?
+          set -e
+          cat smoke.log
+          grep -q CHUVADI_SMOKE_OK smoke.log || { echo "smoke run did not reach first render (exit $CODE)"; exit 1; }
+          {
+            echo "### Startup on $(sysctl -n machdep.cpu.brand_string)"
+            echo '```'
+            grep CHUVADI_STARTUP smoke.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Package
+        run: |
+          mkdir -p out
+          ditto -c -k --keepParent "$APP" out/Chuvadi-mac-universal-unsigned.zip
+          shasum -a 256 out/Chuvadi-mac-universal-unsigned.zip | tee out/SHA256.txt
+
+      - name: Upload app
+        uses: actions/upload-artifact@v4
+        with:
+          name: Chuvadi-mac-universal-unsigned
+          path: out/
+
+      - name: Upload test results and smoke log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-test-results
+          path: |
+            **/test-results.trx
+            smoke.log
+          if-no-files-found: ignore
