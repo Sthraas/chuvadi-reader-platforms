@@ -1,0 +1,15 @@
+# AppArmor profile for Chuvadi Reader (installed to /etc/apparmor.d/chuvadi-reader by the .deb).
+#
+# Ubuntu 24.04 and later stop unconfined programs from creating unprivileged user namespaces.
+# WebKitGTK starts its web content process inside a bubblewrap sandbox, which needs one; without
+# this profile the web process cannot start ("bwrap: setting up uid map: Permission denied").
+# The profile only adds that permission; Chuvadi stays otherwise unconfined, as Ubuntu does for
+# its own WebKit and Chromium-based apps. WebKit's sandbox stays fully on.
+abi <abi/4.0>,
+include <tunables/global>
+
+profile chuvadi-reader @CHUVADI_BINARY@ flags=(unconfined) {
+  userns,
+
+  include if exists <local/chuvadi-reader>
+}

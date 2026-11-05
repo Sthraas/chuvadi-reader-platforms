@@ -52,6 +52,13 @@ jobs:
       - name: Publish (ReadyToRun)
         run: dotnet publish reader/src/ChuvadiReader.Linux -c Release -r linux-${{ matrix.arch }} --self-contained false -o publish
 
+      - name: Load the AppArmor profile the .deb ships (WebKit sandbox needs userns on Ubuntu 24.04+)
+        run: |
+          sysctl kernel.apparmor_restrict_unprivileged_userns || true
+          sed "s#@CHUVADI_BINARY@#$PWD/publish/chuvadi-reader#" \
+            src/ChuvadiReader.Linux/packaging/apparmor/chuvadi-reader | sudo tee /etc/apparmor.d/chuvadi-reader-ci >/dev/null
+          sudo apparmor_parser -r /etc/apparmor.d/chuvadi-reader-ci
+
       - name: Launch test under Xvfb
         run: bash tools/linux/smoke.sh "$PWD/publish" "$PWD/smoke" 3
 
