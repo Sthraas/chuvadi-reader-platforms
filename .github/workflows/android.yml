@@ -52,16 +52,18 @@ jobs:
       - name: Install the MAUI Android workload
         run: dotnet workload install maui-android
 
-      - name: Install Android SDK packages the build needs
-        working-directory: reader
-        run: >
-          dotnet build -t:InstallAndroidDependencies -f net10.0-android
-          src/ChuvadiReader.Android/ChuvadiReader.Android.csproj
-          -p:AndroidSdkDirectory=$ANDROID_HOME -p:AcceptAndroidSDKLicenses=True
-
+      # The Reader's root nuget.config points at the dev-only ./localpackages; CI restores from
+      # its committed feed (ci/packages) + nuget.org, exactly like the Reader's own CI.
       - name: Restore (Reader's own CI feed + nuget.org for Microsoft's MAUI packages)
         working-directory: reader
         run: dotnet restore src/ChuvadiReader.Android/ChuvadiReader.Android.csproj --configfile ci/nuget.config
+
+      - name: Install Android SDK packages the build needs
+        working-directory: reader
+        run: >
+          dotnet build -t:InstallAndroidDependencies -f net10.0-android --no-restore
+          src/ChuvadiReader.Android/ChuvadiReader.Android.csproj
+          -p:AndroidSdkDirectory=$ANDROID_HOME -p:AcceptAndroidSDKLicenses=True
 
       # Release: Play upload bundle (.aab) and .apk, signed only with the throwaway debug key.
       - name: Publish Release (.aab + .apk)
@@ -77,7 +79,7 @@ jobs:
         run: >
           dotnet build src/ChuvadiReader.Android/ChuvadiReader.Android.csproj
           -c Debug -f net10.0-android -p:RuntimeIdentifier=android-x64 -p:EmbedAssembliesIntoApk=true
-          -p:AndroidSdkDirectory=$ANDROID_HOME
+          -p:RestoreConfigFile=ci/nuget.config -p:AndroidSdkDirectory=$ANDROID_HOME
 
       - name: Collect packages
         run: |

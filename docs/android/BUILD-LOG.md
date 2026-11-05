@@ -74,3 +74,28 @@ an extra package); `new Java.Lang.Long(...)` obsolete on API 33+ → `Long.Value
 `.aab` + `.apk` and Debug x86_64 `.apk`; emulator smoke test (`docs/android/ci/smoke-test.sh`)
 on phone + tablet × API 35 + 36: install, cold start, rotate (activity must not restart), fail on
 any crash, upload screenshots + logcat.
+
+### 7. First CI run failed — fixed
+Run 42131193468: "Install Android SDK packages" failed with NU1301 — the implicit restore used
+the Reader's root `nuget.config`, whose dev-only `./localpackages` does not exist in CI. (The
+sandbox workspace had not copied that file, so it didn't show locally.) Fix: restore first with
+`--configfile ci/nuget.config`, then `InstallAndroidDependencies --no-restore`; the Debug x86_64
+build (which re-restores for its RID) gets `-p:RestoreConfigFile=ci/nuget.config`. Sandbox
+workspace now includes the root `nuget.config`, so it matches CI; the CI steps were re-run
+locally and pass.
+
+### 8. Release package (sandbox)
+`dotnet publish -c Release -f net10.0-android` → `in.chuvadi.reader-Signed.aab` 53.9 MB,
+`.apk` 54.3 MB (debug-key signed), 0 warnings.
+
+### 9. Tablet layout (Portal & Android 12d–12f) — host CSS only, pending A-03
+- `wwwroot/android.js` sets `html[data-form-factor]` = tablet (shorter side ≥ 600 dp) / phone,
+  updated on resize (split screen, foldables).
+- `wwwroot/android.css`, tablet block: rails 72 / 72 / 60 (View folds below 1000 px, as the Ui
+  already does), 48 px targets, mode verbs under icons, no hover-expand, top bar 52 px with the
+  command field as a search icon, no theme toggle or status bar; Home via the wordmark.
+- To be checked against the emulator tablet screenshots from CI.
+
+### 10. Existing-file proposal started — `EXISTING-FILE-PROPOSAL.md`
+P-01 (individual chuvadi-pdf packages in Core) tried in the sandbox workspace only (the Reader
+repo is untouched): Core + Ui + tests build with 0 warnings, 161/161 Reader tests pass.

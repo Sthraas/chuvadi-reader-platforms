@@ -1,21 +1,64 @@
 /*
   Android host differences — the only styling this host adds. Everything else is
-  ChuvadiReader.Ui, unchanged (programme rule 1).
+  ChuvadiReader.Ui, unchanged (programme rule 1). PENDING ARUN'S APPROVAL as a set:
+  docs/android/DECISIONS.md, A-03.
 
-  1. Window controls. Android apps have no minimise / maximise / close buttons; the system
-     owns the window. The UI's title-bar "traffic" group is hidden here, the same kind of
-     platform-native difference as the Mac's traffic lights on the left.
-     PENDING ARUN'S APPROVAL — docs/android/DECISIONS.md, A-03.
-
-  2. System bars. The page sits inside the status bar and the gesture/navigation bar, so the
-     shell is padded by the safe-area insets and nothing slips under them.
+  html[data-form-factor] is set by android.js: "tablet" (shorter side >= 600 dp) or "phone".
 */
+
+/* ── Every Android form factor ─────────────────────────────────────────── */
+
+/* Android owns the window: no minimise / maximise / close. Same kind of platform difference as
+   the Mac's traffic lights. */
 .topbar .traffic { display: none; }
 
+/* The edge-to-edge window: keep the shell clear of the status and gesture bars. */
 body {
-    padding-top: env(safe-area-inset-top);
-    padding-bottom: env(safe-area-inset-bottom);
-    padding-left: env(safe-area-inset-left);
-    padding-right: env(safe-area-inset-right);
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
     box-sizing: border-box;
 }
+
+/* ── Tablet — "Portal & Android" 12d–12f ───────────────────────────────── */
+/* Rails 72 / 72 / 60 px with 48 px touch targets. Below 1000 px (portrait, 12f) the Ui's own
+   narrow rule already folds the View rail into the Tools rail; only the widths change here. */
+html[data-form-factor="tablet"] {
+    --sh-top: 52px;
+    --sh-left: 72px;
+    --sh-left-open: 72px;      /* no hover-expand on touch: labels sit under the mode icons instead */
+    --sh-tools: 72px;
+    --sh-view: 60px;
+    --sh-status: 0px;
+}
+@media (max-width: 999px) {
+    html[data-form-factor="tablet"] { --sh-left: 72px; --sh-tools: 72px; --sh-view: 0px; }
+}
+
+/* Top bar (12d): wordmark · tabs · ‹ n / N › · Document ▾ · search. The command field keeps
+   working as a search icon; the theme toggle stays in Settings › Appearance; no status bar. */
+html[data-form-factor="tablet"] .tb-cmd-t,
+html[data-form-factor="tablet"] .tb-cmd .kbd,
+html[data-form-factor="tablet"] .topbar .tb-icon,
+html[data-form-factor="tablet"] .statusbar { display: none; }
+html[data-form-factor="tablet"] .tb-cmd { width: 48px; height: 48px; padding: 0; justify-content: center; border: none; background: transparent; }
+
+/* Left bar (12d): modes as icon over italic verb; Open · Find · Library as icons; Settings at
+   the foot. Home is the wordmark; the expand/collapse toggle has no meaning on touch. */
+html[data-form-factor="tablet"] .leftbar { padding: 8px 6px; }
+html[data-form-factor="tablet"] .lb-btn { height: 48px; padding: 0; justify-content: center; }
+html[data-form-factor="tablet"] .lb-btn .lb-l,
+html[data-form-factor="tablet"] .lb-btn .lb-k { display: none; }
+html[data-form-factor="tablet"] .lb-mode { height: 60px; flex-direction: column; gap: 3px; }
+html[data-form-factor="tablet"] .lb-mode .lb-verb { display: block; opacity: 1; flex: none; font-size: 13px; line-height: 1; }
+html[data-form-factor="tablet"] .lb-mark { left: -6px; }
+html[data-form-factor="tablet"] .lb-toggle,
+html[data-form-factor="tablet"] .leftbar .lb-btn[title="Home"] { display: none; }
+
+/* Right rails: 48 px targets, icon only, never expanding over the page on a tap. */
+html[data-form-factor="tablet"] .srail { padding: 8px 12px; }
+html[data-form-factor="tablet"] .srail-view { padding: 8px 6px; }
+html[data-form-factor="tablet"] .rb { height: 48px; padding: 0; justify-content: center; border-radius: 10px; }
+html[data-form-factor="tablet"] .rb-l,
+html[data-form-factor="tablet"] .rb-k { display: none; }
+html[data-form-factor="tablet"] .srail:hover { width: var(--sh-tools); box-shadow: none; }
+html[data-form-factor="tablet"] .srail-view:hover { width: var(--sh-view); }
+html[data-form-factor="tablet"] .srail:hover .srail-h { text-align: center; padding-left: 0; }
