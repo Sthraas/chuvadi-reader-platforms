@@ -23,6 +23,10 @@ mkdir -p "$FEED" "$WORK"
 if [ ! -f "$FEED/Chuvadi.Pdf.Documents.$PDF_VERSION.nupkg" ]; then
   rm -rf "$WORK/chuvadi-pdf"
   git clone -q --depth 1 --branch "$PDF_TAG" https://github.com/arunshivab/chuvadi-pdf "$WORK/chuvadi-pdf"
+  # Same as chuvadi-pdf's build/fetch-fonts.ps1: Chuvadi.Fonts into its git-ignored .fonts-feed, SHA-256 checked.
+  mkdir -p "$WORK/chuvadi-pdf/.fonts-feed"
+  curl -sSfL -o "$WORK/chuvadi-pdf/.fonts-feed/Chuvadi.Fonts.1.0.0.nupkg" "$REL/fonts-v1.0.0/Chuvadi.Fonts.1.0.0.nupkg"
+  echo "c15a82d1caa3d70f3e2abe16dd94201ea1d3dae91764735a19ffa7398c37f5fe  $WORK/chuvadi-pdf/.fonts-feed/Chuvadi.Fonts.1.0.0.nupkg" | sha256sum -c --quiet -
   # Same command as chuvadi-pdf's own build/pack.ps1.
   dotnet pack "$WORK/chuvadi-pdf/Chuvadi.slnx" -c Release -p:Version="$PDF_VERSION" -o "$FEED" --nologo -v quiet
   if [ -n "$(git -C "$WORK/chuvadi-pdf" status --porcelain)" ]; then

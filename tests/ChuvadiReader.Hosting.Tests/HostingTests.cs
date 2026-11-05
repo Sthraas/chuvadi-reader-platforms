@@ -105,6 +105,17 @@ public sealed class HostingTests
     public void Mac_key_labels(string canonical, string expected) =>
         Assert.Equal(expected, new MacKeyLabels().Format(canonical));
 
+    [Theory]
+    [InlineData(PlatformKind.Windows, FormFactor.Desktop, ShellLayout.Desktop)]
+    [InlineData(PlatformKind.MacOS, FormFactor.Desktop, ShellLayout.Desktop)]
+    [InlineData(PlatformKind.Linux, FormFactor.Desktop, ShellLayout.Desktop)]
+    [InlineData(PlatformKind.Android, FormFactor.Tablet, ShellLayout.Tablet)]
+    [InlineData(PlatformKind.Android, FormFactor.Phone, ShellLayout.Phone)]
+    [InlineData(PlatformKind.Web, FormFactor.Desktop, ShellLayout.Portal)]
+    [InlineData(PlatformKind.Web, FormFactor.Phone, ShellLayout.Portal)]
+    public void Shell_layout_derivation(PlatformKind kind, FormFactor ff, ShellLayout expected) =>
+        Assert.Equal(expected, ShellLayouts.From(kind, ff));
+
     [Fact]
     public async Task App_commands_route_to_the_publisher()
     {
