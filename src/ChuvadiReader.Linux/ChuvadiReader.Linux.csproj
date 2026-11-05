@@ -1,0 +1,58 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+  <!--
+    Chuvadi Reader for Linux: a GTK 4 window with a WebKitGTK 6.0 web view (native/chvdhost.c),
+    hosting the unchanged ChuvadiReader.Ui through Microsoft's own WebViewManager.
+    The only package is Microsoft's Blazor WebView base (the framework itself), as on Windows.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>ChuvadiReader.Linux</RootNamespace>
+    <AssemblyName>chuvadi-reader</AssemblyName>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <SupportedOSPlatformVersion>linux</SupportedOSPlatformVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <InvariantGlobalization>false</InvariantGlobalization>
+
+    <!-- Startup speed: precompile to native code, start on the tiered quick path. -->
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <TieredPGO>true</TieredPGO>
+    <TieredCompilation>true</TieredCompilation>
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+    <AutoreleasePoolSupport>false</AutoreleasePoolSupport>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+
+    <ChvdNativeDir>$(MSBuildProjectDirectory)/native</ChvdNativeDir>
+    <ChvdNativeLib>$(ChvdNativeDir)/out/$(RuntimeIdentifier)/libchvdhost.so</ChvdNativeLib>
+    <ChvdNativeLib Condition="'$(RuntimeIdentifier)' == ''">$(ChvdNativeDir)/out/host/libchvdhost.so</ChvdNativeLib>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="10.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ChuvadiReader.Ui\ChuvadiReader.Ui.csproj" />
+    <ProjectReference Include="..\ChuvadiReader.Core\ChuvadiReader.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="native/**" />
+    <Content Remove="native/**" />
+    <None Remove="packaging/**" />
+  </ItemGroup>
+
+  <!--
+    Build the native shim with the system C compiler (gcc) against the OS's GTK 4 and
+    WebKitGTK 6.0. For a cross build set CC (e.g. aarch64-linux-gnu-gcc) and PKG_CONFIG_PATH.
+  -->
+  <Target Name="ChvdBuildNative" BeforeTargets="BeforeBuild"
+          Inputs="$(ChvdNativeDir)/chvdhost.c;$(ChvdNativeDir)/build.sh" Outputs="$(ChvdNativeLib)">
+    <Exec Command="bash &quot;$(ChvdNativeDir)/build.sh&quot; &quot;$(ChvdNativeLib)&quot; $(Configuration)" />
+  </Target>
+
+  <ItemGroup>
+    <None Include="$(ChvdNativeLib)" Link="libchvdhost.so" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Visible="false" />
+  </ItemGroup>
+</Project>

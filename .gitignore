@@ -1,0 +1,6 @@
+reader/
+publish*/
+smoke*/
+bin/
+obj/
+src/ChuvadiReader.Linux/native/out/
