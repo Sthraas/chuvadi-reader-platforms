@@ -102,20 +102,20 @@ internal static class MacMenuBar
             var items = commands.Where(c => c.Group == group && !FileIds.Contains(c.Id) && docMenu.All(d => d.Id != c.Id)).ToList();
             if (items.Count > 0)
             {
-                doc.Add(UIMenu.Create(group, null, UIMenuIdentifier.None, UIMenuOptions.None,
+                doc.Add(UIMenu.Create(group, null, UIMenuIdentifier.None, (UIMenuOptions)0,
                     items.Select(c => (UIMenuElement)Item(c, keys)).ToArray()));
             }
         }
 
-        var document = UIMenu.Create("Document", null, UIMenuIdentifier.None, UIMenuOptions.None, doc.ToArray());
-        builder.InsertSiblingMenuAfterMenu(document, UIMenuIdentifier.View.GetConstant()!);
+        var document = UIMenu.Create("Document", null, UIMenuIdentifier.None, (UIMenuOptions)0, doc.ToArray());
+        builder.InsertSiblingMenuAfter(document, UIMenuIdentifier.View.GetConstant()!);
 
         // Help keeps only macOS's own menu search field.
         builder.ReplaceChildrenOfMenu(UIMenuIdentifier.Help.GetConstant()!, _ => Array.Empty<UIMenuElement>());
     }
 
     private static bool IsFullscreen(UIMenuElement e)
-        => e is UIMenu m && m.Identifier == UIMenuIdentifier.Fullscreen.GetConstant();
+        => e is UIMenu m && m.Identifier == UIMenuIdentifier.Fullscreen;
 
     private static void AddSection(List<UIMenuElement> target, IEnumerable<ShellCommand> commands, HashSet<string> keys)
     {
