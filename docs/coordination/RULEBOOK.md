@@ -19,7 +19,8 @@ You are one chat in the **Chuvadi Reader platform programme**, run by a coordina
 12. **Documentation:** keep `docs/<platform>/BUILD-LOG.md` — a clean, dated, step-by-step record of everything done (what, why, commands, results). Plus `docs/<platform>/README.md`: how to build, run, package and install.
 
 ### Packages (from the library coordinator's report, 6 Nov 2026 — attached as `chuvadi-reader-platform-and-packages.md`)
-- **PDF:** `chuvadi-pdf` **3.31.1**, individual packages (not the umbrella), all the same version, plus `Chuvadi.Fonts` **1.0.0**. chuvadi-pdf has no GitHub release assets — build the packages in your sandbox with `dotnet pack` from the **unchanged** tag `v3.31.1` of `github.com/arunshivab/chuvadi-pdf`, into a local feed. Never modify library code.
+- **Package source (decided D-01):** the Reader's committed `ci/packages` feed in chuvadi-reader — byte-identical to what Windows ships. Re-packing chuvadi-pdf from the unchanged tag `v3.31.1` is allowed only as a check. Never modify library code.
+- **PDF:** `chuvadi-pdf` **3.31.1**, individual packages (not the umbrella), all the same version, plus `Chuvadi.Fonts` **1.0.0**.
 - **Sheets:** `Chuvadi.Sheets` **2.0.1** (release asset sheets-v2.0.1). Avoid `ToXlsx<T>` / `ReadXlsx<T>` in trimmed/AOT builds.
 - **Zip:** `Chuvadi.Zip` **1.0.0**. **Print:** `Chuvadi.Print`, `.Ipp`, `.Windows` **1.0.0-rc.2** (`.Remote` only for hub/agent printing).
 - **Docs (Word):** wait for docs-v2.0.0; 1.5.1 is a stop-gap only with Arun's approval.
@@ -29,6 +30,8 @@ You are one chat in the **Chuvadi Reader platform programme**, run by a coordina
 
 ### Reporting
 End every working session with a short status: done, in progress, blocked (and on what), questions for Arun. Keep the coordinator able to read your latest message and know exactly where you stand.
+
+See `docs/coordination/DECISIONS.md` for every decision taken.
 
 ### Decision authority (Arun, 6 Nov 05:21)
 Arun has handed the calls on this programme to the coordinator. The coordinator decides **only after** the chat has laid out every option with pros and cons and a recommendation, and the coordinator has discussed it. No chat decides an option on its own, and the coordinator never decides without the pros and cons in front of it.
