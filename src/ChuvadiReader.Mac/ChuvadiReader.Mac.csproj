@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+  <!--
+    Chuvadi Reader — macOS host (.NET MAUI Blazor Hybrid, Mac Catalyst).
+    Hosts the unchanged ChuvadiReader.Ui in WKWebView. Host code only: window,
+    file dialogs, clipboard, drag and drop, menus, printing hand-off, storage.
+    All document processing stays in ChuvadiReader.Core / the Chuvadi libraries.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-maccatalyst</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <UseMaui>true</UseMaui>
+    <SingleProject>true</SingleProject>
+    <RootNamespace>ChuvadiReader.Mac</RootNamespace>
+    <AssemblyName>ChuvadiReader.Mac</AssemblyName>
+
+    <ApplicationTitle>Chuvadi</ApplicationTitle>
+    <!-- PROVISIONAL bundle id — awaiting Arun's decision (see docs/mac/README.md, "Open decisions"). -->
+    <ApplicationId>in.sthraas.chuvadi.reader</ApplicationId>
+    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
+
+    <!-- Mac Catalyst 15.0 = macOS 12 Monterey and later. -->
+    <SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
+
+    <!-- Universal app: Apple Silicon + Intel in one bundle (Arun approved). -->
+    <RuntimeIdentifiers>maccatalyst-arm64;maccatalyst-x64</RuntimeIdentifiers>
+
+    <!-- Unsigned test builds (no Apple Developer account yet). Signing is documented, not done. -->
+    <EnableCodeSigning>false</EnableCodeSigning>
+    <CodesignRequireProvisioningProfile>false</CodesignRequireProvisioningProfile>
+    <CodesignEntitlements>Platforms/MacCatalyst/Entitlements.plist</CodesignEntitlements>
+
+    <!-- Release: no trimming of our own or library code until each library declares
+         IsTrimmable (package report, Decision 4). Sheets' typed import/export loses data
+         when trimmed. Revisit once the libraries are trim-annotated. -->
+    <MtouchLink>None</MtouchLink>
+
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <MauiIcon Include="Resources\AppIcon\appicon.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- First-party Microsoft framework packages only (MAUI + its BlazorWebView). -->
+    <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="$(MauiVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ChuvadiReader.Ui\ChuvadiReader.Ui.csproj" />
+    <ProjectReference Include="..\ChuvadiReader.Core\ChuvadiReader.Core.csproj" />
+  </ItemGroup>
+</Project>
