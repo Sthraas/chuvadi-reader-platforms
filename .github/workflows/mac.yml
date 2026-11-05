@@ -42,9 +42,12 @@ jobs:
             DD="$XC/Contents/Developer"
             # First-launch setup (system components) — without it xcodebuild -find fails.
             sudo DEVELOPER_DIR="$DD" xcodebuild -runFirstLaunch >/dev/null 2>&1 || true
-            # The same lookups the .NET build performs.
-            if DEVELOPER_DIR="$DD" xcodebuild -sdk macosx -find clang >/dev/null 2>&1 \
-               && DEVELOPER_DIR="$DD" xcodebuild -sdk macosx -find actool >/dev/null 2>&1; then
+            # The same lookups the .NET build performs: it names the SDK by its full path
+            # (…/SDKs/MacOSX.sdk), which some images lack even when "-sdk macosx" resolves.
+            SDK="$DD/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk"
+            if [ -e "$SDK" ] \
+               && DEVELOPER_DIR="$DD" xcodebuild -sdk "$SDK" -find clang >/dev/null 2>&1 \
+               && DEVELOPER_DIR="$DD" xcodebuild -sdk "$SDK" -find actool >/dev/null 2>&1; then
               sudo xcode-select -s "$XC"; ok="$XC"; break
             fi
             echo "skipping $XC (no working macOS toolchain)"
