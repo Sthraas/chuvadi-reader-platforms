@@ -24,7 +24,7 @@ public sealed class MainPage : ContentPage
             return;
         }
 
-        _ = web.TryDispatchAsync(_ => { _ = action(); });
+        _ = web.TryDispatchAsync(services => { _ = action(); });
     }
 
     public MainPage(IServiceProvider services)
