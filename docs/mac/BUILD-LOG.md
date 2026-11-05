@@ -83,3 +83,47 @@ the job summary) → `ditto` zip + SHA-256 → artifact `Chuvadi-mac-universal-u
   ~6.7 MB incl. deprecated Fonts.Bundled/Woff2 and PdfA to the Mac app) and Sheets 2.0.1.
 - **F5** Shortcut labels in the Ui are fixed text "Ctrl …" (54 lines across Razor, C# and JS). Cmd already works (the JS
   treats `metaKey` as Ctrl), but a Mac user sees "Ctrl K" where macOS expects "⌘K".
+
+---
+
+## 2026-11-06 — Session 1 (continued): working repo, CI, handout
+
+### 7. Working repo
+- Access granted. `platform/mac` = `main` (handout + coordination docs) → one commit importing
+  chuvadi-reader `c7b9e44` unchanged (tree identical to `platform/web`'s baseline) → Mac commits.
+- The handout in `docs/design-handoff/` is byte-identical to chuvadi-reader's `docs/design/revamp-v3`.
+- The design note settles the Mac chrome: **traffic lights on the left, app menu in the macOS menu
+  bar (File, Edit, View, Document, Window, Help), ⌘ shortcuts.** The earlier "HTML dots drive the
+  window" default is replaced accordingly.
+
+### 8. CI runs
+| Run | Result | Cause → fix |
+|---|---|---|
+| 42130951598 | Tests ✔ (161, macOS); build ✘ | Latest workload (Mac Catalyst 27.0) needs Xcode 27.1; runner newest is 26.6 → pin SDK band `10.0.4xx` and workload set `10.0.401` (Mac Catalyst 26.5.10318). Found by reading every 10.0.400-band workload set: 10.0.400–10.0.401 carry 26.5, 10.0.401.1 onward carry 27.0. |
+| 42131146081 | build ✘ | `Xcode_26.6.0.app` on the image has no macOS SDK / actool → select the newest Xcode that has both. |
+
+### 9. Mac chrome (handout › Platforms, Shell layout) — host files only
+- `wwwroot/index.html` (host's own page) sets `<html data-platform="mac">` and loads
+  `wwwroot/css/mac.css`, which hides the Ui's right-hand window dots and starts the top bar after
+  the native lights (80 px).
+- `MacWindowControls.ApplyChrome`: title text and toolbar hidden, content runs to the top edge;
+  the native close/minimise/zoom buttons are placed inside the Ui's 40 px top bar (left 14, pitch
+  20, vertically centred; re-applied on resize, key, full-screen exit and scale changes; follows the
+  Interface size setting).
+- Double-click on the bar still zooms (the Ui's own handler → `IWindowControls.ToggleMaximize`).
+
+### 10. macOS menu bar — host files only
+Built in `AppDelegate.BuildMenu` from the commands the Ui already publishes into Core's
+`ShellService` (id, group, label, shortcut, action, disabled reason); rebuilt when the published set
+changes, enabled state checked each time a menu opens. Actions run through
+`BlazorWebView.TryDispatchAsync`, i.e. exactly like the click in the Ui.
+- **File**: Open, Close, Save marks, Save as new PDF, Print, Show in folder, Copy file path, bench session.
+- **Edit**: standard macOS (Undo, Redo, Cut, Copy, Paste, Select All); Edit › Find removed so ⌘F
+  reaches Chuvadi's Find.
+- **View**: modes (Read/Mark/Arrange/Protect), View group, reading panels, Go to, Find or do anything… ⌘K,
+  plus the system's Enter Full Screen.
+- **Document**: the Document ▾ items of the active page, then submenus for Mark, Protect, Arrange, Tools.
+- **Window**: standard macOS. **Help**: macOS menu search only.
+- Shortcuts: every "Ctrl …" becomes ⌘ (Shift → ⇧, Alt → ⌥). Single-key shortcuts (R, 1–4) stay
+  with the page so typing is never captured. macOS-owned keys (⌘C/V/X/A/Z/Q/H/M/,) are never taken.
+  A key used by two commands is bound once (the first in menu order).
