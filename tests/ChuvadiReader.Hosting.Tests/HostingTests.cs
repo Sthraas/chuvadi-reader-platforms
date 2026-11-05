@@ -86,7 +86,7 @@ public sealed class HostingTests
             .ToHashSet();
 
         // Host-only seams the Windows host implements itself (not part of the shared kit's Core list).
-        string[] hostSeams = ["IAppStorage", "IUiScale", "IExternalLinks", "IPrintService", "IFilePicker", "IImageClipboard"];
+        string[] hostSeams = ["IAppStorage", "IUiScale", "IExternalLinks", "IPrintService", "IFilePicker", "IImageClipboard", "IClipboard", "IPlatformInfo"];
 
         var services = new ServiceCollection();
         services.AddChuvadiReader(AppStateLifetime.Process);

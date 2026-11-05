@@ -12,7 +12,8 @@ public sealed class DesktopAppPaths : IAppPaths
     public DesktopAppPaths()
     {
         AppDataFolder = ResolveAppData();
-        WorkingFolder = Path.Combine(Path.GetTempPath(), "chuvadi");
+        // Same folder Core uses today (Path.GetTempPath()), so moving Core to IAppPaths changes nothing on desktop.
+        WorkingFolder = Path.GetTempPath();
         var docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         DefaultSaveFolder = string.IsNullOrEmpty(docs) ? null : docs;
     }

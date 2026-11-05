@@ -1,0 +1,95 @@
+# Reusable job template for the platform programme. Platform chats call it from their own
+# workflow (or add a job to platforms.yml) instead of copying steps.
+#
+#   jobs:
+#     linux:
+#       uses: ./.github/workflows/platform-build.yml
+#       with:
+#         runner: ubuntu-latest
+#         build: src/ChuvadiReader.Linux/ChuvadiReader.Linux.csproj
+#
+# Zero-warnings policy: every build runs with -warnaserror.
+name: platform-build
+
+on:
+  workflow_call:
+    inputs:
+      runner:
+        description: GitHub runner label (ubuntu-latest, ubuntu-24.04-arm, macos-latest, windows-latest).
+        required: true
+        type: string
+      build:
+        description: Solution or project to build.
+        required: true
+        type: string
+      test:
+        description: Solution or test project to run after the build (empty = no tests).
+        required: false
+        type: string
+        default: ''
+      build-args:
+        description: Extra arguments for dotnet build (e.g. -p:EnableWindowsTargeting=true, -f net10.0-android).
+        required: false
+        type: string
+        default: ''
+      workloads:
+        description: .NET workloads to install first (e.g. "maui-android"). Empty = none.
+        required: false
+        type: string
+        default: ''
+      label:
+        description: Short unique name for this job's artifacts (e.g. shared, windows-app, linux).
+        required: true
+        type: string
+      full-feed:
+        description: true = build the full local feed with scripts/setup-feed.sh (chuvadi-pdf packed from v3.31.1 + released packages); false = the committed ci/packages feed only.
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  build:
+    name: ${{ inputs.runner }} · ${{ inputs.build }}
+    runs-on: ${{ inputs.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Install workloads
+        if: inputs.workloads != ''
+        run: dotnet workload install ${{ inputs.workloads }}
+
+      - name: Full local feed
+        if: inputs.full-feed
+        shell: bash
+        run: scripts/setup-feed.sh
+
+      - name: Restore
+        shell: bash
+        run: |
+          if [ "${{ inputs.full-feed }}" = "true" ]; then
+            dotnet restore "${{ inputs.build }}" ${{ inputs.build-args }}
+          else
+            dotnet restore "${{ inputs.build }}" --configfile ci/nuget.config ${{ inputs.build-args }}
+          fi
+
+      - name: Build (warnings are errors)
+        shell: bash
+        run: dotnet build "${{ inputs.build }}" -c Release --no-restore -warnaserror ${{ inputs.build-args }}
+
+      - name: Test
+        if: inputs.test != ''
+        shell: bash
+        run: dotnet test "${{ inputs.test }}" -c Release --no-build --logger "trx;LogFileName=test-results.trx"
+
+      - name: Upload test results
+        if: always() && inputs.test != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ inputs.label }}-${{ inputs.runner }}
+          path: '**/test-results.trx'
+          if-no-files-found: ignore

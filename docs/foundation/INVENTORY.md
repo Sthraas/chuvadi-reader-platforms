@@ -104,7 +104,7 @@ Legend for "Breaks on": **M** macOS (WKWebView) · **L** Linux (WebKitGTK) · **
 
 ## 3. Other findings (not platform-specific)
 
-- **CI is not in the repo.** `.gitignore` lists `ci.yml`; there is no `.github/workflows`. The committed `ci/` folder holds a nuget.config + packages for a CI that isn't checked in.
+- **CI** (`.github/workflows/ci.yml`) builds Core, Ui and tests on Ubuntu, macOS and Windows, plus the WPF host on Windows, from the committed `ci/packages` feed — but only for pushes and PRs to `main`, so it does not run on the platform branches. Foundation adds a separate workflow (new file) instead of editing it.
 - `ci/nuget.config` comment says "the chuvadi-pdf 3.14.1 set" but the folder holds 3.31.1 — stale comment.
 - `Directory.Build.targets` touches every source file's timestamp on each build. Harmless for CI, but it makes every build a full rebuild.
 - `App.xaml.cs` (Windows) ignores command-line arguments, so "Open with Chuvadi" / double-click on a PDF doesn't open the file. Not a Foundation item, noted for Arun.

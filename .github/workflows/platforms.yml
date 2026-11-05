@@ -1,0 +1,48 @@
+# Platform programme CI (new file; the existing ci.yml is unchanged and still runs for main).
+# Runs on every platform branch. Platform chats add their host jobs below, using the template.
+name: platforms
+
+on:
+  push:
+    branches: ['platform/**']
+  pull_request:
+    branches: ['platform/**']
+  workflow_dispatch:
+
+jobs:
+  # Shared code (Core, Ui, Platform contracts, host kit) on every runner the hosts will use.
+  shared:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, windows-latest]
+    uses: ./.github/workflows/platform-build.yml
+    with:
+      runner: ${{ matrix.runner }}
+      label: shared
+      build: ChuvadiReader.Platforms.slnx
+      test: ChuvadiReader.Platforms.slnx
+
+  # The Windows app must keep building exactly as on chuvadi-reader main.
+  windows-app:
+    uses: ./.github/workflows/platform-build.yml
+    with:
+      runner: windows-latest
+      label: windows-app
+      build: ChuvadiReader.slnx
+      test: tests/ChuvadiReader.Tests/ChuvadiReader.Tests.csproj
+
+  # The full feed (chuvadi-pdf packed from the unchanged v3.31.1 tag + released packages) must stay reproducible.
+  feed:
+    uses: ./.github/workflows/platform-build.yml
+    with:
+      runner: ubuntu-latest
+      label: feed
+      build: ChuvadiReader.Platforms.slnx
+      full-feed: true
+
+  # ── Platform host jobs (added by each platform chat) ─────────────────────────────────────
+  # mac:      runner macos-latest,     build src/ChuvadiReader.Mac/…,     workloads maui-maccatalyst
+  # linux:    runner ubuntu-latest and ubuntu-24.04-arm, build src/ChuvadiReader.Linux/…
+  # android:  runner ubuntu-latest,    build src/ChuvadiReader.Android/…, workloads maui-android
+  # web:      runner ubuntu-latest,    build src/ChuvadiReader.Web/…
