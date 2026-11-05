@@ -79,10 +79,8 @@ public static class MauiProgram
         services.AddSingleton<MacWindowControls>();
         services.AddSingleton<IWindowControls>(sp => sp.GetRequiredService<MacWindowControls>());
 
-        // Printing: the Mac print path is an open decision for Arun (native macOS print panel fed
-        // by Chuvadi.Pdf's rasteriser, as on Windows, vs Chuvadi.Print.Ipp over CUPS). Until he
-        // decides, the Print card shows "unavailable" rather than a half-built path.
-        services.AddSingleton<IPrintService, NoopPrintService>();
+        // Printing: native macOS print panel fed a vector PDF prepared by chuvadi-pdf (decision 6 Nov).
+        services.AddSingleton<IPrintService, MacPrintService>();
 
         var app = builder.Build();
         StartupTimeline.Mark("maui-built");
