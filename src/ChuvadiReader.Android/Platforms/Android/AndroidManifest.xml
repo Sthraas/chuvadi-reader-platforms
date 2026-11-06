@@ -17,8 +17,8 @@
       android:fullBackupContent="false"
       android:enableOnBackInvokedCallback="true">
     <provider
-        android:name="chuvadi.reader.ClipProvider"
-        android:authorities="${applicationId}.clip"
+        android:name="chuvadi.reader.SharedFileProvider"
+        android:authorities="${applicationId}.files"
         android:exported="false"
         android:grantUriPermissions="true" />
   </application>

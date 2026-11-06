@@ -8,14 +8,14 @@ Decisions waiting on Arun: [DECISIONS.md](DECISIONS.md). Step-by-step record: [B
 
 ## Layout during development
 In this working repo the host lives alone in `src/ChuvadiReader.Android`. It references
-`..\ChuvadiReader.Core` and `..\ChuvadiReader.Ui`, i.e. the layout it will have in
-`chuvadi-reader` after the platform push. To build, place it beside a checkout of
-`chuvadi-reader` at the pinned commit (`READER_REF` in `.github/workflows/android.yml`):
+`..\ChuvadiReader.Core`, `..\ChuvadiReader.Ui`, `..\ChuvadiReader.Platform` and
+`..\ChuvadiReader.Hosting` — the layout it will have after the platform push. To build, place it
+beside the pinned Foundation snapshot (`FOUNDATION_REF` in `.github/workflows/android.yml`):
 
 ```bash
-git clone https://github.com/arunshivab/chuvadi-reader reader
-git -C reader checkout c7b9e4456a8d2a8ff7f25a50d76db9cfd7cd0e29
-cp -r src/ChuvadiReader.Android reader/src/
+git worktree add --detach ../foundation 5505d5eb97b62a7209b1cb6c4ea872635ce252ab
+cp -r src/ChuvadiReader.Android ../foundation/src/
+cd ../foundation
 ```
 
 ## Prerequisites
@@ -53,7 +53,9 @@ testing, never for Play.
 `.github/workflows/android.yml` on every push to `platform/android`:
 1. builds the Release `.aab` + `.apk` and a Debug x86_64 `.apk`, uploaded as `android-packages`;
 2. installs the Debug `.apk` on emulators — phone (pixel_7) and tablet (pixel_tablet), API 35 and
-   36 — cold-starts it, rotates it, fails on any crash, and uploads screenshots + logcat.
+   36 — cold-starts it, waits until the Ui's own text is on screen, rotates it (same process, Ui
+   still there), fails on any crash or WebView console error, and uploads screenshots, UI dumps
+   and logcat.
 
 ## Signing for Play (Arun only — never commit a key)
 Play uses **Play App Signing**: Google holds the app signing key; you sign uploads with your own
@@ -81,7 +83,7 @@ keytool -genkeypair -v -keystore chuvadi-upload.jks -alias chuvadi-upload \
 - [ ] Developer account (Sthraas or imagiQa) and developer name.
 - [ ] Upload key created and stored (above); Play App Signing enrolled.
 - [ ] Target API: .NET 10's API 36 meets Play's current target-level rule; recheck before each release.
-- [ ] Store icon 512 × 512 and adaptive icon from the vector master (A-09).
+- [ ] Store icon 512 × 512 and adaptive icon: drafts in `docs/android/branding/` (A-09) — Arun's final check.
 - [ ] Feature graphic 1024 × 500; phone and 7"/10" tablet screenshots (CI emulator shots are a start).
 - [ ] Short (80 chars) and full description; category: Productivity.
 - [ ] Privacy policy URL (required even when nothing is collected).

@@ -1,19 +1,141 @@
-using ChuvadiReader.Core.Reader;
 using ChuvadiReader.Core.Window;
+using ChuvadiReader.Hosting;
+using ChuvadiReader.Platform;
+using global::Android.Content.Res;
 
 namespace ChuvadiReader.Android.Platform;
 
 /// <summary>
-/// Interface size on Android: the host does not zoom the WebView, so the UI's own CSS-zoom
-/// path (PreferencesInterop / theme.js) applies 100 / 125 / 150 %. Same visual result as
-/// Windows, no host-side zoom code.
+/// Facts about the Android host. The form factor follows Android's own tablet line: the window's
+/// smallest width is at least 600 dp (sw600dp). It is re-read on every configuration change, so
+/// split screen, freeform windows and foldables move the app between Tablet and Phone live.
 /// </summary>
-public sealed class AndroidUiScale : IUiScale
+public sealed class AndroidPlatformInfo : IPlatformInfo
 {
-    public bool IsSupported => false;
+    public const int TabletSmallestWidthDp = 600;
 
-    public void SetScale(int percent)
+    private FormFactor _formFactor;
+
+    public AndroidPlatformInfo()
     {
+        _formFactor = Classify(global::Android.App.Application.Context.Resources?.Configuration);
+    }
+
+    public PlatformKind Kind => PlatformKind.Android;
+
+    public FormFactor FormFactor => _formFactor;
+
+    public event Action? FormFactorChanged;
+
+    public InputKinds Input => InputKinds.Touch | InputKinds.Pen | InputKinds.Keyboard;
+
+    public ShellChrome Chrome { get; } = new(WindowButtons.None, NativeMenuBar: false, AccountMenu: false, TitleBarDrag: false, CornerRadiusPx: 0);
+
+    public PlatformCapabilities Capabilities { get; } = new()
+    {
+        PickFolders = true,    // Storage Access Framework tree picker
+        SaveInPlace = true,    // write-back to the content URI (IFileWriteBack)
+        WatchFolders = false,
+        RevealInFolder = false,
+        DropFiles = false,     // documents arrive by Share / Open with instead
+        Share = true,
+        MultipleWindows = false,
+        ServerSide = false,
+    };
+
+    public IKeyLabels Keys { get; } = new CtrlKeyLabels();
+
+    /// <summary>Called by MainActivity on every configuration change (UI thread).</summary>
+    public void OnConfigurationChanged(Configuration? configuration)
+    {
+        var next = Classify(configuration);
+        if (next == _formFactor)
+        {
+            return;
+        }
+
+        _formFactor = next;
+        FormFactorChanged?.Invoke();
+    }
+
+    private static FormFactor Classify(Configuration? configuration)
+        => configuration is not null && configuration.SmallestScreenWidthDp >= TabletSmallestWidthDp
+            ? FormFactor.Tablet
+            : FormFactor.Phone;
+}
+
+/// <summary>Android folders: settings in private files; working copies in the cache (the system may
+/// reclaim it); no default save folder, because every save goes through the system picker.</summary>
+public sealed class AndroidAppPaths : IAppPaths
+{
+    public AndroidAppPaths()
+    {
+        AppDataFolder = Path.Combine(FileSystem.AppDataDirectory, "Chuvadi");
+        WorkingFolder = Path.Combine(FileSystem.CacheDirectory, "work");
+        Directory.CreateDirectory(AppDataFolder);
+        Directory.CreateDirectory(WorkingFolder);
+    }
+
+    public string AppDataFolder { get; }
+
+    public string WorkingFolder { get; }
+
+    public string? DefaultSaveFolder => null;
+}
+
+/// <summary>
+/// App lifecycle for the Ui: Suspending when the app leaves the screen (flush drafts — Android may
+/// kill a background app without warning), Resumed when it returns, and the system back gesture.
+/// </summary>
+public sealed class AndroidLifecycle : IAppLifecycle
+{
+    public event Func<Task>? Suspending;
+
+    public event Action? Resumed;
+
+    public event Func<bool>? BackRequested;
+
+    /// <summary>Runs every Suspending handler; called from MainActivity.OnPause.</summary>
+    public async Task RaiseSuspendingAsync()
+    {
+        if (Suspending is null)
+        {
+            return;
+        }
+
+        foreach (var handler in Suspending.GetInvocationList().Cast<Func<Task>>())
+        {
+            try
+            {
+                await handler().ConfigureAwait(true);
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                // One failing listener must not stop the others from saving.
+                global::Android.Util.Log.Warn("Chuvadi", "Suspending handler failed: " + ex);
+            }
+        }
+    }
+
+    public void RaiseResumed() => Resumed?.Invoke();
+
+    /// <summary>True when a Ui handler consumed the back gesture (closed a sheet, card or drawer).</summary>
+    public bool RaiseBackRequested()
+    {
+        if (BackRequested is null)
+        {
+            return false;
+        }
+
+        foreach (var handler in BackRequested.GetInvocationList().Cast<Func<bool>>())
+        {
+            if (handler())
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
 
@@ -38,47 +160,4 @@ public sealed class AndroidExternalLinks : IExternalLinks
             return false;
         }
     }
-}
-
-/// <summary>
-/// Android owns the window: there is no minimise, maximise, close or drag. The app always fills
-/// its window (or its split-screen half), so it reports itself as maximised and the controls do
-/// nothing. The title-bar buttons are hidden by the host stylesheet (A-03).
-/// </summary>
-public sealed class AndroidWindowControls : IWindowControls
-{
-    public bool IsMaximized => true;
-
-#pragma warning disable CS0067 // never raised: an Android window has no maximise/restore state
-    public event Action? StateChanged;
-#pragma warning restore CS0067
-
-    public void Minimize()
-    {
-    }
-
-    public void ToggleMaximize()
-    {
-    }
-
-    public void Close()
-    {
-    }
-
-    public void BeginDrag()
-    {
-    }
-}
-
-/// <summary>
-/// Printing on Android is not wired yet: its design (Chuvadi.Print.Ipp to network printers vs
-/// Android's own print framework, or both) is waiting on Arun — A-04 in docs/android/DECISIONS.md.
-/// IsAvailable = false greys out the Print card with the UI's normal "not available" state.
-/// </summary>
-public sealed class AndroidPrintService : IPrintService
-{
-    public bool IsAvailable => false;
-
-    public Task<PrintResult> PrintAsync(string pdfPath, PrintRequest request, CancellationToken ct = default)
-        => Task.FromResult(new PrintResult(PrintOutcome.Unavailable, 0, "Printing is not available on Android yet."));
 }

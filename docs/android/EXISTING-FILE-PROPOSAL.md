@@ -4,7 +4,8 @@ One proposal for Arun to approve in one go (rule 4). Each change: exact diff, wh
 cons, and how it was verified. **Nothing here has been applied to chuvadi-reader.** Diffs are
 against `c7b9e44`. Items are added as they are confirmed; approval can be per item.
 
-Status: **P-01 ready.** P-02 … P-04 listed, diffs to follow.
+Status (6 Nov): P-01 approved and applied centrally by Foundation. P-02 waits on the Reader chat.
+P-03 moved to the Mobile app UI chat. P-04 covered by Foundation's host kit. **P-05 new, for decision.**
 
 ---
 
@@ -81,3 +82,27 @@ on `data-form-factor="phone"` instead of the top bar, left bar and side rails.
 ## P-04 Shared host pieces (optional) — diffs to follow (DECISIONS A-06 #4)
 Move `theme.js` into `ChuvadiReader.Ui/wwwroot/js/` and the host service registrations into one
 `AddChuvadiReaderCore()` in Core, so each host stops copying them.
+
+## P-05 `src/ChuvadiReader.Core/Documents/UserProfileService.cs` — no sandbox user name on Android (A-10)
+Android's `Environment.UserName` is the app's sandbox id (`u0_a216`), shown on Home as
+"Good evening, U0_a216". Return no name instead; the person can set one in Settings, and the
+greeting already handles a null name.
+
+```diff
+@@ public string? Name
+             try
+             {
++                // Android's OS user name is the app's sandbox id (e.g. u0_a216), not a person's name.
++                if (OperatingSystem.IsAndroid())
++                {
++                    return null;
++                }
++
+                 var os = Environment.UserName;
+                 return string.IsNullOrWhiteSpace(os) ? null : Capitalize(os);
+             }
+```
+- **For:** one line; nothing changes on Windows, macOS, Linux or Web.
+- **Against:** a platform check inside Core (the alternative is an `IAccount`/`IPlatformInfo` lookup,
+  which Core can't reach until Foundation's F-2 lands).
+- **Verify:** Android CI tablet screenshot shows the greeting without the id.

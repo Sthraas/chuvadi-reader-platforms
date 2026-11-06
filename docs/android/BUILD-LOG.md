@@ -88,7 +88,7 @@ locally and pass.
 `dotnet publish -c Release -f net10.0-android` → `in.chuvadi.reader-Signed.aab` 53.9 MB,
 `.apk` 54.3 MB (debug-key signed), 0 warnings.
 
-### 9. Tablet layout (Portal & Android 12d–12f) — host CSS only, pending A-03
+### 9. Tablet layout (Portal & Android 12d–12f) — host CSS only, pending A-03 (later removed, see 13)
 - `wwwroot/android.js` sets `html[data-form-factor]` = tablet (shorter side ≥ 600 dp) / phone,
   updated on resize (split screen, foldables).
 - `wwwroot/android.css`, tablet block: rails 72 / 72 / 60 (View folds below 1000 px, as the Ui
@@ -99,3 +99,51 @@ locally and pass.
 ### 10. Existing-file proposal started — `EXISTING-FILE-PROPOSAL.md`
 P-01 (individual chuvadi-pdf packages in Core) tried in the sandbox workspace only (the Reader
 repo is untouched): Core + Ui + tests build with 0 warnings, 161/161 Reader tests pass.
+
+## 2026-11-06 — Session 2: Foundation kit, platform services, printing, icon, honest CI
+
+### 11. Scope and decisions received (coordinator)
+A-01…A-09 decided (DECISIONS.md). The phone/tablet look moved to the Mobile app UI chat
+(`platform/mobile-ui`); this chat owns the host, platform services, packaging, CI and integration.
+
+### 12. Built on Foundation's kit (`platform/foundation` @ 5505d5e)
+- The build workspace and CI now use the pinned Foundation snapshot: chuvadi-reader c7b9e44
+  unchanged + `ChuvadiReader.Platform` (contracts) + `ChuvadiReader.Hosting` (kit).
+- `MauiProgram` calls `AddChuvadiReader(AppStateLifetime.Process)`; the host's own copy of the
+  service list and its no-op services are gone (kit defaults: `IUiScale`, `IWindowControls`).
+- New host implementations: `AndroidPlatformInfo` (Phone/Tablet from sw600dp, re-evaluated on every
+  configuration change), `AndroidAppPaths`, `AndroidLifecycle` (Suspending on pause, Resumed,
+  back gesture offered to the Ui first), `DocumentLinks` + `AndroidFileWriteBack` + SAF
+  `AndroidFilePicker` (A-02), `AndroidClipboard` (text + image) and `AndroidShare` through an own
+  read-only `SharedFileProvider`, `ActivityResults` for system pickers.
+- `GlobalUsings.cs`: MAUI's `IFilePicker`/`IClipboard`/`IShare` names clash with Chuvadi's.
+
+### 13. A-03 applied
+Removed `android.js` and every host CSS rule keyed on Ui classes; `android.css` only pads for the
+system bars.
+
+### 14. Printing (A-04) — `AndroidPrintService`
+Android `PrintManager` with the PDF as-is; page ranges / passwords via chuvadi-pdf
+`PageOperations.Assemble` into a temporary PDF (deleted after hand-off). Outcome from the print job
+state (printed / cancelled / failed).
+
+### 15. App icon draft (A-09)
+Rendered `Brand Assets.dc.html`, measured where Chrome places ச (Tiro Tamil 635 px on the 1024 tile:
+ink box 307,271–717,611), converted the glyph to a path with fontTools (asset generation only;
+nothing shipped) and wrote: `icon-master.svg`, `icon-store-square.svg` → `play-store-icon-512.png`,
+adaptive `appicon.svg` (background) + `appicon_foreground.svg` + `appicon_monochrome.svg`,
+`make-icons.py`, `compare-with-handout.png`. Scale check: 0.6337 px/unit = 635 px / 1000 UPM.
+
+### 16. CI was a false green — fixed
+Run 42131731200 passed all four emulators, but the evidence showed: **phone — blank screen at 30 s;
+tablet — Ui rendered without its component styles**. Causes found:
+1. `index.html` did not link `ChuvadiReader.Android.styles.css`, the host bundle that imports the
+   Ui's scoped component styles (204 KB). Linked now.
+2. WebView console: "Blazor.start() failed: Blazor has already started" — MAUI starts Blazor itself,
+   so the script needs `autostart="false"` (the WPF host differs). Fixed.
+   (The Mac host's `index.html` has the same tag without `autostart="false"`; reported to the coordinator.)
+3. The smoke test only checked "no crash". It now waits up to 120 s for the Ui's own text in the
+   accessibility tree, re-checks after rotation, keeps timed screenshots and UI dumps, and fails on
+   any WebView console error.
+The phone's blank screen has no error in logcat; whether fixes 1–2 cure it is what the next run
+shows (no KVM in the sandbox, so emulators run only in CI).

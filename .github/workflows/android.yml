@@ -1,7 +1,8 @@
 name: Android
 
-# Builds the Android host against an exact, pinned commit of chuvadi-reader (read-only checkout,
-# never modified), produces the Play Store .aab plus an .apk, and smoke-tests the app on
+# Builds the Android host against an exact, pinned snapshot of the Foundation branch (chuvadi-reader
+# c7b9e44 unchanged, plus Foundation's ChuvadiReader.Platform contracts and ChuvadiReader.Hosting kit;
+# read-only checkout, never modified), produces the Play Store .aab plus an .apk, and smoke-tests the app on
 # Android emulators — phone and tablet, on API 35 (the minimum) and API 36 (the latest).
 #
 # Tooling here (setup actions, the emulator runner) is test/CI tooling only; nothing from it
@@ -16,8 +17,8 @@ on:
   workflow_dispatch:
 
 env:
-  # chuvadi-reader main with chuvadi-pdf 3.31.1 + Chuvadi.Fonts 1.0.0 (Reader chat, 6 Nov 2026).
-  READER_REF: c7b9e4456a8d2a8ff7f25a50d76db9cfd7cd0e29
+  # platform/foundation: chuvadi-reader c7b9e44 (chuvadi-pdf 3.31.1 + Chuvadi.Fonts 1.0.0) + platform kit draft.
+  FOUNDATION_REF: 5505d5eb97b62a7209b1cb6c4ea872635ce252ab
   DOTNET_NOLOGO: '1'
   DOTNET_CLI_TELEMETRY_OPTOUT: '1'
 
@@ -30,11 +31,10 @@ jobs:
         with:
           path: platforms
 
-      - name: Check out chuvadi-reader (pinned, read-only)
+      - name: Check out the Foundation snapshot (pinned, read-only)
         uses: actions/checkout@v4
         with:
-          repository: arunshivab/chuvadi-reader
-          ref: ${{ env.READER_REF }}
+          ref: ${{ env.FOUNDATION_REF }}
           path: reader
 
       - name: Place the Android host beside Core and Ui (final repo layout)

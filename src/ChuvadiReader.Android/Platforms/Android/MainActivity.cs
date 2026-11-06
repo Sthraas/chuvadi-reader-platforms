@@ -2,16 +2,17 @@ using ChuvadiReader.Android.Platform;
 using global::Android.App;
 using global::Android.Content;
 using global::Android.Content.PM;
+using global::Android.Content.Res;
 using global::Android.OS;
+using AndroidX.Activity;
 
 namespace ChuvadiReader.Android;
 
 /// <summary>
-/// The single activity. It is SingleTask so "Open with" / "Share" from another app reuses the
-/// running Reader (a new tab) instead of starting a second copy, and it declares every
-/// configuration change so rotation, split screen, resizing and keyboard changes never
-/// recreate it — the Blazor UI keeps its state and simply relays out through its own
-/// phone / tablet CSS.
+/// The single activity. SingleTask, so "Open with" / "Share" from another app reuses the running
+/// Reader (a new tab) instead of starting a second copy. It declares every configuration change, so
+/// rotation, split screen, resizing and keyboard changes never recreate it: the Blazor UI keeps its
+/// state, relays out, and the form factor (phone / tablet) is re-evaluated.
 /// </summary>
 [Activity(
     Theme = "@style/Maui.SplashTheme",
@@ -35,9 +36,17 @@ namespace ChuvadiReader.Android;
     DataMimeTypes = new[] { DocumentTypes.Pdf, DocumentTypes.Docx, DocumentTypes.Xlsx })]
 public sealed class MainActivity : MauiAppCompatActivity
 {
+    private BackCallback? _back;
+
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
+
+        // Back gesture: the Ui gets the first chance (close a sheet, card or drawer); otherwise
+        // Android's default (leave the app). Registered after MAUI's own, so it runs first.
+        _back = new BackCallback(this);
+        OnBackPressedDispatcher.AddCallback(this, _back);
+
         Deliver(Intent);
     }
 
@@ -47,14 +56,58 @@ public sealed class MainActivity : MauiAppCompatActivity
         Deliver(intent);
     }
 
+    protected override void OnActivityResult(int requestCode, Result resultCode, Intent? data)
+    {
+        if (!ActivityResults.Complete(requestCode, resultCode, data))
+        {
+            base.OnActivityResult(requestCode, resultCode, data);
+        }
+    }
+
+    public override void OnConfigurationChanged(Configuration newConfig)
+    {
+        base.OnConfigurationChanged(newConfig);
+        Service<AndroidPlatformInfo>()?.OnConfigurationChanged(newConfig);
+    }
+
+    protected override void OnPause()
+    {
+        // Android may end a background app without warning: let the Ui save drafts and the session now.
+        _ = Service<AndroidLifecycle>()?.RaiseSuspendingAsync();
+        base.OnPause();
+    }
+
+    protected override void OnResume()
+    {
+        base.OnResume();
+        Service<AndroidLifecycle>()?.RaiseResumed();
+    }
+
+    private static T? Service<T>()
+        where T : class
+        => IPlatformApplication.Current?.Services.GetService<T>();
+
     private static void Deliver(Intent? intent)
     {
-        if (intent is null)
+        if (intent is not null)
         {
-            return;
+            Service<DocumentImport>()?.HandleIntent(intent);
         }
+    }
 
-        var import = IPlatformApplication.Current?.Services.GetService<DocumentImport>();
-        import?.HandleIntent(intent);
+    private sealed class BackCallback(MainActivity activity) : OnBackPressedCallback(true)
+    {
+        public override void HandleOnBackPressed()
+        {
+            if (Service<AndroidLifecycle>()?.RaiseBackRequested() == true)
+            {
+                return;
+            }
+
+            // Nobody consumed it: hand the gesture to the next handler (MAUI / system default).
+            Enabled = false;
+            activity.OnBackPressedDispatcher.OnBackPressed();
+            Enabled = true;
+        }
     }
 }
