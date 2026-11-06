@@ -164,3 +164,9 @@ shows (no KVM in the sandbox, so emulators run only in CI).
   `ShellChrome.Buttons = None`, A-03); the phone shows the desktop shell squeezed (Mobile app UI
   chat); "Good morning, U0_a209" (A-10); Home lists sample recent/pinned/watched entries
   (`patient_chart.pdf`, "8 documents found") on a fresh install — reported to the coordinator.
+
+### 18. Run 42136086344 — phone and tablet API 35 pass the strict check
+Phone API 35: Ui rendered after 15 s; screenshots confirm the status and gesture bars are now clear
+of the app. They also showed the "rotated" shot was still portrait: the emulator never rotated,
+so the rotation check proved nothing. The test now rotates through the window manager's own lock
+(`cmd window user-rotation lock 1`) and fails unless the screenshot size actually changes.

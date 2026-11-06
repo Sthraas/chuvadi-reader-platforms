@@ -59,12 +59,23 @@ if [ -z "$pid_before" ]; then
   fail=1
 fi
 
+# Width x height of a PNG screenshot, read from its header (stdlib only).
+png_size() { python3 -c 'import struct,sys; d=open(sys.argv[1],"rb").read(24); print("%dx%d" % struct.unpack(">II", d[16:24]))' "$1"; }
+
 echo "Rotate (activity must survive: no restart, Ui still there)"
-adb shell settings put system user_rotation 1
+# A quarter turn from the natural orientation (phones start portrait, tablets landscape), through the
+# window manager's own rotation lock; the screenshot size must then change.
+rot=1
+adb shell cmd window user-rotation lock "$rot" 2>/dev/null || adb shell settings put system user_rotation "$rot"
 sleep 10
 pid_after="$(adb shell pidof "$PKG" | tr -d '\r' || true)"
 adb exec-out screencap -p > "$OUT/rotated.png" || true
 adb exec-out uiautomator dump /dev/tty > "$OUT/ui-rotated.xml" 2>/dev/null || true
+echo "before $(png_size "$OUT/portrait.png"), after $(png_size "$OUT/rotated.png")"
+if [ "$(png_size "$OUT/portrait.png")" = "$(png_size "$OUT/rotated.png")" ]; then
+  echo "::error::the screen did not rotate (still $(png_size "$OUT/rotated.png")); rotation was not tested"
+  fail=1
+fi
 if [ -z "$pid_after" ] || [ "$pid_before" != "$pid_after" ]; then
   echo "::error::the app did not survive rotation (pid $pid_before -> $pid_after)"
   fail=1
@@ -72,7 +83,7 @@ elif ! grep -qE "$MARKERS" "$OUT/ui-rotated.xml"; then
   echo "::error::the Ui is gone after rotation"
   fail=1
 fi
-adb shell settings put system user_rotation 0
+adb shell cmd window user-rotation lock 0 2>/dev/null || adb shell settings put system user_rotation 0
 
 adb logcat -d > "$OUT/logcat.txt"
 grep -E "FATAL EXCEPTION|AndroidRuntime: Process: $PKG" "$OUT/logcat.txt" > "$OUT/crashes.txt"
