@@ -1,3 +1,0 @@
-PASS → moves the page and the counter follows 1 → 2
-FAIL fit measured before the pages render matches the rendered fit {'rendered': 1.329, 'beforeRender': 1.771}
-FAIL Document menu › Print opens the Print card button None

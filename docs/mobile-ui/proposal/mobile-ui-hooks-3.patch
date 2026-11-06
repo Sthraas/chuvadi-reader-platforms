@@ -166,3 +166,85 @@ index 0716aec..ac3e00b 100644
      if (!page) return 0;
      const z = readZoom();
      const rect = page.getBoundingClientRect();
+diff --git a/src/ChuvadiReader.Ui/Pages/Dashboard.razor b/src/ChuvadiReader.Ui/Pages/Dashboard.razor
+index 4b0ea9b..43408e8 100644
+--- a/src/ChuvadiReader.Ui/Pages/Dashboard.razor
++++ b/src/ChuvadiReader.Ui/Pages/Dashboard.razor
+@@ -38,6 +38,7 @@
+             <p class="blurb">@LibCountText in your library · @Recents.EncryptedCount encrypted · nothing leaves this device.</p>
+             }
+         </section>
++        @PhoneHomeSearch
+ 
+         @if (IsFirstRun)
+         {
+@@ -239,6 +240,10 @@
+ </div>
+ 
+ @code {
++    /// <summary>Phone (Portal & Android 4a): the shell's search button, placed under the count line.
++    /// Only the phone shell cascades it; elsewhere it is null and renders nothing.</summary>
++    [CascadingParameter(Name = "PhoneHomeSearch")] public RenderFragment? PhoneHomeSearch { get; set; }
++
+     private const int RecentCount = 4;
+     private static readonly int[] EmptyBooks = { 16, 22, 14, 26, 18, 20, 15, 24, 17 };
+ 
+diff --git a/src/ChuvadiReader.Ui/Pages/Settings.razor b/src/ChuvadiReader.Ui/Pages/Settings.razor
+index c5241a1..5f3de53 100644
+--- a/src/ChuvadiReader.Ui/Pages/Settings.razor
++++ b/src/ChuvadiReader.Ui/Pages/Settings.razor
+@@ -26,6 +26,10 @@
+             <button type="button" class="snav-item @(on ? "on" : null)" aria-current="@(on ? "page" : null)" @onclick="() => Show(s.Id)">
+                 <Icon Name="@s.Icon" Size="17" />
+                 <span class="snav-label">@s.Label</span>
++                @if (PhoneList)
++                {
++                    <span class="snav-sum">@s.Summary</span>
++                }
+                 @if (s.IsNew)
+                 {
+                     <span class="snav-note">new</span>
+@@ -80,20 +84,32 @@
+ </div>
+ 
+ @code {
+-    private sealed record Section(string Id, string Icon, string Label, bool IsNew);
++    // Summary: one line under the label in the phone's section list (Portal & Android, D-88); the
++    // desktop doesn't show it.
++    private sealed record Section(string Id, string Icon, string Label, bool IsNew, string Summary);
+ 
+     private static readonly IReadOnlyList<Section> Sections = new[]
+     {
+-        new Section("appearance", "sliders", "Appearance", false),
+-        new Section("reading", "reading-mode", "Reading", false),
+-        new Section("saving", "save", "Saving & files", false),
+-        new Section("library", "library", "Library & folders", false),
+-        new Section("account", "user", "Account & roles", true),
+-        new Section("kiosk", "lock", "Kiosk", true),
+-        new Section("language", "star", "Language", true),
+-        new Section("accessibility", "accessibility", "Accessibility", true),
+-        new Section("shortcuts", "menu", "Shortcuts", false),
+-        new Section("about", "info", "About", false),
++        new Section("appearance", "sliders", "Appearance", false,
++            "Theme · interface size · reduce motion"),
++        new Section("reading", "reading-mode", "Reading", false,
++            "Default zoom · layout"),
++        new Section("saving", "save", "Saving & files", false,
++            "Save folder · name new files · autosave drafts"),
++        new Section("library", "library", "Library & folders", false,
++            "Folder · default view · check every"),
++        new Section("account", "user", "Account & roles", true,
++            "Roles · lock after idle · audit trail"),
++        new Section("kiosk", "lock", "Kiosk", true,
++            "Allowed folder · exit PIN"),
++        new Section("language", "star", "Language", true,
++            "Language · dates · numbers · preferred name"),
++        new Section("accessibility", "accessibility", "Accessibility", true,
++            "Interface size · focus rings · larger touch targets"),
++        new Section("shortcuts", "menu", "Shortcuts", false,
++            "With a keyboard attached"),
++        new Section("about", "info", "About", false,
++            "Versions · licences · data folder"),
+     };
+ 
+     /// <summary>Optional deep link: /settings?section=reading.</summary>

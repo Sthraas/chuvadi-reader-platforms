@@ -25,10 +25,14 @@
     <main class="content ph-content">
         @if (OnHome)
         {
-            @* 4a: "Find or do anything…" — runs MainLayout's Find (the command bar). *@
-            <button class="ph-search" @onclick="() => Then(Find)"><Icon Name="find-in-page" Size="18" /><span>Find or do anything…</span></button>
+            @* 4a: "Find or do anything…" (MainLayout's Find, the command bar). Home places the same button
+               below its count line through the "PhoneHomeSearch" slot (Dashboard hook H-10); this copy shows
+               only until a page has placed it (mobile.css, :has). *@
+            @HomeSearch
         }
-        @ChildContent
+        <CascadingValue Name="PhoneHomeSearch" Value="@(OnHome ? HomeSearch : null)">
+            @ChildContent
+        </CascadingValue>
         @if (OnHome && Open is not null)
         {
             <button class="ph-fab ph-fab-ext" @onclick="() => Then(Open)" aria-label="@(OpenLabel == "Open" ? "Open a document" : OpenLabel)">
@@ -168,6 +172,12 @@
 
 @code {
     [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Home's search button (4a). Cascaded as "PhoneHomeSearch" so Home can place it under its count line.</summary>
+    private RenderFragment HomeSearch => __builder =>
+    {
+        <button class="ph-search" @onclick="() => Then(Find)"><Icon Name="find-in-page" Size="18" /><span>Find or do anything…</span></button>
+    };
 
     /// <summary>Label and icon of the ⋮ menu's Open row ("Upload" / "upload" on the Web portal).</summary>
     [Parameter] public string OpenLabel { get; set; } = "Open";
