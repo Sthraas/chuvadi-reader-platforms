@@ -1,8 +1,8 @@
 # Programme status
 
-_Last updated: 7 Nov 2026, 03:10 IST (repo and CI only: two Chrome browsers still connected with none selected, so the chats could not be read)._
+_Last updated: 7 Nov 2026, 03:41 IST (repo and CI only: two Chrome browsers still connected with none selected, so the chats could not be read)._
 
-**BLOCKER:** GitHub Actions on Sthraas stopped since ~01:40 IST (billing/spending limit). All chats building locally; Mac and Android cannot build/test without it. Re-checked 03:10 IST: Android dispatches at 02:47, 02:57 and 03:07 IST still refused with the same billing message.
+**BLOCKER:** GitHub Actions on Sthraas stopped since ~01:40 IST (billing/spending limit). All chats building locally; Mac and Android cannot build/test without it. Re-checked 03:10 IST: Android dispatches at 02:47, 02:57 and 03:07 IST still refused with the same billing message; 03:17, 03:27 and 03:37 IST refused too. No new commits on any branch since 02:30 IST (chats idle, likely waiting on the coordinator).
 
 | Chat | State |
 |---|---|
