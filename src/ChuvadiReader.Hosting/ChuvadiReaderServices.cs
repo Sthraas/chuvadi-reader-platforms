@@ -80,7 +80,7 @@ public static class ChuvadiReaderServices
         Self<CertificateSignService>();
         Add<IEntitlements, DefaultEntitlements>();
         Add<IAppReadySignal, AppReadySignal>();
-        Add<IAppCommands, AppCommands>();
+        Add<IAppCommands, ShellAppCommands>();
 
         // Platform seams: harmless defaults. Each host replaces the ones it supports.
         services.TryAdd(Describe<IUiScale, NoopUiScale>(lifetime));
@@ -88,6 +88,9 @@ public static class ChuvadiReaderServices
         services.TryAdd(Describe<IWindowControls, NoopWindowControls>(lifetime));
         services.TryAdd(Describe<IPrintService, NoopPrintService>(lifetime));
         services.TryAdd(Describe<IFileWriteBack, NoFileWriteBack>(lifetime));
+        services.TryAdd(Describe<IAppPaths, Desktop.DesktopAppPaths>(lifetime));
+        services.TryAdd(Describe<IAccount, LocalAccount>(lifetime));
+        services.TryAdd(Describe<IAppLifecycle, NoAppLifecycle>(lifetime));
         return services;
     }
 

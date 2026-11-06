@@ -117,17 +117,70 @@ public sealed class HostingTests
     public void Shell_layout_derivation(PlatformKind kind, FormFactor ff, ShellLayout expected) =>
         Assert.Equal(expected, ShellLayouts.From(kind, ff));
 
-    [Fact]
-    public async Task App_commands_route_to_the_publisher()
+    private static (ShellService Shell, IAppCommands Commands) ShellAndCommands()
     {
-        var cmds = new AppCommands();
-        string? ran = null;
+        var services = new ServiceCollection();
+        services.AddChuvadiReader(AppStateLifetime.Process);
+        services.AddSingleton<IAppStorage, MemoryStorage>();
+        var sp = services.BuildServiceProvider();
+        return (sp.GetRequiredService<ShellService>(), sp.GetRequiredService<IAppCommands>());
+    }
+
+    [Fact]
+    public void App_commands_come_from_the_shell_registry()
+    {
+        var (shell, cmds) = ShellAndCommands();
+        Assert.IsType<ShellAppCommands>(cmds);
         var changed = 0;
         cmds.Changed += () => changed++;
-        cmds.Publish([new AppCommandInfo("doc.print", "Print", "Document", "Ctrl P", true)], id => { ran = id; return Task.CompletedTask; });
-        await cmds.InvokeAsync("doc.print");
-        Assert.Equal("doc.print", ran);
+
+        shell.RegisterCommands(this, [
+            new ShellCommand("doc.print", "Print", "Document", "print", "Ctrl P", () => Task.CompletedTask),
+            new ShellCommand("doc.reveal", "Show in folder", "Document", "folder", null, () => Task.CompletedTask, "Coming soon"),
+        ]);
+
         Assert.Equal(1, changed);
-        Assert.Single(cmds.Current);
+        var print = Assert.Single(cmds.Commands, c => c.Id == "doc.print");
+        Assert.Equal(("Print", "Document", "Ctrl P", true), (print.Label, print.Group, print.Keys, print.IsEnabled));
+        var reveal = Assert.Single(cmds.Commands, c => c.Id == "doc.reveal");
+        Assert.False(reveal.IsEnabled);
+        Assert.Equal("Coming soon", reveal.DisabledReason);
+
+        shell.UnregisterCommands(this);
+        Assert.Empty(cmds.Commands);
+        Assert.Equal(2, changed);
+    }
+
+    [Fact]
+    public void Document_menu_keeps_order_and_marks_separators()
+    {
+        var (shell, cmds) = ShellAndCommands();
+        shell.SetDocumentMenu([
+            new ShellCommand("doc.props", "Properties", "Document", "info", null, () => Task.CompletedTask),
+            new ShellCommand("sep.1", "", "", "", null, () => Task.CompletedTask),
+            new ShellCommand("doc.close", "Close", "Document", "close", "Ctrl W", () => Task.CompletedTask),
+        ]);
+
+        Assert.Equal(["doc.props", "sep.1", "doc.close"], cmds.DocumentMenu.Select(c => c.Id));
+        Assert.True(cmds.DocumentMenu[1].IsSeparator);
+        Assert.False(cmds.DocumentMenu[0].IsSeparator);
+    }
+
+    [Fact]
+    public async Task Invoke_runs_enabled_commands_only()
+    {
+        var (shell, cmds) = ShellAndCommands();
+        var ran = new List<string>();
+        shell.RegisterCommands(this, [
+            new ShellCommand("a", "A", "File", "x", null, () => { ran.Add("a"); return Task.CompletedTask; }),
+            new ShellCommand("b", "B", "File", "x", null, () => { ran.Add("b"); return Task.CompletedTask; }, "not now"),
+        ]);
+        shell.SetDocumentMenu([new ShellCommand("sep.1", "", "", "", null, () => { ran.Add("sep"); return Task.CompletedTask; })]);
+
+        Assert.True(await cmds.InvokeAsync("a"));
+        Assert.False(await cmds.InvokeAsync("b"));
+        Assert.False(await cmds.InvokeAsync("sep.1"));
+        Assert.False(await cmds.InvokeAsync("missing"));
+        Assert.Equal(["a"], ran);
     }
 }

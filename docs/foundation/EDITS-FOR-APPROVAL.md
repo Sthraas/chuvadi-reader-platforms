@@ -59,4 +59,4 @@ If F-1 = C (recommended): one line after each successful write to a path the per
 - MainLayout + Reader/Bench/Redact: phone bottom bar, tool strip and View sheet when `FormFactor.Phone` (12g-12j); tablet sizes via `data-form-factor="tablet"` CSS (12d-12f).
 - reader.js: pen draws / finger pans on tablets (12e); WebKit `gesture*` pinch for Mac/Linux (INVENTORY K2, after a device test).
 - MainLayout/Reader: Android back closes the open card, sheet or drawer first (`IAppLifecycle.BackRequested`).
-- Ui publishes its command list to `IAppCommands` for the macOS menu bar.
+- ~~Ui publishes its command list to `IAppCommands`~~ — not needed: the kit fills `IAppCommands` from `ShellService` (decided 6 Nov).

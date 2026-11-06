@@ -50,7 +50,7 @@ New contracts (`ChuvadiReader.Platform`):
 | `IFileManager` | "Show in folder" | — host (desktop only) |
 | `IShare` | share sheet | — host (Android, macOS) |
 | `IAppLifecycle` | suspend / resume / Android back | `NoAppLifecycle` |
-| `IAppCommands` | Ui publishes its command list; macOS menu bar shows and runs it | `AppCommands` (registered) |
+| `IAppCommands` | the Ui's commands (Ctrl K list + Document ▾ menu) for the macOS menu bar; filled host-side from `ShellService`, no Ui hook | `ShellAppCommands` (registered) |
 
 ### What each value means for the Ui (form factor and chrome switch)
 
