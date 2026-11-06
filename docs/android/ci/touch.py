@@ -123,9 +123,11 @@ def steps_between(a, b, n):
     return [a + (b - a) * (i / n) for i in range(1, n + 1)]
 
 
-def tap(g, x, y):
-    g.emit(g.press(0, x, y), 0.06)
-    g.emit(g.release(0), 0)
+def tap(g, x, y, sleep_after=0.0):
+    """Down and up as two reports in ONE write: each write is a process start on the slow emulator,
+    and a double-tap must land inside mobile.js's 300 ms window."""
+    syn = ev(EV_SYN, SYN_REPORT, 0)
+    g.steps.append((g.press(0, x, y) + syn + g.release(0) + syn, sleep_after))
 
 
 def main():
@@ -135,8 +137,7 @@ def main():
         tap(g, *args[:2])
     elif cmd == "doubletap":
         x, y = args[:2]
-        tap(g, x, y)
-        g.steps[-1] = (g.steps[-1][0], 0.12)
+        tap(g, x, y, sleep_after=0.08)
         tap(g, x, y)
     elif cmd == "swipe":
         x1, y1, x2, y2 = args[:4]

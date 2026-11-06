@@ -39,6 +39,7 @@ STATE_JS = r"""
   const ctr = (document.querySelector('.ph-pager')?.textContent || document.querySelector('.tb-pg-box')?.value || '').trim();
   const rect = e => { if (!e) return null; const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; };
   const cards = [...document.querySelectorAll('[data-bench-id]')].filter(vis);
+  const shelfPages = [...document.querySelectorAll('[data-shelf]')];
   return {
     shell: document.documentElement.dataset.shell || null,
     dpr: devicePixelRatio,
@@ -51,6 +52,12 @@ STATE_JS = r"""
     overflowX: desk ? desk.scrollWidth - desk.clientWidth : null,
     order: [...document.querySelectorAll('[data-bench-id]')].map(e => e.dataset.benchId),
     cards: cards.slice(0, 6).map(rect),
+    contentW: desk ? desk.scrollWidth : null,
+    shelfPages: shelfPages.length,
+    shelfVisible: shelfPages.filter(vis).slice(0, 3).map(rect),
+    shelfHead: rect([...document.querySelectorAll('.shelf-head')].find(vis) || null),
+    deskDrop: rect([...document.querySelectorAll('.desk-drop')].find(vis) || null),
+    deskPages: document.querySelectorAll('.desk-drop [data-bench-id]').length,
   };
 })()
 """
@@ -262,8 +269,9 @@ if st0.get("desk"):
     gesture("pinch", "pinch", pcx, pcy, round(span * 0.25), round(span * 0.85), 600)
     st3 = state()
     shot("g4-pinched")
-    w2, w3 = (st2.get("page") or {}).get("w") or 0, (st3.get("page") or {}).get("w") or 0
-    check("pinch out zooms in", w3 > w2 * 1.08, {"pageW_before": w2, "pageW_after": w3, "zoomed": st3.get("zoomed")})
+    w2, w3 = st2.get("contentW") or 0, st3.get("contentW") or 0
+    check("pinch out zooms in", w3 > w2 * 1.08 or (st3.get("zoomed") and not st2.get("zoomed")),
+          {"contentW_before": w2, "contentW_after": w3, "zoomed": [st2.get("zoomed"), st3.get("zoomed")]})
 
 # ── 5. Arrange: long-press a page and drag it ─────────────────────────────────
 xml = dump()
@@ -278,20 +286,27 @@ check("Arrange button found on screen", m is not None, {})
 if m:
     x1, y1, x2, y2 = map(int, m.groups())
     touch("tap", (x1 + x2) // 2, (y1 + y2) // 2)
-    st4 = wait_for(lambda s: len(s.get("cards") or []) >= 3, 40, "Arrange page cards")
+    st4 = wait_for(lambda s: (s.get("shelfPages") or 0) >= 6 and s.get("deskDrop"), 40, "Arrange (Shelf pages and a desk)")
     shot("g5-arrange")
-    cards = st4.get("cards") or []
-    check("Arrange shows the document's pages", len(st4.get("order") or []) >= 6, {"order": st4.get("order"), "visible": len(cards)})
-    if len(cards) >= 3:
-        a, c = cards[0], cards[2]
+    check("Arrange shows the document's pages on the Shelf", (st4.get("shelfPages") or 0) >= 6,
+          {"shelfPages": st4.get("shelfPages"), "deskPages": st4.get("deskPages")})
+    if not st4.get("shelfVisible") and st4.get("shelfHead"):
+        # Phone: the Shelf rests as a peek; a tap on its header opens it (12j).
+        h = st4["shelfHead"]
+        hx, hy = to_screen(st4, h["x"] + h["w"] / 2, h["y"] + h["h"] / 2)
+        gesture("shelf-open", "tap", hx, hy)
+        st4 = wait_for(lambda s: len(s.get("shelfVisible") or []) >= 1, 20, "the Shelf to open")
+        shot("g6-shelf-open")
+        check("tap on the Shelf header opens it", len(st4.get("shelfVisible") or []) >= 1, {"visible": len(st4.get("shelfVisible") or [])})
+    if st4.get("shelfVisible") and st4.get("deskDrop"):
+        a, dz = st4["shelfVisible"][0], st4["deskDrop"]
         ax, ay = to_screen(st4, a["x"] + a["w"] / 2, a["y"] + a["h"] / 2)
-        tx, ty = to_screen(st4, c["x"] + c["w"] * 0.75, c["y"] + c["h"] / 2)
-        gesture("longdrag", "longdrag", ax, ay, tx, ty, 800, 700)
+        tx, ty = to_screen(st4, dz["x"] + dz["w"] / 2, dz["y"] + dz["h"] / 2)
+        gesture("longdrag", "longdrag", ax, ay, tx, ty, 800, 900)
         st5 = state()
-        shot("g6-dragged")
-        before, after = st4.get("order") or [], st5.get("order") or []
-        check("long-press drag reorders the pages", len(after) == len(before) and after != before and sorted(after) == sorted(before),
-              {"before": before, "after": after})
+        shot("g7-dragged")
+        check("long-press drag puts a Shelf page on the desk", (st5.get("deskPages") or 0) > (st4.get("deskPages") or 0),
+              {"deskPages_before": st4.get("deskPages"), "deskPages_after": st5.get("deskPages"), "order": st5.get("order")})
 
 with open(os.path.join(OUT, "gestures.json"), "w") as f:
     json.dump(results, f, indent=2)

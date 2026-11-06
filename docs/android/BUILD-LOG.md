@@ -281,3 +281,14 @@ Chrome claims a horizontal drag as its own pan and sends `pointercancel`, which 
 swipe". To prove it, the test now records (passive listeners only) the pointer/touch events the page sees
 during each gesture and saves them as `events-<gesture>.json`. Also fixed a crash in my script when a state
 value was missing.
+
+### 32. Run 42209297085 — evidence per gesture (phone and tablet, API 35)
+| Gesture | What the page received | Result | Whose |
+|---|---|---|---|
+| swipe | pointerdown → 1 pointermove → **pointercancel** | page doesn't change | **Mobile UI bug**: the desk is `touch-action: pan-x pan-y`, so the WebView claims a sideways drag as its own pan and cancels the pointer; mobile.js drops the swipe on pointercancel. Only shows on a real WebView. |
+| tap | pointerdown/up, click | per-page strip appears (Rotate page · To desk · Snapshot · Bookmark) | works |
+| double-tap | two taps **476 ms** apart | no flip | test: too slow for mobile.js's 300 ms window → each tap is now one write (2 writes + 80 ms) |
+| pinch | 2 pointers, 16 Ctrl-wheel events from mobile.js | **zoomed in** (screenshot; desk `zoomed`) | works; my width measure read the wrong element → now the desk's content width |
+| Arrange | tap on the bottom bar's Arrange | "1 desk · 0 pages", Shelf as a peek | works as designed; the test now opens the Shelf (tap on its header) and long-press-drags a Shelf page onto Desk 1 |
+Also confirmed again on the phone: Fit page leaves the page ~54 CSS px wider than the view (screenshot:
+edge cut, sideways scrollbar) — Mobile UI chat.
