@@ -9,7 +9,8 @@ namespace ChuvadiReader.Mac.Platform;
 /// chuvadi-pdf prepares the print PDF — the chosen pages in order, decrypted with the file's
 /// password — via <see cref="PrintDocumentBuilder"/>; the panel (an OS component) then prints that
 /// PDF. Copies, paper, scaling and the printer itself are chosen in the panel, as in any Mac app.
-/// The original file is never changed.
+/// The original file is never changed. A file whose own permissions forbid printing is refused
+/// before the panel opens (<see cref="PrintPermission"/>, as the Windows print service does).
 /// </summary>
 public sealed class MacPrintService : IPrintService
 {
@@ -25,6 +26,11 @@ public sealed class MacPrintService : IPrintService
         catch (OperationCanceledException)
         {
             return new PrintResult(PrintOutcome.Cancelled, 0);
+        }
+        catch (PrintRefusedException ex)
+        {
+            // The file's permissions forbid printing: refused before the panel, as on Windows.
+            return new PrintResult(PrintOutcome.Failed, 0, ex.Message);
         }
         catch (ArgumentException ex)
         {
