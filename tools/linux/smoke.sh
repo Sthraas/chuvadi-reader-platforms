@@ -22,7 +22,9 @@ xvfb=$!
 sleep 1
 # One session bus for every run, as a desktop session has. (A bus per launch leaves its portal
 # services running after the app is stopped; they pile up and stall the machine.)
-read -r DBUS_SESSION_BUS_ADDRESS bus < <(dbus-daemon --session --fork --print-address=1 --print-pid=1 | tr '\n' ' ')
+bus_info="$(dbus-daemon --session --fork --print-address=1 --print-pid=1)"
+DBUS_SESSION_BUS_ADDRESS="$(sed -n 1p <<<"$bus_info")"
+bus="$(sed -n 2p <<<"$bus_info")"
 export DBUS_SESSION_BUS_ADDRESS
 mutter --x11 --replace >"$out/mutter.log" 2>&1 &
 wm=$!
