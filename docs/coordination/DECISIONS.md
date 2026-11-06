@@ -198,5 +198,14 @@ Options considered:
 |---|---|---|
 | D-87 | Sheets 2.0.2 | (a). The Reader chat should target **2.0.2, not 2.0.1** (Arun relays). Platforms follow chuvadi-reader main; the Foundation adds the 2.0.2 .nupkg and its SHA-256 to ci/packages when it rebases on that change. Linux, Mac and Web carry Core's pin today; Android has no separate pin. |
 
+## 7 Nov 2026 04:55 check-in — coordinator (browser back; all seven chats read)
+| # | Item | Decision |
+|---|---|---|
+| D-88 | Mobile UI: Home search box position; Settings one-line summaries | Yes to both (handout 4a / Settings mock is final). Pros: screens follow the handout. Cons: two small phone-only hooks into existing files (Dashboard, Settings). Exact diffs to Foundation's combined patch with desktop pixel-identical proof |
+| D-89 | Home drop zone on portal and mobile (DROP-ZONE-OPTIONS.md) | **C**: A (InputFile overlay + IDroppedFiles seam) on the portal only, B wording where DropFiles is false (Android). Web host sets DropFiles=false until A lands. Pros: the portal gets the designed drag-and-drop and loses the "browser opens the PDF and leaves the app" trap; Android stops promising a drop. Cons: most work of the four (still small). A and D rejected: A alone leaves Android promising a drop; D leaves the trap |
+| D-90 | Actions cost (Arun: about $18 in a day; repo made public 04:46 IST) | Recommended to Arun: make the repo private again, because ci/packages publishes the Chuvadi library DLLs (Chuvadi is proprietary). Awaiting his A/B. Either way: Foundation proposes a workflow patch — docs-only pushes run nothing, per-push matrix Linux only, Mac/Windows/Android-emulator jobs manual only, cancel-in-progress per branch. No Mac/Windows/Android runs until the coordinator confirms |
+| D-91 | Foundation PR | Coordinator add_repo for arunshivab/chuvadi-reader with push now succeeds; Foundation retries the push of platform/foundation-pr and opens the PR (never merges) |
+| D-92 | Linux | Build accepted as complete (107/107 UI steps x64 locally; ARM64 last green on 833cea3). Linux Test chat opened; platform/linux takes only fixes the Test chat reports. ARM64 rerun when CI is confirmed |
+
 ## Blocker for Arun
-- GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move.
+- GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).
