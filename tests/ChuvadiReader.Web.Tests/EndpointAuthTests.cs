@@ -25,7 +25,9 @@ public class EndpointAuthTests
         "/signout-sangam",         // back from Sangam's end-session
         "/signed-out",             // the signed-out page
         "/backchannel-logout",     // Sangam's signed logout token
-        "/licence",                // licence agreement and notices (Terms of use)
+        "/terms",                  // the portal's terms of use (D-86)
+        "/privacy",                // privacy notice (D-86)
+        "/licence",                // the portal's other documents: cookies, third-party notices
         "/healthz",                // "ok", for monitoring
         "/error",                  // where unexpected failures land
     };
@@ -76,6 +78,8 @@ public class EndpointAuthTests
         // The check sees what it should: the known open routes are found…
         Assert.Contains("/healthz", open);
         Assert.Contains("/licence", open);
+        Assert.Contains("/terms", open);
+        Assert.Contains("/privacy", open);
         Assert.Contains("/backchannel-logout", open);
 
         // …and the person's own routes are protected (the fallback policy covers routes without metadata).

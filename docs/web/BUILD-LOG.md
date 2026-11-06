@@ -218,3 +218,28 @@ dotnet test tests/ChuvadiReader.Web.Tests -c Release   # 123 passed, 0 warnings
   - Test witnesses: the print check counts only its own request in the server log (it used to read the last line, which an earlier run could satisfy). Firefox's own messages on leaving a page aren't counted as portal errors.
 - **`TEST-PLAN.md`** for the Web Test chat: 20 flows, 18 security checks, 12 Sangam failure cases, 8 load checks, the browser matrix, deployment checks, a run log and known gaps.
 - Checks: the whole shared solution `-warnaserror` (0/0) and its tests; Web 140/140; flows in 4 engines; real-Sangam e2e and expiry e2e in Chrome, Firefox and WebKit; `load.py` 10/10.
+
+### 23. Fourth combined patch, legal pages (D-86), drop refused (D-89) — 7 Nov, morning
+- Rebased onto `platform/foundation` @ `e5802e6`: the third patch's part 3 (legal drafts and legal pages), single instance, and the fourth patch. Nothing in them needs Web host code except the legal pages:
+  - single instance is desktop;
+  - host notices: the Web host has none (kit default);
+  - the portal wording W-1 to W-4 is Ui text.
+- **D-86 (a), legal pages:** `/terms`, `/privacy` and `/licence` render the Foundation's `LicencesSection` to plain HTML before sign-in.
+  - The renderer gives the page the Web platform info, so it shows the portal's documents: terms of use, privacy, cookies, third-party notices.
+  - `js/legal.js` turns the switch into the four addresses.
+  - `Portal:TermsUrl` now defaults to `/terms`, so the sign-in page's "Terms of use" opens it.
+  - The texts are shown as shipped, DRAFT line included.
+  - Tests: every page answers before sign-in with no worker; DRAFT and copyright present; the apps' EULA isn't shown on the portal; unknown parts open the terms. `/terms` and `/privacy` added to the route list.
+- **D-86 (b):** the sign-in page has been live since the third patch; `web-12a-ready` is no longer needed.
+- **D-86 (c):** `TEST-PLAN.md` now has the manual runs (M-1 Edge, M-2 Safari on Mac, M-3 Safari on iPhone and iPad, M-4 Android Chrome) as one 12-step sequence plus per-browser checks. It also has the staging runs: V-1 two-hour soak, V-2 real Let's Encrypt with a forced renewal, V-3 large documents, V-4 hostile documents, V-5 logs, V-6 restart with the banner, V-7 no DRAFT before go-live.
+- **D-89, now:**
+  - `WebCapabilities.DropFiles = false`. Nothing in the Ui reads the flag yet (option B's wording hasn't landed), so the flag alone didn't stop the trap: a browser opens a file dropped on a page that doesn't take it.
+  - `portal.js` now cancels any file drop nothing in the page handled, with the "not allowed" cursor while dragging. The Reader's own image drops run first and are left alone.
+  - `flows.py` checks the drop is cancelled in all four engines, and a control check confirms a page without the script doesn't cancel it.
+- **D-89, next:** the host side of `IDroppedFiles` when the Foundation publishes it.
+- For counsel (not changed; the drafts are the Foundation's): the terms say documents are processed "in an encrypted working area". Under D-28 the working copies are in RAM (tmpfs), never on disk, with swap encrypted; RAM itself isn't encrypted.
+- Checks (local only; no CI runs until Actions billing is confirmed):
+  - shared solution `-warnaserror` 0/0, its tests (Reader 171, Hosting 48, Mobile UI 15, Web UI 31), Web 140/140;
+  - flows in 4 engines, 7/7 each;
+  - legal pages in Chrome;
+  - real-Sangam e2e through the gateway.

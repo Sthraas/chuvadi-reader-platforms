@@ -194,5 +194,6 @@ WantedBy=multi-user.target
 |---|---|
 | Domain (B5) and E2E account, region, VM plan, DNS (B6) | Arun |
 | Agreeing to Let's Encrypt's subscriber agreement (`AgreeToTermsOfService`) | Arun |
+| Counsel-reviewed legal texts (Terms of Use, Privacy, Cookies): the drafts say not to publish; `/terms` and `/privacy` must show no DRAFT line (TEST-PLAN V-7) | Arun / Foundation |
 | Sangam production client registration (section 5) and the Sangam self-service address | Arun / Sangam |
 | Where the LUKS passphrase lives (E2E console at boot, or Pezhai) | Arun |

@@ -93,7 +93,7 @@ public sealed class SangamSignInTests : IAsyncLifetime
         Assert.DoesNotContain("name=\"username\"", html); // U-9 (a): no Sangam ID field yet
         Assert.Contains("data-chvd-signin=\"/signin/sangam?returnUrl=%2Flibrary\"", html);
         Assert.Contains("js/signin.js", html);
-        Assert.Contains("href=\"/licence\"", html); // "Terms of use" (Foundation part 2)
+        Assert.Contains("href=\"/terms\"", html); // "Terms of use" (D-86)
         Assert.Contains("Terms of use", html);
         Assert.DoesNotContain("blazor.web.js", html); // no circuit before sign-in
 

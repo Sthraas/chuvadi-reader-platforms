@@ -13,10 +13,10 @@ Blazor Server portal for Chuvadi Reader: the unchanged `ChuvadiReader.Ui` render
 - Own ACME client (Let's Encrypt) built and tested against a strict fake ACME server (our test code).
 - Based on `platform/foundation` @ `63af90f`: chuvadi-pdf 3.31.2 (D-54; Pdf A/B cleared, D-55) and the combined hooks (D-26), so the portal shows the 12b account menu, the server status dot and the signed-in person; the host supplies `PortalLinks` and `IAccount.Unit`.
 - Rebased on `platform/foundation` @ `a4acc56` (third combined patch, part 1: the Web portal UI's decided portal files; licence and EULA). The 12a sign-in page ("Continue with Sangam" only, U-9 a) is served at `/signin`; `PortalLinks` takes two arguments. Browser printing refuses files whose permissions forbid it (L-8). Planned restarts are announced with a banner in every open tab.
-- On `platform/foundation` @ `615afde` (third combined patch, part 2): "Terms of use" on the sign-in page opens `/licence` (licence agreement, licence, third-party notices), readable before sign-in.
+- On `platform/foundation` @ `e5802e6` (fourth combined patch). D-86: `/terms`, `/privacy` and `/licence?part=cookies|notices` serve the Foundation's portal documents before sign-in, kept marked DRAFT; "Terms of use" on the sign-in page opens `/terms`. D-89: `DropFiles = false`, and a dropped file is refused instead of the browser opening it and leaving Chuvadi.
 - Printing works in Safari and in browsers without a PDF viewer (an "Open the PDF to print" link the person clicks). The browser flows, sign-in and expiry e2e run in Chrome, Firefox and WebKit.
 - Test plan for the Web Test chat: `TEST-PLAN.md`.
-- Next: serve the Foundation's portal Terms of Use and Privacy Notice at `/terms` and `/privacy` when they land. Domain and E2E stay last (Arun).
+- Next: the host side of the Foundation's `IDroppedFiles` when it lands (D-89 C: each dropped file streams to the session's working copy as upload does). Domain and E2E stay last (Arun). No CI runs until Actions billing is confirmed.
 
 ## Build and test
 Requires the .NET 10 SDK (10.0.403 or later). Packages come from the committed `ci/packages` feed.
@@ -50,6 +50,7 @@ Session files go to `src/ChuvadiReader.Web/.portal-data` (git-ignored) and are d
 | `MaxUploadBytes`, `MaxFilesPerPick`, `UploadChunkBytes` | Upload limits (200 MB, 50 files, 4 MB chunks) |
 | `PickTimeout`, `DownloadLinkLifetime`, `SaveWaitLimit` | 30 min, 10 min, 30 min |
 | `AllowCertificateUpload` | Off (D-27) |
+| `TermsUrl` | "Terms of use" under the sign-in card; default `/terms` (served before sign-in, D-86). Empty hides it |
 | `DesktopAppUrl` | "Get the desktop app" in the account menu (D-35); placeholder `https://chuvadi.in/download` |
 | `AccountSettingsUrl` | "Account settings" → Sangam's self-service site (D-35); empty hides the item until its address is known |
 | `Tls:CertificatePath`, `Tls:KeyPath`, `Tls:ReloadCheck` | PEM pair served by Kestrel (with ACME off: re-read every 5 min when changed; with ACME on: where issued certificates are stored) |
