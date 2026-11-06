@@ -4,6 +4,7 @@
 @inject TabsService Tabs
 @inject NavigationManager Nav
 @inject IAppLifecycle Life
+@inject UserProfileService Profile
 @inject IJSRuntime JS
 
 @*
@@ -18,10 +19,22 @@
 
 <div class="ph-shell" data-mode="@ModeKey">
     <PhoneAppBar OnBack="Back" OnMenu="() => ShowSheet(PhoneSheetKind.Menu)" OnTitle="() => ShowSheet(PhoneSheetKind.Tabs)"
-                 OnDocView="OnDocView" PageTitle="@PageTitle" />
+                 OnDocView="OnDocView" PageTitle="@PageTitle" Initials="@(OnHome ? Initials : null)"
+                 OnAvatar='() => Go?.Invoke("/settings?section=account")' />
 
     <main class="content ph-content">
+        @if (OnHome)
+        {
+            @* 4a: "Find or do anything…" — runs MainLayout's Find (the command bar). *@
+            <button class="ph-search" @onclick="() => Then(Find)"><Icon Name="find-in-page" Size="18" /><span>Find or do anything…</span></button>
+        }
         @ChildContent
+        @if (OnHome && Open is not null)
+        {
+            <button class="ph-fab ph-fab-ext" @onclick="() => Then(Open)" aria-label="Open a document">
+                <Icon Name="plus" Size="18" /><span>Open</span>
+            </button>
+        }
         @if (Fab is { } fab)
         {
             <button class="ph-fab" disabled="@(!fab.IsEnabled)" title="@(fab.DisabledReason ?? fab.Label)" aria-label="@fab.Label"
@@ -36,6 +49,32 @@
         <PhoneToolStrip Items="items" Active="@_activeTool" OnPick="PickTool" />
     }
 
+    @if (!OnDocView)
+    {
+        @* Off-document (4a, D-45): Home · Library · Tabs · N · Settings. *@
+        <nav class="ph-nav ph-nav-dest" aria-label="Places">
+            @foreach (var (path, icon, label) in Places)
+            {
+                var pth = path;
+                var on = IsAt(pth);
+                <button class="ph-nav-b @(on ? "on" : null)" aria-current="@(on ? "page" : null)" title="@label" @onclick="() => Go?.Invoke(pth)">
+                    <span class="ph-pill"><Icon Name="@icon" Size="20" /></span>
+                    <span class="ph-lab">@label</span>
+                </button>
+            }
+            <button class="ph-nav-b" disabled="@(Tabs.Tabs.Count == 0)" title="@(Tabs.Tabs.Count == 0 ? "No documents open" : $"Open tabs · {Tabs.Tabs.Count}")"
+                    @onclick="() => ShowSheet(PhoneSheetKind.Tabs)">
+                <span class="ph-pill"><Icon Name="copy" Size="20" /></span>
+                <span class="ph-lab">@(Tabs.Tabs.Count == 0 ? "Tabs" : $"Tabs · {Tabs.Tabs.Count}")</span>
+            </button>
+            <button class="ph-nav-b @(IsAt("/settings") ? "on" : null)" aria-current="@(IsAt("/settings") ? "page" : null)" title="Settings" @onclick='() => Go?.Invoke("/settings")'>
+                <span class="ph-pill"><Icon Name="settings" Size="20" /></span>
+                <span class="ph-lab">Settings</span>
+            </button>
+        </nav>
+    }
+    else
+    {
     <nav class="ph-nav" aria-label="Modes">
         @foreach (var (mode, icon, label) in Modes)
         {
@@ -49,6 +88,7 @@
             </button>
         }
     </nav>
+    }
 
     @if (_sheet == PhoneSheetKind.Menu)
     {
@@ -159,6 +199,39 @@
         (DocMode.Arrange, "grid-view", "Arrange"),
         (DocMode.Protect, "redact", "Protect"),
     };
+
+    // Home and Library; Tabs and Settings are drawn after them (Tabs opens a sheet, not a page).
+    private static readonly (string Path, string Icon, string Label)[] Places =
+    {
+        ("/", "home", "Home"),
+        ("/library", "library", "Library"),
+    };
+
+    private string CurrentPath => "/" + Nav.ToBaseRelativePath(Nav.Uri).Split('?', '#')[0].Trim('/');
+
+    private bool IsAt(string path) => path == "/"
+        ? CurrentPath == "/"
+        : CurrentPath.StartsWith(path, StringComparison.OrdinalIgnoreCase);
+
+    private bool OnHome => !OnDocView && CurrentPath == "/";
+
+    private bool InSettingsSection =>
+        IsAt("/settings") && Nav.Uri.Contains("section=", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>4a's avatar: initials of the preferred name, else none (the icon shows).</summary>
+    private string Initials
+    {
+        get
+        {
+            var parts = (Profile.Name ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            return parts.Length switch
+            {
+                0 => string.Empty,
+                1 => parts[0][..1].ToUpperInvariant(),
+                _ => (parts[0][..1] + parts[^1][..1]).ToUpperInvariant(),
+            };
+        }
+    }
 
     private PhoneSheetKind _sheet;
     private string? _activeTool;
@@ -364,7 +437,8 @@
             return;
         }
 
-        Go?.Invoke("/");
+        // A Settings section goes back to the section list (Settings A, D-45); elsewhere, Home.
+        Go?.Invoke(InSettingsSection ? "/settings" : "/");
     }
 
     /// <summary>Android back: a sheet closes first; then the host's default.</summary>

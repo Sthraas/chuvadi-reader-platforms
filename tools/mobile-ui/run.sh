@@ -14,7 +14,11 @@ for i in $(seq 1 120); do
 done
 for spec in "$@"; do
   set -- $spec
-  python3 "$HERE/shoot.py" "http://127.0.0.1:$PORT" "$OUT" "$1" "${2%x*}" "${2#*x}"
+  if [ "$1" = "gestures" ] || [ "$1" = "gestures-jitter" ]; then
+    python3 "$HERE/gestures.py" "http://127.0.0.1:$PORT" "${2%x*}" "${2#*x}" "${1#gestures-}" | tee "$OUT/$1-$L-$2.txt"
+  else
+    python3 "$HERE/shoot.py" "http://127.0.0.1:$PORT" "$OUT" "$1" "${2%x*}" "${2#*x}"
+  fi
 done
 pkill -f "ASPNETCORE_URLS=http://127.0.0.1:$PORT" 2>/dev/null; kill $PID 2>/dev/null; pkill -f "urls.*$PORT" 2>/dev/null
 fuser -k "$PORT/tcp" 2>/dev/null; wait 2>/dev/null; true

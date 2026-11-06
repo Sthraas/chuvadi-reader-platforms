@@ -27,10 +27,11 @@ async def main():
         pg = await ctx.new_page()
         pg.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
         pg.on("pageerror", lambda e: errors.append(str(e)))
-        start = {"-home": "/", "-library": "/library", "-settings": "/settings"}
+        start = {"-home": "/", "-library": "/library", "-library-shelf": "/library", "-settings": "/settings",
+                 "-settings-section": "/settings"}
         await pg.goto(url + next((v for k, v in start.items() if scen.endswith(k)), "/reader"))
         await pg.wait_for_timeout(3500)
-        if scen.startswith("phone-") and not scen.endswith(("-home", "-library", "-settings")):
+        if scen.startswith("phone-") and not scen.endswith(("-home", "-library", "-library-shelf", "-settings", "-settings-section")):
             await tap(pg, ".ph-nav-b:nth-child(1)")   # every scenario starts from Read
         if scen.endswith("-mark"):
             await tap(pg, ".ph-nav-b:nth-child(2), .lb-mode:nth-of-type(2)")
@@ -49,6 +50,10 @@ async def main():
             await tap(pg, ".ph-nav-b:nth-child(4)")
             await tap(pg, ".ph-tool:first-child")
             await pg.wait_for_timeout(1500)
+        elif scen.endswith("-library-shelf"):
+            await tap(pg, ".libp-views .vbtn:nth-child(2)")
+        elif scen.endswith("-settings-section"):
+            await tap(pg, ".snav-item")
         elif scen.endswith("-menu"):
             await tap(pg, ".ph-bar .ph-ib[aria-label='More']")
         await pg.wait_for_timeout(1500)

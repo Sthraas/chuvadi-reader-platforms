@@ -1,0 +1,49 @@
+diff --git a/src/ChuvadiReader.Ui/Layout/MainLayout.razor b/src/ChuvadiReader.Ui/Layout/MainLayout.razor
+index e0f06f0..4c2c616 100644
+--- a/src/ChuvadiReader.Ui/Layout/MainLayout.razor
++++ b/src/ChuvadiReader.Ui/Layout/MainLayout.razor
+@@ -35,7 +35,8 @@
+     @if (ShellLayout == ChuvadiReader.Platform.ShellLayout.Phone)
+     {
+         <ChuvadiReader.Ui.Components.Platform.Phone.PhoneShell RequestMode="RequestMode" ModeDisabledReason="ModeDisabledReason"
+-                                                               Open="AddTab" Find="FindNow" Go="Go" OnDocView="OnDocView">
++                                                               Open="AddTab" Find="FindNow" Go="Go" OnDocView="OnDocView"
++                                                               SwitchTab="SwitchTab" CloseTab="CloseTab">
+             @Body
+         </ChuvadiReader.Ui.Components.Platform.Phone.PhoneShell>
+     }
+diff --git a/src/ChuvadiReader.Ui/Pages/Settings.razor b/src/ChuvadiReader.Ui/Pages/Settings.razor
+index 594ebea..4ab482b 100644
+--- a/src/ChuvadiReader.Ui/Pages/Settings.razor
++++ b/src/ChuvadiReader.Ui/Pages/Settings.razor
+@@ -17,7 +17,7 @@
+     (each control calls its service). Unbuilt features stay visible, greyed out with a
+     "Coming soon" tooltip. Deep link: /settings?section=reading (ids in Sections below).
+ *@
+-<div class="settings">
++<div class="@(PhoneList ? "settings phone-list" : "settings")">
+     <nav class="snav" aria-label="Settings sections">
+         <h1 class="snav-title" tabindex="-1">Settings</h1>
+         @foreach (var s in Sections)
+@@ -136,7 +136,20 @@
+     }
+ 
+     // Changing section re-keys the scroll container, so it starts at the top.
+-    private void Show(string id) => _active = id;
++    private void Show(string id)
++    {
++        // Phone (D-45, Settings A): a section opens as its own screen, so Back returns to the list.
++        if (Platform.FormFactor == ChuvadiReader.Platform.FormFactor.Phone)
++        {
++            Nav.NavigateTo($"settings?section={id}");
++            return;
++        }
++
++        _active = id;
++    }
++
++    /// <summary>Phone with no section asked for: the section list alone (D-45).</summary>
++    private bool PhoneList => Platform.FormFactor == ChuvadiReader.Platform.FormFactor.Phone && string.IsNullOrEmpty(SectionQuery);
+ 
+     private void OnAnyChanged() => InvokeAsync(() =>
+     {

@@ -107,3 +107,61 @@ resulting tree was checked byte-identical to the rebased one. Restore resolves C
 from `ci/packages`. Re-verified on 3.31.2: 0 warnings; 161 + 27 + 4 tests; hook patches still
 apply; desktop pixel-identical (Read, Arrange, Mark at 1440×900); 0 console errors on phone
 Read / Tabs / Redact / Arrange and tablet Read / Arrange.
+
+## Session 3 — 7 Nov: MU-8 built, Android touch bugs, F-4
+
+Took `platform/foundation` 63af90f by merge (it carries the combined hooks D-26: H-1, reader.js
+pen/finger, Bench desk counter, D-48). 12 add/add conflicts on the Phone files: kept mine, which already
+used `IPlatformInfo`. Session 2's H1/H3 patches deleted (applied upstream).
+
+### Done
+- **F-4:** TouchSupport and PhoneShell inject `IPlatformInfo` and use `Info.Shell()`, with no
+  cascade left.
+- **Android bug 1, swipe never pages (step 32):** pointer events got `pointercancel` from the
+  WebView's own pan. Swipe now reads touch events (never cancelled). A desk that fits sideways gets
+  `.chvd-hfit` → `touch-action: pan-y`.
+- **Android bug 2, fit page > fit width, sizes jump:** my double-tap fit flip ran together with
+  reader.js's double-tap zoom on the same tap. Removed mine (and my Ctrl-wheel pinch: reader.js already
+  pinches).
+- **Android bug 3, long-press intermittent (step 34):** Chrome ignores a blocking touchmove listener
+  added mid-gesture. Now registered while Arrange shows (`setArrange`); an armed press cancels the pan.
+  A page lifted from the open Shelf drops the sheet to its peek (phone landscape: the sheet covered
+  every desk).
+- **D-46:** Bench publishes the desk counter (63af90f); mine removed, because two would fight.
+- **MU-8 / D-45:**
+  - Off-document bar Home · Library · Tabs · N · Settings; Home avatar, search pill and extended Open FAB.
+  - Home 4a layout: resume cards sideways, drop zone and clock eyebrow hidden.
+  - Library: one-row chips, two-line rows, Shelf as desktop.
+  - Settings A: list → section pushed; Back returns to the list (H-6).
+  - Landscape bar icon-only.
+- Hooks for Foundation: H-5 (MainLayout passes SwitchTab/CloseTab) and H-6 (Settings phone push).
+- Preview host seeds a 7-file library in category folders (Library was empty).
+- Harness:
+  - `gestures.py`: CDP touch, checks swipe, double-tap, pinch, fit, and long-press with or without jitter.
+  - `<layout>-base` mode for any layout.
+  - `shoot.py` start paths for Home, Library and Settings.
+
+### Evidence (`screens/2026-11-07/`)
+- 0 warnings; 161 + 28 + 14 + 4 tests pass (hooks applied); the branch alone builds with 0 warnings.
+- Gestures: every check passes on phone 412×915, phone 915×412, tablet 1280×800 and jitter. On 63af90f
+  ("before"), swipe FAILs on phone and tablet (`pointerdown, pointercancel`).
+- 0 console errors in all 18 phone and tablet scenarios.
+- Desktop: before and after run side by side:
+  - Read ×2, Arrange, Mark, Settings ×2: only the clock differs.
+  - Home and Library: ≤ 6 pixels off by 1 colour level out of 255 (anti-aliasing; the Home region
+    recurs in base-vs-base runs).
+  - A first sequential run had shown 156 / 403 px on Home / Library: the clock minute and "2m" / "3m"
+    ages.
+
+### Not reproducible headless (device re-run needed)
+- The intermittent long-press: passes every time headless, including with jitter.
+- 456 vs 342 fit sizes: A4 portrait fits equally in Chromium; the cause (double-tap duplication) is fixed.
+
+### Open (OPTIONS.md › MU-8 open points)
+- Home search pill placement.
+- Settings row summaries.
+- Library Default view placeholder.
+- Redaction view zoom on a phone.
+- Shelf drop-to-peek: my choice, please confirm.
+- "1 / 1 desks".
+- "Computer" wording in Settings (Appearance, Language, Kiosk), for PlatformText.

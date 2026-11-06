@@ -59,12 +59,34 @@
         }
     }
 
-    <button class="ph-ib" @onclick="OnMenu" aria-label="More"><Icon Name="more-vertical" Size="20" /></button>
+    @if (Initials is not null)
+    {
+        @* Home (4a): the avatar opens Settings › Account & roles. *@
+        <button class="ph-av" @onclick="OnAvatar" aria-label="Account">
+            @if (Initials.Length > 0)
+            {
+                @Initials
+            }
+            else
+            {
+                <Icon Name="user" Size="16" />
+            }
+        </button>
+    }
+    else
+    {
+        <button class="ph-ib" @onclick="OnMenu" aria-label="More"><Icon Name="more-vertical" Size="20" /></button>
+    }
 </header>
 
 @code {
     [Parameter] public EventCallback OnBack { get; set; }
     [Parameter] public EventCallback OnMenu { get; set; }
+
+    /// <summary>Home only (4a): initials for the avatar ("" = icon); null = the ⋮ menu instead.</summary>
+    [Parameter] public string? Initials { get; set; }
+
+    [Parameter] public EventCallback OnAvatar { get; set; }
 
     /// <summary>Tap on the document title (Read, Mark, Protect) → Tabs sheet.</summary>
     [Parameter] public EventCallback OnTitle { get; set; }

@@ -1,0 +1,7 @@
+PASS swipe → next page 1 → 2; events ['pointerdown', 'pointerup']
+PASS double-tap zooms in and back 497 → 1587 → 497 px
+PASS pinch ×2 spread zooms ≈2× (single handler) 497 → 995 px (×2.00)
+PASS long-press drag Shelf page → desk desk pages 0 → 1; events ['pointerdown', 'pointerdown', 'pointerup']
+tablet-read 1280x800 console errors: 0
+tablet-arrange 1280x800 console errors: 0
+tablet-mark 1280x800 console errors: 0

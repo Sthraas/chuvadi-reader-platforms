@@ -1,68 +1,82 @@
-# Mobile app UI → Foundation: hooks for the combined patch (D-26)
+# Mobile app UI → Foundation: hooks, session 3 (7 Nov)
 
-Branch `platform/mobile-ui`, up to date with `platform/foundation` **be4498a** (chuvadi-pdf 3.31.2).
-The patches were generated against 60dca85; MainLayout and Reader.razor are unchanged since, and they
-apply cleanly to be4498a with `git apply` (re-checked). They are **not** applied on
-`platform/mobile-ui`; `tools/mobile-ui/preview.sh` applies them in a scratch copy for testing.
+Branch `platform/mobile-ui` now includes `platform/foundation` **63af90f**, which already has the combined
+hooks (D-26): H-1 in MainLayout, reader.js pen/finger split (D-42), Bench's desk counter (D-46) and the
+TabsService de-dup (D-48). So session 2's `H1-…`, `H3-…` and `mobile-ui-hooks-2.patch` are deleted;
+nothing from them is still waiting.
+
+Two new hooks, for MU-8 (D-45) and the Tabs sheet (D-43). They are **not** applied on this branch;
+`tools/mobile-ui/preview.sh` applies `proposal/mobile-ui-hooks-*.patch` in a scratch copy for testing.
+Both apply cleanly to 63af90f with `git apply`.
 
 | Patch | File | Decision | Lines |
 |---|---|---|---|
-| `proposal/H1-mainlayout-phone-shell.patch` | `Ui/Layout/MainLayout.razor` | D-40, D-41, D-43 | +19 / −0 |
-| `proposal/H3-reader-pen-finger.patch` | `Ui/Pages/Reader.razor` | D-42 | +3 / −0 |
-| `proposal/mobile-ui-hooks-2.patch` | both of the above, concatenated | — | — |
+| `proposal/H5-mainlayout-tabs-sheet.patch` | `Ui/Layout/MainLayout.razor` | D-43 | +2 / −1 |
+| `proposal/H6-settings-phone-push.patch` | `Ui/Pages/Settings.razor` | D-45 Settings A | +15 / −2 |
+| `proposal/mobile-ui-hooks-3.patch` | both, concatenated | — | — |
 
-Hosts must also link `_content/ChuvadiReader.Ui/css/mobile.css` after `shell.css` (Android chat, D-49).
+## H-5: pass SwitchTab and CloseTab to the phone shell (MainLayout)
+Foundation's H-1 renders `PhoneShell` without `SwitchTab` / `CloseTab`, so the phone Tabs sheet (D-43)
+lists tabs but can't switch or close them. H-5 adds the two parameters to the existing PhoneShell tag.
+- **For:** the sheet runs MainLayout's own methods (close still asks about unsaved changes); nothing is
+  re-implemented; it only touches the phone branch, so the Windows render path is unchanged.
+- **Against:** one more edit to MainLayout.
+- **Alternative:** PhoneShell calls `TabsService` itself. No hook, but it would skip MainLayout's
+  unsaved-changes prompt and navigation, so I don't recommend it.
 
-## H-1 — phone shell and touch (MainLayout)
-- `@if (Kind != Windows && FormFactor != Desktop) { <TouchSupport /> }` — pinch, double-tap, swipe,
-  tap-for-strip, Arrange long-press, tablet desk counter.
-- `@if (FormFactor == Phone) { <PhoneShell …>@Body</PhoneShell> } else { …existing top bar → status bar… }`.
-  PhoneShell gets MainLayout's own `RequestMode`, `ModeDisabledReason`, `AddTab`, `FindNow`, `Go`,
-  `OnDocView`, `SwitchTab`, `CloseTab` — nothing is re-implemented (close still asks about unsaved changes).
-- The existing markup is wrapped, not re-indented, so the diff stays small.
-- Gates read plain properties (`Platform.Kind`, `Platform.FormFactor`), not the `Shell()` extension,
-  so Windows JITs nothing new. `FormFactor == Phone` ⇔ `Shell() == Phone` by `ShellLayouts.From`.
+## H-6: Settings A on a phone (section list → section pushed as its own screen)
+- With no `?section=`, a phone shows only the section list (`settings phone-list`; mobile.css hides the body).
+- Tapping a section navigates to `settings?section=<id>`, so the app-bar ← and Android Back return to
+  the list. PhoneShell's Back already does this.
+- Desktop and tablet keep `_active = id` exactly as today.
+- **For:** the standard Android settings pattern; uses the existing deep link (`?section=`); keyed on
+  `FormFactor == Phone`, so Windows never takes the new branch.
+- **Against:**
+  - Settings.razor is an existing page the Reader chat may still change.
+  - On Windows, `PhoneList` is checked once per Settings render: one enum compare, not on the startup path.
+- **Alternative:** CSS only. The section list would show, but a tap couldn't open a new screen, so
+  Back couldn't step out of a section (Settings B behaviour). That isn't what D-45 chose.
 
-## H-3 — tablet pen draws, finger pans (Reader.razor, `MkDown`)
-```csharp
-if (!_markup || e.Button != 0) return;
-// Tablet with a pen (Portal & Android 12e): the pen draws, a finger pans (mobile.css lets it).
-if (Platform.FormFactor == ChuvadiReader.Platform.FormFactor.Tablet && e.PointerType == "touch"
-    && Platform.Input.HasFlag(ChuvadiReader.Platform.InputKinds.Pen)) return;
-```
-**Correction to my MU-5 note:** the Mark-layer drawing is Blazor `@onpointerdown="MkDown"` in
-`Reader.razor`, not `reader.js`. Same decision (a hook in the drawing code on the pointer type), one
-line, in the right file. The CSS half (`touch-action: pan-x pan-y` on `.mk-layer` for
-`html[data-shell="tablet"][data-input~="pen"]`) is in `mobile.css`, no hook.
-Keyed on `FormFactor == Tablet` so a Windows Surface with a pen is unchanged.
+## Evidence (63af90f + this branch + hooks-3, in a scratch copy)
+- Programme solution: **0 warnings, 0 errors**; tests **161 + 28 + 14 + 4 = 207 pass**.
+- **Desktop pixel-identical:** before (63af90f) and after were run at the same time
+  (`screens/2026-11-07/desktop-compare.txt`).
+  - Read 1440×900 and 990×700, Arrange, Mark, Settings 1440×900 and 700×800: only the clock differs.
+  - Home: 5 pixels off by 1 colour level out of 255, on anti-aliased edges. The same region shows the
+    same 1-level noise in an A/A run (63af90f vs 63af90f).
+  - Library: 6 pixels off by 1 level on the anti-aliased ends of a bar. Same kind; this one didn't
+    recur in 3 A/A runs.
+  - Nothing visible. Earlier Home/Library differences (156 / 403 px) were "18:50" vs "18:51" and
+    "2m" vs "3m" ages from running before and after a minute apart.
+- StartupProbe not re-run: H-5 is inside the phone-only branch and H-6 is not on the startup path
+  (Dashboard is).
 
-## Not needed any more
-- **D-46 Bench desk-counter hook:** done with **no** existing-file edit. `ShellService.CounterHandler`
-  is public; `TouchSupport` (tablet only) publishes "desk n / N" while Arrange shows (Bench publishes no
-  counter there) and scrolls to the desk; `mobile.css` adds the word "desks". Coordinator: if you'd still
-  rather Bench own its counter (clearer ownership), say so and I'll write that diff — cost: Bench.razor +
-  Bench.Shell.cs edits and a bench.js export.
-- **D-48 TabsService restore de-duplication: please don't apply — my report was wrong.** A test showed
-  `OpenAsync` persists at once, so opening before the first restore *replaces* the saved session (earlier
-  tabs dropped, no duplicate), and the de-dup changes nothing. The duplicates I saw came from my preview
-  host calling `TabsService` directly before restore. Real hosts hand files over through
-  `OpenDocumentService.Request`, which the Reader takes only after restoring — so no bug on any host.
-  Host rule instead (for the Android chat's share/open intents): **always use `OpenDocumentService`,
-  never `TabsService.OpenAsync`.**
+## D-46 desk counter: one owner
+Foundation's Bench now publishes the desk counter (`PublishDeskCounter`, bench.js `scrollDeskTo`).
+My TouchSupport also published one (session 2). Two publishers would fight over the counter, so **mine
+is removed** and Bench's is the one. The coordinator's note said "the desk counter with no Bench edit is
+fine; keep it". That was overtaken by 63af90f already shipping the Bench version. **Please confirm**
+Bench's counter is the one to keep.
 
-## Evidence (hooks applied in a scratch copy of 60dca85 + this branch)
-- Programme solution: **0 warnings, 0 errors**; tests **161 + 27 + 4 pass**.
-- **Desktop pixel-identical** (unchanged 60dca85 vs. with H-1 + H-3): Read 1440×900, Read 990×700,
-  Arrange 1440×900, Mark 1440×900 — only the live clock seconds differ (`tools/mobile-ui/compare.py`).
-- **Startup (Windows profile, `tools/StartupProbe`, published Release, 25 interleaved runs):**
+## For the Android chat (via the coordinator)
+- **Double-tap now zooms** (reader.js: to at least 200 %, and back). My double-tap "Fit width ⇄ Fit page"
+  flip is gone; both ran together on the same tap, which caused the size jumps (456 / 90 / 793 px). The
+  emulator test should expect zoom in and back, not a fit flip.
+- **Swipe (step 32):** Android's own pan cancelled the pointer events. Swipe now reads touch events, and
+  a desk whose pages fit sideways pans only vertically (`touch-action: pan-y`). Headless: FAIL on
+  63af90f, PASS now, on phone portrait, phone landscape and tablet.
+- **Long-press drag (step 34):** while Arrange shows, a blocking `touchmove` listener is in place before
+  any press; once a press arms (450 ms), it stops the pan. Passes headless, with and without finger
+  jitter, but the intermittent failure never reproduced headless. **Please re-run on the emulator.**
+- **Fit page vs fit width (step 33):** fit page is ≤ fit width with no overflow and stays put after
+  swipe and double-tap (headless). A4 portrait pages fit equally headless, so please re-check the
+  456 vs 342 case on the device.
+- Host rule: open files (share / open intents) through `OpenDocumentService`, never `TabsService.OpenAsync`.
 
-  | | services | first render | total | JIT methods | assemblies |
-  |---|---|---|---|---|---|
-  | 60dca85 | 20.1 ms | 150.7 ms | 196.6 ms | 1,415 | 43 |
-  | + H-1 + H-3 | 20.2 ms | 150.9 ms | 198.8 ms | 1,416 | 43 |
+## For Foundation's PlatformText
+Settings says "computer" where Android needs "phone" / "device":
+- Appearance › *Follow the computer's light / dark setting*
+- Language › *Preferred name* hint ("your computer's name")
+- Kiosk › "Turn this computer into a self-service station." (if Kiosk shows on Android at all)
 
-  +1 method, +2.2 ms total — inside your 7 ms A/A noise floor. Rendered HTML identical to 60dca85
-  apart from one whitespace text node (scoped-CSS hashes unchanged).
-- Contract tests (`tests/ChuvadiReader.MobileUi.Tests`) fail if a command id the phone uses disappears,
-  if a `mobile.css` rule isn't scoped to tablet/phone, or if MainLayout's pager loses the
-  `aria-label="@Shell.CounterUnit number"` the desk label keys on.
+Not changed here (Settings is an existing file; the coordinator routed it to PlatformText).

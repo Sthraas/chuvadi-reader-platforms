@@ -1,24 +1,24 @@
 # Mobile app UI — Android tablet and phone look
 
-Branch `platform/mobile-ui` (up to date with `platform/foundation` be4498a: Groups A–C, startup fixes, chuvadi-pdf 3.31.2).
+Branch `platform/mobile-ui` (includes `platform/foundation` 63af90f: combined hooks D-26, ReadyToRun, chuvadi-pdf 3.31.2).
 Design: `docs/design-handoff/Portal & Android.dc.html` 12d-12j, `Reader Side Rails.dc.html`, `tokens.css`.
 
 ## What is here (all new files)
 | Path | What |
 |---|---|
-| `src/ChuvadiReader.Ui/Components/Platform/Phone/PhoneShell.razor` | Phone shell (12g-12j): app bar, content, FAB, tool strip, bottom bar, ⋮ menu, View sheet |
-| `…/Phone/PhoneAppBar.razor` | Back · title / mono sub-line · counter (tap to type a page) or **Bind all** in Arrange · ⋮ |
+| `src/ChuvadiReader.Ui/Components/Platform/Phone/PhoneShell.razor` | Phone shell (12g-12j): app bar, content, FAB, tool strip, ⋮ menu, View and Tabs sheets. Bottom bar: Read · Mark · Arrange · Protect in a document, Home · Library · Tabs · Settings elsewhere (4a, D-45) |
+| `…/Phone/PhoneAppBar.razor` | Back · title / mono sub-line · counter (tap to type a page) or **Bind all** in Arrange · ⋮ (avatar on Home) |
 | `…/Phone/PhoneToolStrip.razor` | 62 px strip, Mark and Protect only |
 | `…/Phone/PhoneSheet.razor` | Bottom sheet (handle, serif title, Done, 44 px rows) |
 | `…/Phone/PhoneCommands.cs` | Which ShellService command ids the strip, View sheet and FAB run |
 | `…/Phone/TouchSupport.razor` | Loads `mobile.js` on tablet and phone layouts only |
-| `src/ChuvadiReader.Ui/wwwroot/css/mobile.css` | Tablet sizing (72/72/60, 48 px targets) and phone folding; every rule keyed on `html[data-shell="tablet|phone"]` or `.ph-*` |
-| `src/ChuvadiReader.Ui/wwwroot/js/mobile.js` | Pinch → the Reader's own zoom, double-tap fit, swipe paging, tap shows the page strip, long-press drag in Arrange, Shelf peek |
+| `src/ChuvadiReader.Ui/wwwroot/css/mobile.css` | Tablet sizing (72/72/60, 48 px targets), phone folding, phone Home / Library / Settings; every rule keyed on `html[data-shell="tablet|phone"]` or `.ph-*` |
+| `src/ChuvadiReader.Ui/wwwroot/js/mobile.js` | Swipe paging (touch events), tap shows the page strip, long-press drag in Arrange, Shelf peek. Pinch and double-tap zoom are reader.js's own |
 | `tests/ChuvadiReader.MobileUi.Tests` | Contract tests: command ids exist; strip/sheet match the frames; every CSS rule is scoped |
 | `tests/ChuvadiReader.MobileUi.Preview` | **Testing only.** Blazor Server page that renders the Ui at phone/tablet/desktop |
-| `tools/mobile-ui/*.sh, *.py` | **Testing only.** Preview runner, headless-Chromium screenshots with touch emulation, pixel compare |
-| `docs/mobile-ui/proposal/H1-…, H3-…, mobile-ui-hooks-2.patch` | The only existing-file changes (MainLayout, Reader.razor), **not applied** — for the Foundation's combined patch: `FOR-FOUNDATION.md` |
-| `docs/mobile-ui/MU-8-PHONE-SCREENS.md`, `mocks/` | Phone Home / Library / Settings: two options each, mock screenshots |
+| `tools/mobile-ui/*.sh, *.py` | **Testing only.** Preview runner, headless-Chromium screenshots with touch emulation, pixel compare, `gestures.py` (CDP touch: swipe, double-tap, pinch, fit, long-press drag) |
+| `docs/mobile-ui/proposal/H5-…, H6-…, mobile-ui-hooks-3.patch` | The only existing-file changes (MainLayout, Settings.razor), **not applied**; for Foundation: `FOR-FOUNDATION.md` |
+| `docs/mobile-ui/MU-8-PHONE-SCREENS.md`, `mocks/` | Phone Home / Library / Settings: the options and mocks behind D-45 (now built) |
 | `tools/mobile-ui/mocks.py` | **Design only.** Renders the mock frames |
 
 ## How it switches
@@ -26,7 +26,7 @@ The host page writes `<html data-shell …>` for the first paint and MainLayout 
 (non-Windows only); `mobile.css` keys on it. Components read `IPlatformInfo` (`@inject`, `Shell()`,
 `FormFactorChanged`) — there is no cascade. `MainLayout` renders `PhoneShell` instead of its top bar /
 left bar / status bar when `FormFactor == Phone`, and `TouchSupport` on non-Windows tablet/phone
-(hook H-1; Windows renders neither). The phone shell runs
+(H-1, applied by Foundation; Windows renders neither). The phone shell runs
 MainLayout's own methods (passed in) and the commands the mode views already register for Ctrl K —
 nothing is re-implemented.
 
@@ -46,5 +46,12 @@ tools/mobile-ui/run.sh tablet  5181 out "tablet-read 1280x800" "tablet-arrange 8
 tools/mobile-ui/run.sh desktop      5183 after  "desktop-read 1440x900" "desktop-read 990x700"
 tools/mobile-ui/run.sh desktop-base 5184 before "desktop-read 1440x900" "desktop-read 990x700"
 tools/mobile-ui/compare.py before after      # IDENTICAL / CLOCK ONLY = pass
+
+# touch gestures (CDP touch events); <layout>-base runs unchanged platform/foundation for "before"
+tools/mobile-ui/run.sh phone      5185 out "gestures 412x915" "gestures 915x412" "gestures-jitter 412x915"
+tools/mobile-ui/run.sh tablet-base 5186 before "gestures 1280x800"
 ```
+Run desktop and desktop-base **at the same time** (two ports, `CHVD_SCRATCH` apart): Home and Library
+show the clock and relative ages ("2m"), which differ if the runs are a minute apart. A difference of
+1 colour level on a few anti-aliased pixels also shows between two runs of the same tree.
 Screens from each session are kept in `docs/mobile-ui/screens/<date>/` next to crops of the design frames.

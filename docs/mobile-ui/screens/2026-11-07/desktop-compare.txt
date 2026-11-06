@@ -1,0 +1,8 @@
+CLOCK ONLY desktop-arrange-1440x900.png (1422, 883, 1428, 892)
+DIFFERS desktop-home-1440x900.png (1047, 191, 1428, 892)
+DIFFERS desktop-library-1440x900.png (1403, 111, 1428, 892)
+CLOCK ONLY desktop-mark-1440x900.png (1415, 883, 1428, 892)
+CLOCK ONLY desktop-read-1440x900.png (1422, 883, 1428, 892)
+CLOCK ONLY desktop-read-990x700.png (972, 683, 978, 692)
+CLOCK ONLY desktop-settings-1440x900.png (1422, 883, 1428, 892)
+CLOCK ONLY desktop-settings-700x800.png (675, 783, 688, 792)

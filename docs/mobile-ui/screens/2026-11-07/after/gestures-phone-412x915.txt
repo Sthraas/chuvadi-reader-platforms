@@ -1,0 +1,5 @@
+PASS swipe → next page 1 / 13 → 2 / 13; events ['pointerdown', 'pointerup']
+PASS double-tap zooms in and back 352 → 1587 → 352 px
+PASS pinch ×2 spread zooms ≈2× (single handler) 352 → 704 px (×2.00)
+PASS fit page ≤ fit width, no overflow, stable width 352 page 352 width 352 (desk 412, overflow 0)
+PASS long-press drag Shelf page → desk desk pages 0 → 1; events ['pointerdown', 'pointerdown', 'pointerup']

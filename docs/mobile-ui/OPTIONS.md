@@ -1,20 +1,44 @@
 # Mobile app UI — options and hooks for the coordinator
 
-## Status of every item (decisions D-40 … D-49, 6 Nov)
+## Status of every item (7 Nov, session 3)
 | Item | Decision | State on `platform/mobile-ui` |
 |---|---|---|
-| MU-1 phone shell hook | D-40 (a) via combined patch | Regenerated against 60dca85 with `IPlatformInfo` (no cascade): `proposal/H1-…patch`, see `FOR-FOUNDATION.md` |
-| MU-2/3/4 CSS, command ids, mobile.js | D-41 (a) | Built; real-device check with the Android chat's emulator still to do |
-| MU-5 pen draws, finger pans | D-42 (a) | Diff ready — **in `Reader.razor` `MkDown`, not reader.js** (my earlier note named the wrong file): `proposal/H3-…patch` |
-| MU-6 Tabs sheet | D-43 (a) | Built: tap the title → Tabs sheet (switch, × close via MainLayout's own CloseTab, Open…) |
-| MU-7 phone landscape | D-44 (b) | Built: 48 px app bar, icon-only 56 px bottom bar |
-| MU-8 phone Home / Library / Settings | D-45 | Two options each with mock screenshots: `MU-8-PHONE-SCREENS.md` — **needs a decision; not built** |
-| MU-9 Protect FAB | D-46 | Built: Save redacted copy (`rd.save`, redaction view) |
-| MU-9 desk counter | D-46 hook | Built **without** a hook (TouchSupport, tablet only) — confirm or ask for the Bench hook (`FOR-FOUNDATION.md`) |
+| MU-1 phone shell hook | D-40 (a) | **Applied by Foundation** (63af90f, H-1). Follow-up: H-5 passes SwitchTab / CloseTab (`FOR-FOUNDATION.md`) |
+| MU-2/3/4 CSS, command ids, touch | D-41 (a) | Built. Session 3 fixed the emulator bugs (swipe, fit flip, long-press); device re-run needed |
+| MU-5 pen draws, finger pans | D-42 (a) | **Applied by Foundation** in reader.js (`penSplit`); my CSS half removed (reader.js handles it) |
+| MU-6 Tabs sheet | D-43 (a) | Built; switch / close need H-5 |
+| MU-7 phone landscape | D-44 (b) | Built; the off-document bar is icon-only in landscape too |
+| MU-8 phone Home / Library / Settings | D-45: bar B, Home B, Library both, Settings A | **Built.** Settings A needs H-6. Open points below |
+| MU-9 Protect FAB | D-46 | Built: Save redacted copy |
+| MU-9 desk counter | D-46 | Bench's (Foundation 63af90f). Mine removed so the two don't fight; please confirm |
 | MU-10 title | D-47 file name | As built |
-| TabsService duplicates | D-48 approved | **Withdrawn — my report was wrong** (test shows no duplicate on real hosts); host rule instead (`FOR-FOUNDATION.md`) |
+| TabsService duplicates | D-48 | Applied by Foundation (I'd withdrawn the report in session 2; the fix is harmless) |
 | Android host fixes | D-49 | Android chat |
-| chuvadi-pdf 3.31.2 | D-54 | Done: branch brought up to be4498a (3.31.2 in `ci/packages`); nothing here pins a version; re-verified on 3.31.2 |
+| chuvadi-pdf 3.31.2 | D-54 | Done (in 63af90f) |
+| F-4 PlatformState cascade | — | Done: TouchSupport and PhoneShell use `IPlatformInfo` + `ShellLayouts.Shell` |
+
+### MU-8 open points (need a decision)
+1. **Home search pill sits above the greeting**, not below the count line as in 4a. Dashboard has no
+   slot there; PhoneShell puts it above the page content.
+   (a) Keep it as is: no hook, and search is the first thing under the thumb.
+   (b) A Dashboard hook (≈3 lines, phone only) to render it exactly where 4a has it. Matches the handout.
+   **Recommend (b)** (Arun's rule: follow the handout), but it's an existing-file edit.
+2. **Settings list rows have no one-line summary** (the mock had one under each section name).
+   (a) Leave them out: no hook.
+   (b) A `Summary` per entry in Settings' `Sections` table (Settings hook, ~10 lines of text).
+   Recommend (b) if Arun wants the mock exactly; (a) is clean and usable.
+3. **Library "Default view" is a placeholder** (Settings shows it greyed "Soon"; Library always opens
+   Table), so the phone opens with List.
+   (a) Keep it until the Reader chat builds the setting; the phone follows it automatically then.
+   (b) A phone-only hook in Library to open with Shelf.
+   **Recommend (a)**: it matches D-45 ("phone opens with Settings › Default view").
+4. **The redaction view opens at its desktop zoom on a phone** (page wider than the screen).
+   (a) A Redact hook: fit width when `FormFactor == Phone`.
+   (b) Leave it; pinch works.
+   Recommend (a).
+5. **Phone landscape, Arrange Shelf**: lifting a page out of the open Shelf drops the sheet to its
+   peek, so the desks are reachable. This is my interaction choice (not in the handout). Please confirm.
+6. Tablet desk counter reads "1 / 1 desks" (no singular). Bench's counter text; cosmetic.
 
 ---
 

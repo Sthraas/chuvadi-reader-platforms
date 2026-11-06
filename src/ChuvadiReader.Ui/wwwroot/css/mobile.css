@@ -44,6 +44,12 @@ html[data-shell="phone"] .rpage-send { display: none; }
 html[data-shell="tablet"] .pop-item,
 html[data-shell="phone"] .pop-item { height: 44px; font-size: 14px; }
 
+/* Swipe paging (Android BUILD-LOG step 32): a desk whose pages fit sideways pans only vertically,
+   so the WebView doesn't take a sideways drag as its own pan; mobile.js marks it .chvd-hfit. A desk
+   zoomed wider than the view keeps the Reader's pan-x pan-y. Two-finger pinch stays reader.js's. */
+html[data-shell="tablet"] .rdesk.chvd-hfit,
+html[data-shell="phone"] .rdesk.chvd-hfit { touch-action: pan-y; }
+
 /* Arrange: one finger scrolls the desks; a page drags after a long-press (mobile.js). */
 html[data-shell="tablet"] .bpage,
 html[data-shell="tablet"] .shelf-pg,
@@ -130,12 +136,8 @@ html[data-shell="tablet"] .srail:hover .rtext { justify-content: center; padding
 /* Messages sit above the gesture bar, not above a status bar that isn't there. */
 html[data-shell="tablet"] .msgs { bottom: calc(14px + env(safe-area-inset-bottom)); }
 
-/* Arrange (12f "‹ 2 desks ›"): the counter TouchSupport publishes reads "1 / 2 desks". */
+/* Arrange (12f "‹ 2 desks ›"): the desk counter Bench publishes on a tablet (D-46) reads "1 / 2 desks". */
 html[data-shell="tablet"] .tb-pg-box[aria-label="desk number"] + .tb-pg-total::after { content: " desks"; }
-
-/* Mark with a pen (12e, D-42): the pen draws, a finger pans the desk. Reader.razor ignores a
-   finger's press on the Mark layer on a tablet (hook H-3); this lets the browser pan with it. */
-html[data-shell="tablet"][data-input~="pen"] .mk-layer { touch-action: pan-x pan-y; }
 
 /* Arrange, portrait (12f): desks two across; 76 × 106 page cards; 48 px desk header. */
 @media (max-width: 999px) {
@@ -354,9 +356,85 @@ html[data-shell="phone"] .desk-add { min-height: 88px; }
     html[data-shell="phone"] { --ph-bar: 48px; --ph-nav: 56px; }
     html[data-shell="phone"] .ph-nav { padding: 4px 8px calc(4px + env(safe-area-inset-bottom)); }
     html[data-shell="phone"] .ph-nav-b { min-height: 48px; gap: 0; }
-    html[data-shell="phone"] .ph-verb { display: none; }
+    html[data-shell="phone"] .ph-verb,
+    html[data-shell="phone"] .ph-lab { display: none; }
     html[data-shell="phone"] .ph-sheet { max-height: 92dvh; }
 }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   Phone off-document (D-45): 4a's Home · Library · Tabs · Settings bar, Home, Library, Settings A
+   ════════════════════════════════════════════════════════════════════════════ */
+.ph-lab { font-family: var(--chvd-sans-display); font-size: 12px; line-height: 1; white-space: nowrap; }
+.ph-av {
+    flex: none; width: 32px; height: 32px; margin: 6px 12px 6px 6px; border: none; outline: 6px solid transparent; /* 44 px target */ border-radius: 16px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--chvd-binding); color: var(--chvd-on-accent); font: 500 12px var(--chvd-mono);
+}
+.ph-search {
+    display: flex; align-items: center; gap: 10px; width: calc(100% - 36px); height: 46px; margin: 14px 18px 0;
+    padding: 0 14px; box-sizing: border-box; border-radius: 12px; cursor: pointer; text-align: left;
+    background: var(--chvd-surface-hi); border: var(--chvd-stroke) solid var(--chvd-border);
+    color: var(--chvd-ink-muted); font: 14px var(--chvd-sans-display);
+}
+.ph-fab-ext { width: auto; padding: 0 20px; gap: 8px; font: 15px var(--chvd-sans-display); position: fixed;
+    bottom: calc(var(--ph-nav) + 16px + env(safe-area-inset-bottom)); }
+
+/* Home (4a): one column — greeting, resume cards sideways, Recent, then the side blocks. The drop
+   zone has nothing to drop on a phone (the Open button replaces it); the clock line is the system's. */
+html[data-shell="phone"] .home { display: block; padding: 18px 18px 96px; height: auto; }
+html[data-shell="phone"] .home .main { padding: 0; gap: 22px; max-width: none; }
+html[data-shell="phone"] .home .greet .eyebrow { display: none; }
+html[data-shell="phone"] .home .greet-line { font-size: 34px; line-height: 1.05; }
+html[data-shell="phone"] .home .greet-line .ta { display: block; font-size: 28px; margin-top: 2px; }
+html[data-shell="phone"] .home .blurb { font-size: 13.5px; }
+html[data-shell="phone"] .home .main > button.drop { display: none; }
+html[data-shell="phone"] .home .drop.first { padding: 22px 16px; }
+html[data-shell="phone"] .home .resume {
+    display: flex; gap: 10px; overflow-x: auto; margin-right: -18px; padding-right: 18px; scrollbar-width: none;
+}
+html[data-shell="phone"] .home .rcard { flex: none; width: 218px; min-height: 92px; }
+html[data-shell="phone"] .home .rrow { grid-template-columns: 22px minmax(0, 1fr) auto auto; min-height: 50px; gap: 10px; }
+html[data-shell="phone"] .home .r-lock span { display: none; }
+html[data-shell="phone"] .home .side { width: auto; margin-top: 26px; padding: 0; border: none; background: transparent; position: static; }
+html[data-shell="phone"] .home .smap-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+/* Library: one row of chips that scrolls sideways; Table becomes a two-line list; the Shelf keeps
+   its desktop look (each shelf scrolls sideways). Opens with Table (the Default view setting is not
+   built yet — Settings shows it as "Coming soon"). */
+html[data-shell="phone"] .libp-filter { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-right: -16px; padding-right: 16px; }
+html[data-shell="phone"] .libp-filter .tagchip { flex: none; min-height: 32px; }
+html[data-shell="phone"] .libp-views .vbtn { min-height: 36px; }
+html[data-shell="phone"] .libp-views .shelf-note { display: none; }
+html[data-shell="phone"] .libhead { display: none; }
+html[data-shell="phone"] .librow {
+    display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; grid-template-areas: "c n p" "c t u";
+    align-items: center; column-gap: 8px; row-gap: 0; padding: 4px 0; min-height: 52px;
+}
+html[data-shell="phone"] .librow > .libcheck { grid-area: c; width: 20px; height: 20px; }
+html[data-shell="phone"] .librow > .lib-name { grid-area: n; min-width: 0; min-height: 32px; }
+html[data-shell="phone"] .librow > .lib-tags { grid-area: t; min-width: 0; flex-wrap: nowrap; overflow: hidden; }
+html[data-shell="phone"] .librow > .num:nth-of-type(1) { grid-area: p; }
+html[data-shell="phone"] .librow > .num:nth-of-type(2) { display: none; }
+html[data-shell="phone"] .librow > .num:nth-of-type(3) { grid-area: u; }
+html[data-shell="phone"] .librow .lib-path { display: none; }
+/* The Shelf keeps its desktop look; each shelf already scrolls sideways. */
+
+/* Settings A: the section list alone; a section opens as its own screen (hook H-6 adds .phone-list
+   when no section is asked for, and pushes ?section=… on a tap). */
+html[data-shell="phone"] .settings { display: block; height: auto; }
+html[data-shell="phone"] .settings .snav { width: auto; border: none; background: transparent; padding: 6px 16px 24px; position: static; height: auto; }
+html[data-shell="phone"] .settings .snav-title { display: none; }
+html[data-shell="phone"] .settings .snav { flex-direction: column; flex-wrap: nowrap; gap: 0; }
+html[data-shell="phone"] .settings .snav-item { width: 100%; box-sizing: border-box; }
+html[data-shell="phone"] .settings .snav-foot { display: block; margin-top: 18px; }
+html[data-shell="phone"] .settings .snav-item {
+    min-height: 56px; padding: 0 4px; border-radius: 0; border-bottom: var(--chvd-stroke) solid var(--chvd-border-soft); font-size: 15px;
+}
+html[data-shell="phone"] .settings .snav-item::after { content: "›"; margin-left: auto; color: var(--chvd-ink-muted); font-size: 18px; }
+html[data-shell="phone"] .settings .snav-item.on { background: transparent; color: inherit; box-shadow: none; }
+html[data-shell="phone"] .settings:not(.phone-list) .snav { display: none; }
+html[data-shell="phone"] .settings.phone-list .sbody { display: none; }
+html[data-shell="phone"] .settings .sbody { padding: 16px 16px 32px; max-width: none; }
 
 /* Immersive keeps only the page, as on desktop. */
 body.chvd-immersive .ph-bar,

@@ -1,0 +1,14 @@
+diff --git a/src/ChuvadiReader.Ui/Layout/MainLayout.razor b/src/ChuvadiReader.Ui/Layout/MainLayout.razor
+index e0f06f0..4c2c616 100644
+--- a/src/ChuvadiReader.Ui/Layout/MainLayout.razor
++++ b/src/ChuvadiReader.Ui/Layout/MainLayout.razor
+@@ -35,7 +35,8 @@
+     @if (ShellLayout == ChuvadiReader.Platform.ShellLayout.Phone)
+     {
+         <ChuvadiReader.Ui.Components.Platform.Phone.PhoneShell RequestMode="RequestMode" ModeDisabledReason="ModeDisabledReason"
+-                                                               Open="AddTab" Find="FindNow" Go="Go" OnDocView="OnDocView">
++                                                               Open="AddTab" Find="FindNow" Go="Go" OnDocView="OnDocView"
++                                                               SwitchTab="SwitchTab" CloseTab="CloseTab">
+             @Body
+         </ChuvadiReader.Ui.Components.Platform.Phone.PhoneShell>
+     }

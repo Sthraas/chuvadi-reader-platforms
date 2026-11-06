@@ -35,6 +35,21 @@ app.MapRazorComponents<ChuvadiReader.MobileUi.Preview.Components.HostPage>()
 // Two documents open, like 12g ("1 of 2 tabs" here; the frame shows 4).
 var tabs = app.Services.GetRequiredService<TabsService>();
 var shell = app.Services.GetRequiredService<ShellService>();
+// A small library in category folders, so Library's list and shelf have something to show.
+var lib = app.Services.GetRequiredService<SaveFolderService>().BaseFolder;
+foreach (var (cat, name, pages) in new[]
+{
+    ("Clinical", "lab-report-meena-r.pdf", 4), ("Clinical", "discharge-summary.pdf", 12), ("Clinical", "ot-checklist-v3.pdf", 3),
+    ("Finance", "insurance-claims.pdf", 9), ("Finance", "tariff-2026.pdf", 48), ("Legal", "consent-form-signed.pdf", 2),
+    ("Legal", "vendor-agreement.pdf", 18),
+})
+{
+    if (!File.Exists(Path.Combine(lib, cat, name)))
+    {
+        Fixtures.Document(Path.Combine(lib, cat), name, pages);
+    }
+}
+
 await tabs.RestoreAsync();   // as Dashboard/Reader do first, so the fixtures aren't added twice
 var a = Fixtures.Document("discharge-summary.pdf", 13);
 var b = Fixtures.Document("lab-report.pdf", 4);

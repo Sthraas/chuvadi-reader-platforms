@@ -3,7 +3,7 @@
 Mock screenshots: `docs/mobile-ui/mocks/` (`home-options.png`, `library-options.png`,
 `settings-options.png`: today | A | B). Source: `mocks/phone-screens.html` (handout tokens, fonts
 and LiPicons; content uses the app's real theme names, setting labels and section icons).
-**Nothing here is built yet.**
+**Built (7 Nov):** bar B, Home B, Library both views, Settings A (decision D-45). Screens: `screens/2026-11-07/after/phone-{home,library,library-shelf,settings,settings-section}-*.png`. Open points: `OPTIONS.md` › MU-8 open points.
 
 The handout already has a phone Home: `Chuvadi Mobile.dc.html` frame **4a** (copied as
 `mocks/reference-chuvadi-mobile-4a.png`). DESIGN-NOTE supersedes only that file's *tablet* frames,

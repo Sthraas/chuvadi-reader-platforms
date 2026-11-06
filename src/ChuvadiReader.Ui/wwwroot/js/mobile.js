@@ -1,30 +1,32 @@
 // Touch for the tablet and phone shells (Portal & Android 12d-12j). Loaded by TouchSupport.razor and
 // PhoneShell.razor only when <html data-shell> is "tablet" or "phone"; never on desktop or portal.
 //
-// It translates touch into what the desktop code already understands, so reader.js and bench.js
-// stay unchanged:
-//   * two-finger pinch on the page desk → Ctrl + wheel, which reader.js turns into its own
-//     cursor-anchored zoom (the same path as a trackpad pinch)
-//   * double-tap on the page → Fit width ⇄ Fit page (Read mode; .NET decides)
-//   * horizontal swipe when the page has no sideways overflow → next / previous page (Read mode)
+// reader.js already owns pinch-to-zoom and double-tap zoom on touchscreens ("Pinch, double-tap and
+// swipe do zoom and paging" — handout 12g), so this file adds only what the desktop code lacks:
+//   * horizontal swipe on a page that fits sideways → next / previous page (Read mode). Detected from
+//     touch events, which keep arriving when the WebView takes the drag as a pan (pointer events get
+//     pointercancel there — Android BUILD-LOG step 32). A desk that fits sideways is marked
+//     .chvd-hfit so it pans only vertically (mobile.css), leaving the sideways drag to the swipe.
 //   * tap on the canvas → shows the per-page strip for a few seconds (desktop shows it on hover)
-//   * Arrange: long-press a page (or a shelf page) to drag it; a quick swipe scrolls instead.
+//   * Arrange: long-press a page (or a Shelf page) to drag it; a quick swipe scrolls instead. While
+//     Arrange shows, a blocking touchmove listener is registered *before* any press, so the browser
+//     waits for it and an armed press can stop the pan (Chrome ignores one added mid-gesture — step 34).
+//   * phone Arrange: the Shelf rests as a peek; tap it or swipe up to open, swipe down to close; a page
+//     long-pressed out of the open Shelf drops it back to the peek so the desks are reachable.
 
 let net = null;          // DotNetObjectReference<TouchSupport>
 let attached = false;
-const touches = new Map();   // pointerId → {x, y}
-let pinch = null;            // {dist, desk}
-let tap = null;              // {x, y, t, id, moved}
-let lastTap = null;          // {x, y, t}
+let tap = null;              // pointer tap candidate {x, y, t, id, moved, target}
+let swipe = null;            // touch swipe candidate {x, y, t, target, multi}
 let stripTimer = null;
 let press = null;            // Arrange long-press state
-let guardMove = null;
+let arrange = false;
+let fitTimer = 0;
 
-const DOUBLE_TAP_MS = 300;
 const TAP_SLOP = 10;
 const SWIPE_MIN = 60;
+const SWIPE_MS = 600;
 const LONG_PRESS_MS = 450;
-const ZOOM_K = 0.0015;       // reader.js: next = old * exp(-deltaY * 0.0015)
 
 export function initTouch(dotnetRef) {
     net = dotnetRef || net;
@@ -35,6 +37,11 @@ export function initTouch(dotnetRef) {
     document.addEventListener('pointerup', onUp, true);
     document.addEventListener('pointercancel', onCancel, true);
     document.addEventListener('contextmenu', onContextMenu, true);
+    document.addEventListener('touchstart', onTouchStart, { capture: true, passive: true });
+    document.addEventListener('touchend', onTouchEnd, { capture: true, passive: true });
+    document.addEventListener('touchcancel', onTouchCancel, { capture: true, passive: true });
+    fitTimer = setInterval(markFits, 300);
+    markFits();
 }
 
 export function disposeTouch() {
@@ -45,10 +52,28 @@ export function disposeTouch() {
     document.removeEventListener('pointerup', onUp, true);
     document.removeEventListener('pointercancel', onCancel, true);
     document.removeEventListener('contextmenu', onContextMenu, true);
-    endPress();
-    touches.clear();
-    pinch = null; tap = null; lastTap = null;
+    document.removeEventListener('touchstart', onTouchStart, true);
+    document.removeEventListener('touchend', onTouchEnd, true);
+    document.removeEventListener('touchcancel', onTouchCancel, true);
+    setArrange(false);
+    clearInterval(fitTimer); fitTimer = 0;
+    cancelPress();
+    tap = null; swipe = null;
     clearTimeout(stripTimer);
+}
+
+/** TouchSupport tells us when Arrange is showing (long-press drag needs the blocking listener). */
+export function setArrange(on) {
+    on = !!on;
+    if (on === arrange) return;
+    arrange = on;
+    if (on) document.addEventListener('touchmove', guardMove, { capture: true, passive: false });
+    else document.removeEventListener('touchmove', guardMove, { capture: true });
+}
+
+function guardMove(e) {
+    // Only an armed press stops the pan; every other drag scrolls as usual.
+    if (press && press.armed && e.cancelable) e.preventDefault();
 }
 
 function isTouch(e) { return e.pointerType === 'touch'; }
@@ -59,128 +84,99 @@ function interactive(el) {
     return !!(el && el.closest && el.closest('button, input, select, textarea, a, [contenteditable], .mk-layer, .fcards, .pstrip, .mdrawer'));
 }
 
-// ── pointer routing ─────────────────────────────────────────────────────────
-function onDown(e) {
-    if (!isTouch(e) || e.__chvdSynthetic) return;
-    touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+function isPhone() { return document.documentElement.getAttribute('data-shell') === 'phone'; }
 
-    if (touches.size === 2) {
-        const desk = deskOf(e.target);
-        if (desk) {
-            const [a, b] = [...touches.values()];
-            pinch = { dist: Math.hypot(a.x - b.x, a.y - b.y), desk };
-            tap = null;
-            cancelPress();
-        }
+// A desk whose pages fit sideways pans only vertically, so a sideways drag is ours (swipe).
+function markFits() {
+    for (const d of document.querySelectorAll('.rdesk')) {
+        d.classList.toggle('chvd-hfit', d.scrollWidth <= d.clientWidth + 1);
+    }
+}
+
+// ── swipe (touch events: never cancelled by the WebView's own pan) ────────────
+function onTouchStart(e) {
+    if (e.touches.length !== 1) { if (swipe) swipe.multi = true; return; }
+    const t = e.touches[0];
+    swipe = { x: t.clientX, y: t.clientY, t: performance.now(), target: e.target, multi: false };
+}
+
+function onTouchEnd(e) {
+    const s = swipe;
+    if (!s || e.touches.length !== 0) return;
+    swipe = null;
+    if (s.multi || press) return;
+    const t = e.changedTouches[0];
+    if (!t) return;
+    const dx = t.clientX - s.x, dy = t.clientY - s.y;
+
+    // Phone Arrange: swipe up on the Shelf peek opens it, swipe down on its header closes it.
+    const sh = s.target.closest ? s.target.closest('.bench-shelf') : null;
+    if (sh && isPhone() && Math.abs(dy) > SWIPE_MIN && Math.abs(dy) > 2 * Math.abs(dx)) {
+        if (dy < 0) sh.classList.add('chvd-open');
+        else if (s.target.closest('.shelf-head') || sh.scrollTop <= 0) sh.classList.remove('chvd-open');
         return;
     }
 
-    if (touches.size === 1 && beginPress(e)) return;
+    // Paging: horizontal, quick, on a page that fits sideways (otherwise the drag pans the page).
+    const desk = deskOf(s.target);
+    if (desk && !interactive(s.target) && Math.abs(dx) > SWIPE_MIN && Math.abs(dx) > 2 * Math.abs(dy)
+        && performance.now() - s.t < SWIPE_MS && desk.scrollWidth <= desk.clientWidth + 1) {
+        call('OnSwipe', dx < 0 ? 1 : -1);
+    }
+}
 
+function onTouchCancel() { swipe = null; }
+
+// ── pointer routing: tap and long-press ──────────────────────────────────────
+function onDown(e) {
+    if (!isTouch(e) || e.__chvdSynthetic) return;
+    if (!e.isPrimary) { tap = null; cancelPress(); return; }   // a second finger: pinch is reader.js's
+    if (beginPress(e)) return;
     tap = { x: e.clientX, y: e.clientY, t: performance.now(), id: e.pointerId, moved: false, target: e.target };
 }
 
 function onMove(e) {
-    if (!isTouch(e) || !touches.has(e.pointerId)) return;
-    touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
-
-    if (press && !press.armed && e.pointerId === press.id) {
-        if (Math.hypot(e.clientX - press.x, e.clientY - press.y) > TAP_SLOP) cancelPress();  // a swipe: let it scroll
-    }
-
-    if (pinch && touches.size >= 2) {
-        const [a, b] = [...touches.values()];
-        const dist = Math.hypot(a.x - b.x, a.y - b.y);
-        if (pinch.dist > 0 && dist > 0) {
-            const ratio = dist / pinch.dist;
-            if (Math.abs(ratio - 1) > 0.01) {
-                const deltaY = -Math.log(ratio) / ZOOM_K;
-                pinch.desk.dispatchEvent(new WheelEvent('wheel', {
-                    bubbles: true, cancelable: true, ctrlKey: true, deltaY,
-                    clientX: (a.x + b.x) / 2, clientY: (a.y + b.y) / 2,
-                }));
-                pinch.dist = dist;
-            }
-        }
-        e.preventDefault();
-        return;
-    }
-
+    if (!isTouch(e)) return;
+    if (press && !press.armed && e.pointerId === press.id
+        && Math.hypot(e.clientX - press.x, e.clientY - press.y) > TAP_SLOP) cancelPress();   // a scroll
     if (tap && tap.id === e.pointerId && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) > TAP_SLOP) tap.moved = true;
 }
 
 function onUp(e) {
     if (!isTouch(e) || e.__chvdSynthetic) return;
-    touches.delete(e.pointerId);
-    if (pinch) {
-        if (touches.size < 2) pinch = null;
-        tap = null;
-        return;
-    }
-
     if (press && e.pointerId === press.id) {
         if (!press.armed) {
             // A quick tap on a page: hand bench.js the press it never saw, so it selects the page
             // exactly as a click does (its pointerup listener runs after this one).
             replayDown(press);
-            cancelPress();
-        } else {
-            endPress();
         }
+        cancelPress();
         return;
     }
 
     const t = tap;
     tap = null;
-    if (!t || t.id !== e.pointerId) return;
-    const dx = e.clientX - t.x, dy = e.clientY - t.y;
-    const desk = deskOf(t.target);
+    if (!t || t.id !== e.pointerId || t.moved) return;
 
-    if (t.moved) {
-        const sh = t.target.closest ? t.target.closest('.bench-shelf') : null;
-        if (sh && document.documentElement.getAttribute('data-shell') === 'phone' && Math.abs(dy) > SWIPE_MIN && Math.abs(dy) > 2 * Math.abs(dx)) {
-            // Swipe up on the peek opens the Shelf; swipe down on its header closes it.
-            if (dy < 0) sh.classList.add('chvd-open');
-            else if (t.target.closest('.shelf-head') || sh.scrollTop <= 0) sh.classList.remove('chvd-open');
-            return;
-        }
-        // Swipe paging: horizontal, fast enough, and the page isn't wider than the view.
-        if (desk && Math.abs(dx) > SWIPE_MIN && Math.abs(dx) > 2 * Math.abs(dy)
-            && performance.now() - t.t < 600 && desk.scrollWidth <= desk.clientWidth + 1) {
-            call('OnSwipe', dx < 0 ? 1 : -1);
-        }
-        return;
-    }
-
-    // Arrange on a phone: the Shelf rests as a peek; a tap on its header (or the peek) opens it.
+    // Phone Arrange: the Shelf rests as a peek; a tap on its header (or the peek) opens / closes it.
     const shelf = t.target.closest ? t.target.closest('.bench-shelf') : null;
-    if (shelf && document.documentElement.getAttribute('data-shell') === 'phone'
-        && (!shelf.classList.contains('chvd-open') || t.target.closest('.shelf-head'))) {
+    if (shelf && isPhone() && (!shelf.classList.contains('chvd-open') || t.target.closest('.shelf-head'))) {
         shelf.classList.toggle('chvd-open');
         return;
     }
     if (interactive(t.target)) return;
-    const now = performance.now();
-    if (desk && lastTap && now - lastTap.t < DOUBLE_TAP_MS && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 30) {
-        lastTap = null;
-        call('OnDoubleTap');
-        return;
-    }
-    lastTap = { x: e.clientX, y: e.clientY, t: now };
     showStrip(t.target);
 }
 
 function onCancel(e) {
     if (!isTouch(e)) return;
-    touches.delete(e.pointerId);
-    if (touches.size < 2) pinch = null;
     if (tap && tap.id === e.pointerId) tap = null;
     if (press && e.pointerId === press.id && !press.armed) cancelPress();
 }
 
 function onContextMenu(e) {
     // Android shows a context menu / text selection on long-press; not on a page being dragged.
-    if (press && press.armed) e.preventDefault();
+    if (press) e.preventDefault();
 }
 
 function call(method, arg) {
@@ -199,6 +195,7 @@ function showStrip(target) {
 
 // ── Arrange: long-press to drag ─────────────────────────────────────────────
 function beginPress(e) {
+    if (!arrange) return false;
     const card = e.target.closest ? e.target.closest('[data-bench-id], [data-shelf], [data-shelf-all]') : null;
     if (!card || e.target.closest('button') || e.target.closest('input')) return false;
     // bench.js would start its press now; hold it back until we know this isn't a scroll.
@@ -210,12 +207,14 @@ function beginPress(e) {
 
 function armPress() {
     if (!press) return;
-    press.armed = true;
+    press.armed = true;   // guardMove now stops the pan for the rest of this touch
     try { navigator.vibrate && navigator.vibrate(12); } catch { /* not allowed */ }
-    // From here on a moving finger drags the page, not the desks: stop the browser panning.
-    guardMove = (ev) => { if (ev.cancelable) ev.preventDefault(); };
-    document.addEventListener('touchmove', guardMove, { passive: false, capture: true });
     replayDown(press);
+    // Phone: a page lifted out of the open Shelf sheet drops the sheet back to its peek, so the
+    // desks it covered (all of them in landscape) are there to drop on. bench.js already holds the
+    // press, so the drag carries on.
+    const sheet = press.target.closest ? press.target.closest('.bench-shelf.chvd-open') : null;
+    if (sheet && isPhone()) requestAnimationFrame(() => sheet.classList.remove('chvd-open'));
 }
 
 function replayDown(p) {
@@ -232,14 +231,6 @@ function cancelPress() {
     if (!press) return;
     clearTimeout(press.timer);
     press = null;
-}
-
-function endPress() {
-    cancelPress();
-    if (guardMove) {
-        document.removeEventListener('touchmove', guardMove, { capture: true });
-        guardMove = null;
-    }
 }
 
 // ── orientation (phone View sheet: "Two-page · landscape only") ──────────────
@@ -261,11 +252,4 @@ export function unwatchOrientation() {
     if (orientHandler) window.removeEventListener('resize', orientHandler);
     orientHandler = null;
     orientRef = null;
-}
-
-// ── tablet Arrange: the top-bar counter's ‹ › scroll to a desk (12f) ────────
-export function scrollToDesk(n) {
-    const desks = document.querySelectorAll('.bench-desks > .desk');
-    const el = desks[n - 1];
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
 }

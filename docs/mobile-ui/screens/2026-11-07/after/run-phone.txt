@@ -1,0 +1,27 @@
+PASS swipe → next page 1 / 13 → 2 / 13; events ['pointerdown', 'pointerup']
+PASS double-tap zooms in and back 352 → 1587 → 352 px
+PASS pinch ×2 spread zooms ≈2× (single handler) 352 → 704 px (×2.00)
+PASS fit page ≤ fit width, no overflow, stable width 352 page 352 width 352 (desk 412, overflow 0)
+PASS long-press drag Shelf page → desk desk pages 0 → 1; events ['pointerdown', 'pointerdown', 'pointerup']
+PASS swipe → next page 1 / 13 → 2 / 13; events ['pointerdown', 'pointerup']
+PASS double-tap zooms in and back 186 → 1587 → 186 px
+PASS pinch ×2 spread zooms ≈2× (single handler) 186 → 373 px (×2.01)
+PASS fit page ≤ fit width, no overflow, stable width 855 page 186 width 855 (desk 915, overflow 0)
+PASS long-press drag Shelf page → desk desk pages 1 → 2; events ['pointerdown', 'pointerdown', 'pointerup']
+PASS swipe → next page 1 / 13 → 2 / 13; events ['pointerdown', 'pointerup']
+PASS double-tap zooms in and back 352 → 1587 → 352 px
+PASS pinch ×2 spread zooms ≈2× (single handler) 352 → 704 px (×2.00)
+PASS fit page ≤ fit width, no overflow, stable width 352 page 352 width 352 (desk 412, overflow 0)
+PASS long-press drag Shelf page → desk desk pages 2 → 3; events ['pointerdown', 'pointerdown', 'pointerup']
+phone-read 412x915 console errors: 0
+phone-home 412x915 console errors: 0
+phone-library 412x915 console errors: 0
+phone-library-shelf 412x915 console errors: 0
+phone-settings 412x915 console errors: 0
+phone-settings-section 412x915 console errors: 0
+phone-tabs 412x915 console errors: 0
+phone-arrange 412x915 console errors: 0
+phone-mark 412x915 console errors: 0
+phone-protect 412x915 console errors: 0
+phone-home 915x412 console errors: 0
+phone-read 915x412 console errors: 0
