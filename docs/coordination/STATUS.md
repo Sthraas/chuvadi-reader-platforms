@@ -1,15 +1,16 @@
 # Programme status
 
-_Last updated: 7 Nov 2026, 04:45 IST (repo and CI only: two Chrome browsers still connected with none selected, so the chats could not be read)._
+_Last updated: 7 Nov 2026, 05:05 IST (browser back; all chats read and messaged)._
 
-**BLOCKER:** GitHub Actions on Sthraas stopped since ~01:40 IST (billing/spending limit). All chats building locally; Mac and Android cannot build/test without it. Re-checked 03:10 IST: Android dispatches at 02:47, 02:57 and 03:07 IST still refused with the same billing message; 03:17, 03:27 and 03:37 IST refused too. No new commits on any branch since 02:30 IST (chats idle, likely waiting on the coordinator).
+**CI:** Arun made the repo public at 04:46 IST after an ~$18 bill. Coordinator recommends private again (ci/packages exposes the library DLLs) plus cutting minutes (D-90); awaiting A/B. No Mac/Windows/Android runs until then.
 
 | Chat | State |
 |---|---|
-| Foundation | Combined patch 3, single-instance (Windows side), legal drafts, notices contract; PR waits on Arun's GitHub verification |
-| Mac | Universal app green before the block; waiting for LICENSE/EULA to embed |
-| Linux | Build complete (eb65770, whole workflow green locally); Linux Test chat to open once a browser is selected |
-| Android | Round 3 emulator tests ready (waits on Actions); P-06 and over-wide probe pushed |
-| Web | Plan built except deployment (domain/E2E last); /terms, 12a, TEST-PLAN next |
-| Mobile app UI | MU-8 screens; over-wide fix after Android probe |
-| Web portal UI | Waiting on Foundation hooks H5/H6 and wording |
+| Foundation | PR access now works (D-91): pushing platform/foundation-pr and opening the PR; then drop zone C (D-89), CI-minutes patch (D-90), ReadyToRun (D-50) |
+| Mac | Embedding LICENSE/EULA/notices from Foundation legal/; CI on hold |
+| Linux | Build complete (D-92); fixes only from Linux Test; ARM64 rerun when CI confirmed |
+| Android | Round 3 ready, on hold for CI; asked to stop the 10-minute dispatch retries |
+| Web | /terms and /privacy, web-12a-ready, TEST-PLAN.md (D-86); DropFiles=false now, IDroppedFiles host side next (D-89) |
+| Mobile app UI | Two phone hooks approved (D-88); PhoneShell slot and Redact fit-width diffs to Foundation; then gesture bugs |
+| Linux Test | Opened 05:00 IST (3247f8b1): test plan, then full run locally |
+| Web portal UI | W-1..W-4 landed; H5 waits on PhoneShell slot; links /terms and /privacy |
