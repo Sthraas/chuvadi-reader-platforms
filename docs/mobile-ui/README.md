@@ -52,6 +52,7 @@ tools/mobile-ui/run.sh phone      5185 out "gestures 412x915" "gestures 915x412"
 tools/mobile-ui/run.sh tablet-base 5186 before "gestures 1280x800"
 tools/mobile-ui/run.sh phone      5187 out "checks 412x915"
 ```
+`CHVD_EMPTY=1` before `run.sh` starts the preview like a fresh install (no tabs: Home's first-run box).
 Run desktop and desktop-base **at the same time** (two ports, `CHVD_SCRATCH` apart): Home and Library
 show the clock and relative ages ("2m"), which differ if the runs are a minute apart. A difference of
 1 colour level on a few anti-aliased pixels also shows between two runs of the same tree.

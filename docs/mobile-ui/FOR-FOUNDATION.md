@@ -1,5 +1,18 @@
 # Mobile app UI → Foundation: hooks and hand-off (updated 7 Nov, 05:05 IST)
 
+## CI on this branch (D-93, 7 Nov 05:20)
+- The 23:36 UTC run failed on `shared (windows-latest)`: 4 tests in `SingleInstanceTests` (Foundation's
+  e5802e6, merged here). The cause was in `DesktopSingleInstance` on Windows:
+  - The named **Mutex** was acquired, and Windows mutexes are owned by a thread and re-entrant on it.
+  - The tests claim twice inside one process on the same thread, so the second claim also became
+    `Primary`.
+  - In the real app it was worse: `ClaimAsync` took the mutex on a thread-pool thread. When the pool
+    retires that idle thread, the mutex is abandoned, and the next launch takes it as "the previous
+    copy died", giving two running copies and files that are no longer handed over.
+- **Foundation had already fixed it in 839571e** (create the mutex, never acquire it). I reviewed it and
+  it is correct; the only gap is the documented F-1 fallback in a microseconds-wide race. Merged
+  Foundation 4819d66 here: run 42314377764 passes on all 6 jobs. No change of mine was needed.
+
 ## Ready for Foundation: what you asked for (coordinator, 7 Nov 04:55)
 Branch `platform/mobile-ui` includes `platform/foundation` **e5802e6** (fourth combined patch). Two kinds
 of change come from here:
@@ -19,7 +32,7 @@ brings all of them, as the Android chat's `compose.sh` already does:
 - Also only in the new files: MU-8 (D-45), the touch fixes (swipe, long-press, D-46 counter left to
   Bench), and the phone half of H-7 (`fitWidthZoom` in mobile.js).
 
-**2. Existing-file hooks: `proposal/mobile-ui-hooks-3.patch`** (H-5 to H-11, applies cleanly to e5802e6).
+**2. Existing-file hooks: `proposal/mobile-ui-hooks-3.patch`** (H-5 to H-12, applies cleanly to **4819d66**).
 - **(c) Redact fit width on a phone = H-7** below. It needs `mobile.js` from this branch (its
   `fitWidthZoom`), so apply it together with the merge in step 1.
 - **D-88 = H-10 (Dashboard) and H-11 (Settings)** below.
@@ -51,7 +64,40 @@ Evidence for the set (hooks-3 on this branch, i.e. e5802e6 + mobile-ui + H-5 to 
 | `proposal/H9-reader-fit-after-render-bugfix.patch` | `Ui/wwwroot/js/reader.js` | **Bug fix**: the phone "over-wide" page and Fit page 456 vs 342 | +10 / −2 |
 | `proposal/H10-dashboard-phone-search.patch` | `Ui/Pages/Dashboard.razor` | D-88 | +5 / −1 |
 | `proposal/H11-settings-phone-summaries.patch` | `Ui/Pages/Settings.razor` (on top of H-6) | D-88 | +27 / −11 |
-| `proposal/mobile-ui-hooks-3.patch` | all seven, in order | — | — |
+| `proposal/H12-core-no-samples-on-android.patch` | `Core/Documents/RecentFilesService.cs`, `PinnedAndWatchedServices.cs` | **Bug fix** (Android fresh install), for decision | +16 / −6 |
+| `proposal/mobile-ui-hooks-3.patch` | all eight, in order | — | — |
+
+## H-12: no Phase 0 samples on Android (bug fix; needs a decision)
+On a fresh Android install, Home lists five sample recents (`patient_chart.pdf`, `consent_form.pdf`
+"encrypted", …) and sample pins, and Settings shows the sample watched folder ("~/Documents/Chuvadi ·
+8 documents found"). None of these files exist on the device, so tapping one fails. Worse:
+- Home's **first-run box never appears** on Android (it needs no recents and no tabs).
+- So D-89 option C's "Open your first document" can't show there, and the Android chat's round-3 D-89
+  check can't pass as set up.
+
+Already known: the Android chat reported the samples (BUILD-LOG step 17, A-10 area), and Foundation's
+COMBINED-HOOKS records "samples off on the server only (Web H8 b); recommend (a) remove everywhere
+when the Reader chat removes Phase 0 data".
+
+| Option | For | Against |
+|---|---|---|
+| **(a) Samples off on Android only (H-12)** | Fixes the fresh install and unblocks D-89 on the device; Windows, Mac and Linux unchanged (pixel proof holds by construction: `Kind != Android`); 3 small edits in Core | Phase 0 placeholders stay on the desktops until the Reader chat removes them |
+| (b) Samples on Windows only | Mac and Linux fresh installs are honest too | Changes the Mac and Linux chats' first-run screens; their call |
+| (c) Remove the samples everywhere | The right end state | Changes Windows' first run; Arun / the Reader chat's decision |
+
+**Recommend (a) now, (c) later.** The patch:
+- Recents and Pinned: `_samples` also requires `Kind != Android`.
+- Watched folder: takes `IPlatformInfo?` (optional, so DI and existing callers are unaffected) and
+  keeps the sample folder off Android.
+- On Android, Settings › Library then reads "0 documents found · scanned never" with "—".
+
+Evidence (preview reports Android for phone and tablet; `CHVD_EMPTY=1` starts like a fresh install):
+- `screens/2026-11-07/{before,after}/firstrun-*`. Before (4819d66): phantom recents, no first-run box.
+  After: "Open your first document", Open a file… / Choose a library folder, empty Recents and Pinned.
+- Desktop vs 4819d66: Home and Settings identical; Library 6 pixels of 1-level noise (scrollbar ends).
+- With H-5 to H-12: 0 warnings; 266 tests pass.
+- Also seen there, for PlatformText: the **tablet** first-run tip says "Ctrl K finds any file", which
+  needs a keyboard. The phone already has its own tip.
 
 ## H-10: Home search under the count line on a phone (D-88)
 PhoneShell (my file) cascades its search button, the one running MainLayout's Find, as a named slot

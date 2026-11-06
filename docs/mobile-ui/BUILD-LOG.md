@@ -273,3 +273,18 @@ Evidence:
   - Gestures and checks: 30 PASS on phone (portrait and landscape) and tablet; 0 console errors.
 - Gesture bugs (item 4): the fixes are in (swipe rule, H-9 fit, long-press). The device check waits for
   CI (billing hold; no runs triggered).
+
+### 7 Nov, 05:20 (D-93): CI red on windows-latest → fixed upstream; H-12
+- Run 42313017152: `shared (windows-latest)` failed, with 4 SingleInstanceTests on Foundation's new
+  Windows single-instance code. Cause: an acquired named Mutex is thread-owned (re-entrant in tests;
+  abandoned when the `ClaimAsync` pool thread retires, giving a second "primary" in real use).
+  Foundation fixed it in 839571e (created, never acquired); reviewed, correct.
+- Merged Foundation 4819d66 (fix, D-89 drop wording, CI rules). All hooks apply. Run 42314377764:
+  **all 6 jobs green**.
+- D-89 check (as asked): the first-run box could never show on Android, because Phase 0 sample recents
+  and pins are seeded on every non-server host. **H-12** (Core, for decision) turns the samples off on
+  Android only.
+  - Proven with the preview's new `CHVD_EMPTY=1` (fresh install). Before: phantom recents, no first-run
+    box. After: "Open your first document", D-89 C wording correct on phone and tablet.
+  - Results: desktop unchanged; 266 tests with H-5 to H-12.
+- For PlatformText: the tablet first-run tip says "Ctrl K".

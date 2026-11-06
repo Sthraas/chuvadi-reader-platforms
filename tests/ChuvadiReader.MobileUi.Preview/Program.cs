@@ -63,6 +63,13 @@ foreach (var (cat, name, pages) in new[]
 }
 
 await tabs.RestoreAsync();   // as Dashboard/Reader do first, so the fixtures aren't added twice
+// CHVD_EMPTY=1: a fresh install — no open tabs, so Home shows its first-run box (D-89, H-12).
+if (Environment.GetEnvironmentVariable("CHVD_EMPTY") == "1")
+{
+    app.Run();
+    return;
+}
+
 var a = Fixtures.Document("discharge-summary.pdf", 13);
 var b = Fixtures.Document("lab-report.pdf", 4);
 await tabs.OpenAsync(b, Path.GetFileName(b), DocumentFormat.Pdf);

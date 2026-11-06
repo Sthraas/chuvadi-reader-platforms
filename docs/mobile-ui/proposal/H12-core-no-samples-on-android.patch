@@ -1,0 +1,64 @@
+diff --git a/src/ChuvadiReader.Core/Documents/PinnedAndWatchedServices.cs b/src/ChuvadiReader.Core/Documents/PinnedAndWatchedServices.cs
+index be646ea..326fed6 100644
+--- a/src/ChuvadiReader.Core/Documents/PinnedAndWatchedServices.cs
++++ b/src/ChuvadiReader.Core/Documents/PinnedAndWatchedServices.cs
+@@ -13,11 +13,12 @@ public sealed class PinnedService
+ 
+     private readonly bool _samples;
+ 
+-    /// <param name="platform">The host. No Phase 0 samples on a server (Web H8). Desktop unchanged.</param>
++    /// <param name="platform">The host. No Phase 0 samples on a server (Web H8) or on Android (H-12).
++    /// Desktop unchanged.</param>
+     public PinnedService(IAppStorage storage, IPlatformInfo? platform = null)
+     {
+         _storage = storage;
+-        _samples = platform?.Capabilities.ServerSide != true;
++        _samples = platform?.Capabilities.ServerSide != true && platform?.Kind != PlatformKind.Android;
+     }
+ 
+     public IReadOnlyList<PinnedItem> Items => _items;
+@@ -64,7 +65,15 @@ public sealed class WatchedFolderService
+     private const string StorageKey = "watched-folder";
+     private readonly IAppStorage _storage;
+ 
+-    public WatchedFolderService(IAppStorage storage) => _storage = storage;
++    private readonly bool _samples;
++
++    /// <param name="platform">The host. No Phase 0 sample folder on Android (H-12): it doesn't exist on
++    /// the device. Desktop and server unchanged.</param>
++    public WatchedFolderService(IAppStorage storage, IPlatformInfo? platform = null)
++    {
++        _storage = storage;
++        _samples = platform?.Kind != PlatformKind.Android;
++    }
+ 
+     public string? FolderPath { get; private set; }
+ 
+@@ -78,7 +87,7 @@ public sealed class WatchedFolderService
+     {
+         FolderPath = await _storage.GetAsync(StorageKey, ct).ConfigureAwait(false);
+ 
+-        if (string.IsNullOrWhiteSpace(FolderPath))
++        if (string.IsNullOrWhiteSpace(FolderPath) && _samples)
+         {
+             FolderPath = "~/Documents/Chuvadi";
+             DocumentCount = 8;
+diff --git a/src/ChuvadiReader.Core/Documents/RecentFilesService.cs b/src/ChuvadiReader.Core/Documents/RecentFilesService.cs
+index 38b9f9e..4774bf1 100644
+--- a/src/ChuvadiReader.Core/Documents/RecentFilesService.cs
++++ b/src/ChuvadiReader.Core/Documents/RecentFilesService.cs
+@@ -18,11 +18,12 @@ public sealed class RecentFilesService
+     private readonly bool _samples;
+ 
+     /// <param name="platform">The host. No Phase 0 samples on a server (Web H8): every portal session
+-    /// starts empty and the sample files don't exist there. Desktop unchanged.</param>
++    /// starts empty and the sample files don't exist there. None on Android either (H-12): the files
++    /// don't exist on the device, and a fresh install must show the first-run box. Desktop unchanged.</param>
+     public RecentFilesService(IAppStorage storage, IPlatformInfo? platform = null)
+     {
+         _storage = storage;
+-        _samples = platform?.Capabilities.ServerSide != true;
++        _samples = platform?.Capabilities.ServerSide != true && platform?.Kind != PlatformKind.Android;
+     }
+ 
+     public IReadOnlyList<RecentItem> Items => _items;
