@@ -213,3 +213,12 @@ Residual gaps → library asks (`LIBRARY-ASKS.md`): L-1 embed missing fonts; L-2
 
 ### 20. Docs
 `REAL-MAC-CHECKS.md` — the checklist for the real Mac at the end. `LIBRARY-ASKS.md` — L-1, L-2.
+
+### 21. CI after session 2 changes
+- 42201356763 ✘ — `SceneOpenUrl` handler must return bool → fixed.
+- **42201712779 ✔** — tests 167/167 on macOS, universal (x86_64 + arm64), launched to first render.
+  Foundation's `platforms` workflow ✔ on the same code (42201356891).
+- Size with individual Pdf packages (F4): bundle **155.8 MB** (native 106.5, MonoBundle 45.3, web 4.1),
+  download **42 MB** (was 165.8 / 47).
+- Startup (CI, cold, ms since process start): main 131 · MAUI built 348 · window 364 · WebView ready 491 ·
+  **first render 1672** (was 2434).
