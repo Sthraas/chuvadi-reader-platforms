@@ -20,6 +20,9 @@ namespace ChuvadiReader.Android.Platform;
 /// PDF (<see cref="PageOperations.Assemble"/>) in the app's working folder, and that is printed;
 /// it is deleted when the print job is handed off. Copies, paper and scaling are chosen in the system
 /// dialog (Android has no way to preselect them).
+///
+/// A PDF whose own permissions forbid printing is refused before the system dialog opens, with
+/// <see cref="PrintPermission.Refused"/> (L-8; the Print card already locks it, this is the second guard).
 /// </summary>
 public sealed class AndroidPrintService : IPrintService
 {
@@ -45,6 +48,10 @@ public sealed class AndroidPrintService : IPrintService
                 PrintOutcome.Cancelled => new PrintResult(PrintOutcome.Cancelled, 0),
                 _ => new PrintResult(PrintOutcome.Failed, 0, "The print job failed."),
             };
+        }
+        catch (PrintRefusedException)
+        {
+            return new PrintResult(PrintOutcome.Failed, 0, PrintPermission.Refused);
         }
         catch (PdfPasswordRequiredException)
         {
@@ -73,6 +80,12 @@ public sealed class AndroidPrintService : IPrintService
         using var doc = string.IsNullOrEmpty(request.Password)
             ? await PdfDocument.OpenAsync(pdfPath, ct).ConfigureAwait(false)
             : await PdfDocument.OpenAsync(pdfPath, request.Password!, ct).ConfigureAwait(false);
+
+        // The file's own "no printing" permission: refuse before PrintManager sees the job.
+        if (!PrintPermission.Allows(doc))
+        {
+            throw new PrintRefusedException();
+        }
 
         if (!PageRangeParser.TryParse(request.PageRange, doc.PageCount, request.CurrentPage, out var pages, out var error))
         {
@@ -122,6 +135,9 @@ public sealed class AndroidPrintService : IPrintService
         {
         }
     }
+
+    /// <summary>The file's permissions forbid printing.</summary>
+    private sealed class PrintRefusedException : Exception;
 
     /// <summary>Feeds one finished PDF file to the print framework.</summary>
     private sealed class PdfFileAdapter(string jobName, string path, int pageCount) : PrintDocumentAdapter

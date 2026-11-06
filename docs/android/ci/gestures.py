@@ -6,7 +6,7 @@
 2. Real touch gestures (touch.py → the emulator's touchscreen), each checked against the page's
    own state (cdp.py), with a screenshot after each:
      swipe            → page counter moves on by one page
-     double-tap       → fit mode flips (Fit width ⇄ Fit page)
+     double-tap       → zooms in; a second double-tap returns
      pinch out        → page gets wider (zoomed in)
      Arrange: long-press a page and drag it → page order changes
 Writes gestures.json and screenshots to the results folder; exits 1 if any check fails.
@@ -254,13 +254,17 @@ if st0.get("desk"):
     check("swipe left moves to the next page", (counter_number(st1) or 0) > (counter_number(st0) or 0),
           {"before": st0.get("counter"), "after": st1.get("counter"), "overflowX": st0.get("overflowX")})
 
-    # ── 3. Double-tap → Fit width ⇄ Fit page ──────────────────────────────────
+    # ── 3. Double-tap → zoom in; again → back (handout: double-tap = zoom; reader.js owns it) ──
     sx, sy = to_screen(st1, cx, cy)
     gesture("doubletap", "doubletap", sx, sy)
-    st2 = state()
+    st2z = state()
     shot("g3-doubletapped")
-    check("double-tap flips the fit mode", st2.get("fit") != st1.get("fit") and st2.get("fit") in ("width", "page"),
-          {"before": st1.get("fit"), "after": st2.get("fit"), "pageW": [(st1.get("page") or {}).get("w"), (st2.get("page") or {}).get("w")]})
+    gesture("doubletap-back", "doubletap", sx, sy)
+    st2 = state()
+    shot("g3b-doubletapped-back")
+    w0, w1, w2 = [(x.get("page") or {}).get("w") or 0 for x in (st1, st2z, st2)]
+    check("double-tap zooms in, a second double-tap returns", w1 > w0 * 1.5 and abs(w2 - w0) <= 2,
+          {"pageW": [w0, w1, w2]})
 
     # ── 4. Pinch out → zoom in ────────────────────────────────────────────────
     st2d = st2.get("desk") or d

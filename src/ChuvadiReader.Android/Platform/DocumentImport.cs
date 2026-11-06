@@ -15,12 +15,14 @@ public sealed class DocumentImport
     private readonly DocumentLinks _links;
     private readonly OpenDocumentService _open;
     private readonly BenchDropService _bench;
+    private readonly ShellService _shell;
 
-    public DocumentImport(DocumentLinks links, OpenDocumentService open, BenchDropService bench)
+    public DocumentImport(DocumentLinks links, OpenDocumentService open, BenchDropService bench, ShellService shell)
     {
         _links = links;
         _open = open;
         _bench = bench;
+        _shell = shell;
     }
 
     public void HandleIntent(Intent intent)
@@ -42,14 +44,30 @@ public sealed class DocumentImport
         var mime = intent.Type;
 
         // Copy off the UI thread; the grant stays valid while the activity holds the intent.
+        // A file that can't be opened is said so on screen (and in the log): never a silent no-op.
         _ = Task.Run(() =>
         {
-            var local = _links.Import(uri, mime, persistable, DocumentTypes.Extensions);
-            if (local is null)
+            string? local;
+            try
             {
+                local = _links.Import(uri, mime, persistable, DocumentTypes.Extensions);
+            }
+            catch (Exception ex) when (ex is Java.Lang.SecurityException or Java.Lang.IllegalArgumentException
+                                           or Java.Lang.UnsupportedOperationException or IOException or UnauthorizedAccessException)
+            {
+                global::Android.Util.Log.Warn("Chuvadi", $"Open from another app failed for {uri}: {ex}");
+                Tell("Chuvadi couldn't read that file: the app that sent it didn't give access.");
                 return;
             }
 
+            if (local is null)
+            {
+                global::Android.Util.Log.Warn("Chuvadi", $"Open from another app: nothing imported from {uri} (type {mime})");
+                Tell("Chuvadi couldn't open that file.");
+                return;
+            }
+
+            global::Android.Util.Log.Info("Chuvadi", $"Opened from another app: {Path.GetFileName(local)}");
             MainThread.BeginInvokeOnMainThread(() =>
             {
                 if (_bench.IsBenchActive)
@@ -63,4 +81,6 @@ public sealed class DocumentImport
             });
         });
     }
+
+    private void Tell(string text) => MainThread.BeginInvokeOnMainThread(() => _shell.Notify(text, isError: true));
 }

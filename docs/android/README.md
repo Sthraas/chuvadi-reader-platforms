@@ -90,9 +90,13 @@ keytool -genkeypair -v -keystore chuvadi-upload.jks -alias chuvadi-upload \
 - [ ] Short (80 chars) and full description; category: Productivity.
 - [ ] Privacy policy URL (required even when nothing is collected).
 - [ ] **Data safety**: no data collected, no data shared; files processed on the device. Network
-      permission: none today. If printing uses Chuvadi.Print.Ipp (A-04), add INTERNET and update
-      this answer (printing to local network printers only, no data to the developer).
+      permission: none (printing goes through Android's own print framework, A-04 (a), which needs no
+      app permission).
 - [ ] Content rating questionnaire; target audience (adults / general); no ads.
+- [ ] **Licence (Arun, 7 Nov): proprietary, free for everyone, not open source.** Price: Free. The
+      Foundation adds `LICENSE` and an EULA draft; use the EULA as the listing's custom licence /
+      terms link and in-app About (the About screen is the shared Ui). Don't describe the app as
+      open source anywhere in the listing.
 - [ ] Permissions declared: none (files arrive through the system picker and Open-with/Share grants).
 - [ ] App access: no sign-in needed (Sangam gating applies only to signing/sync — none on Android v1).
 - [ ] Internal testing track first, then closed testing, then production.

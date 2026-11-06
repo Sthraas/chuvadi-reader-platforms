@@ -341,3 +341,34 @@ Screenshots: `gestures-phone.png`, `gestures-tablet.png` (sent to the coordinato
   the Reader's own `DocxViewService` / `XlsxViewService` before use.
 - **Not testable from the UI: share out.** No Ui command calls `IShare` (Android implements it: chooser with a
   read-only content URI). Reported to the coordinator.
+
+### 36. Arun's decisions (7 Nov); Foundation 2fafb60 + Mobile UI 26739e8; platform tests, round 2
+- **Composition:** Foundation `2fafb60` (second combined patch: L-8 print permission, F-3 open queue)
+  with platform/mobile-ui `26739e8` (session 3) merged in (clean), plus `mobile-ui-hooks-3.patch` (H-5, H-6),
+  plus the host. Sandbox build: 0 warnings, 0 errors.
+- **L-8 (decision 2): `AndroidPrintService` refuses a no-printing PDF** (`PrintPermission.Allows`) before
+  PrintManager sees it, with `PrintPermission.Refused`. Test fixture `ci/fixtures/no-print.pdf` (made
+  with Core's own permission mask; `Allows` = false); the emulator test checks the Print card is locked
+  with the reason.
+- **Open with while running (decision 3):** already singleTask + OnNewIntent. The test now proves it
+  directly: same process, exactly one activity record in one task, tab count + 1.
+  Round 1 (run 42276742988) found that it **didn't open anything** on all four emulators: the intents
+  arrived (`am start` shows delivery) but nothing opened and nothing was logged. **Host bug fixed:**
+  `DocumentImport` let an exception from the name lookup vanish inside `Task.Run`. Now a failure is
+  logged (tag `Chuvadi`) and shown to the person ("Chuvadi couldn't open that file." / "…didn't give
+  access."). The test saves our log lines so the cause shows in the next run.
+- **Licence (decision 1):** Play checklist updated (Free, proprietary EULA link; never "open source").
+- Tests adjusted to the facts of round 1 (not to make them pass):
+  - Start platform tests in Read. gestures.py ends in Arrange, where Open with drops the file on the
+    Shelf by design.
+  - Rotation checks a flip (the tablet's natural orientation is landscape).
+  - The print dialog had no printer selected → choose "Save as PDF"; give the saved file a unique name.
+  - **Back:** BlazorWebView steps back through the app's screens before leaving. The check now walks
+    back until the app leaves, with no dead presses. "Back closes a card" also requires the same
+    screen, so a history step that happens to close the card doesn't count.
+  - Typing goes one key at a time (a burst dropped characters), then Enter.
+  - The emulator has no hardware keyboard now. With one, Gboard showed only its small toolbar, so
+    the on-screen keyboard wasn't really tested.
+  - Double-tap follows the new contract (Mobile UI session 3): zoom in, a second double-tap returns.
+- Round 1 already proved on all four emulators: rotation, split screen in and out (WMShell),
+  relaunch, PrintManager dialog, back closes the phone ⋮ sheet (key and edge gesture), no crash.
