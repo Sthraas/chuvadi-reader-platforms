@@ -27,7 +27,7 @@ A registration after `AddChuvadiReader` wins.
 | Seam | Mac | Linux | Android | Web |
 |---|---|---|---|---|
 | `IPlatformInfo` | `MacOS`, Desktop, buttons **Left**, `NativeMenuBar`, `MacKeyLabels` | `Linux`, Desktop, buttons from the desktop's layout, radius 12 | `Android`, Tablet/Phone (+ `FormFactorChanged`), Touch/Pen | `Web`, form factor from the browser width (+ changes), `AccountMenu`, `ServerSide`, `SavesAsDownload`; `MacKeyLabels` for Mac browsers |
-| `IFilePicker` | NSOpen/SavePanel → real paths | GTK/portal dialogs → real paths | SAF → copy into app storage, return that path; remember the URI for write-back | upload → session-only encrypted working copy, return its path; folders: not available |
+| `IFilePicker` | NSOpen/SavePanel → real paths | GTK/portal dialogs → real paths | SAF → copy into app storage, return that path; remember the URI for write-back | upload → session-only encrypted working copy, return its path; `PickFolderAsync` → a fresh empty session folder, no dialog (its files are delivered as one download) |
 | `IFileWriteBack` | default (none) | default (none) | write the working file back to its URI (folder picks: to the tree) | browser download (Save and Save as) |
 | `IAppPaths` | default (`~/Library/Application Support/Chuvadi`) | default (XDG) | app files / cache dirs | per-session encrypted folder; `DefaultSaveFolder` null |
 | `IPrintService` | OS print panel with the PDF (vector) | PDF as-is to CUPS, raster fallback, PrintCard dialog | `PrintManager` with the PDF | browser print of the PDF |

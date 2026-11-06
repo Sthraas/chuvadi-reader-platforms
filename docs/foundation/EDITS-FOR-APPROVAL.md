@@ -1,6 +1,6 @@
 # Foundation — existing-file edits for Arun's approval
 
-**Nothing here is applied to `platform/foundation`.** Approver: the coordinator (delegated by Arun, 6 Nov); nothing reaches `arunshivab/chuvadi-reader` before Arun's final check. Group A is one patch with exact diffs: `docs/foundation/proposal/foundation-edits-1.patch` (apply with `git apply`). It assumes the recommended answers to decisions F-2 (a), F-3 (switch) and F-6 (keep both); if you choose differently I regenerate it.
+**Group A is applied** (aeeac43, approved 6 Nov). **Groups B and C below are not applied yet.** Approver: the coordinator (delegated by Arun, 6 Nov); nothing reaches `arunshivab/chuvadi-reader` before Arun's final check. Group A is one patch with exact diffs: `docs/foundation/proposal/foundation-edits-1.patch` (apply with `git apply`). It assumes the recommended answers to decisions F-2 (a), F-3 (switch) and F-6 (keep both); if you choose differently I regenerate it.
 Groups B and C depend on decision F-1 (file model) and are listed by site; their diffs are written after you decide, so nothing is built for an option you don't pick.
 
 ## How Group A was verified
@@ -40,19 +40,43 @@ Windows output is designed to be identical: `CtrlKeyLabels` returns "Ctrl …" t
 5. Document ▾ › Copy file path → paste somewhere.
 6. Status bar still says "offline · on this device".
 
-## Group B — file write-back (after decision F-1)
+## Groups B and C — one patch, for approval (`proposal/foundation-edits-2.patch`, 27 files, +451/−86)
 
-If F-1 = C (recommended): one line after each successful write to a path the person chose or opened — `await WriteBack.CommitAsync(path);` — plus an error toast when it fails. Desktop: `NoFileWriteBack` → no change on Windows. Sites (from INVENTORY F5/F6/F7):
-- Save as: PasswordCard.razor:5 flow; Bench.razor:2048, 2055, 2078, 2664; Merge.razor:128; Reader.Shell.cs:770; Reader.razor:1768, 1881 (PNG), 3025, 3140; Redact.razor:563; Split.razor:229; Bench.razor:1497 (session).
-- Save in place: Reader.razor:1802-1808, 2197-2203, 2988-2994.
-- Output to folder: Bench.razor:2062, 2617, 2656, 2730; Reader.razor:1251, 1302; Split.razor:200; Dashboard.razor:439/448 and Library/Settings folder pickers (these are *source* folders: no write-back; hidden where `PickFolders` is false — Group C).
-- Plus a test that fails if a new save site skips the call.
+Built on F-1 C. Verified with the patch applied (Linux, .NET 10.0.403): Platforms solution and the WPF host compile with `-warnaserror` (0 warnings); **188/188 tests** (161 existing + 27 kit, including 6 new guards). Applies cleanly to `platform/foundation` @ the commit that adds it.
 
-## Group C — paths, account, capability gating (after F-1; small)
-- `IAppPaths`: SessionService.cs:46, AppInfo.cs:46, SaveFolderService.cs:31 (same values on Windows by construction), and the ~20 temp sites in INVENTORY P4 → `IAppPaths.WorkingFolder` (desktop = `Path.GetTempPath()`, unchanged).
-- `IAccount`: UserProfileService.cs:39 and the status-bar user chip (MainLayout.razor:165).
-- Capability gating (hide or lock, per your choice): folder pickers when `PickFolders` is false; Watched folder/Library roots when `WatchFolders` is false; "Show in folder" / "Copy file path" when `RevealInFolder` is false; device-only wording (AboutSection.razor:14, Settings.razor:37, LibrarySection.razor:50) when `ServerSide` — **the Web wording is yours to give.**
-- "Show in folder" (Reader.Shell.cs:424) wired to `IFileManager` on desktop — a new working feature, so listed separately for you to accept or leave as "Coming soon".
+### Group B — write-back at every save (F-1 C)
+| # | File(s) | Change | For | Against | Windows risk |
+|---|---|---|---|---|---|
+| B1 | new `Ui/Components/Platform/WriteBackExtensions.cs` | `await WriteBack.DeliverOrThrowAsync(path)`: returns at once when `IsNeeded` is false; otherwise commits and throws `IOException` with a readable message on failure, so each site's existing `catch` shows it; a cancelled download is not an error | one line per site, reuses the existing error display | a site's error text may read "Couldn't save: …" for a delivery failure | None: Windows `NoFileWriteBack.IsNeeded` is false → no call is made |
+| B2 | Bench.razor (session, Bind all, Combine, `RunSave` = Bind/Lift desk, Scatter, Export PDF / images, Press), Reader.razor (Export, Press, Stamp copy and in place, snapshot PNG, bookmarks in place, markup in place, markup Save as, Flatten copy), Reader.Shell.cs `OnProtectedSaved` (password copy + certificate signing), Merge, Split (to folder, range), Redact | One delivery line right after each successful write; folder outputs deliver the folder | every save reaches the person's real file (Android) or a download (Web) | — | None (see B1) |
+| B3 | new test `Every_save_site_delivers_its_file` | Fails if a Ui file has more `PickSave…`/`File.Replace` sites than delivery calls (mutation-checked: removing Merge's call fails it) | a future save site can't silently skip delivery | heuristic count, not a proof | — |
+
+### Group C — host folders, account, packages, shared lists, platform gating
+| # | File(s) | Change | For | Against | Windows risk |
+|---|---|---|---|---|---|
+| C1 | `Core.csproj` | **F4:** umbrella `Chuvadi.Pdf` → 17 individual 3.31.1 packages (one `ChuvadiPdfVersion` property). Shipped set drops PdfA, Color, Fonts.Woff2, Fonts.Bundled, Xfa, Reader and the umbrella — none referenced by the app. All in `ci/packages`, **nothing to add**. | ~6.7 MB less (Android), no deprecated packages | 17 references kept at one version (one property does it) | Low: compiles and tests pass; nothing used was removed. **Check:** open a PDF, Mark, Arrange, Protect, sign, print |
+| C2 | new `Core/Storage/ScratchFiles.cs`; StampService, PressService, BenchService, BenchComposer (4 helpers made instance methods), Reader.razor (3), Bench.razor (1) | Every temp file goes to `IAppPaths.WorkingFolder` (optional ctor parameter; fallback = system temp) | Web keeps intermediates in the person's encrypted session folder, not a shared server temp | ctor signatures gain an optional parameter (tests unchanged) | None: desktop `WorkingFolder` = `Path.GetTempPath()`; only the random temp file names differ |
+| C3 | SaveFolderService (+ SavingSection) | Default save folder = `IAppPaths.DefaultSaveFolder`/"Chuvadi Documents" (Web: under the session folder); static `DefaultBaseFolder()` → instance `DefaultFolder` | right default per host | — | None: same Documents\Chuvadi Documents (test asserts it) |
+| C4 | SessionService | **Mac chat F2 (bug fix):** desk templates in `IAppPaths.AppDataFolder` instead of a hard-coded `%AppData%\ChuvadiReader`; one-time copy of an existing file from the old folder (old file left in place) | one app-data folder for everything, per host | a copy, not a move, leaves the old file behind | **Behaviour (visible on disk only):** templates now live in `%AppData%\Chuvadi`; existing ones are carried over on first use. **Check:** Arrange › desk ⋯ › Apply template still lists your templates |
+| C5 | UserProfileService | Name fallback from `IAccount.DisplayName` (desktop `LocalAccount` = OS user name) | Web shows the Sangam name | — | None |
+| C6 | AppInfo + AboutSection | **Bug fix:** About showed "chuvadi-pdf 3.30.2" (hard-coded) while 3.31.1 ships; versions now read from the loaded assemblies. Data folder from `IAppPaths` | About can't drift again | — | **Visible:** About › chuvadi-pdf shows 3.31.1 |
+| C7 | DocumentModels + MainWindow.xaml.cs | **Mac chat F1 (bug fix):** one `OpenableExtensions` list; window drop uses it. Before: drop accepted .doc/.xls (which then opened as PDF and failed) and refused .md/.markdown/.txt/.log/.html/.htm | drop = Open dialog everywhere; test guards it against the Windows filter | — | **Behaviour:** dropping .md/.txt/.html now opens them; .doc/.xls are no longer accepted. **Check:** drop a .md and a .docx |
+| C8 | FileAppStorage (moved Windows → `Hosting/Desktop`) + App.xaml.cs `using` | **Mac chat F3 (bug fix):** write to `settings.json.tmp`, then replace `settings.json` | a crash mid-write can't truncate settings; one implementation for Windows/Mac/Linux/Android | file moves out of the Windows project | Low. **Check:** change a setting, restart, it is kept |
+| C9 | Bench (3), Reader (2), Library (1) "change…" links; SavingSection "Where files are saved"; LibrarySection "Library folder" + "Watched folders"; Document menu "Show in folder" + "Copy file path" | **Hidden** (not greyed) when the capability is false: `PickFolders`, `WatchFolders`, `RevealInFolder` | the controls never work there; the portal design has none of them | hiding vs greying (alternative: show greyed with "Not available on the web") | None: all true on desktop |
+| C10 | (contract note) | Web's `IFilePicker.PickFolderAsync` returns a fresh session folder without a dialog; write-back delivers its files as one download | every output-to-folder flow (Bind all, Split to folder, Export, Scatter, Press) works on Web with no Ui edit | — | — |
+
+### Add to the Windows checks (HANDOFF §6) when B/C are applied
+7. Settings › About: chuvadi-pdf 3.31.1.
+8. Drop a .md file and a .docx on the window: both open; a .doc is refused.
+9. Arrange: Apply template still lists existing templates; Save template works.
+10. Change a setting, restart: kept.
+11. Bind a desk, Merge, Split, Stamp in place, Save marks in place: files written as before.
+
+### Not in this patch (decisions or other chats)
+- Device-only wording (AboutSection "nothing leaves this device", Settings "Stored on this device only", Library "Stays on this device") — needs Arun's Web wording.
+- "Show in folder" wiring to `IFileManager` — Arun's call (kept "Coming soon").
+- Sheets 2.0.1 — waiting for the Reader chat's answer (see status).
+- Portal Home/Library layout without watched folders — Web portal UI chat.
 
 ## Later hooks (when the components exist; not in this proposal)
 - MainLayout: `AccountMenu` slot when `Chrome.AccountMenu` (Web, 12b); Web sign-in route (12a); `SangamGate` on certificate signing (12c).
