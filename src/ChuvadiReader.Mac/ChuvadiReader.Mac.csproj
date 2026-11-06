@@ -59,7 +59,8 @@
       <!-- The .NET runtime pack (Mono on Mac Catalyst), found the way the .NET for Mac Catalyst SDK finds it:
            ResolvedFrameworkReference's RuntimePackName / RuntimePackPath (Xamarin.Shared.Sdk.targets). -->
       <_ChvdMonoPack Include="@(ResolvedFrameworkReference)" Condition="$([System.String]::Copy('%(ResolvedFrameworkReference.RuntimePackName)').StartsWith('Microsoft.NETCore.App.Runtime'))" />
-      <_ChvdApplePack Include="@(ResolvedRuntimePack)" Condition="'%(ResolvedRuntimePack.FrameworkName)' == 'Microsoft.MacCatalyst'" />
+      <!-- The .NET for Mac Catalyst runtime pack, as the SDK finds it (Microsoft.MacCatalyst.Runtimes). -->
+      <_ChvdApplePack Include="@(ResolvedFrameworkReference)" Condition="'%(ResolvedFrameworkReference.Identity)' == 'Microsoft.MacCatalyst.Runtimes'" />
     </ItemGroup>
     <PropertyGroup>
       <_ChvdMonoNotices>@(_ChvdMonoPack->'%(RuntimePackPath)')</_ChvdMonoNotices>
@@ -100,12 +101,30 @@
       <_ChvdMonoNotices Condition="'$(_ChvdMonoNotices)' == '' and '$(_ChvdMonoId)' != '' and Exists('$(NetCoreTargetingPackRoot)/$(_ChvdMonoId)/$(_ChvdMonoVersion)/THIRD-PARTY-NOTICES.TXT')">$(NetCoreTargetingPackRoot)/$(_ChvdMonoId)/$(_ChvdMonoVersion)/THIRD-PARTY-NOTICES.TXT</_ChvdMonoNotices>
     </PropertyGroup>
     <PropertyGroup>
-      <_ChvdAppleLicense>@(_ChvdApplePack->'%(PackageDirectory)')</_ChvdAppleLicense>
+      <_ChvdAppleLicense>@(_ChvdApplePack->'%(RuntimePackPath)')</_ChvdAppleLicense>
       <_ChvdAppleLicense>$(_ChvdAppleLicense.Split(';').GetValue(0))</_ChvdAppleLicense>
       <_ChvdAppleLicense Condition="'$(_ChvdAppleLicense)' != ''">$([System.IO.Path]::Combine('$(_ChvdAppleLicense)', 'LICENSE'))</_ChvdAppleLicense>
     </PropertyGroup>
+    <!-- Outside a single-RID build: the SDK's KnownFrameworkReference for the same pack (name pattern and
+         exact version, Microsoft.MacCatalyst.Sdk.Versions.props), in the packs folder or the NuGet cache. -->
+    <PropertyGroup Condition="'$(_ChvdTfm)' == ''">
+      <_ChvdTfm>net$(TargetFrameworkVersion.TrimStart('v'))</_ChvdTfm>
+      <_ChvdRid>$(RuntimeIdentifier)</_ChvdRid>
+      <_ChvdRid Condition="'$(_ChvdRid)' == ''">$(RuntimeIdentifiers.Split(';').GetValue(0))</_ChvdRid>
+    </PropertyGroup>
+    <ItemGroup Condition="!Exists('$(_ChvdAppleLicense)')">
+      <_ChvdKnownApple Include="@(KnownFrameworkReference)" Condition="'%(KnownFrameworkReference.Identity)' == 'Microsoft.MacCatalyst.Runtimes' and '%(KnownFrameworkReference.TargetFramework)' == '$(_ChvdTfm)'" />
+    </ItemGroup>
+    <PropertyGroup Condition="!Exists('$(_ChvdAppleLicense)')">
+      <_ChvdAppleId>@(_ChvdKnownApple->'%(RuntimePackNamePatterns)')</_ChvdAppleId>
+      <_ChvdAppleId>$(_ChvdAppleId.Split(';').GetValue(0).ToString().Replace('**RID**', '$(_ChvdRid)'))</_ChvdAppleId>
+      <_ChvdAppleVersion>@(_ChvdKnownApple->'%(LatestRuntimeFrameworkVersion)')</_ChvdAppleVersion>
+      <_ChvdAppleVersion>$(_ChvdAppleVersion.Split(';').GetValue(0))</_ChvdAppleVersion>
+      <_ChvdAppleLicense Condition="'$(_ChvdAppleId)' != '' and Exists('$(NetCoreTargetingPackRoot)/$(_ChvdAppleId)/$(_ChvdAppleVersion)/LICENSE')">$(NetCoreTargetingPackRoot)/$(_ChvdAppleId)/$(_ChvdAppleVersion)/LICENSE</_ChvdAppleLicense>
+      <_ChvdAppleLicense Condition="!Exists('$(_ChvdAppleLicense)') and '$(_ChvdAppleId)' != '' and Exists('$(NuGetPackageRoot)$(_ChvdAppleId.ToLowerInvariant())/$(_ChvdAppleVersion)/LICENSE')">$(NuGetPackageRoot)$(_ChvdAppleId.ToLowerInvariant())/$(_ChvdAppleVersion)/LICENSE</_ChvdAppleLicense>
+    </PropertyGroup>
     <Error Condition="'$(_ChvdMonoNotices)' == '' or !Exists('$(_ChvdMonoNotices)')" Text="Chuvadi: .NET runtime notices not found in the resolved runtime pack ('$(_ChvdMonoNotices)'). Resolved framework references: @(ResolvedFrameworkReference->'%(Identity)=%(RuntimePackName)@%(RuntimePackPath)', ' | '). Downloaded runtime packs: @(_ChvdMonoDownload->'%(Identity) %(Version)', ' | '). Known Mono pack: $(_ChvdMonoId) $(_ChvdMonoVersion) (RID $(_ChvdRid), TFM $(_ChvdTfm)). NuGet root: $(NuGetPackageRoot). Packs root: $(NetCoreTargetingPackRoot)." />
-    <Error Condition="'$(_ChvdAppleLicense)' == '' or !Exists('$(_ChvdAppleLicense)')" Text="Chuvadi: .NET for Mac Catalyst licence not found in the resolved runtime pack ('$(_ChvdAppleLicense)'). Resolved runtime packs: @(ResolvedRuntimePack->'%(FrameworkName)@%(PackageDirectory)', ' | ')" />
+    <Error Condition="'$(_ChvdAppleLicense)' == '' or !Exists('$(_ChvdAppleLicense)')" Text="Chuvadi: .NET for Mac Catalyst licence not found ('$(_ChvdAppleLicense)'). Known pack: $(_ChvdAppleId) $(_ChvdAppleVersion) (RID $(_ChvdRid), TFM $(_ChvdTfm)). Packs root: $(NetCoreTargetingPackRoot). NuGet root: $(NuGetPackageRoot)." />
     <ItemGroup>
       <BundleResource Include="$(_ChvdMonoNotices)" LogicalName="legal/DOTNET-RUNTIME-THIRD-PARTY-NOTICES.txt" />
       <BundleResource Include="$(_ChvdAppleLicense)" LogicalName="legal/DOTNET-MACCATALYST-LICENSE.txt" />
