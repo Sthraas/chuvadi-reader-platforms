@@ -143,3 +143,6 @@ foundation a4acc56 + Mobile UI's Phone folder, mobile.css and mobile.js from 1a2
 
 ### 6. Verification (committed state)
 Build `-warnaserror` 0 warnings; tests Hosting 33 + MobileUi 11 + WebUi 17 + Reader 171 = **232 pass**.
+
+### 7. CI did not run (account billing)
+Run 42286178538 on de5da8a: every job "was not started because recent account payments have failed or your spending limit needs to be increased" (GitHub billing for the `Sthraas` account) — no code ran. Local: build `-warnaserror` 0 warnings, 232 tests pass. The last green run on `platform/foundation` was 19:42 UTC (a4acc56). Needs Arun (Billing & plans); re-run CI once cleared.
