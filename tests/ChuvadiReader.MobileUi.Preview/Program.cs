@@ -25,6 +25,11 @@ builder.Services.AddSingleton<IImageClipboard, NoClipboard>();
 builder.Services.AddSingleton<IClipboard, NoClipboard>();
 var web = Environment.GetEnvironmentVariable("CHVD_FF") == "web";
 builder.Services.AddSingleton<IPlatformInfo>(new PreviewPlatform(ff, web));
+if (ff != FormFactor.Desktop)
+{
+    // Stands in for Android's bundled .NET runtime notices (IHostNotices).
+    builder.Services.AddSingleton<IHostNotices, PreviewHostNotices>();
+}
 if (web)
 {
     // The Web host registers these from its configuration; the preview uses the placeholders.

@@ -18,4 +18,8 @@
     <!-- Ui brings the Blazor framework package (and with it Microsoft.Extensions.DependencyInjection). -->
     <ProjectReference Include="..\ChuvadiReader.Ui\ChuvadiReader.Ui.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="ChuvadiReader.Hosting.Tests" />
+  </ItemGroup>
+
 </Project>

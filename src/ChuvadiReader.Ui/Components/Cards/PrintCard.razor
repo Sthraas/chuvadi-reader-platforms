@@ -1,5 +1,6 @@
 @namespace ChuvadiReader.Ui.Components.Cards
 @inject IServiceProvider Services
+@inject ShellService Shell
 @implements IDisposable
 @*
     Print: page range (All / Current / Custom "1-3, 5"), copies, fit to page → IPrintService,
@@ -84,7 +85,8 @@
 
     [Parameter] public EventCallback OnClose { get; set; }
 
-    /// <summary>Success/error toasts.</summary>
+    /// <summary>Kept for the page's markup; print results go to <see cref="ShellService.Notify"/>
+    /// with their outcome (error style for Failed / Unavailable).</summary>
     [Parameter] public EventCallback<string> OnMessage { get; set; }
 
     private IPrintService? _print;
@@ -169,12 +171,13 @@
 
             if (result.Outcome != PrintOutcome.Cancelled && !string.IsNullOrEmpty(result.Message))
             {
-                await OnMessage.InvokeAsync(result.Message!);
+                // The outcome decides the toast's style, not the wording of the message.
+                Shell.Notify(result.Message!, isError: result.Outcome is PrintOutcome.Failed or PrintOutcome.Unavailable);
             }
         }
         catch (Exception ex)
         {
-            await OnMessage.InvokeAsync("Couldn't print: " + ex.Message);
+            Shell.Notify("Couldn't print: " + ex.Message, isError: true);
         }
         finally
         {
