@@ -1,0 +1,31 @@
+diff --git a/src/ChuvadiReader.Ui/Layout/MainLayout.razor b/src/ChuvadiReader.Ui/Layout/MainLayout.razor
+index e0f06f0..91b7acf 100644
+--- a/src/ChuvadiReader.Ui/Layout/MainLayout.razor
++++ b/src/ChuvadiReader.Ui/Layout/MainLayout.razor
+@@ -35,7 +35,9 @@
+     @if (ShellLayout == ChuvadiReader.Platform.ShellLayout.Phone)
+     {
+         <ChuvadiReader.Ui.Components.Platform.Phone.PhoneShell RequestMode="RequestMode" ModeDisabledReason="ModeDisabledReason"
+-                                                               Open="AddTab" Find="FindNow" Go="Go" OnDocView="OnDocView">
++                                                               Open="AddTab" Find="FindNow" Go="Go" OnDocView="OnDocView"
++                                                               OpenLabel="@(IsPortal ? "Upload" : "Open")" OpenIcon="@(IsPortal ? "upload" : "folder")"
++                                                               MenuFooter="@(Platform.Chrome.AccountMenu ? PortalMenuFooter : null)">
+             @Body
+         </ChuvadiReader.Ui.Components.Platform.Phone.PhoneShell>
+     }
+@@ -266,6 +268,15 @@
+     private ChuvadiReader.Platform.ShellLayout ShellLayout => ChuvadiReader.Platform.ShellLayouts.Shell(Platform);
+ 
+     private bool IsPortal => Platform.Kind == ChuvadiReader.Platform.PlatformKind.Web;
++
++    // Web portal on a phone (D-32, U-10 a): account block at the foot of the ⋮ sheet. Static: one delegate per process;
++    // its body runs only when a phone renders the sheet.
++    private static readonly RenderFragment<EventCallback> PortalMenuFooter = close => b =>
++    {
++        b.OpenComponent<ChuvadiReader.Ui.Components.Platform.Portal.PortalPhoneAccount>(0);
++        b.AddComponentParameter(1, "OnDone", close);
++        b.CloseComponent();
++    };
+     private readonly HashSet<Guid> _fading = new();
+ 
+     protected override void OnInitialized()
