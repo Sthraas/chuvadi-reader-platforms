@@ -109,9 +109,14 @@ class Gesture:
                     script.append(f"sleep {sleep_s:.3f}")
             with open(os.path.join(tmp, "run.sh"), "w") as f:
                 f.write("\n".join(script) + "\n")
-            adb("shell", "rm -rf /data/local/tmp/chvd-touch; mkdir -p /data/local/tmp/chvd-touch")
-            adb("push", tmp + "/.", "/data/local/tmp/chvd-touch/")
-            adb("shell", "sh /data/local/tmp/chvd-touch/run.sh")
+            # Push the folder itself to a destination that doesn't exist yet: adb then creates it
+            # with exactly these files (no "dir/." semantics to depend on).
+            adb("shell", "rm -rf /data/local/tmp/chvd-touch")
+            adb("push", tmp, "/data/local/tmp/chvd-touch")
+            r = subprocess.run(["adb", "shell", "sh /data/local/tmp/chvd-touch/run.sh 2>&1; echo rc=$?"],
+                               capture_output=True, text=True)
+            if not r.stdout.strip().endswith("rc=0"):
+                raise SystemExit(f"writing to {DEV} failed:\n{r.stdout}{r.stderr}")
 
 
 def steps_between(a, b, n):

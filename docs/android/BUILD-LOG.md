@@ -246,3 +246,13 @@ Reader tests 161/161.
 Foundation `be4498a` packed 3.31.2 from the unchanged tag into `ci/packages` (SHA-256s in its
 `PACKAGES-3.31.2.md`) and pinned Core. Re-composed on it: the patch applies unchanged (only packages and
 the version moved); Android Debug build 0 warnings. CI re-pinned to `be4498a`.
+
+### 28. First gesture run (42202635440, 3.31.2 composition)
+All four emulators: smoke test passes (Ui 10–25 s, real rotation), the phone shell and tablet layout
+are detected (`data-shell` phone / tablet), and **Open with works**: the MediaStore `content://` URI
+opens the 6-page PDF in the Reader ("1 / 6"). The gesture step then stopped at the touch tool, whose
+error output was captured and not printed (my test-tool gap). Fixed: the tool's errors are printed
+and recorded as a failed check, the remaining checks still run, the device's input-device facts are
+saved, and the push no longer relies on adb's "dir/." handling. Dry-run against a fake emulator adb:
+swipe 10 frames (0.37 s), double-tap 4 frames (0.32 s), pinch 15 frames with two slots, long-press drag
+17 frames (0.8 s hold).

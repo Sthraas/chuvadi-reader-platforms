@@ -91,15 +91,27 @@ def state():
     return cdp.evaluate(STATE_JS)
 
 
+_origin = None
+
+
 def to_screen(st, x, y):
-    ox, oy = webview_origin()
+    global _origin
+    if _origin is None:
+        _origin = webview_origin()
+    ox, oy = _origin
     return round(ox + x * st["dpr"]), round(oy + y * st["dpr"])
 
 
 def touch(*args):
-    out = subprocess.run([sys.executable, os.path.join(HERE, "touch.py"), *map(str, args)],
-                         check=True, capture_output=True, text=True).stdout.strip()
-    print("  " + out)
+    """Runs one gesture; returns False (and prints why) if the touch tool failed."""
+    r = subprocess.run([sys.executable, os.path.join(HERE, "touch.py"), *map(str, args)],
+                       capture_output=True, text=True)
+    print("  " + (r.stdout.strip() or f"touch.py {' '.join(map(str, args))}"))
+    if r.returncode != 0:
+        print("  touch.py failed:\n" + r.stderr.strip())
+        check(f"touch input ({args[0]})", False, {"stderr": r.stderr.strip()[-600:]})
+        return False
+    return True
 
 
 def counter_number(st):
@@ -129,6 +141,11 @@ def wait_for(pred, seconds, what):
     print(f"timed out waiting for {what}: {json.dumps(last)[:400]}")
     return last
 
+
+# Input-device facts, kept as evidence for the touch tool.
+with open(os.path.join(OUT, "input-devices.txt"), "w") as f:
+    f.write(adb("shell", "id", check=False) + "\n" + adb("shell", "ls -l /dev/input", check=False) + "\n"
+            + adb("shell", "getevent -lp", check=False) + "\n" + adb("shell", "wm size", check=False))
 
 # ── 1. Open the test PDF through ACTION_VIEW ───────────────────────────────────
 local_pdf = os.path.join(OUT, PDF_NAME)
