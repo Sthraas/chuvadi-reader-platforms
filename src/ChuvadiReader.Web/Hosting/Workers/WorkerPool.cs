@@ -331,6 +331,8 @@ public sealed class WorkerPool : ITabControl, IAsyncDisposable
         env["XDG_CACHE_HOME"] = Path.Combine(home, ".cache");
         env["DOTNET_GCHeapHardLimit"] = "0x" + ((long)_options.MemoryLimitMB * 1024 * 1024).ToString("X", CultureInfo.InvariantCulture);
         env["DOTNET_gcServer"] = "0";
+        env["DOTNET_DbgEnableMiniDump"] = "0"; // a crash must not write this person's memory to disk
+        env["DOTNET_EnableCrashReport"] = "0";
         if (DotnetHost() is { } muxer && !env.ContainsKey("DOTNET_ROOT"))
         {
             env["DOTNET_ROOT"] = Path.GetDirectoryName(muxer); // so an app host finds the same runtime

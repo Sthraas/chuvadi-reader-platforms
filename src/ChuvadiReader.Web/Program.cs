@@ -50,6 +50,17 @@ public static class Program
         builder.Services.AddOptions<SangamOptions>().Bind(builder.Configuration.GetSection(SangamOptions.Section));
         builder.Services.AddSingleton(TimeProvider.System);
 
+        // D-28: outside Development, working copies must be in RAM and never paged to disk in the clear.
+        if (!devSignIn && mode != PortalMode.Worker)
+        {
+            var portal = builder.Configuration.GetSection(PortalOptions.Section).Get<PortalOptions>() ?? new();
+            if (!string.IsNullOrWhiteSpace(portal.DataRoot)
+                && StorageCheck.Problems(portal.DataRoot, portal.Storage) is { Count: > 0 } problems)
+            {
+                throw new InvalidOperationException("The portal won't start: " + string.Join(" ", problems));
+            }
+        }
+
         switch (mode)
         {
             case PortalMode.Worker:
