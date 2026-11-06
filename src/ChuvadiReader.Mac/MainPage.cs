@@ -1,5 +1,6 @@
 using ChuvadiReader.Core.Reader;
 using ChuvadiReader.Core.Storage;
+using ChuvadiReader.Hosting.Desktop;
 using ChuvadiReader.Mac.Platform;
 using Microsoft.AspNetCore.Components.WebView;
 using Microsoft.AspNetCore.Components.WebView.Maui;
@@ -70,7 +71,7 @@ public sealed class MainPage : ContentPage
         view.BackgroundColor = UIKit.UIColor.Clear;
 
         _services.GetService<MacUiScale>()?.Attach(view);
-        FileDrop.Attach(view, _services);
+        FileDrop.Attach(view, _services.GetRequiredService<MacIncomingFiles>());
         _services.GetService<MacWindowControls>()?.ApplyChrome();
     }
 }

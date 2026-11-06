@@ -1,9 +1,11 @@
 using ChuvadiReader.Core.Reader;
 using ChuvadiReader.Core.Storage;
+using ChuvadiReader.Hosting.Desktop;
 using ChuvadiReader.Core.Window;
 using ChuvadiReader.Hosting;
 using ChuvadiReader.Mac.Platform;
 using ChuvadiReader.Platform;
+using Microsoft.Maui.LifecycleEvents;
 
 namespace ChuvadiReader.Mac;
 
@@ -49,6 +51,8 @@ public static class MauiProgram
         services.AddSingleton<IFilePicker, MacFilePicker>();
         services.AddSingleton<IExternalLinks, MacExternalLinks>();
         services.AddSingleton<IFileManager, MacFileManager>();
+        services.AddSingleton<IShare, MacShare>();
+        services.AddSingleton<MacIncomingFiles>();
         services.AddSingleton<IPrintService, MacPrintService>();
 
         services.AddSingleton<MacWindowControls>();
@@ -56,8 +60,26 @@ public static class MauiProgram
         services.AddSingleton<MacUiScale>();
         services.AddSingleton<IUiScale>(sp => sp.GetRequiredService<MacUiScale>());
 
+        // Files opened with Chuvadi from Finder: at launch (scene connect) and while running.
+        builder.ConfigureLifecycleEvents(events => events.AddiOS(ios => ios
+            .SceneWillConnect((_, _, options) => Incoming(options.UrlContexts))
+            .SceneOpenUrl((_, contexts) => Incoming(contexts))));
+
         var app = builder.Build();
+        _services = app.Services;
         StartupTimeline.Mark("maui-built");
         return app;
+    }
+
+    private static IServiceProvider? _services;
+
+    private static void Incoming(Foundation.NSSet<UIKit.UIOpenUrlContext>? contexts)
+    {
+        if (contexts is null || contexts.Count == 0 || _services is null)
+        {
+            return;
+        }
+
+        _services.GetRequiredService<MacIncomingFiles>().Receive(contexts.ToArray().Select(c => c.Url));
     }
 }

@@ -247,3 +247,67 @@ internal static class StartupTimeline
         }
     }
 }
+
+/// <summary>The macOS share sheet (UIActivityViewController) for a file: Mail, Messages, AirDrop…</summary>
+public sealed class MacShare : IShare
+{
+    public bool IsAvailable => true;
+
+    public Task<bool> ShareFileAsync(string localPath, string title, CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(localPath) || !File.Exists(localPath))
+        {
+            return Task.FromResult(false);
+        }
+
+        var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        UIApplication.SharedApplication.BeginInvokeOnMainThread(() =>
+        {
+            try
+            {
+                var host = KeyViewController();
+                if (host?.View is not { } anchor)
+                {
+                    tcs.TrySetResult(false);
+                    return;
+                }
+
+                var sheet = new UIActivityViewController(new NSObject[] { NSUrl.CreateFileUrl(localPath, false, null) }, null);
+                if (!string.IsNullOrEmpty(title))
+                {
+                    sheet.SetValueForKey(new NSString(title), new NSString("subject"));
+                }
+
+                // On the Mac the sheet is a popover; anchor it to the middle of the top bar.
+                if (sheet.PopoverPresentationController is { } popover)
+                {
+                    popover.SourceView = anchor;
+                    popover.SourceRect = new CoreGraphics.CGRect(anchor.Bounds.Width / 2, 20, 1, 1);
+                }
+
+                sheet.CompletionWithItemsHandler = (_, completed, _, _) => tcs.TrySetResult(completed);
+                host.PresentViewController(sheet, true, null);
+            }
+            catch
+            {
+                tcs.TrySetResult(false);
+            }
+        });
+        return tcs.Task;
+    }
+
+    private static UIViewController? KeyViewController()
+    {
+        var window = UIApplication.SharedApplication.ConnectedScenes
+            .OfType<UIWindowScene>()
+            .SelectMany(s => s.Windows)
+            .FirstOrDefault(w => w.IsKeyWindow);
+        var vc = window?.RootViewController;
+        while (vc?.PresentedViewController is { } presented)
+        {
+            vc = presented;
+        }
+
+        return vc;
+    }
+}
