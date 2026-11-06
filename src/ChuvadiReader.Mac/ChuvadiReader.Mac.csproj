@@ -30,10 +30,10 @@
     <CodesignRequireProvisioningProfile>false</CodesignRequireProvisioningProfile>
     <CodesignEntitlements>Platforms/MacCatalyst/Entitlements.plist</CodesignEntitlements>
 
-    <!-- Release: no trimming of our own or library code until each library declares
-         IsTrimmable (package report, Decision 4). Sheets' typed import/export loses data
-         when trimmed. Revisit once the libraries are trim-annotated. -->
-    <MtouchLink>None</MtouchLink>
+    <!-- Trimming: only .NET's own framework assemblies are trimmed (SdkOnly). Chuvadi libraries and the
+         app's own code are kept whole until each library declares trim safety (package report,
+         decision 4) — Sheets' typed import/export loses data when it is trimmed. -->
+    <MtouchLink>SdkOnly</MtouchLink>
 
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
@@ -51,5 +51,7 @@
   <ItemGroup>
     <ProjectReference Include="..\ChuvadiReader.Ui\ChuvadiReader.Ui.csproj" />
     <ProjectReference Include="..\ChuvadiReader.Core\ChuvadiReader.Core.csproj" />
+    <ProjectReference Include="..\ChuvadiReader.Platform\ChuvadiReader.Platform.csproj" />
+    <ProjectReference Include="..\ChuvadiReader.Hosting\ChuvadiReader.Hosting.csproj" />
   </ItemGroup>
 </Project>

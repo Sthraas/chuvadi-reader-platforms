@@ -99,8 +99,11 @@ jobs:
       - name: Smoke run (launch to first render, record startup)
         run: |
           set +e
-          # macOS has no GNU timeout; perl's alarm gives a 120 s limit.
-          CHUVADI_SMOKE_EXIT=1 perl -e 'alarm shift; exec @ARGV' 120 "$BIN" > smoke.log 2>&1
+          # Launched through LaunchServices (open), as a person double-clicking it would: a Mac
+          # Catalyst app started by running its binary directly gets no scene and aborts.
+          # -W waits for it to quit; macOS has no GNU timeout, so perl's alarm gives a 120 s limit.
+          perl -e 'alarm shift; exec @ARGV' 120 open -W -n --env CHUVADI_SMOKE_EXIT=1 \
+            --stdout "$PWD/smoke.log" --stderr "$PWD/smoke.log" "$APP"
           CODE=$?
           set -e
           cat smoke.log

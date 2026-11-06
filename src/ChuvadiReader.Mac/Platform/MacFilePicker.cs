@@ -13,7 +13,7 @@ namespace ChuvadiReader.Mac.Platform;
 /// </summary>
 public sealed class MacFilePicker : IFilePicker
 {
-    private static readonly string[] DocumentTypes = { "pdf", "docx", "xlsx", "md", "markdown", "txt", "log", "html", "htm" };
+    internal static readonly string[] DocumentTypes = { "pdf", "docx", "xlsx", "md", "markdown", "txt", "log", "html", "htm" };
     private static readonly string[] ImageTypes = { "png", "jpg", "jpeg", "bmp", "gif", "tif", "tiff", "webp" };
 
     public Task<string?> PickDocumentAsync(CancellationToken ct = default)

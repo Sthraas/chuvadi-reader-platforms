@@ -1,15 +1,14 @@
-using ChuvadiReader.Core.Documents;
-using ChuvadiReader.Core.Lifecycle;
 using ChuvadiReader.Core.Reader;
 using ChuvadiReader.Core.Storage;
-using ChuvadiReader.Core.Theme;
 using ChuvadiReader.Core.Window;
+using ChuvadiReader.Hosting;
 using ChuvadiReader.Mac.Platform;
+using ChuvadiReader.Platform;
 
 namespace ChuvadiReader.Mac;
 
-/// <summary>Builds the MAUI app and registers the same Core services as the Windows host,
-/// with the Mac implementations of the platform interfaces.</summary>
+/// <summary>Builds the MAUI app: every Core service through the shared kit (AddChuvadiReader), then the
+/// Mac implementations of the platform seams (docs/foundation/HANDOFF.md §2). A later registration wins.</summary>
 public static class MauiProgram
 {
     public static MauiApp CreateMauiApp()
@@ -25,62 +24,37 @@ public static class MauiProgram
         services.AddBlazorWebViewDeveloperTools();
 #endif
 
-        // ~/Library/Application Support/Chuvadi — the macOS home for app state. Asked of the OS
-        // directly: .NET's SpecialFolder.ApplicationData maps to ~/.config on macOS.
-        var storage = new FileAppStorage(MacPaths.AppSupportDirectory);
+        // Every Core service, registered once for all hosts.
+        services.AddChuvadiReader(AppStateLifetime.Process);
+
+        // Folders: asked of macOS itself (the kit's desktop default can't tell Mac Catalyst is macOS).
+        var paths = new MacAppPaths();
+        services.AddSingleton<IAppPaths>(paths);
+
+        var storage = new FileAppStorage(paths.AppDataFolder);
         services.AddSingleton<IAppStorage>(storage);
         services.AddSingleton(storage);
 
-        // Core services — identical list and order to the Windows host (App.xaml.cs).
-        services.AddSingleton<SaveFolderService>();
-        services.AddSingleton<CategoryService>();
-        services.AddSingleton<ThemeService>();
-        services.AddSingleton<UserProfileService>();
-        services.AddSingleton<RecentFilesService>();
-        services.AddSingleton<PinnedService>();
-        services.AddSingleton<WatchedFolderService>();
-        services.AddSingleton<LibraryService>();
-        services.AddSingleton<TagService>();
-        services.AddSingleton<FolderSearchService>();
-        services.AddSingleton<DocumentPropertiesService>();
-        services.AddSingleton<ExportService>();
-        services.AddSingleton<RedactService>();
-        services.AddSingleton<StampService>();
-        services.AddSingleton<DocxViewService>();
-        services.AddSingleton<XlsxViewService>();
-        services.AddSingleton<FlattenService>();
-        services.AddSingleton<RecoveryService>();
-        services.AddSingleton<PressService>();
-        services.AddSingleton<IPdfReader, ChuvadiPdfReader>();
-        services.AddSingleton<TabsService>();
-        services.AddSingleton<PdfToolsService>();
-        services.AddSingleton<BenchComposer>();
-        services.AddSingleton<BenchService>();
-        services.AddSingleton<SessionService>();
-        services.AddSingleton<OpenDocumentService>();
-        services.AddSingleton<BenchDropService>();
-        services.AddSingleton<RedactRequestService>();
-        services.AddSingleton<ShellService>();
-        services.AddSingleton<PreferencesService>();
-        services.AddSingleton<TextViewService>();
-        services.AddSingleton<MeasureService>();
-        services.AddSingleton<SignatureCheckService>();
-        services.AddSingleton<PasswordService>();
-        services.AddSingleton<CertificateSignService>();
-        services.AddSingleton<ChuvadiReader.Core.Licensing.IEntitlements, ChuvadiReader.Core.Licensing.DefaultEntitlements>();
-        services.AddSingleton<IAppReadySignal, AppReadySignal>();
+        services.AddSingleton<IPlatformInfo>(new FixedPlatformInfo(
+            PlatformKind.MacOS,
+            InputKinds.Mouse | InputKinds.Keyboard,
+            // Traffic lights drawn by the Ui on the left; the app menu lives in the macOS menu bar.
+            new ShellChrome(ChuvadiReader.Platform.WindowButtons.Left, NativeMenuBar: true, AccountMenu: false, TitleBarDrag: true, CornerRadiusPx: 0),
+            FixedPlatformInfo.DesktopCapabilities,
+            new MacKeyLabels()));
 
-        // Mac platform layer.
-        services.AddSingleton<MacUiScale>();
-        services.AddSingleton<IUiScale>(sp => sp.GetRequiredService<MacUiScale>());
-        services.AddSingleton<IExternalLinks, MacExternalLinks>();
+        var clipboard = new MacClipboard();
+        services.AddSingleton<IClipboard>(clipboard);
+        services.AddSingleton<IImageClipboard>(clipboard);
         services.AddSingleton<IFilePicker, MacFilePicker>();
-        services.AddSingleton<IImageClipboard, MacImageClipboard>();
+        services.AddSingleton<IExternalLinks, MacExternalLinks>();
+        services.AddSingleton<IFileManager, MacFileManager>();
+        services.AddSingleton<IPrintService, MacPrintService>();
+
         services.AddSingleton<MacWindowControls>();
         services.AddSingleton<IWindowControls>(sp => sp.GetRequiredService<MacWindowControls>());
-
-        // Printing: native macOS print panel fed a vector PDF prepared by chuvadi-pdf (decision 6 Nov).
-        services.AddSingleton<IPrintService, MacPrintService>();
+        services.AddSingleton<MacUiScale>();
+        services.AddSingleton<IUiScale>(sp => sp.GetRequiredService<MacUiScale>());
 
         var app = builder.Build();
         StartupTimeline.Mark("maui-built");

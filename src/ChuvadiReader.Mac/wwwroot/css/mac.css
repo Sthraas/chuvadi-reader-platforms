@@ -1,6 +1,0 @@
-/* macOS chrome (handout › Platforms and Shell layout): the native traffic lights sit at the left
-   of the top bar, so the Ui's own window dots (right) are hidden and the bar starts after the
-   lights. Host-only stylesheet — the Ui's files are unchanged. Geometry matches MacChrome in
-   Platform/MacWindowControls.cs: lights 14 + 2 × 20 + 14 = 68 px, then the bar's 12 px gap. */
-html[data-platform="mac"] .topbar .traffic { display: none; }
-html[data-platform="mac"] .topbar { padding-left: 80px; }
