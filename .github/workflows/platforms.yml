@@ -32,7 +32,7 @@ jobs:
       build: ChuvadiReader.slnx
       test: tests/ChuvadiReader.Tests/ChuvadiReader.Tests.csproj
 
-  # Check only: chuvadi-pdf re-packed from the unchanged v3.31.1 tag yields the same package set as ci/packages.
+  # Check only: chuvadi-pdf re-packed from the unchanged v3.31.2 tag yields the same package set as ci/packages.
   pack-check:
     uses: ./.github/workflows/platform-build.yml
     with:
