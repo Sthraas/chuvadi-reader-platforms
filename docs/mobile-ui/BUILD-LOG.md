@@ -198,3 +198,20 @@ Evidence:
   landscape), tablet and desktop; desktop before/after shows only the clock on all eight screens.
 - Lesson: run at most two preview servers at once for pixel comparisons. Four at once gave false
   differences, with pages still rendering.
+
+### Android round 2 (run 42281134585): real-device results → swipe fix
+- Long-press drag and pinch pass on all four emulators. Double-tap passes on API 36; on API 35 the
+  test's page-width probe reads 100 % throughout (older WebView rect of a zoomed element), so the
+  measure is suspect. → and Print fail on phones: H-8, not in that build.
+- **Swipe failed everywhere.** Causes:
+  - the injected swipe takes ~1.8 s (one process start per step), against my 600 ms limit;
+  - phones show unexplained sideways overflow in the desk, against my whole-desk fit check.
+- Fix (mobile.js):
+  - pages on a quick fling **or** a drag across a third of the desk;
+  - a long-press then drag, or a drag that leaves selected text, never pages;
+  - "fits" now means the pages in view fit, measured on the unzoomed `.rpage-wrap`.
+- gestures.py: slow swipe (1.8 s), swipe with 190 px of other overflow, and long-press then drag.
+  - On 26739e8: the first two FAIL (`screens/2026-11-07/before-26739e8/`).
+  - Now: every check passes on phone portrait and landscape, jitter, and tablet.
+- Lesson: my fling limit was tuned to CDP's instant events. Injected touch on a slow emulator, and a
+  slow real finger, need the distance rule too.

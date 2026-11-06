@@ -3,9 +3,10 @@
 //
 // reader.js already owns pinch-to-zoom and double-tap zoom on touchscreens ("Pinch, double-tap and
 // swipe do zoom and paging" — handout 12g), so this file adds only what the desktop code lacks:
-//   * horizontal swipe on a page that fits sideways → next / previous page (Read mode). Detected from
-//     touch events, which keep arriving when the WebView takes the drag as a pan (pointer events get
-//     pointercancel there — Android BUILD-LOG step 32). A desk that fits sideways is marked
+//   * horizontal swipe on pages that fit sideways → next / previous page (Read mode): a quick fling, or
+//     a slower drag across a third of the desk (Android's own pager does both). Detected from touch
+//     events, which keep arriving when the WebView takes the drag as a pan (pointer events get
+//     pointercancel there — Android BUILD-LOG step 32). A desk whose pages fit sideways is marked
 //     .chvd-hfit so it pans only vertically (mobile.css), leaving the sideways drag to the swipe.
 //   * tap on the canvas → shows the per-page strip for a few seconds (desktop shows it on hover)
 //   * Arrange: long-press a page (or a Shelf page) to drag it; a quick swipe scrolls instead. While
@@ -17,7 +18,7 @@
 let net = null;          // DotNetObjectReference<TouchSupport>
 let attached = false;
 let tap = null;              // pointer tap candidate {x, y, t, id, moved, target}
-let swipe = null;            // touch swipe candidate {x, y, t, target, multi}
+let swipe = null;            // touch swipe candidate {x, y, t, target, multi, movedAt}
 let stripTimer = null;
 let press = null;            // Arrange long-press state
 let arrange = false;
@@ -38,6 +39,7 @@ export function initTouch(dotnetRef) {
     document.addEventListener('pointercancel', onCancel, true);
     document.addEventListener('contextmenu', onContextMenu, true);
     document.addEventListener('touchstart', onTouchStart, { capture: true, passive: true });
+    document.addEventListener('touchmove', onTouchMove, { capture: true, passive: true });
     document.addEventListener('touchend', onTouchEnd, { capture: true, passive: true });
     document.addEventListener('touchcancel', onTouchCancel, { capture: true, passive: true });
     fitTimer = setInterval(markFits, 300);
@@ -53,6 +55,7 @@ export function disposeTouch() {
     document.removeEventListener('pointercancel', onCancel, true);
     document.removeEventListener('contextmenu', onContextMenu, true);
     document.removeEventListener('touchstart', onTouchStart, true);
+    document.removeEventListener('touchmove', onTouchMove, true);
     document.removeEventListener('touchend', onTouchEnd, true);
     document.removeEventListener('touchcancel', onTouchCancel, true);
     setArrange(false);
@@ -89,15 +92,43 @@ function isPhone() { return document.documentElement.getAttribute('data-shell') 
 // A desk whose pages fit sideways pans only vertically, so a sideways drag is ours (swipe).
 function markFits() {
     for (const d of document.querySelectorAll('.rdesk')) {
-        d.classList.toggle('chvd-hfit', d.scrollWidth <= d.clientWidth + 1);
+        d.classList.toggle('chvd-hfit', pagesFit(d));
     }
+}
+
+// Do the pages in view fit sideways? Measured on each page's .rpage-wrap, which isn't zoomed itself:
+// its scrollWidth includes the zoomed page in every WebView, whereas getBoundingClientRect of a
+// CSS-zoomed element differs between WebView versions (Android API 35 reports it unzoomed). Other
+// content that overflows the desk doesn't count — the emulator showed such overflow on phones.
+function pagesFit(desk) {
+    const top = desk.getBoundingClientRect().top, bottom = top + desk.clientHeight;
+    let seen = 0;
+    for (const w of desk.querySelectorAll('.rpage-wrap')) {
+        const r = w.getBoundingClientRect();
+        if (r.bottom <= top || r.top >= bottom) { if (seen) break; continue; }
+        seen++;
+        if (w.scrollWidth > w.clientWidth + 1) return false;
+    }
+    return seen > 0;
+}
+
+function hasSelection() {
+    const sel = window.getSelection && window.getSelection();
+    return !!(sel && !sel.isCollapsed && String(sel).length > 0);
 }
 
 // ── swipe (touch events: never cancelled by the WebView's own pan) ────────────
 function onTouchStart(e) {
     if (e.touches.length !== 1) { if (swipe) swipe.multi = true; return; }
     const t = e.touches[0];
-    swipe = { x: t.clientX, y: t.clientY, t: performance.now(), target: e.target, multi: false };
+    swipe = { x: t.clientX, y: t.clientY, t: performance.now(), target: e.target, multi: false, movedAt: 0 };
+}
+
+function onTouchMove(e) {
+    const s = swipe;
+    if (!s || s.movedAt || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    if (Math.hypot(t.clientX - s.x, t.clientY - s.y) > TAP_SLOP) s.movedAt = performance.now();
 }
 
 function onTouchEnd(e) {
@@ -117,10 +148,15 @@ function onTouchEnd(e) {
         return;
     }
 
-    // Paging: horizontal, quick, on a page that fits sideways (otherwise the drag pans the page).
+    // Paging: horizontal, on pages that fit sideways (otherwise the drag pans the page); a quick fling
+    // or a drag across a third of the desk. A long-press then drag selects text instead.
     const desk = deskOf(s.target);
-    if (desk && !interactive(s.target) && Math.abs(dx) > SWIPE_MIN && Math.abs(dx) > 2 * Math.abs(dy)
-        && performance.now() - s.t < SWIPE_MS && desk.scrollWidth <= desk.clientWidth + 1) {
+    if (!desk || interactive(s.target)) return;
+    const adx = Math.abs(dx), ady = Math.abs(dy);
+    const quick = adx > SWIPE_MIN && performance.now() - s.t < SWIPE_MS;
+    const far = adx > Math.max(2 * SWIPE_MIN, desk.clientWidth * 0.33);
+    const held = s.movedAt && s.movedAt - s.t > LONG_PRESS_MS;
+    if (adx > 2 * ady && (quick || far) && !held && !hasSelection() && pagesFit(desk)) {
         call('OnSwipe', dx < 0 ? 1 : -1);
     }
 }

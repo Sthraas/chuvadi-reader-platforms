@@ -102,6 +102,39 @@ fine; keep it". That was overtaken by 63af90f already shipping the Bench version
 Bench's counter is the one to keep.
 
 ## For the Android chat (via the coordinator)
+**Round 2 (run 42281134585, `15bf9fb`, mobile-ui 26739e8 + Foundation 2fafb60) — real-device results:**
+
+| | phone API 36 | phone API 35 | tablet API 36 | tablet API 35 |
+|---|---|---|---|---|
+| long-press drag (step 34) | PASS | PASS | PASS | PASS |
+| pinch | PASS | PASS | PASS | PASS |
+| double-tap zoom and back | PASS | FAIL* | PASS | FAIL* |
+| swipe | FAIL | FAIL | FAIL | FAIL |
+| → / Print (phone) | FAIL | FAIL | PASS | PASS |
+
+- **Swipe, fixed in mobile.js** (`platform/mobile-ui` after c531f04). Two causes, both reproduced
+  headless on 26739e8 and passing now:
+  1. The injector writes each of the swipe's 9 steps with its own process start (~170 ms each,
+     `touch.py`'s own comment), so a "250 ms" swipe takes ~1.8 s. My 600 ms fling limit rejected it.
+     Swipe now also pages on a slower drag across a third of the desk (as Android's own pager does);
+     a long-press then drag (text selection) still doesn't page.
+  2. On the phones, something in the desk overflows sideways (`overflowX` 54 / 193 while
+     `overflowPage` is 0), and I only allowed swipe when the whole desk fit. It now checks only that
+     the pages in view fit, measured on `.rpage-wrap`.
+  - Still unknown: **what** overflows the phone desk. Not reproducible headless at 411×867 or
+    411×839 at 2.625×. Please log it once on the emulator:
+    `[...document.querySelector('.rdesk').querySelectorAll('*')].filter(e => e.getBoundingClientRect().right > document.querySelector('.rdesk').getBoundingClientRect().right + 1).slice(0, 5).map(e => e.className)`
+- **\* Double-tap on API 35:** the page width reads 793 px (100 %) before and after every gesture,
+  and the phone desk overflows only 54 px. That fits the older WebView reporting a CSS-`zoom`ed
+  element's rect **unzoomed**, so the test's `pageW` can't see zoom changes there. Pinch passes on
+  API 35 because it measures `contentW`. Suggest measuring double-tap the same way (desk `scrollWidth`
+  or the desk's `--rpage-zoom`), then re-check. If it still fails, it's reader.js's double-tap
+  (Foundation), and I'll look.
+- **→ and Print on the phones** are the Reader bug fixed by **H-8**, which wasn't in this build
+  (hooks-3 at 26739e8 had H-5 and H-6 only). compose.sh now picks the highest-numbered hooks patch,
+  and the current hooks-3 (H-5 to H-8) applies cleanly to 2fafb60 + this branch (checked).
+- Please re-run with `MOBILEUI_REF` at the current tip.
+
 **Run 42276742988 tested the pinned snapshot `MOBILEUI_REF` f29b6a6 (session 2), not session 3**, so its
 gesture failures are the bugs already fixed in 26739e8. To test the fixes:
 1. In `android.yml`, set `MOBILEUI_REF` to the current `platform/mobile-ui` tip. Optionally set

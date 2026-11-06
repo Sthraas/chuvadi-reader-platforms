@@ -13,7 +13,7 @@ Design: `docs/design-handoff/Portal & Android.dc.html` 12d-12j, `Reader Side Rai
 | `…/Phone/PhoneCommands.cs` | Which ShellService command ids the strip, View sheet and FAB run |
 | `…/Phone/TouchSupport.razor` | Loads `mobile.js` on tablet and phone layouts only |
 | `src/ChuvadiReader.Ui/wwwroot/css/mobile.css` | Tablet sizing (72/72/60, 48 px targets), phone folding, phone Home / Library / Settings; every rule keyed on `html[data-shell="tablet|phone"]` or `.ph-*` |
-| `src/ChuvadiReader.Ui/wwwroot/js/mobile.js` | Swipe paging (touch events), tap shows the page strip, long-press drag in Arrange, Shelf peek. Pinch and double-tap zoom are reader.js's own |
+| `src/ChuvadiReader.Ui/wwwroot/js/mobile.js` | Swipe paging (touch events; a fling or a drag across a third of the desk, on pages that fit), tap shows the page strip, long-press drag in Arrange, Shelf peek, Redact fit width. Pinch and double-tap zoom are reader.js's own |
 | `tests/ChuvadiReader.MobileUi.Tests` | Contract tests: command ids exist; strip/sheet match the frames; every CSS rule is scoped |
 | `tests/ChuvadiReader.MobileUi.Preview` | **Testing only.** Blazor Server page that renders the Ui at phone/tablet/desktop |
 | `tools/mobile-ui/*.sh, *.py` | **Testing only.** Preview runner, headless-Chromium screenshots with touch emulation, pixel compare, `gestures.py` (CDP touch: swipe, double-tap, pinch, fit, long-press drag), `checks.py` (→ paging, Document › Print, phone Redact fit width) |

@@ -55,6 +55,33 @@ async def main():
         s1 = await pg.evaluate(STATE)
         report("swipe → next page", s1["counter"] != s0["counter"], f'{s0["counter"]} → {s1["counter"]}; events {await pg.evaluate("window.__ev")}')
 
+        # 1b. slow swipe, as the Android emulator's injector makes it (~200 ms per step, ~1.8 s in all)
+        s0 = await pg.evaluate(STATE)
+        await drag(cdp, int(W * 0.8), cy, int(W * 0.2), cy, steps=8, step_ms=200)
+        await pg.wait_for_timeout(1200)
+        s1 = await pg.evaluate(STATE)
+        report("slow swipe (1.8 s) → next page", s1["counter"] != s0["counter"], f'{s0["counter"]} → {s1["counter"]}')
+
+        # 1c. something else in the desk wider than the screen (seen on the emulator) doesn't stop paging
+        await pg.evaluate('''() => { const d = document.querySelector('.rdesk'); const x = document.createElement('div');
+            x.id = 'chvd-test-wide'; x.style.cssText = 'width:' + (d.clientWidth + 190) + 'px;height:2px';
+            d.appendChild(x); }''')
+        await pg.wait_for_timeout(500)
+        s0 = await pg.evaluate(STATE)
+        await drag(cdp, cx + 120, cy, cx - 120, cy, steps=6, step_ms=12)
+        await pg.wait_for_timeout(1200)
+        s1 = await pg.evaluate(STATE)
+        report("swipe with other content overflowing the desk → next page", s1["counter"] != s0["counter"],
+               f'{s0["counter"]} → {s1["counter"]} (desk overflow {s0["sw"] - s0["deskW"]} px)')
+        await pg.evaluate("document.getElementById('chvd-test-wide')?.remove()")
+
+        # 1d. long-press, then a sideways drag (text selection on Android) doesn't page
+        s0 = await pg.evaluate(STATE)
+        await drag(cdp, cx + 120, cy, cx - 120, cy, steps=6, step_ms=12, hold_ms=700)
+        await pg.wait_for_timeout(1200)
+        s1 = await pg.evaluate(STATE)
+        report("long-press then drag doesn't page", s1["counter"] == s0["counter"], f'{s0["counter"]} → {s1["counter"]}')
+
         # 2. double-tap zooms in, a second double-tap returns (handout: double-tap = zoom)
         w0 = (await pg.evaluate(STATE))["page"]
         for _ in range(2):
