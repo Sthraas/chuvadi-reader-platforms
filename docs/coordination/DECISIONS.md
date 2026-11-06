@@ -142,3 +142,21 @@ Each decided on the chat's own pros and cons. Delivered to the chats at the next
 - Single-instance app (open file as a new tab in the running app) — programme-wide behaviour change incl. Windows.
 - Licence for the Linux package metadata (repo has no licence file).
 - Delete branch `platform/linux-probe` (finished temporary branch; deletion blocked for the coordinator).
+
+## 7 Nov 2026 00:55 — Arun
+- GitHub access option A: Claude GitHub app on Arun's personal account for chuvadi-reader; chats push branches and open PRs, Arun merges.
+- Sangam login_hint pre-fill: Arun takes a write-up to the Sangam chat himself.
+- Single instance (tabbed) approved programme-wide.
+- Licence: proprietary, final. Free for everyone, never open source.
+- Check-ins every 30 minutes.
+
+## 7 Nov 2026 01:00 — coordinator
+| # | Item | Decision |
+|---|---|---|
+| D-69 | Single-instance design | Foundation designs an IAppInstance kit contract with per-host options (Windows pipe, Linux D-Bus/socket, Mac native, Android singleTask/OnNewIntent); must not slow first launch |
+| D-70 | LICENSE + EULA | Foundation adds proprietary LICENSE and EULA draft (marked for Arun's legal review); all package metadata uses it |
+| D-71 | Owner-password printing gap | Wait for chuvadi-pdf 3.32.0 PDF-16 |
+| D-72 | Web worker isolation / VM size | (a) same service account for launch; 16 GB / 8 vCPU for ~40 concurrent; restarts at quiet hours with a banner |
+| D-73 | Mac size option 2 (−111 MB, +0.3 s startup) | Rejected — startup priority; do option 1 now, option 3 when libraries are trim-annotated |
+| D-74 | Phone Redact fit-width hook; Shelf landscape peek | Approved; keep |
+| D-75 | Web UI phone account block; Portal status-bar spans; PortalLinks 2 args; CI Node 24 actions | Approved; Foundation's next combined patch / Web host |
