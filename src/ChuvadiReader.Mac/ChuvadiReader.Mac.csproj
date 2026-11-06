@@ -56,19 +56,21 @@
   </PropertyGroup>
   <Target Name="ChuvadiDotnetNotices" DependsOnTargets="ResolveFrameworkReferences">
     <ItemGroup>
-      <_ChvdMonoPack Include="@(ResolvedRuntimePack)" Condition="'%(ResolvedRuntimePack.FrameworkName)' == 'Microsoft.NETCore.App'" />
+      <!-- The .NET runtime pack (Mono on Mac Catalyst), found the way the .NET for Mac Catalyst SDK finds it:
+           ResolvedFrameworkReference's RuntimePackName / RuntimePackPath (Xamarin.Shared.Sdk.targets). -->
+      <_ChvdMonoPack Include="@(ResolvedFrameworkReference)" Condition="$([System.String]::Copy('%(ResolvedFrameworkReference.RuntimePackName)').StartsWith('Microsoft.NETCore.App.Runtime'))" />
       <_ChvdApplePack Include="@(ResolvedRuntimePack)" Condition="'%(ResolvedRuntimePack.FrameworkName)' == 'Microsoft.MacCatalyst'" />
     </ItemGroup>
     <PropertyGroup>
-      <_ChvdMonoNotices>@(_ChvdMonoPack->'%(PackageDirectory)')</_ChvdMonoNotices>
+      <_ChvdMonoNotices>@(_ChvdMonoPack->'%(RuntimePackPath)')</_ChvdMonoNotices>
       <_ChvdMonoNotices>$(_ChvdMonoNotices.Split(';').GetValue(0))</_ChvdMonoNotices>
       <_ChvdMonoNotices Condition="'$(_ChvdMonoNotices)' != ''">$([System.IO.Path]::Combine('$(_ChvdMonoNotices)', 'THIRD-PARTY-NOTICES.TXT'))</_ChvdMonoNotices>
       <_ChvdAppleLicense>@(_ChvdApplePack->'%(PackageDirectory)')</_ChvdAppleLicense>
       <_ChvdAppleLicense>$(_ChvdAppleLicense.Split(';').GetValue(0))</_ChvdAppleLicense>
       <_ChvdAppleLicense Condition="'$(_ChvdAppleLicense)' != ''">$([System.IO.Path]::Combine('$(_ChvdAppleLicense)', 'LICENSE'))</_ChvdAppleLicense>
     </PropertyGroup>
-    <Error Condition="'$(_ChvdMonoNotices)' == '' or !Exists('$(_ChvdMonoNotices)')" Text="Chuvadi: .NET runtime notices not found in the resolved runtime pack ('$(_ChvdMonoNotices)')." />
-    <Error Condition="'$(_ChvdAppleLicense)' == '' or !Exists('$(_ChvdAppleLicense)')" Text="Chuvadi: .NET for Mac Catalyst licence not found in the resolved runtime pack ('$(_ChvdAppleLicense)')." />
+    <Error Condition="'$(_ChvdMonoNotices)' == '' or !Exists('$(_ChvdMonoNotices)')" Text="Chuvadi: .NET runtime notices not found in the resolved runtime pack ('$(_ChvdMonoNotices)'). Resolved framework references: @(ResolvedFrameworkReference->'%(Identity)=%(RuntimePackName)@%(RuntimePackPath)', ' | ')" />
+    <Error Condition="'$(_ChvdAppleLicense)' == '' or !Exists('$(_ChvdAppleLicense)')" Text="Chuvadi: .NET for Mac Catalyst licence not found in the resolved runtime pack ('$(_ChvdAppleLicense)'). Resolved runtime packs: @(ResolvedRuntimePack->'%(FrameworkName)@%(PackageDirectory)', ' | ')" />
     <ItemGroup>
       <BundleResource Include="$(_ChvdMonoNotices)" LogicalName="legal/DOTNET-RUNTIME-THIRD-PARTY-NOTICES.txt" />
       <BundleResource Include="$(_ChvdAppleLicense)" LogicalName="legal/DOTNET-MACCATALYST-LICENSE.txt" />
