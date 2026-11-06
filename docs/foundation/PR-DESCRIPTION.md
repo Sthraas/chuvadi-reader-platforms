@@ -41,7 +41,7 @@ Three commits: code (`src`, `tests`, `ChuvadiReader.Platforms.slnx`), dev tools 
 
 **Windows host:** registers through `AddChuvadiReader`; adds `WpfClipboard`, `WpfFileManager`; `FileAppStorage` moves to the shared kit. **`dotnet publish` is now ReadyToRun** (win-x64 default, `-r win-arm64` for Arm); build, F5 and tests are unchanged.
 
-**Licence (Arun, 7 Nov: proprietary, free to use):** `LICENSE`, `legal/EULA.txt` and `legal/THIRD-PARTY-NOTICES.txt` (every bundled package's licence with full texts: chuvadi-pdf Apache-2.0, Chuvadi libraries MIT, LiPi Sans OFL-1.1, Microsoft MIT) — **all three are drafts for legal review**. `Directory.Build.props` sets Company, Product and Copyright on every assembly; the Windows app carries the three files in its output.
+**Licence (Arun, 7 Nov: proprietary, free to use):** `LICENSE`, `legal/EULA.txt` and `legal/THIRD-PARTY-NOTICES.txt` (every bundled package's licence with full texts: chuvadi-pdf Apache-2.0, Chuvadi libraries MIT, LiPi Sans OFL-1.1, Microsoft MIT) — **all three are drafts for legal review**. `Directory.Build.props` sets Company, Product and Copyright on every assembly; the Windows app carries the three files in its output. Settings › About › Licences now opens them in the app (also at `/licence`).
 
 **CI:** `ci.yml` moves to `actions/checkout@v7`, `setup-dotnet@v6`, `upload-artifact@v7` (Node 24).
 
@@ -89,6 +89,7 @@ Also for this PR's other changes:
 16. Settings › Language › Preferred name "Arun S." → Home: "Good morning, Arun S." (one full stop).
 17. A PDF whose permissions forbid printing: the Print card is greyed with "This file's permissions don't allow printing."; an ordinary PDF still prints.
 18. Explorer › Properties › Details on `ChuvadiReader.Windows.exe`: Company "Sthraas Intelligence Pvt Ltd", Product "Chuvadi Reader", Copyright "© 2026 Sthraas Intelligence Pvt Ltd. All rights reserved."; `LICENSE.txt`, `EULA.txt`, `THIRD-PARTY-NOTICES.txt` sit beside the exe.
+19. Settings › About › Licences › Open: the licence agreement, the licence and the third-party notices; "‹ About" goes back.
 
 ## Known gaps (not changed here)
 - Windows printing is raster (`WpfPrintService`); move to Chuvadi.Print's vector XPS route when rc.3 is released.
