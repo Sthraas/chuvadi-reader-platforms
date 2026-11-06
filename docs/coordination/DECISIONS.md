@@ -29,6 +29,28 @@ Arun handed the calls to the coordinator on 6 Nov 2026 (05:21 IST). Every decisi
 | D-16 | Android host | Separate `ChuvadiReader.Android`; no host CSS on Ui class names (look built in Ui by Mobile UI chat) | No silent drift |
 | D-17 | Android icon | Android chat builds a draft SVG master from Brand Assets, flagged for Arun | Unblocks Play assets |
 
+
+## 6 Nov 2026 05:39 — Arun's answers
+- Domain: probably chuvadi.in. Bundle ID / app ID decided before release, on the final domain; placeholders until then.
+- Publisher: Sthraas Intelligence Pvt Ltd. Google Play and Apple Developer accounts are created after the company is registered; until then unsigned/test builds only.
+- E2E server: at the very end. Sangam client registration: when Sangam goes to production (test against a local Sangam meanwhile).
+- App icon: coordinator approves the draft if it matches Brand Assets; Arun may change it before the final release.
+- Mac test on a friend's Mac: once everything is ready.
+- TLS: our own C# ACME client for Let's Encrypt (Pezhai has a private CA only, not production-proven yet).
+- Merge plan (a): Foundation edits land in arunshivab/chuvadi-reader first (PR, Arun merges after Windows checks). **Concentrate on speed** — move fast, and startup performance is a priority in every code change.
+- Sheets 2.0.1: the Reader chat does the move.
+- Library: release order fonts 1.1.0 → markup 1.1.0 → docs 2.0.0 → layout tags; re-pin Layout.Pdf off 3.30.2; the package report's leans on items 3–16 accepted; log PDF-09 as open.
+
+## 6 Nov 2026 — coordinator (cont.)
+| # | Decision | Chosen |
+|---|---|---|
+| D-18 | Foundation Group B (write-back) | Approved |
+| D-19 | Foundation Group C; gating | Approved; HIDE what a platform can never do; LOCK only library-gated items |
+| D-20 | Web wording for device-only lines | "Processed on the Chuvadi server · encrypted · only you can see it. Your files are removed when you sign out." Status bar as the handout |
+| D-21 | "Show in folder" on desktop | Wire it (it's in the handout's Document menu) |
+| D-22 | Windows raster printing | Known existing gap; move to Chuvadi.Print vector XPS (rc.3) when released |
+| D-23 | Mac menu bar command source | Foundation kit fills IAppCommands from ShellService |
+
 ## Waiting for Arun's final check
 - Mac bundle ID (provisional `in.sthraas.chuvadi.reader`) and Android application ID (placeholder `in.chuvadi.reader`): both permanent once released; depend on the domain and Play/Apple accounts Arun owns.
 - Which Play developer account publishes (Sthraas or imagiQa).
