@@ -143,3 +143,26 @@ index 41cd124..ff0eb05 100644
  
      private async Task GoTo(int page)
      {
+diff --git a/src/ChuvadiReader.Ui/wwwroot/js/reader.js b/src/ChuvadiReader.Ui/wwwroot/js/reader.js
+index 0716aec..ac3e00b 100644
+--- a/src/ChuvadiReader.Ui/wwwroot/js/reader.js
++++ b/src/ChuvadiReader.Ui/wwwroot/js/reader.js
+@@ -478,8 +478,16 @@ function notifyZoom(s) {
+ }
+ 
+ // Returns the absolute scale that fits the page width / whole page; 0 if not measurable.
+-export function measureFit(deskEl, mode) {
+-    const page = deskEl && deskEl.querySelector('.rpage');
++// A newly opened document is fitted right after init, often before any page has rendered. The
++// placeholder (.rpage-load) is sized in points (595 × 842), 3/4 of a rendered page (96/72 px per pt),
++// so measuring it fitted pages 4/3 too large on a slow device (Android emulator: Fit page 456 px on a
++// 411 px screen). Wait briefly for a rendered page and measure that; fall back to the placeholder.
++export async function measureFit(deskEl, mode) {
++    for (let i = 0; i < 40 && deskEl && !deskEl.querySelector('.rpage svg'); i++) {
++        await new Promise(r => setTimeout(r, 50));
++    }
++    const rendered = deskEl && deskEl.querySelector('.rpage svg');
++    const page = rendered ? rendered.closest('.rpage') : deskEl && deskEl.querySelector('.rpage');
+     if (!page) return 0;
+     const z = readZoom();
+     const rect = page.getBoundingClientRect();

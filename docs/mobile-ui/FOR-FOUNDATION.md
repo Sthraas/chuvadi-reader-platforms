@@ -5,8 +5,8 @@ hooks (D-26): H-1 in MainLayout, reader.js pen/finger split (D-42), Bench's desk
 TabsService de-dup (D-48). So session 2's `H1-…`, `H3-…` and `mobile-ui-hooks-2.patch` are deleted;
 nothing from them is still waiting.
 
-Four new hooks. They are **not** applied on this branch; `tools/mobile-ui/preview.sh` applies
-`proposal/mobile-ui-hooks-3.patch` (all four) in a scratch copy for testing. It applies cleanly to
+Five new hooks. They are **not** applied on this branch; `tools/mobile-ui/preview.sh` applies
+`proposal/mobile-ui-hooks-3.patch` (all five) in a scratch copy for testing. It applies cleanly to
 63af90f and to the current tip **615afde** (second and third combined patches) with `git apply`.
 
 | Patch | File | Decision | Lines |
@@ -15,7 +15,8 @@ Four new hooks. They are **not** applied on this branch; `tools/mobile-ui/previe
 | `proposal/H6-settings-phone-push.patch` | `Ui/Pages/Settings.razor` | D-45 Settings A | +15 / −2 |
 | `proposal/H7-redact-phone-fit-width.patch` | `Ui/Pages/Redact.razor` | Coordinator, 7 Nov | +16 / −0 |
 | `proposal/H8-reader-rerender-bugfix.patch` | `Ui/Pages/Reader.Shell.cs`, `Reader.razor` | **Bug fix**, found from Android run 42276742988; coordinator: combined patch (D-26) | +14 / −6 |
-| `proposal/mobile-ui-hooks-3.patch` | all four, concatenated | — | — |
+| `proposal/H9-reader-fit-after-render-bugfix.patch` | `Ui/wwwroot/js/reader.js` | **Bug fix**: the phone "over-wide" page and Fit page 456 vs 342 | +10 / −2 |
+| `proposal/mobile-ui-hooks-3.patch` | all five, concatenated | — | — |
 
 ## H-5: pass SwitchTab and CloseTab to the phone shell (MainLayout)
 Foundation's H-1 renders `PhoneShell` without `SwitchTab` / `CloseTab`, so the phone Tabs sheet (D-43)
@@ -79,12 +80,42 @@ Found while checking the Android run's phone failures, then confirmed on unchang
 - Desktop at rest: only the clock differs (below). Headless: Document › Print fails on 63af90f and
   opens the card with H-8, on desktop, tablet and phone; → moves the counter on all three.
 
+## H-9: bug fix: a new document's first fit is measured on the placeholder (all platforms)
+The cause of the Android chat's "Phone Fit page is wrong" (456 vs 342 px) and, very likely, of the
+phone desk's sideways overflow (the page itself is too wide):
+- The Reader fits a newly opened document right after `init`, before any page has rendered.
+- `measureFit` then measures the `.rpage-load` placeholder. It is sized in **points** (595 × 842), 3/4
+  of a rendered page (793 px: 96/72 px per pt).
+- So the fit comes out **4/3 too large**: 0.592 instead of 0.444 on a 412 px phone, i.e. a 469 px
+  page on a 411 px screen, the emulator's figures.
+- It only shows when the fit runs before the first page renders, as on a slow device. My preview had
+  the pages cached, which is why it never showed headless.
+- Proof (checks.py, "fit measured before the pages render"): pages swapped for placeholders, fit
+  asked, render arriving 300 ms later. 615afde → **0.592** (FAIL); with H-9 → **0.444** (PASS).
+
+Fix: `measureFit` waits up to 2 s for a rendered page and measures that one; with none, it falls back
+to the placeholder as today. It becomes `async`. Both callers already use `InvokeAsync<double>`, which
+awaits a returned promise, so nothing else changes.
+
+| Option | For | Against |
+|---|---|---|
+| **(a) measureFit waits for a rendered page (H-9)** | Exact for any page size; one function in reader.js | The first fit lands up to one render later on a slow device (the placeholder shows at 100 % meanwhile) |
+| (b) Size `.rpage-load` in px (793 × 1123) | One CSS line; no wait | Exact for A4 only: Letter is ~3 % off, landscape pages more |
+| (c) Page sizes in `PdfDocumentVm`, placeholders sized per page | The most complete: no wrong measure and no layout jump for mixed page sizes | Core + ChuvadiPdfReader + Reader markup; much larger |
+
+**Recommend (a)** now; (c) is worth doing when the Reader chat next touches lazy rendering.
+- Desktop: at rest, Read and every other route are clock-only or 1-level anti-aliasing noise vs 615afde.
+  Desktop fits a rendered page today, so nothing changes there.
+- The Android probe (gestures.py `overwide.json`) should now show the over-wide element to be the
+  `.rpage` itself. With H-9 in the composition, the next run should show no overflow and Fit page ≤
+  Fit width on both phones.
+
 ## Evidence (63af90f + this branch + hooks-3, in a scratch copy)
 - Programme solution: **0 warnings, 0 errors**; tests **161 + 28 + 14 + 4 = 207 pass** (H-5 to H-8 applied).
 - **Desktop pixel-identical:** before (63af90f) and after (H-5 to H-8) were run at the same time
   (`screens/2026-11-07/desktop-compare.txt`).
   - Read 1440×900 and 990×700, Arrange, Mark, Home, Library, Settings 1440×900 and 700×800: only the
-    clock differs.
+    clock differs, plus ≤ 8 pixels of 1-colour-level anti-aliasing noise on Home and Read (H-5 to H-9 vs 615afde).
   - A run with four preview servers at once showed differences on Read, Arrange and Home from pages
     still rendering under the load. Re-run with the two servers alone: clean.
   - An earlier run showed 1-colour-level anti-aliasing noise on 5–6 Home / Library pixels; the same

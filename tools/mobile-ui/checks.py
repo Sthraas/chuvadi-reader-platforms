@@ -31,6 +31,21 @@ async def main():
         c1 = await pg.evaluate(COUNTER)
         report("→ moves the page and the counter follows", c1 != c0 and c1[:1] == "2", f"{c0} → {c1}")
 
+        # 1b. The first fit of a new document, measured before its pages render (slow device), must
+        #     not use the placeholder (595 px wide, 3/4 of a rendered page): H-9.
+        r = await pg.evaluate('''async () => {
+            const m = await import('/_content/ChuvadiReader.Ui/js/reader.js');
+            const d = document.querySelector('.rdesk'), pages = [...d.querySelectorAll('.rpage')];
+            const want = await m.measureFit(d, 'width');
+            const saved = pages.map(p => p.innerHTML);
+            pages.forEach(p => p.innerHTML = '<div class="rpage-load" style="width:595px;height:842px"></div>');
+            setTimeout(() => pages.forEach((p, i) => p.innerHTML = saved[i]), 300);   // the render arrives
+            const got = await m.measureFit(d, 'width');
+            return { rendered: want, beforeRender: got };
+        }''')
+        report("fit measured before the pages render matches the rendered fit",
+               abs(r["beforeRender"] - r["rendered"]) <= 0.01, r)
+
         # 2. ⋮ (phone) / Document (tablet) → Print opens the Print card
         if phone:
             await pg.locator('.ph-bar button[aria-label="More"]').click(); await pg.wait_for_timeout(500)

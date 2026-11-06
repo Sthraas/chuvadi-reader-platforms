@@ -18,6 +18,8 @@
 | F-4 PlatformState cascade | — | Done: TouchSupport and PhoneShell use `IPlatformInfo` + `ShellLayouts.Shell` |
 | Web portal PhoneShell slot | Coordinator, 7 Nov | Done: `OpenLabel`, `OpenIcon`, `MenuFooter` (Web UI chat's request patch). The Home Open button uses `OpenLabel` too |
 | Android run 42276742988 findings | Coordinator, 7 Nov | Run used pinned f29b6a6. H-8 bug fix (Document › Print / Export / Press, → counter); compose.sh and test changes for the Android chat (`FOR-FOUNDATION.md`) |
+| Phone over-wide page / Fit page 456 vs 342 | Coordinator: fix at the source via the combined patch | **H-9** (reader.js): the first fit was measured on the points-sized placeholder. Proven headless; the Android probe should confirm it on the device |
+| MU-8 open point 3, Library Default view | Coordinator, 7 Nov: approved (leave it to the Reader chat's setting) | Nothing to build here |
 
 ### MU-8 open points (need a decision)
 1. **Home search pill sits above the greeting**, not below the count line as in 4a. Dashboard has no

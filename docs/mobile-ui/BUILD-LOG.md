@@ -236,3 +236,19 @@ Evidence:
   (Settings hook), Library Default view (the Reader chat's setting).
 - Android CI is stopped (GitHub billing), so this was tested locally only. The device check of the
   swipe fix and the over-wide phone element wait for the Android chat's run.
+
+### 7 Nov (late): the phone "over-wide" page found → H-9
+- The Android probe (5f5056e) is written but can't run (CI on billing hold). The Android build log
+  gave the clue: Fit page 456 vs Fit width 342 = **1.333 = 96/72**.
+- `.rpage-load` is 595 × 842 (points); a rendered A4 page is 793 px. The Reader fits a new document
+  right after `init`, before the first render.
+- Headless proof: reader.js `measureFit` on the same desk returns 0.444 on rendered pages and 0.592 on
+  placeholders.
+- Slow network and CPU didn't reproduce it end to end, because the preview's pages were already
+  rendered and cached server-side.
+- H-9: `measureFit` waits (≤ 2 s) for a rendered page. checks.py: 615afde 0.592 FAIL, with H-9 0.444
+  PASS (the render arrives 300 ms after the fit is asked).
+- Results: 0 warnings; 235 tests with H-5 to H-9; desktop vs 615afde clock-only, apart from ≤ 8 pixels
+  of 1-colour-level anti-aliasing noise.
+- Lesson: my preview hid a timing bug because its pages were cached. A fresh-render check now forces
+  the slow order.
