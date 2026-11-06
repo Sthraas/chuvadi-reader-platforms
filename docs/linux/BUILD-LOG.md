@@ -291,7 +291,7 @@ layout, 12 px corners when not maximised (`screenshots/linux-buttons-left-gnome-
 the Reader chat's work, not a platform difference.
 
 ### 25. CI: both architectures green — `.github/workflows/linux.yml`
-Runs 42224638571 (x64, commit `dbc989b`) and 42225596444 (ARM64, commit `a77674e`), GitHub-hosted Ubuntu 24.04:
+Run 42225596444 (commit `a77674e`, both architectures green; x64 also green on `dbc989b`), GitHub-hosted Ubuntu 24.04:
 build (warnings are errors), both test projects, ReadyToRun publish, launch test, both `.deb` packages, install
 of the `.deb` (postinst loads the AppArmor profile; `xdg-mime` default for PDF), launch of the installed app,
 CUPS PDF queue, full UI pass.
