@@ -222,3 +222,31 @@ Residual gaps → library asks (`LIBRARY-ASKS.md`): L-1 embed missing fonts; L-2
   download **42 MB** (was 165.8 / 47).
 - Startup (CI, cold, ms since process start): main 131 · MAUI built 348 · window 364 · WebView ready 491 ·
   **first render 1672** (was 2434).
+
+---
+
+## 2026-11-06 (night) — Session 3: chuvadi-pdf 3.31.2, startup options
+
+### 22. Rebased on `platform/foundation` at 63af90f
+chuvadi-pdf 3.31.2 (D-54), combined hooks (D-26; COMBINED-HOOKS.md: "Mac: nothing to change"), Mac
+Catalyst `IsMacOS()` fixes in CertificateSignService and PasswordService (F6). Clean rebase. Core 167/167,
+Hosting 28/28 on Linux with warnings as errors.
+
+### 23. Bundle size — breakdown and options (for the coordinator)
+Bundle 155.8 MB / download 42 MB with `SdkOnly`; 519 MB with no trimming.
+
+| Part | MB |
+|---|---|
+| `Contents/MacOS/ChuvadiReader.Mac` — native code for arm64 + x64 (incl. AOT-compiled managed code on arm64) | 106.5 |
+| `Contents/MonoBundle` — managed assemblies (20.2 in per-architecture copies), AOT data | 45.3 |
+| `Contents/Resources/wwwroot` — fonts, CSS, JS | 4.1 |
+
+| # | Option | Pros | Cons |
+|---|---|---|---|
+| 1 | Framework-only trimming (`SdkOnly`, in place) | Standard .NET Release setting for Apple targets; Chuvadi libraries and app code untouched; 519 → 156 MB | Leaves ~156 MB |
+| 2 | Drop unused Chuvadi packages (F4, done by Foundation) | Zero risk | Already taken (166 → 156) |
+| 3 | Full trimming (`MtouchLink=Full`) | Largest further cut | Unsafe until the libraries declare trim safety (decision 4); Sheets' typed import/export loses data when trimmed |
+| 4 | Separate Intel and Apple Silicon downloads | Each roughly half | Two downloads and a choice for the person; universal approved and the Mac norm |
+| 5 | Interpreter instead of AOT | Smaller native code | Slower start and run — measured below |
+
+Recommendation: 1 now (in place), 3 after the libraries are trim-annotated; not 4 or 5.
