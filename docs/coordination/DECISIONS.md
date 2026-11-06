@@ -51,6 +51,59 @@ Arun handed the calls to the coordinator on 6 Nov 2026 (05:21 IST). Every decisi
 | D-22 | Windows raster printing | Known existing gap; move to Chuvadi.Print vector XPS (rc.3) when released |
 | D-23 | Mac menu bar command source | Foundation kit fills IAppCommands from ShellService |
 
+
+## 6 Nov 2026 06:00 check-in — coordinator (from the options files on each branch)
+Each decided on the chat's own pros and cons. Delivered to the chats at the next check-in.
+
+### Web (`docs/web/DECISIONS-PENDING.md`)
+| # | Item | Decision |
+|---|---|---|
+| D-24 | W-02 isolation | Per-person worker process behind our own Kestrel gateway (contains Pdf A/B to one person, no Core edits) |
+| D-25 | W-03 TLS (doc outdated) | Our own C# ACME client for Let's Encrypt, auto-renew, hot reload — Arun agreed 05:39 |
+| D-26 | W-05 hooks H0–H9 | Not applied separately: Foundation merges every MainLayout/existing-file hook (Web H0–H9, Web-UI, Mobile-UI) into ONE combined patch, checks desktop pixel-identical, then applies |
+| D-27 | W-08 certificate signing on the portal | (a) off now; (c) Sangam's e-signature ceremony later |
+| D-28 | W-09 working copies at rest | (b) tmpfs (RAM, size-limited) for working copies + (a) LUKS volume for anything that touches disk; (c) per-session app encryption later |
+| D-29 | W-10 settings across sessions | (b) appearance settings only in the person's browser storage |
+| D-30 | W-11 session expiry | 30 min idle, 8 h absolute; a warning 5 min before idle expiry offering to download open work |
+
+### Web portal UI (`docs/web-ui/OPTIONS-FOR-COORDINATOR.md`)
+| # | Item | Decision |
+|---|---|---|
+| D-31 | U-1 texts made untrue by no storage | Keep pitch and status "encrypted at rest" (true with D-28); change only promise 1 → "Files live only for your session, then are wiped" and promise 3 → "Sign out and your files are gone from the server" |
+| D-32 | U-2 portal on narrow browsers | (a) reuse the Mobile UI phone/tablet components; chrome = form factor + portal additions when Kind == Web |
+| D-33 | U-3 Sangam gate | (a) desktop component; hook deferred until a desktop Sangam client exists; keep the gating list as the handout |
+| D-34 | U-4 sign-in form | (a) the Sangam ID is a login hint, no password field on our page (if Sangam supports login_hint; else report) |
+| D-35 | U-5 account menu | Account settings → Sangam's own page; desktop-app URL is config (placeholder https://chuvadi.in/download); add `Unit` to IAccount (Foundation) for "· Records" |
+| D-36 | U-6 theme toggle and version on the portal | (a) keep both |
+| D-37 | U-7 server status dot | Yes, blue `server` class on the dot when ServerSide |
+| D-38 | U-8 account card position | (a) one position |
+| D-39 | F-1 WebKit 0.5 px dividers vanish | Bug fix approved in direction; Foundation proposes the exact CSS with a Windows pixel check, in the combined patch |
+
+### Mobile app UI (`docs/mobile-ui/OPTIONS.md`)
+| # | Item | Decision |
+|---|---|---|
+| D-40 | MU-1 phone shell hook | (a) `@if (Shell == Phone)` in MainLayout — via the combined patch (D-26) |
+| D-41 | MU-2 / MU-3 / MU-4 | (a) CSS on data-shell; actions by Ctrl K command id; touch via mobile.js — real-device check on the Android emulator |
+| D-42 | MU-5 pen draws, finger pans | (a) reader.js hook on pointerType — in the combined patch |
+| D-43 | MU-6 tabs on phone | (a) tap the title → Tabs sheet |
+| D-44 | MU-7 phone landscape | (b) icon-only 56 px bottom bar, 48 px app bar |
+| D-45 | MU-8 phone Home/Library/Settings | Not designed: Mobile UI chat brings two layout options per screen with mock screenshots and pros/cons before building |
+| D-46 | MU-9 | Protect FAB = Save redacted copy; add the small Bench desk-counter hook (combined patch) so the tablet counter shows desks |
+| D-47 | MU-10 phone title | File name |
+| D-48 | TabsService.RestoreAsync duplicate tabs | Bug fix approved — skip a saved path already open (combined patch) |
+| D-49 | Android host fixes from Mobile UI | Android chat: link the scoped styles CSS, link mobile.css, remove host tablet CSS/traffic rule/safe-area padding/data-form-factor writer, register IAppLifecycle with BackRequested |
+
+### Foundation (`docs/foundation/STARTUP.md`)
+| # | Item | Decision |
+|---|---|---|
+| D-50 | S1 ReadyToRun publish for Windows | Yes (−80 ms, no code change). Same for every desktop host where supported |
+| D-51 | S3 profile first render | Yes, on Arun's machine via measure-startup.ps1 -ReadyToRun at his Windows check |
+| D-52 | S4 clock re-renders whole shell every second | Fix: render only the clock span (combined patch) |
+| D-53 | S2 composite R2R / PGO | Measure after S1; decide on numbers |
+
+## Blocked on Arun
+- **PR to arunshivab/chuvadi-reader:** the Foundation branch `platform/foundation-pr` (PR text in `docs/foundation/PR-DESCRIPTION.md`) is ready in the private repo, but neither the chat nor the coordinator can push to your public repo (access blocked). You push it and open the PR, then merge after the six Windows checks.
+
 ## Waiting for Arun's final check
 - Mac bundle ID (provisional `in.sthraas.chuvadi.reader`) and Android application ID (placeholder `in.chuvadi.reader`): both permanent once released; depend on the domain and Play/Apple accounts Arun owns.
 - Which Play developer account publishes (Sthraas or imagiQa).
