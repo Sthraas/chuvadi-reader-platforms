@@ -1,0 +1,39 @@
+@* The portal's HTML document. It loads the Ui's own stylesheets and fonts exactly as the Windows
+   host's index.html does, then renders the unchanged ChuvadiReader.Ui.App on the server
+   (Interactive Server). Portal chrome from the Web portal UI chat will plug in here. *@
+@using Microsoft.AspNetCore.Components.Web
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <title>Chuvadi</title>
+    <link rel="preload" href="_content/ChuvadiReader.Ui/lipi-sans/fonts/LiPi-Sans-Latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="_content/ChuvadiReader.Ui/fonts/google/fonts.css" />
+    <link rel="stylesheet" href="_content/ChuvadiReader.Ui/lipi-sans/lipi-sans.css" />
+    <link rel="stylesheet" href="_content/ChuvadiReader.Ui/css/tokens.css" />
+    <link rel="stylesheet" href="_content/ChuvadiReader.Ui/css/app.css" />
+    <link rel="stylesheet" href="_content/ChuvadiReader.Ui/css/shell.css" />
+    <link rel="stylesheet" href="_content/ChuvadiReader.Ui/css/prefs.css" />
+    <link rel="stylesheet" href="ChuvadiReader.Web.styles.css" />
+    <link rel="stylesheet" href="css/portal.css" />
+</head>
+<body>
+    <ChuvadiReader.Ui.App @rendermode="InteractiveServerNoPrerender" />
+
+    <div id="blazor-error-ui">
+        An error occurred. <a href="" class="reload">Reload</a>
+    </div>
+
+    <script src="theme.js"></script>
+    <script src="js/portal.js"></script>
+    <script src="_framework/blazor.web.js"></script>
+</body>
+</html>
+
+@code {
+    // No prerender: the Ui's first render reads per-person settings and talks to the browser
+    // (theme, JS modules); prerendering would run it twice and briefly show default settings.
+    private static readonly IComponentRenderMode InteractiveServerNoPrerender = new InteractiveServerRenderMode(prerender: false);
+}
