@@ -289,3 +289,27 @@ shows the Ui's styled scrollbar, as WebView2 does). Linux-only by design: window
 layout, 12 px corners when not maximised (`screenshots/linux-buttons-left-gnome-kde-layout.png`,
 `linux-12px-corner-8x.png`). The Ui itself implements the handout's D-10 rails partly (DESIGN-NOTE); that is
 the Reader chat's work, not a platform difference.
+
+### 25. CI: both architectures green — `.github/workflows/linux.yml`
+Runs 42224638571 (x64, commit `dbc989b`) and 42225596444 (ARM64, commit `a77674e`), GitHub-hosted Ubuntu 24.04:
+build (warnings are errors), both test projects, ReadyToRun publish, launch test, both `.deb` packages, install
+of the `.deb` (postinst loads the AppArmor profile; `xdg-mime` default for PDF), launch of the installed app,
+CUPS PDF queue, full UI pass.
+
+| | x64 | ARM64 |
+|---|---|---|
+| `.deb` self-contained (download / installed) | 36.7 MB / 105 MB | 33.0 MB / 115 MB |
+| `.deb` framework-dependent | 10.7 MB | 10.2 MB |
+| Full UI pass | 106 / 106 | 106 / 106 |
+| Blazor first render, launch test (runner, no GPU) | 1.2–1.5 s | 1.06–1.23 s (first launch 3.5 s, cold disk) |
+
+Fixes on the way: `smoke.sh` read the session bus with `read` (stopped by `set -e`) → `sed`; the ARM64 image
+has no `xdg-utils` → installed with the test tools. One x64 rerun after Ubuntu's mirror timed out (apt).
+
+Known upstream warning, harmless: GTK 4.14's print dialog logs two `Gtk-CRITICAL` lines
+(`gtk_column_view_get_model`, `gtk_single_selection_get_selected_item`) when it is closed with Escape — inside
+GTK's own dispose (`g_list_store_remove_all` on its printer list after the list view is gone; backtrace taken).
+No crash, no effect on the job. A two-dialog C reproducer without our code does not always trigger it; not
+worked around (it would mean reaching into GTK's internals).
+Also in the CI log: Microsoft Edge (preinstalled on the runner) aborts at teardown — the UI pass's external
+link opened it through `xdg-open`; test environment only.
