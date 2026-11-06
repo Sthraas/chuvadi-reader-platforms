@@ -1,16 +1,17 @@
 diff --git a/src/ChuvadiReader.Ui/Pages/Dashboard.razor b/src/ChuvadiReader.Ui/Pages/Dashboard.razor
-index 4b0ea9b..43408e8 100644
+index 4b0ea9b..67fceaf 100644
 --- a/src/ChuvadiReader.Ui/Pages/Dashboard.razor
 +++ b/src/ChuvadiReader.Ui/Pages/Dashboard.razor
-@@ -38,6 +38,7 @@
+@@ -37,7 +37,7 @@
+             {
              <p class="blurb">@LibCountText in your library · @Recents.EncryptedCount encrypted · nothing leaves this device.</p>
              }
-         </section>
-+        @PhoneHomeSearch
+-        </section>
++        </section>@* Phone: 4a's search under the count line (H-10); null elsewhere, renders nothing. *@@PhoneHomeSearch
  
          @if (IsFirstRun)
          {
-@@ -239,6 +240,10 @@
+@@ -239,6 +239,10 @@
  </div>
  
  @code {

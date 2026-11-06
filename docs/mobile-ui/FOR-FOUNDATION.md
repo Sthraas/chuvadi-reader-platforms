@@ -1,13 +1,46 @@
-# Mobile app UI → Foundation: hooks, session 3 (7 Nov)
+# Mobile app UI → Foundation: hooks and hand-off (updated 7 Nov, 05:05 IST)
 
-Branch `platform/mobile-ui` now includes `platform/foundation` **63af90f**, which already has the combined
-hooks (D-26): H-1 in MainLayout, reader.js pen/finger split (D-42), Bench's desk counter (D-46) and the
-TabsService de-dup (D-48). So session 2's `H1-…`, `H3-…` and `mobile-ui-hooks-2.patch` are deleted;
-nothing from them is still waiting.
+## Ready for Foundation: what you asked for (coordinator, 7 Nov 04:55)
+Branch `platform/mobile-ui` includes `platform/foundation` **e5802e6** (fourth combined patch). Two kinds
+of change come from here:
 
-Five new hooks. They are **not** applied on this branch; `tools/mobile-ui/preview.sh` applies
-`proposal/mobile-ui-hooks-3.patch` (all five) in a scratch copy for testing. It applies cleanly to
-63af90f and to the current tip **615afde** (second and third combined patches) with `git apply`.
+**1. New files (mine): take them by merging `platform/mobile-ui`.** Foundation's tree still has my
+*session-2* copies of the phone files (from 3358b00). The current ones are on this branch; merging it
+brings all of them, as the Android chat's `compose.sh` already does:
+`Components/Platform/Phone/*` (PhoneShell, PhoneAppBar, PhoneCommands, PhoneSheetKind, TouchSupport),
+`wwwroot/css/mobile.css`, `wwwroot/js/mobile.js`, and `tests/ChuvadiReader.MobileUi.*`.
+- **(a) The Web UI chat's PhoneShell slot is in PhoneShell on this branch** (`OpenLabel`, `OpenIcon`,
+  `MenuFooter`, since 1a27cd6), so its H5 phone account block can land once PhoneShell is merged.
+  The Home Open button follows `OpenLabel` too ("Upload" on the portal).
+  - If Foundation needs the slot **before** merging this branch: the Web UI chat's own
+    `docs/web-ui/proposal/mobile-ui-request-phoneshell-slot.patch` applies cleanly to Foundation's
+    session-2 PhoneShell copy at e5802e6 (checked). Merging this branch afterwards then supersedes
+    that copy.
+- Also only in the new files: MU-8 (D-45), the touch fixes (swipe, long-press, D-46 counter left to
+  Bench), and the phone half of H-7 (`fitWidthZoom` in mobile.js).
+
+**2. Existing-file hooks: `proposal/mobile-ui-hooks-3.patch`** (H-5 to H-11, applies cleanly to e5802e6).
+- **(c) Redact fit width on a phone = H-7** below. It needs `mobile.js` from this branch (its
+  `fitWidthZoom`), so apply it together with the merge in step 1.
+- **D-88 = H-10 (Dashboard) and H-11 (Settings)** below.
+
+Evidence for the set (hooks-3 on this branch, i.e. e5802e6 + mobile-ui + H-5 to H-11):
+- 0 warnings; tests 171 + 48 + 31 + 16 = **266 pass**.
+- **Desktop vs e5802e6, before and after run side by side** (`screens/2026-11-07/desktop-compare.txt`):
+  - Settings 1440×900: identical.
+  - Library, Read 1440×900 and 990×700, Mark, Settings 700×800: clock only.
+  - Arrange and Home: clock plus 2 / 15 pixels off by 1 colour level (renderer anti-aliasing; the
+    rendered desktop Home HTML is **byte-identical** to e5802e6, below).
+- **Startup (Windows profile, `tools/StartupProbe`, published Release, 25 interleaved runs, medians):**
+
+  | | services | first render | total | JIT methods | assemblies | Home HTML |
+  |---|---|---|---|---|---|---|
+  | e5802e6 | 19.8 ms | 147.3 ms | 191.8 ms | 1,423 | 43 | 20,392 chars |
+  | + H-5 to H-11 | 19.9 ms | 148.8 ms | 192.2 ms | 1,438 | 43 | 20,392, byte-identical (clock masked) |
+
+  +0.4 ms total, inside the 7 ms A/A noise floor. A first H-10 draft added one whitespace text node to
+  the desktop HTML (invisible); `@PhoneHomeSearch` now sits on the `</section>` line, so the markup is
+  byte-identical.
 
 | Patch | File | Decision | Lines |
 |---|---|---|---|
@@ -16,7 +49,61 @@ Five new hooks. They are **not** applied on this branch; `tools/mobile-ui/previe
 | `proposal/H7-redact-phone-fit-width.patch` | `Ui/Pages/Redact.razor` | Coordinator, 7 Nov | +16 / −0 |
 | `proposal/H8-reader-rerender-bugfix.patch` | `Ui/Pages/Reader.Shell.cs`, `Reader.razor` | **Bug fix**, found from Android run 42276742988; coordinator: combined patch (D-26) | +14 / −6 |
 | `proposal/H9-reader-fit-after-render-bugfix.patch` | `Ui/wwwroot/js/reader.js` | **Bug fix**: the phone "over-wide" page and Fit page 456 vs 342 | +10 / −2 |
-| `proposal/mobile-ui-hooks-3.patch` | all five, concatenated | — | — |
+| `proposal/H10-dashboard-phone-search.patch` | `Ui/Pages/Dashboard.razor` | D-88 | +5 / −1 |
+| `proposal/H11-settings-phone-summaries.patch` | `Ui/Pages/Settings.razor` (on top of H-6) | D-88 | +27 / −11 |
+| `proposal/mobile-ui-hooks-3.patch` | all seven, in order | — | — |
+
+## H-10: Home search under the count line on a phone (D-88)
+PhoneShell (my file) cascades its search button, the one running MainLayout's Find, as a named slot
+`PhoneHomeSearch`. Dashboard renders it right after the greeting block, i.e. under the count line as in
+4a:
+```razor
+        </section>@* Phone: 4a's search under the count line (H-10); null elsewhere, renders nothing. *@@PhoneHomeSearch
+…
+    [CascadingParameter(Name = "PhoneHomeSearch")] public RenderFragment? PhoneHomeSearch { get; set; }
+```
+- **For:**
+  - One search button and one code path (MainLayout's Find).
+  - Dashboard doesn't know about the phone.
+  - Off the phone nothing cascades the slot, so it is null and renders nothing: desktop Home is
+    pixel-identical (clock only).
+  - Without the hook, PhoneShell's own copy still shows (above the greeting), so nothing breaks
+    before it lands. mobile.css hides that copy with `:has()` once Home has placed it.
+- **Against:**
+  - A cascading parameter is an invisible link between two files (named and commented on both sides).
+  - On Windows, Dashboard looks up one more cascading value at first render. Measured with
+    StartupProbe: +0.4 ms total, desktop Home HTML byte-identical (evidence above).
+- **Alternative:** Dashboard renders its own phone search component. It would need its own route to
+  MainLayout's Find, a second code path. Not recommended.
+
+## H-11: one-line summaries in the phone Settings list (D-88)
+`Section` gets a `Summary`; the row shows it only when `PhoneList` (H-6) is true, i.e. the phone's
+section list. The texts come from the mock, checked against the current section labels. The mock's
+"audit log" is "audit trail" here, the Account section's own card title:
+
+| Section | Summary |
+|---|---|
+| Appearance | Theme · interface size · reduce motion |
+| Reading | Default zoom · layout |
+| Saving & files | Save folder · name new files · autosave drafts |
+| Library & folders | Folder · default view · check every |
+| Account & roles | Roles · lock after idle · audit trail |
+| Kiosk | Allowed folder · exit PIN |
+| Language | Language · dates · numbers · preferred name |
+| Accessibility | Interface size · focus rings · larger touch targets |
+| Shortcuts | With a keyboard attached |
+| About | Versions · licences · data folder |
+
+- **For:**
+  - The summaries sit next to the section list they describe, in one table.
+  - Desktop markup is unchanged: the span renders only on the phone list. Settings 1440×900 is
+    identical, 700×800 clock only.
+- **Against:**
+  - Summaries are hand-written and can go stale when a section changes. Whoever edits a section
+    should update its line.
+  - It must apply after H-6 (it uses `PhoneList`); the combined patch keeps that order.
+- **Alternative:** each section component publishes its own summary. Never stale, but it edits all
+  ten section files. Not worth it for one line each.
 
 ## H-5: pass SwitchTab and CloseTab to the phone shell (MainLayout)
 Foundation's H-1 renders `PhoneShell` without `SwitchTab` / `CloseTab`, so the phone Tabs sheet (D-43)

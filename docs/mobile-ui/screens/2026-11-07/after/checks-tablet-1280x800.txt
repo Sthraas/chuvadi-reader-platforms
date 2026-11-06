@@ -1,2 +1,3 @@
 PASS → moves the page and the counter follows 1 → 2
+PASS fit measured before the pages render matches the rendered fit {'rendered': 1.281, 'beforeRender': 1.281}
 PASS Document menu › Print opens the Print card button Print 13 pages

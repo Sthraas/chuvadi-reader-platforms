@@ -252,3 +252,24 @@ Evidence:
   of 1-colour-level anti-aliasing noise.
 - Lesson: my preview hid a timing bug because its pages were cached. A fresh-render check now forces
   the slow order.
+
+### 7 Nov, 05:05: D-88 (H-10, H-11), Foundation hand-off, e5802e6 merged
+- Merged `platform/foundation` e5802e6 (fourth combined patch, single instance); clean; all hooks apply.
+- **H-10** (Dashboard, D-88): PhoneShell cascades its search button as `PhoneHomeSearch`; Home places
+  it under the count line as in 4a. Without the hook the shell's own copy shows (mobile.css `:has()`
+  hides it once Home has placed it); checked on this branch alone.
+  - StartupProbe caught the first draft adding one whitespace text node to the desktop HTML. Moved the
+    expression onto the `</section>` line, and the desktop Home HTML is now byte-identical.
+- **H-11** (Settings, D-88): one-line summaries in the phone section list. The mock's "audit log" is
+  "audit trail" here (the Account section's own title).
+- Foundation's asks: (a) the Web UI slot is in my PhoneShell (merge this branch; their own patch also
+  applies to Foundation's session-2 copy); (c) Redact = H-7. Both set out at the top of
+  FOR-FOUNDATION.md.
+- D-89 drop zone: nothing to build; check on phone and tablet when Foundation lands it.
+- Results:
+  - 0 warnings; 266 tests with H-5 to H-11.
+  - Desktop vs e5802e6: clock only, plus 2 / 15 pixels of 1-level noise on Arrange / Home.
+  - StartupProbe +0.4 ms total.
+  - Gestures and checks: 30 PASS on phone (portrait and landscape) and tablet; 0 console errors.
+- Gesture bugs (item 4): the fixes are in (swipe rule, H-9 fit, long-press). The device check waits for
+  CI (billing hold; no runs triggered).

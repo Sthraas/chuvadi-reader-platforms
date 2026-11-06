@@ -1,3 +1,4 @@
 PASS → moves the page and the counter follows 1 / 13 → 2 / 13
+PASS fit measured before the pages render matches the rendered fit {'rendered': 0.444, 'beforeRender': 0.444}
 PASS Document menu › Print opens the Print card button Print 13 pages
 PASS Redact opens at fit width {'zoom': '0.47', 'page': 373, 'left': 20, 'desk': 412, 'overflow': 0}

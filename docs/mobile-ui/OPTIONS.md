@@ -18,16 +18,18 @@
 | F-4 PlatformState cascade | — | Done: TouchSupport and PhoneShell use `IPlatformInfo` + `ShellLayouts.Shell` |
 | Web portal PhoneShell slot | Coordinator, 7 Nov | Done: `OpenLabel`, `OpenIcon`, `MenuFooter` (Web UI chat's request patch). The Home Open button uses `OpenLabel` too |
 | Android run 42276742988 findings | Coordinator, 7 Nov | Run used pinned f29b6a6. H-8 bug fix (Document › Print / Export / Press, → counter); compose.sh and test changes for the Android chat (`FOR-FOUNDATION.md`) |
+| D-88 Home search + Settings summaries | Coordinator, 7 Nov 04:55: yes to both | **H-10** (Dashboard) and **H-11** (Settings) written; desktop Home HTML byte-identical; startup +0.4 ms |
+| D-89 drop zone | Coordinator: option C (Foundation words it "open" where DropFiles is false) | Nothing to build; check on phone and tablet when it lands |
 | Phone over-wide page / Fit page 456 vs 342 | Coordinator: fix at the source via the combined patch | **H-9** (reader.js): the first fit was measured on the points-sized placeholder. Proven headless; the Android probe should confirm it on the device |
 | MU-8 open point 3, Library Default view | Coordinator, 7 Nov: approved (leave it to the Reader chat's setting) | Nothing to build here |
 
 ### MU-8 open points (need a decision)
-1. **Home search pill sits above the greeting**, not below the count line as in 4a. Dashboard has no
+1. **Decided (D-88): H-10 written.** ~~Home search pill sits above the greeting**, not below the count line as in 4a. Dashboard has no
    slot there; PhoneShell puts it above the page content.
    (a) Keep it as is: no hook, and search is the first thing under the thumb.
    (b) A Dashboard hook (≈3 lines, phone only) to render it exactly where 4a has it. Matches the handout.
    **Recommend (b)** (Arun's rule: follow the handout), but it's an existing-file edit.
-2. **Settings list rows have no one-line summary** (the mock had one under each section name).
+2. **Decided (D-88): H-11 written.** ~~Settings list rows have no one-line summary** (the mock had one under each section name).
    (a) Leave them out: no hook.
    (b) A `Summary` per entry in Settings' `Sections` table (Settings hook, ~10 lines of text).
    Recommend (b) if Arun wants the mock exactly; (a) is clean and usable.
