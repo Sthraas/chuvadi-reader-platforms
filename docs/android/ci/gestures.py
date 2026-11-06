@@ -142,17 +142,6 @@ def wait_for(pred, seconds, what):
     return last
 
 
-# The emulator's SELinux policy denies the shell user writes to /dev/input even though it is in the
-# input group, so touch.py needs a root adbd. google_apis emulator images allow `adb root`; the app
-# keeps running while adbd restarts.
-print(adb("root", check=False).strip())
-adb("wait-for-device")
-for _ in range(20):
-    if adb("shell", "id -u", check=False).strip() == "0":
-        break
-    time.sleep(1)
-print("adbd uid:", adb("shell", "id -u", check=False).strip())
-
 # Input-device facts, kept as evidence for the touch tool.
 with open(os.path.join(OUT, "input-devices.txt"), "w") as f:
     f.write(adb("shell", "id", check=False) + "\n" + adb("shell", "ls -l /dev/input", check=False) + "\n"
@@ -186,6 +175,19 @@ st0 = wait_for(lambda s: s.get("pages", 0) >= 1 and counter_number(s) is not Non
 shot("g1-opened")
 check("Open with (ACTION_VIEW content://) opens the PDF in the Reader",
       st0.get("pages", 0) >= 1 and counter_number(st0) == 1, {k: st0.get(k) for k in ("shell", "pages", "counter", "fit")})
+
+# Now the gestures. The emulator's SELinux policy denies the shell user writes to /dev/input even though it is in the
+# input group, so touch.py needs a root adbd. google_apis emulator images allow `adb root`; the app
+# keeps running while adbd restarts. (Open with stays as the shell user above: a file pushed and an
+# intent sent by root don't grant the app read access the way the shell user's do.)
+print(adb("root", check=False).strip())
+adb("wait-for-device")
+for _ in range(20):
+    if adb("shell", "id -u", check=False).strip() == "0":
+        break
+    time.sleep(1)
+print("adbd uid:", adb("shell", "id -u", check=False).strip())
+
 
 if st0.get("desk"):
     d = st0["desk"]

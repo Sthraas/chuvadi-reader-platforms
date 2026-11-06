@@ -266,3 +266,9 @@ swipe 10 frames (0.37 s), double-tap 4 frames (0.32 s), pinch 15 frames with two
 - **Found, for the Mobile UI chat: on the phone, Fit page leaves the page ~54 CSS px wider than the view**
   (right edge clipped, sideways scrollbar; `.rdesk` scrollWidth − clientWidth = 54). Besides the look, it
   blocks swipe paging, which only acts when the page has no sideways overflow.
+
+### 30. Run 42206027480 — real touch works; Open with must stay unprivileged
+With a root adbd the touch tool works: a real tap on the bottom bar's Arrange switched the phone to
+Arrange (app bar "Bind all"). But Open with then failed: a file pushed and an intent sent by root
+don't give the app read access as the shell user's did. Order fixed: Open with as the shell user
+(the real path a file manager takes), then `adb root` for the gestures only.
