@@ -52,7 +52,7 @@ public static class MauiProgram
         services.AddSingleton<IExternalLinks, MacExternalLinks>();
         services.AddSingleton<IFileManager, MacFileManager>();
         services.AddSingleton<IShare, MacShare>();
-        services.AddSingleton<MacIncomingFiles>();
+        services.AddSingleton<IHostNotices, MacHostNotices>();
         services.AddSingleton<IPrintService, MacPrintService>();
 
         services.AddSingleton<MacWindowControls>();
@@ -84,6 +84,6 @@ public static class MauiProgram
             return;
         }
 
-        _services.GetRequiredService<MacIncomingFiles>().Receive(contexts.ToArray().Select(c => c.Url));
+        MacFileArrivals.Route(_services, contexts.ToArray().Select(c => c.Url));
     }
 }

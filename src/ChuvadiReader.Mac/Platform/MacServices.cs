@@ -311,3 +311,35 @@ public sealed class MacShare : IShare
         return vc;
     }
 }
+
+/// <summary>
+/// D-84: the notices of the .NET this app bundles (it is self-contained), shown as the ".NET runtime" tab
+/// on the Licences page. Two texts ship in <c>Contents/Resources/legal/</c>, copied unchanged at build time
+/// from the exact packs the build used: the Mono runtime's THIRD-PARTY-NOTICES and the .NET for Mac
+/// Catalyst licence (which carries its own third-party notices). Read only when the tab opens.
+/// </summary>
+public sealed class MacHostNotices : IHostNotices
+{
+    internal const string RuntimeNotices = "DOTNET-RUNTIME-THIRD-PARTY-NOTICES.txt";
+    internal const string MacCatalystLicense = "DOTNET-MACCATALYST-LICENSE.txt";
+
+    public string? Title => ".NET runtime";
+
+    public string ReadText()
+    {
+        var dir = Path.Combine(NSBundle.MainBundle.ResourcePath ?? string.Empty, "legal");
+        var parts = new List<string>();
+        foreach (var (file, heading) in new[]
+                 {
+                     (RuntimeNotices, ".NET runtime (Mono) — third-party notices"),
+                     (MacCatalystLicense, ".NET for Mac Catalyst — licence and third-party notices"),
+                 })
+        {
+            var path = Path.Combine(dir, file);
+            parts.Add(heading + Environment.NewLine + new string('=', heading.Length) + Environment.NewLine + Environment.NewLine
+                      + (File.Exists(path) ? File.ReadAllText(path) : "(missing from this build: " + file + ")"));
+        }
+
+        return string.Join(Environment.NewLine + Environment.NewLine, parts);
+    }
+}
