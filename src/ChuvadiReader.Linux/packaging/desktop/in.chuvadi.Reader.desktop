@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Version=1.5
+Name=Chuvadi Reader
+GenericName=PDF, Word and Excel viewer
+Comment=Read, mark and arrange PDFs; view Word and Excel files. Offline, on this device.
+Exec=chuvadi-reader %F
+TryExec=chuvadi-reader
+Icon=in.chuvadi.Reader
+Terminal=false
+StartupNotify=true
+StartupWMClass=in.chuvadi.Reader
+Categories=Office;Viewer;
+Keywords=PDF;viewer;editor;annotate;redact;merge;split;Word;Excel;docx;xlsx;
+MimeType=application/pdf;application/vnd.openxmlformats-officedocument.wordprocessingml.document;application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;

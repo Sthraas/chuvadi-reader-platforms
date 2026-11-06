@@ -1,0 +1,13 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: Chuvadi Reader
+Source: https://github.com/arunshivab/chuvadi-reader
+
+Files: *
+Copyright: Dr. Arun Shiva B
+License: to-be-confirmed
+ The licence is to be confirmed by Arun (the repository has no licence file yet).
+
+Files: usr/lib/chuvadi-reader/libcoreclr.so usr/lib/chuvadi-reader/System.*.dll usr/lib/chuvadi-reader/Microsoft.*.dll
+Copyright: .NET Foundation and Contributors
+License: MIT
+ Present only in self-contained builds: the .NET runtime and the Microsoft libraries that ship with .NET.

@@ -9,12 +9,14 @@ namespace ChuvadiReader.Linux;
 
 /// <summary>
 /// UI test driver — compiled only into the test build (dotnet build -p:UiTest=true), never into the
-/// shipped app. Reads one command per line on stdin, answers one line per command on stdout:
-///   js &lt;function body&gt;   → "OK &lt;json&gt;" (runs in the page; "return …" gives a value; await allowed)
-///   commands             → "OK [{id,label,group,keys,enabled}…]" (the Ctrl K registry, IAppCommands)
-///   invoke &lt;id&gt;          → "OK true|false" (runs a command on the Blazor dispatcher)
-///   open &lt;path&gt;          → "OK true" (as a file arriving from outside: OpenDocumentService.Request)
-/// Errors answer "ERR &lt;message&gt;". tools/linux/uitest.py drives it.
+/// shipped app. Reads one command per line on stdin, "&lt;n&gt; &lt;verb&gt; &lt;args&gt;", and answers "&lt;n&gt; OK &lt;json&gt;" or
+/// "&lt;n&gt; ERR &lt;message&gt;" on stdout. Each command runs on its own, so one that waits (a command that opens
+/// a dialog) never holds up the next.
+///   js &lt;function body&gt;   → the result (runs in the page; "return …" gives a value; await allowed)
+///   commands             → [{id,label,group,keys,enabled}…] (the Ctrl K registry, IAppCommands)
+///   invoke &lt;id&gt;          → true | false | "pending" (still running after 2 s, e.g. waiting in a dialog)
+///   open &lt;path&gt;          → true (as a file arriving from outside: OpenDocumentService.Request)
+/// tools/linux/uitest.py drives it.
 /// </summary>
 internal static class UiTestDriver
 {
@@ -36,23 +38,39 @@ internal static class UiTestDriver
         Console.Error.WriteLine("[uitest] driver ready");
     }
 
+    private static readonly object WriteLock = new();
+
     private static void Loop(IServiceProvider services, LinuxWebViewManager manager)
     {
         string? line;
         while ((line = Console.In.ReadLine()) is not null)
         {
-            string reply;
-            try
+            var space = line.IndexOf(' ');
+            if (space <= 0)
             {
-                reply = "OK " + Run(services, manager, line).GetAwaiter().GetResult();
-            }
-            catch (Exception ex)
-            {
-                reply = "ERR " + ex.Message.ReplaceLineEndings(" ");
+                continue;
             }
 
-            Console.Out.WriteLine(reply);
-            Console.Out.Flush();
+            var id = line[..space];
+            var command = line[(space + 1)..];
+            _ = Task.Run(async () =>
+            {
+                string reply;
+                try
+                {
+                    reply = "OK " + await Run(services, manager, command);
+                }
+                catch (Exception ex)
+                {
+                    reply = "ERR " + ex.Message.ReplaceLineEndings(" ");
+                }
+
+                lock (WriteLock)
+                {
+                    Console.Out.WriteLine(id + " " + reply);
+                    Console.Out.Flush();
+                }
+            });
         }
     }
 
@@ -85,8 +103,13 @@ internal static class UiTestDriver
             case "invoke":
             {
                 var commands = services.GetRequiredService<IAppCommands>();
-                var ok = await manager.Dispatcher.InvokeAsync(() => commands.InvokeAsync(arg));
-                return ok ? "true" : "false";
+                var run = manager.Dispatcher.InvokeAsync(() => commands.InvokeAsync(arg));
+                if (await Task.WhenAny(run, Task.Delay(TimeSpan.FromSeconds(2))) != run)
+                {
+                    return "\"pending\"";
+                }
+
+                return await run ? "true" : "false";
             }
 
             case "open":

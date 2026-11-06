@@ -14,8 +14,6 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <InvariantGlobalization>false</InvariantGlobalization>
 
-    <!-- Startup speed: precompile to native code, start on the tiered quick path. -->
-    <PublishReadyToRun>true</PublishReadyToRun>
     <TieredPGO>true</TieredPGO>
     <TieredCompilation>true</TieredCompilation>
     <UseSystemResourceKeys>true</UseSystemResourceKeys>
@@ -29,6 +27,14 @@
     <ChvdNativeDir>$(MSBuildProjectDirectory)/native</ChvdNativeDir>
     <ChvdNativeLib>$(ChvdNativeDir)/out/$(RuntimeIdentifier)/libchvdhost.so</ChvdNativeLib>
     <ChvdNativeLib Condition="'$(RuntimeIdentifier)' == ''">$(ChvdNativeDir)/out/host/libchvdhost.so</ChvdNativeLib>
+  </PropertyGroup>
+
+  <!-- Startup speed (D-50, Foundation's block): publish precompiled (ReadyToRun). Without -r, publish for
+       the machine's own architecture (linux-x64 or linux-arm64). -->
+  <PropertyGroup Condition="'$(_IsPublishing)' == 'true'">
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">$(NETCoreSdkPortableRuntimeIdentifier)</RuntimeIdentifier>
+    <SelfContained Condition="'$(SelfContained)' == ''">false</SelfContained>
   </PropertyGroup>
 
   <ItemGroup>

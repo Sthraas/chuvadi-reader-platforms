@@ -70,6 +70,25 @@ static struct
 
 /* ── main loop ──────────────────────────────────────────────────────────── */
 
+static gboolean has_render_node(void)
+{
+    GDir *dir = g_dir_open("/dev/dri", 0, NULL);
+    if (!dir)
+    {
+        return FALSE;
+    }
+
+    gboolean found = FALSE;
+    const char *name;
+    while (!found && (name = g_dir_read_name(dir)))
+    {
+        found = g_str_has_prefix(name, "renderD");
+    }
+
+    g_dir_close(dir);
+    return found;
+}
+
 CHVD_EXPORT int chvd_init(chvd_scheme_fn scheme, chvd_message_fn message, chvd_wake_fn wake, chvd_event_fn event)
 {
     if (!scheme || !message || !wake || !event)
@@ -82,18 +101,25 @@ CHVD_EXPORT int chvd_init(chvd_scheme_fn scheme, chvd_message_fn message, chvd_w
     S.wake = wake;
     S.event = event;
 
-    /* Printing goes to CUPS queues only (the PDF itself, through Chuvadi.Print.Ipp). GTK's
-     * "Print to File" and LPR pseudo-printers can't take that job, so the dialog lists CUPS
-     * printers only, unless the person has chosen backends themselves. */
-    if (!g_getenv("GTK_PRINT_BACKENDS"))
+
+    /* Without a GPU (no DRM render node: VMs, remote sessions, CI), GTK's GL/Vulkan renderers run in
+     * software (llvmpipe) and cost ~460 ms before the window shows and ~700 ms to first render
+     * (measured, docs/linux/BUILD-LOG.md). Its CPU renderer is then the fast one. With a GPU, GTK's
+     * default stays. The person's own GSK_RENDERER always wins. */
+    if (!g_getenv("GSK_RENDERER") && !has_render_node())
     {
-        g_setenv("GTK_PRINT_BACKENDS", "cups", FALSE);
+        g_setenv("GSK_RENDERER", "cairo", FALSE);
     }
 
     if (!gtk_init_check())
     {
         return 0; /* no display */
     }
+
+    /* Printing goes to CUPS queues only (the PDF itself, through Chuvadi.Print.Ipp). GTK's "Print to
+     * File" pseudo-printer can't take that job, so the print dialog lists CUPS printers only.
+     * (GTK 4 reads this from its settings; the GTK 3 GTK_PRINT_BACKENDS variable is gone.) */
+    g_object_set(gtk_settings_get_default(), "gtk-print-backends", "cups", NULL);
 
     S.loop = g_main_loop_new(NULL, FALSE);
     return 1;
@@ -904,10 +930,10 @@ static void add_line(GString *out, const char *key, const char *value)
 
 static void collect_cups_option(const char *key, const char *value, gpointer data)
 {
-    /* Printer-specific options GTK read from the queue are stored as "cups-<Option>". PPD option
-     * names start with an upper-case letter (InputSlot, MediaType, Resolution…); those are passed on
-     * as job attributes, which CUPS applies to the queue's options. */
-    if (g_str_has_prefix(key, "cups-") && g_ascii_isupper(key[5]) && value && *value)
+    /* GTK keeps the queue's options as "cups-<CUPS option name>": the printer's own options
+     * (InputSlot, MediaType, Resolution…) and the Job tab (job-priority, job-sheets,
+     * job-hold-until, job-billing). All are passed on; .NET types them as IPP attributes. */
+    if (g_str_has_prefix(key, "cups-") && key[5] && value && *value)
     {
         GString *out = data;
         g_string_append_printf(out, "\nopt:%s=%s", key + 5, value);

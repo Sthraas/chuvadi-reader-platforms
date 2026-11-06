@@ -40,34 +40,76 @@ def health(baseline):
         raise AssertionError("the app logged an error (see app.log)")
 
 
+DIALOG_TITLES = ("Open", "Save", "Print", "Add ", "Choose", "Fetch")
+
+
 def native_windows():
-    """Open GTK dialogs (file chooser, print) — anything titled other than the main window."""
+    """Open dialogs: GTK file dialogs (run by the desktop portal, another process) and the GTK print
+    dialog (in the app). Matched by title, so the main window and the WM's own windows are left alone."""
     r = subprocess.run(["xdotool", "search", "--onlyvisible", "--name", "."], env=app.env, capture_output=True, text=True)
-    names = []
+    found = []
     for w in r.stdout.split():
         n = subprocess.run(["xdotool", "getwindowname", w], env=app.env, capture_output=True, text=True).stdout.strip()
-        if n and n != "Chuvadi" and "mutter" not in n.lower():
-            names.append((w, n))
-    return names
+        if n.startswith(DIALOG_TITLES):
+            g = subprocess.run(["xdotool", "getwindowgeometry", w], env=app.env, capture_output=True, text=True).stdout
+            size = g.split("Geometry: ")[1].strip() if "Geometry: " in g else "0x0"
+            wd, ht = (int(v) for v in size.split("x"))
+            found.append((wd * ht, w, n))
+    # the portal can map a small helper window with the same title: largest first
+    return [(w, n) for _, w, n in sorted(found, reverse=True)]
+
+
+def focus_main():
+    w = app.windows("^Chuvadi$")
+    if w:
+        subprocess.run(["xdotool", "windowactivate", "--sync", w[0]], env=app.env, capture_output=True)
+        time.sleep(0.3)
 
 
 def dismiss():
-    """Closes any card, menu or dialog a step left open."""
+    """Closes any dialog, card, menu or command bar a step left open (real keys to the main window)."""
     for w, _ in native_windows():
         subprocess.run(["xdotool", "windowactivate", "--sync", w], env=app.env, capture_output=True)
         app.key("Escape")
-        time.sleep(0.5)
-    for _ in range(2):
-        try:
-            app.js("document.activeElement && document.activeElement.blur(); document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));")
-        except Exception:
-            pass
-        time.sleep(0.2)
+        time.sleep(0.6)
+    focus_main()
     try:
-        app.js("var c=[...document.querySelectorAll('.chvd-card .close, .card-close, [aria-label=Close][class*=close]')].filter(b=>b.offsetParent!==null); c.forEach(b=>b.click()); return c.length")
+        # Only the app's cards — never the window's own Close button (.tl-close).
+        app.js("var c=[...document.querySelectorAll('.chvd-card .close, .card-close')].filter(b=>b.offsetParent!==null && !b.closest('.traffic')); c.forEach(b=>b.click()); return c.length")
+    except Exception:
+        pass
+    app.key("Escape", "Escape")
+    try:
+        # A click on the status bar's empty end closes menus and popovers.
+        r = app.rect(".statusbar") or app.rect(".shell")
+        app.mouse_click(r[0] + r[2] * 0.6, r[1] + r[3] / 2)
     except Exception:
         pass
     time.sleep(0.3)
+
+
+def ensure_reader(mode=0):
+    """Back to five-pages.pdf in the reader (mode 0 Read, 1 Mark, 3 Protect)."""
+    on_pdf = app.js("var t=[...document.querySelectorAll('.rtab')].find(t=>t.innerText.includes('five-pages.pdf')); if(!t) return false; t.click(); return true")
+    time.sleep(1.2)
+    if not on_pdf or not app.js("return location.pathname === '/reader' && !!document.querySelector('.tb-pager input') && document.querySelector('.tb-pager').innerText.includes('5')"):
+        app.open(PDF)
+        app.wait(lambda: app.exists(".tb-doc"), 20, "reader")
+        time.sleep(1.5)
+    app.click(".lb-mode", mode)
+    time.sleep(1.5)
+
+
+def type_into(selector, text, index=0):
+    """Real typing into a field; checks the value arrived (a stray key would trigger a shortcut)."""
+    focus_main()
+    app.click_real(selector, index)
+    app.key("ctrl+a")
+    app.type(text)
+    time.sleep(0.4)
+    got = app.js(f"return document.querySelectorAll({json.dumps(selector)})[{index}].value")
+    if got != text:
+        raise AssertionError(f"typed {text!r} into {selector}, field has {got!r}")
 
 
 def step(name, fn, shot=True):
@@ -139,13 +181,14 @@ def window_geometry():
     return pos, size
 
 
-def cups_pdfs():
+def cups_pdfs(since=0.0):
+    """PDFs the CUPS PDF queue wrote after `since` (by modification time: cups-pdf reuses the job's file name)."""
     roots = [CUPS_OUT] if CUPS_OUT else []
     roots += [os.path.expanduser("~/PDF"), app.home + "/PDF", "/var/spool/cups-pdf/ANONYMOUS"]
     roots += glob.glob("/home/*/PDF") + glob.glob("/root/PDF")
     files = set()
     for r in roots:
-        files.update(glob.glob(os.path.join(r, "*.pdf")))
+        files.update(f for f in glob.glob(os.path.join(r, "*.pdf")) if os.path.getmtime(f) > since)
     return files
 
 
@@ -203,15 +246,24 @@ def restore_and_maximise():
 step("04-window-restore-drag-maximise", restore_and_maximise)
 
 
+def wm_state():
+    w = subprocess.run(["xdotool", "search", "--name", "^Chuvadi$"], env=app.env, capture_output=True, text=True).stdout.split()[0]
+    return w, subprocess.run(["xprop", "-id", w, "WM_STATE", "_NET_WM_STATE"], env=app.env, capture_output=True, text=True).stdout
+
+
 def minimise():
     app.click(".tl-min")
     time.sleep(1.5)
-    if app.windows("^Chuvadi$"):
-        raise AssertionError("window still visible after Minimize")
-    w = subprocess.run(["xdotool", "search", "--name", "^Chuvadi$"], env=app.env, capture_output=True, text=True).stdout.split()[0]
+    w, state = wm_state()
+    # A compositing WM (mutter) keeps minimised windows mapped; the WM state says what happened.
+    if "Iconic" not in state or "_NET_WM_STATE_HIDDEN" not in state:
+        raise AssertionError("window not minimised: " + state.replace("\n", " "))
     subprocess.run(["xdotool", "windowactivate", "--sync", w], env=app.env, capture_output=True)
     time.sleep(1.5)
-    return "minimised, then raised again"
+    _, after = wm_state()
+    if "Iconic" in after:
+        raise AssertionError("window didn't come back")
+    return "Minimize → WM state Iconic + _NET_WM_STATE_HIDDEN; raised again → Normal"
 
 
 step("05-window-minimise", minimise)
@@ -225,30 +277,48 @@ step("07-rail-collapse", lambda: (app.click(".lb-toggle"), time.sleep(1), app.sh
 def settings_pages():
     app.click(".leftbar .lb-btn", 8)
     time.sleep(1.5)
-    sections = visible(".settings nav button, .set-nav button, nav button")
-    shots = []
-    for idx, label in enumerate(sections[:12]):
-        try:
-            click_label(".settings nav, .set-nav, nav", label)
-            app.shot(f"08-settings-{idx:02d}")
-            shots.append(label)
-        except AssertionError:
-            pass
-    return "sections: " + ", ".join(shots)
+    labels = app.js("return [...document.querySelectorAll('.snav-item')].map(b=>b.innerText.trim().replace(/\\s+/g,' '))")
+    for idx in range(len(labels)):
+        app.click(".snav-item", idx)
+        time.sleep(0.8)
+        app.shot(f"08-settings-{idx:02d}")
+    return f"{len(labels)} sections: " + ", ".join(labels)
 
 
 step("08-settings-sections", settings_pages, shot=False)
 
 
+def themes():
+    app.click(".leftbar .lb-btn", 8)
+    time.sleep(1)
+    app.click(".snav-item", 0)
+    names = app.js("return [...document.querySelectorAll('.tc')].map(b=>b.innerText.trim().split('\\n')[0])")
+    seen = []
+    for idx, name in enumerate(names):
+        app.click(".tc", idx)
+        time.sleep(1)
+        app.shot(f"09-theme-{idx}")
+        seen.append(f"{name}={app.js('return document.documentElement.dataset.theme')}")
+    app.click(".tc", 0)
+    return ", ".join(seen)
+
+
+step("09-themes", themes, shot=False)
+
+
 def interface_size():
     app.click(".leftbar .lb-btn", 8)
     time.sleep(1)
+    app.click(".snav-item", 0)
     out = []
-    for size in ("125", "150", "100"):
-        ok = app.js(f"var b=[...document.querySelectorAll('button, [role=radio]')].filter(b=>b.offsetParent!==null && b.innerText.trim().startsWith('{size}'))[0]; if(!b) return false; b.click(); return true;")
+    for size in ("125%", "150%", "100%"):
+        idx = app.js(f"return [...document.querySelectorAll('.seg-opt')].findIndex(b=>b.innerText.trim()==='{size}')")
+        if idx < 0:
+            raise AssertionError(size + " option not found")
+        app.click(".seg-opt", idx)
         time.sleep(1.2)
-        app.shot(f"09-scale-{size}")
-        out.append(f"{size}%:{'clicked' if ok else 'not found'}")
+        app.shot(f"09-scale-{size[:-1]}")
+        out.append(f"{size}: topbar height {app.rect('.topbar')[3]:.0f} px")
     return ", ".join(out)
 
 
@@ -279,6 +349,7 @@ for idx, label in enumerate(["Rotate this page", "Snapshot a region", "Bookmark 
 
 
 def doc_menu_item(label):
+    ensure_reader()
     app.click(".tb-doc")
     time.sleep(0.5)
     click_label(".pop", label)
@@ -311,6 +382,7 @@ step("19-command-bar-ctrl-k", lambda: (app.key("ctrl+k"), time.sleep(1), app.sho
 
 def every_command():
     done, skipped = [], []
+    ensure_reader()
     for c in app.commands():
         cid = c["Id"]
         if cid in ("doc.close", "r.print", "r.immersive", "doc.reveal", "doc.copypath") or not c["Enabled"]:
@@ -322,23 +394,29 @@ def every_command():
         app.shot("20-cmd-" + cid.replace(".", "-"))
         health(baseline)
         dismiss()
-        done.append(f"{cid}:{'ran' if ok else 'refused'}")
+        ensure_reader()
+        done.append(f"{cid}:{'dialog' if ok == 'pending' else ('ran' if ok else 'refused')}")
     return f"{len(done)} run ({', '.join(done)}); skipped here (tested on their own or disabled): {', '.join(skipped)}"
 
 
 step("20-every-command", every_command, shot=False)
 
+# ── functional checks on a fresh process: the sweep above toggled every View tool ──
+app.restart()
+results.append({"step": "restart", "ok": True, "detail": "fresh process and profile for the functional checks", "s": 0})
+MARKED_DIR = app.home
+
 # ── Mark: draw a rectangle, Save as new PDF through the GTK dialog, then Save ──
-MARKED = os.path.join(app.home, "Documents", "marked.pdf")
+MARKED = os.path.join(MARKED_DIR, "Documents", "marked.pdf")
 
 
 def mark_and_save_as():
-    app.click(".lb-mode", 1)
-    time.sleep(2)
+    ensure_reader(1)
     rail_labels = visible(".srail button")
     click_label(".srail", "Rectangle")
-    r = app.rect(".rpage-wrap", 0) or app.rect(".rpage")
-    x, y = r[0] + r[2] * 0.3, r[1] + 200
+    focus_main()
+    r = app.rect(".rpage-wrap", 0)
+    x, y = r[0] + r[2] * 0.3, r[1] + r[3] * 0.25
     app.xdo("mousemove", str(int(x)), str(int(y)))
     app.xdo("mousedown", "1")
     for i in range(1, 12):
@@ -347,6 +425,9 @@ def mark_and_save_as():
     app.xdo("mouseup", "1")
     time.sleep(1)
     app.shot("21-mark-rectangle")
+    status = app.text(".statusbar")
+    if "1 shape" not in status:
+        raise AssertionError("rectangle not drawn; status bar: " + status.replace("\n", " "))
     click_label(".srail", "Save as new PDF")
     file_dialog("Save", MARKED)
     app.wait(lambda: os.path.exists(MARKED) and os.path.getsize(MARKED) > 0, 20, "marked.pdf written")
@@ -359,31 +440,31 @@ step("21-mark-rectangle-save-as", mark_and_save_as)
 rail_buttons("22-mark", skip=("Save", "Clear all marks", "Image", "Signature"))
 
 # ── Protect: password-protect a copy, open it again with the password ───────
-PROTECTED = os.path.join(app.home, "Documents", "protected.pdf")
+PROTECTED = os.path.join(MARKED_DIR, "Documents", "protected.pdf")
 
 
 def protect_copy():
-    app.click(".lb-mode", 3)
-    time.sleep(2)
+    ensure_reader(3)
     click_label(".srail", "Password")
     time.sleep(1)
     app.shot("23-password-card")
-    pw = app.js("var i=[...document.querySelectorAll('input[type=password]')].filter(e=>e.offsetParent!==null); return i.length")
-    if not pw:
-        raise AssertionError("no password fields on the card")
+    field = ".chvd-card input[autocomplete=new-password]"
+    pw = app.js(f"return document.querySelectorAll({json.dumps(field)}).length")
+    if pw < 2:
+        raise AssertionError(f"expected the password and confirm fields, found {pw}")
     for idx in range(pw):
-        app.click_real("input[type=password]", idx)
-        app.key("ctrl+a")
-        app.type("Chuvadi-Linux-1")
+        type_into(field, "Chuvadi-Linux-1", idx)
     time.sleep(0.5)
     app.shot("23-password-filled")
     btn = app.js("var b=[...document.querySelectorAll('.chvd-card button.primary, .card button.primary')].filter(b=>b.offsetParent!==null)[0]; if(!b) return null; var t=b.innerText; b.click(); return t")
     file_dialog("Save", PROTECTED)
     app.wait(lambda: os.path.exists(PROTECTED) and os.path.getsize(PROTECTED) > 0, 20, "protected.pdf written")
-    enc = pdfinfo(PROTECTED).get("Encrypted", "?")
-    if not enc.startswith("yes"):
-        raise AssertionError("output isn't encrypted: " + enc)
-    return f"'{btn}' → protected.pdf, Encrypted: {enc}"
+    no_pw = subprocess.run(["pdfinfo", PROTECTED], capture_output=True, text=True)
+    with_pw = subprocess.run(["pdfinfo", "-upw", "Chuvadi-Linux-1", PROTECTED], capture_output=True, text=True).stdout
+    enc = next((l.split(":", 1)[1].strip() for l in with_pw.splitlines() if l.startswith("Encrypted")), "?")
+    if no_pw.returncode == 0 or not enc.startswith("yes"):
+        raise AssertionError(f"expected a file that needs the password; without it rc={no_pw.returncode}, with it Encrypted: {enc}")
+    return f"'{btn}' → protected.pdf: won't open without the password; with it: Encrypted: {enc}"
 
 
 step("23-protect-password-copy", protect_copy)
@@ -396,8 +477,12 @@ step("25-arrange", lambda: (app.click(".lb-mode", 2), time.sleep(2.5), "; ".join
 def bench_fetch():
     click_label(".srail", "Fetch file")
     file_dialog("Add PDF documents", PDF)
-    time.sleep(2)
-    return f"shelf files: {app.js('return document.querySelectorAll(\".bench-shelf .shelf-file, .shelf-item, .bench-shelf [data-file]\").length')}"
+    app.wait(lambda: "five-pages.pdf" in (app.text(".bench-shelf") or ""), 15, "file on the shelf")
+    time.sleep(1.5)
+    thumbs = app.js("return [...document.querySelectorAll('.bench-shelf .shelf-pg')].filter(e=>e.offsetParent!==null).length")
+    if thumbs < 5:
+        raise AssertionError(f"shelf shows {thumbs} page thumbnails, expected 5")
+    return f"five-pages.pdf on the shelf with {thumbs} page thumbnails"
 
 
 step("26-arrange-fetch-gtk-dialog", bench_fetch)
@@ -422,30 +507,28 @@ step("29-open-xlsx", lambda: open_and_check(os.path.join(FIX, "sample.xlsx"), "C
 
 
 def print_pages():
-    before = cups_pdfs()
-    app.js("var t=[...document.querySelectorAll('.rtab')].find(t=>t.innerText.includes('five-pages.pdf')); t && t.click(); return !!t")
-    time.sleep(1.5)
-    app.click(".lb-mode", 0)
-    time.sleep(1.5)
+    started = time.time()
+    ensure_reader(0)
+    focus_main()
     app.key("ctrl+p")
     time.sleep(1.2)
     app.shot("30-print-card")
     # pages 2-4, two copies
-    app.js("var b=[...document.querySelectorAll('.chvd-card .seg button, .chvd-card [role=radio]')].filter(b=>b.offsetParent!==null); var c=b.find(x=>/custom|pages|range/i.test(x.innerText)) || b[b.length-1]; c && c.click(); return b.map(x=>x.innerText)")
-    time.sleep(0.4)
-    app.click_real(".chvd-card input[type=text]")
-    app.key("ctrl+a")
-    app.type("2-4")
-    app.click(".chvd-card [aria-label='More copies']")
-    time.sleep(0.4)
+    card = "section[aria-label=Print]"
+    app.click(card + " .seg button", 2)  # Custom
+    type_into(card + " input[type=text]", "2-4")
+    app.click(card + " [aria-label='More copies']")
+    copies = app.text(card + " .count")
+    if copies != "2":
+        raise AssertionError("copies shows " + str(copies))
     app.shot("30-print-card-filled")
-    app.click(".chvd-card button.primary")
+    app.click(card + " button.primary")
     w = app.wait(lambda: [x for x in native_windows() if x[1].startswith("Print")], 15, "GTK print dialog")[0][0]
     subprocess.run(["xdotool", "windowactivate", "--sync", w], env=app.env, capture_output=True)
     time.sleep(3)  # printers load asynchronously
     app.shot("30-gtk-print-dialog")
     app.key("Return")
-    new = app.wait(lambda: cups_pdfs() - before, 60, "cups-pdf output")
+    new = app.wait(lambda: cups_pdfs(started), 60, "cups-pdf output")
     out = sorted(new, key=os.path.getmtime)[-1]
     time.sleep(1)
     info = pdfinfo(out)
@@ -466,9 +549,11 @@ step("30-print-pages-2-4-two-copies", print_pages)
 
 
 def print_cancel():
+    ensure_reader(0)
+    focus_main()
     app.key("ctrl+p")
     time.sleep(1)
-    app.click(".chvd-card button.primary")
+    app.click("section[aria-label=Print] button.primary")
     w = app.wait(lambda: [x for x in native_windows() if x[1].startswith("Print")], 15, "GTK print dialog")[0][0]
     subprocess.run(["xdotool", "windowactivate", "--sync", w], env=app.env, capture_output=True)
     time.sleep(1.5)
@@ -483,6 +568,8 @@ step("31-print-cancel", print_cancel)
 
 
 def shortcuts():
+    ensure_reader(0)
+    focus_main()
     seen = []
     app.key("ctrl+plus")
     seen.append("Ctrl+")
@@ -507,6 +594,7 @@ step("32-shortcuts", shortcuts)
 
 
 def immersive():
+    focus_main()
     app.key("F11")
     time.sleep(1.5)
     app.shot("33-immersive")
@@ -519,6 +607,7 @@ step("33-immersive", immersive, shot=False)
 
 
 def close_tabs():
+    focus_main()
     n = app.js("return document.querySelectorAll('.rtab').length")
     app.key("ctrl+shift+w")
     time.sleep(1.5)
@@ -529,7 +618,7 @@ step("34-close-all-tabs", close_tabs)
 
 
 def window_close():
-    app.click(".tl-close")
+    app.click_real(".tl-close")
     app.wait(lambda: not app.alive(), 15, "app exit")
     return f"exit code {app.proc.returncode}"
 

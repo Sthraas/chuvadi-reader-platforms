@@ -1,67 +1,92 @@
 # Chuvadi Reader for Linux
 
-Ubuntu, x64 and ARM64. Same design as Windows (`ChuvadiReader.Ui`, unchanged), in our own host:
+Ubuntu 24.04 and 26.04, x64 and ARM64. The same design as Windows (`ChuvadiReader.Ui`, unchanged) in our own host:
 
 ```
-chuvadi-reader (apphost, .NET 10)
- ├─ ChuvadiReader.Linux     new — composition root, WebViewManager subclass, platform services
+chuvadi-reader (apphost, .NET 10, ReadyToRun)
+ ├─ ChuvadiReader.Linux     new — composition root, WebViewManager subclass, Linux platform seams
  │   └─ libchvdhost.so       new — C shim: GTK 4 window + WebKitGTK 6.0 view (native/chvdhost.c)
+ ├─ ChuvadiReader.Hosting   Foundation — AddChuvadiReader(...) registers every Core service
+ ├─ ChuvadiReader.Platform  Foundation — the platform contracts
  ├─ ChuvadiReader.Ui        unchanged — the whole UI
  └─ ChuvadiReader.Core      unchanged — all library use
 ```
 
-- **Window:** GTK 4, custom chrome (the HTML title bar), client-side frame with resize edges.
-- **Web view:** WebKitGTK 6.0 with an ephemeral session (nothing written to disk).
-- **Assets:** an `app://localhost/` URI scheme answered in-process by Microsoft's `WebViewManager`
-  (from `Microsoft.AspNetCore.Components.WebView`, part of .NET's Blazor).
-- **JS ↔ .NET:** `window.external.sendMessage/receiveMessage` (what `blazor.webview.js` expects),
-  carried by a WebKit script-message handler one way and `evaluate_javascript` the other.
-- **Threading:** Blazor runs on its own synchronization context; anything that touches GTK is
-  posted to the GTK main thread (`GtkHost.Post`).
-- **Dev tools:** Inspect Element only in Debug builds.
+| Part | How |
+|---|---|
+| Window | GTK 4, custom chrome (the Ui's top bar), 12 px rounded corners (square when maximised, tiled, full screen or without a compositor); window buttons on the side the desktop's GNOME/KDE button layout puts them |
+| Web view | WebKitGTK 6.0, ephemeral session (nothing written to disk), pinch zoom off, Inspect Element in Debug builds only |
+| Assets | `app://localhost/` URI scheme, answered in-process by Microsoft's `WebViewManager` (part of .NET's Blazor) |
+| JS ↔ .NET | `window.external.sendMessage/receiveMessage` (what `blazor.webview.js` expects); one ordered queue to the page |
+| Files | GTK file dialogs (`GtkFileDialog`) — real paths; window drop; `chuvadi-reader file.pdf` and the desktop entry's `%F` |
+| Clipboard | GDK clipboard, text and PNG |
+| Show in folder | the file manager over D-Bus (`org.freedesktop.FileManager1.ShowItems`), else the folder with `xdg-open` |
+| Printing | Print card → GTK print dialog → the PDF as-is to the CUPS queue over IPP (`Chuvadi.Print.Ipp`); no rendering to images |
+| Folders | settings in `~/.config/Chuvadi` (XDG), saves under `~/Documents/Chuvadi Documents` |
 
-No third-party code: only .NET, GTK, GLib and WebKitGTK (OS components).
+No third-party code: only .NET, GTK, GLib, WebKitGTK and CUPS (OS components) and Arun's Chuvadi libraries.
 
-## Prerequisites (Ubuntu 24.04 / 26.04)
+## Prerequisites
 
 ```bash
 sudo apt install dotnet-sdk-10.0 libgtk-4-dev libwebkitgtk-6.0-dev
+bash scripts/setup-feed.sh        # Chuvadi packages from ci/packages into ./localpackages
 ```
 
 ## Build and run
 
-The working repo holds only the new Linux files. `prepare-tree.sh` checks out chuvadi-reader at the
-pinned commit, adds them, fills the local package feed, and fails if any existing file differs.
-
 ```bash
-tools/linux/prepare-tree.sh ./reader
-dotnet build reader/src/ChuvadiReader.Linux -c Release
-reader/src/ChuvadiReader.Linux/bin/Release/net10.0/chuvadi-reader [file.pdf]
+dotnet build src/ChuvadiReader.Linux -c Release -warnaserror
+src/ChuvadiReader.Linux/bin/Release/net10.0/chuvadi-reader [file.pdf]
 ```
 
-`CHUVADI_TIMING=1` prints every startup stage to stderr.
+`CHUVADI_TIMING=1` prints each startup stage to stderr. On Ubuntu 24.04+ a development build needs the
+AppArmor profile loaded for its path (WebKit's sandbox needs it; the `.deb` installs it for
+`/usr/lib/chuvadi-reader`):
+
+```bash
+sed "s#@CHUVADI_BINARY@#$PWD/src/ChuvadiReader.Linux/bin/Release/net10.0/chuvadi-reader#" \
+  src/ChuvadiReader.Linux/packaging/apparmor/chuvadi-reader | sudo tee /etc/apparmor.d/chuvadi-reader-dev
+sudo apparmor_parser -r /etc/apparmor.d/chuvadi-reader-dev
+```
 
 ## Publish
 
 ```bash
-dotnet publish reader/src/ChuvadiReader.Linux -c Release -r linux-x64   --self-contained false -o publish-x64
-dotnet publish reader/src/ChuvadiReader.Linux -c Release -r linux-arm64 --self-contained false -o publish-arm64
+dotnet publish src/ChuvadiReader.Linux -c Release              # ReadyToRun, this machine's architecture
+dotnet publish src/ChuvadiReader.Linux -c Release -r linux-arm64
 ```
 
-ReadyToRun is on. The native shim is built by the project (`native/build.sh`, warnings are errors).
-An ARM64 publish must run on ARM64 (CI uses `ubuntu-24.04-arm`) or with a cross compiler
-(`CC=aarch64-linux-gnu-gcc` and ARM64 `pkg-config` files).
+The native shim is compiled by the project (`native/build.sh`, warnings are errors), so an ARM64 build runs
+on ARM64 (CI: `ubuntu-24.04-arm`) or with a cross compiler (`CC=aarch64-linux-gnu-gcc` and ARM64 `pkg-config`).
+
+## Package and install
+
+```bash
+src/ChuvadiReader.Linux/packaging/deb/build-deb.sh out/                       # self-contained (default)
+src/ChuvadiReader.Linux/packaging/deb/build-deb.sh out/ --framework-dependent # needs dotnet-runtime-10.0
+sudo apt install ./out/chuvadi-reader_1.0.0~preview_amd64.deb
+```
+
+The package installs the app in `/usr/lib/chuvadi-reader`, `chuvadi-reader` on the PATH, the menu entry
+with PDF / Word / Excel associations, the icons (taken byte for byte from the Windows app's `chuvadi.ico`),
+AppStream metadata and the AppArmor profile. Remove with `sudo apt remove chuvadi-reader`.
 
 ## Test
 
 ```bash
-tools/linux/smoke.sh publish-x64 smoke-out 3   # Xvfb + mutter (test-only tools)
+tools/linux/smoke.sh <publish dir> <out dir> 3          # launch test: first render + real pixels on screen
+
+dotnet publish src/ChuvadiReader.Linux -c Release -p:UiTest=true -o uitest-build   # test build only
+tools/linux/uitest.py uitest-build <out dir>            # full pass: every toolbar, dialogs, print to CUPS
+tools/linux/compare-design.py uitest-build <out dir>    # Linux vs Chromium (WebView2's engine), same pages
 ```
 
-Passes when Blazor's first render arrives within 30 s with no logged error; writes timings and a
-screenshot. CI (`.github/workflows/linux.yml`) runs build, the Reader's tests, publish and this test
-on x64 and ARM64.
+The UI test build adds `UiTestDriver` (commands on stdin); the shipped build never contains it. The full
+pass needs Xvfb, mutter, xdotool, xclip, ImageMagick, poppler-utils and a default CUPS queue that writes
+PDFs (cups-pdf); the comparison also needs Python Playwright with Chromium — all test tools. CI
+(`.github/workflows/linux.yml`) runs, on x64 and ARM64: build, tests, publish, the launch test, both
+`.deb` packages, install + launch of the installed app, and the full UI pass.
 
-## Package and install
-
-`.deb` packaging, desktop entry, icon and file associations: in progress (see BUILD-LOG).
+Results so far: `BUILD-LOG.md` §21–§24; screenshots in `screenshots/`; open options in
+`OPTIONS-FOR-COORDINATOR.md`.

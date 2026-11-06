@@ -29,19 +29,22 @@ jobs:
           - arch: arm64
             runner: ubuntu-24.04-arm
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 30
+    timeout-minutes: 75
     env:
       DOTNET_CLI_TELEMETRY_OPTOUT: "1"
       DOTNET_NOLOGO: "1"
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install SDK and GTK 4 / WebKitGTK 6.0 (Ubuntu packages)
-        timeout-minutes: 10
+      # Build: SDK, GTK 4, WebKitGTK 6.0, dpkg-dev. Test only (never shipped): Xvfb, mutter, ImageMagick,
+      # xdotool, xclip, x11-utils, poppler-utils, CUPS + cups-pdf.
+      - name: Install build and test packages (Ubuntu)
+        timeout-minutes: 15
         run: |
           sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 update -qq
-          sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 install -y -qq dotnet-sdk-10.0 libgtk-4-dev libwebkitgtk-6.0-dev \
-            xvfb mutter imagemagick dbus-x11
+          sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 install -y -qq dotnet-sdk-10.0 \
+            libgtk-4-dev libwebkitgtk-6.0-dev dpkg-dev \
+            xvfb mutter imagemagick dbus-x11 xdotool xclip x11-utils poppler-utils cups cups-pdf
           dotnet --info | head -8
 
       # Packages: the committed ci/packages feed (byte-identical to the Windows app), coordinator D-01,
@@ -60,20 +63,50 @@ jobs:
       - name: Publish (ReadyToRun)
         run: dotnet publish src/ChuvadiReader.Linux -c Release -r linux-${{ matrix.arch }} --self-contained false -o publish
 
-      - name: Load the AppArmor profile the .deb ships (WebKit sandbox needs userns on Ubuntu 24.04+)
+      - name: Load the AppArmor profile for the published and UI-test builds (WebKit's sandbox needs it on 24.04+)
         run: |
           sysctl kernel.apparmor_restrict_unprivileged_userns || true
-          sed "s#@CHUVADI_BINARY@#$PWD/publish/chuvadi-reader#" \
-            src/ChuvadiReader.Linux/packaging/apparmor/chuvadi-reader | sudo tee /etc/apparmor.d/chuvadi-reader-ci >/dev/null
-          sudo apparmor_parser -r /etc/apparmor.d/chuvadi-reader-ci
+          dotnet publish src/ChuvadiReader.Linux -c Release -r linux-${{ matrix.arch }} --self-contained false -p:UiTest=true -o uitest-build
+          for app in publish uitest-build; do
+            sed "s#@CHUVADI_BINARY@#$PWD/$app/chuvadi-reader#; s#profile chuvadi-reader #profile chuvadi-reader-$app #" \
+              src/ChuvadiReader.Linux/packaging/apparmor/chuvadi-reader | sudo tee /etc/apparmor.d/chuvadi-reader-$app >/dev/null
+            sudo apparmor_parser -r /etc/apparmor.d/chuvadi-reader-$app
+          done
 
       - name: Launch test under Xvfb
         run: bash tools/linux/smoke.sh "$PWD/publish" "$PWD/smoke" 3
+
+      - name: Build the .deb packages (self-contained default, and framework-dependent)
+        run: |
+          bash src/ChuvadiReader.Linux/packaging/deb/build-deb.sh "$PWD/deb"
+          bash src/ChuvadiReader.Linux/packaging/deb/build-deb.sh "$PWD/deb-framework-dependent" --framework-dependent
+          ls -la deb deb-framework-dependent
+
+      - name: Install the .deb (its postinst loads the AppArmor profile) and launch the installed app
+        run: |
+          sudo apt-get install -y ./deb/chuvadi-reader_*.deb
+          sudo aa-status 2>/dev/null | grep -E "chuvadi-reader$" || { echo "profile not loaded by postinst"; exit 1; }
+          test "$(xdg-mime query default application/pdf)" = "in.chuvadi.Reader.desktop" || xdg-mime query default application/pdf
+          bash tools/linux/smoke.sh /usr/lib/chuvadi-reader "$PWD/smoke-installed" 2
+
+      - name: CUPS PDF queue for the print test
+        run: |
+          sudo systemctl start cups || sudo cupsd
+          sudo lpadmin -p ChuvadiPDF -E -v cups-pdf:/ -m lsb/usr/cups-pdf/CUPS-PDF_opt.ppd
+          sudo lpadmin -d ChuvadiPDF
+          lpstat -p -d
+
+      - name: Full UI test pass (every toolbar, GTK dialogs, print to CUPS)
+        timeout-minutes: 40
+        run: python3 -I -u tools/linux/uitest.py "$PWD/uitest-build" "$PWD/uitest" --cups-out "$HOME/PDF"
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: linux-${{ matrix.arch }}
           path: |
-            publish
             smoke
+            smoke-installed
+            uitest
+            deb
+            deb-framework-dependent

@@ -179,12 +179,12 @@ public sealed class CupsPrintService : IPrintService
                 o.AdditionalJobAttributes.Add(new IppAttribute("number-up", IppValue.Integer(up)));
             }
 
-            // The queue's own options chosen in the dialog (tray, media type, resolution…).
+            // The queue's options and the Job tab, as CUPS takes them (option name = attribute name).
             foreach (var (key, value) in answer)
             {
-                if (key.StartsWith("opt:", StringComparison.Ordinal))
+                if (key.StartsWith("opt:", StringComparison.Ordinal) && QueueOption(key[4..], value) is { } attribute)
                 {
-                    o.AdditionalJobAttributes.Add(new IppAttribute(key[4..], IppValue.Keyword(value)));
+                    o.AdditionalJobAttributes.Add(attribute);
                 }
             }
         });
@@ -212,6 +212,46 @@ public sealed class CupsPrintService : IPrintService
             _ => new CorePrintResult(PrintOutcome.Printed, pagesSent,
                 pagesSent == 1 ? "Sent 1 page to the printer" : $"Sent {pagesSent} pages to the printer"),
         };
+    }
+
+    private static readonly HashSet<string> HoldKeywords = new(StringComparer.Ordinal)
+    {
+        "no-hold", "indefinite", "day-time", "evening", "night", "second-shift", "third-shift", "weekend",
+    };
+
+    /// <summary>
+    /// One option from the dialog as an IPP job attribute. Upper-case names are the printer's own (PPD)
+    /// options; CUPS applies them by name. Lower-case names are IPP job attributes from the Job tab.
+    /// Options already sent another way (pages, paper, two-sided, pages per sheet) are skipped.
+    /// </summary>
+    private static IppAttribute? QueueOption(string name, string value)
+    {
+        if (char.IsUpper(name[0]))
+        {
+            return name is "PageSize" or "PageRegion" or "Duplex"
+                ? null
+                : new IppAttribute(name, IppValue.Keyword(value));
+        }
+
+        switch (name)
+        {
+            case "job-priority" when int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var priority)
+                                     && priority is >= 1 and <= 100:
+                return new IppAttribute(name, IppValue.Integer(priority));
+            case "job-sheets":
+                // "start,end" banner pages, e.g. "standard,none".
+                return new IppAttribute(name, value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Select(IppValue.Name));
+            case "job-hold-until":
+                // A keyword (indefinite, night…) or a time "HH:MM:SS" in UTC, which CUPS takes as a name.
+                return new IppAttribute(name, HoldKeywords.Contains(value) ? IppValue.Keyword(value) : IppValue.Name(value));
+            case "job-billing":
+                return new IppAttribute(name, IppValue.Name(value));
+            case "number-up-layout":
+                return new IppAttribute(name, IppValue.Keyword(value));
+            default:
+                return null; // pages, copies, paper, sides, page-set, order and number-up are already mapped
+        }
     }
 
     /// <summary>The dialog's page choice. GTK ranges are 0-based and inclusive.</summary>

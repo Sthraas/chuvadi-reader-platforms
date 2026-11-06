@@ -51,6 +51,20 @@ class App:
         for line in self.proc.stdout:
             self.replies.put(line.rstrip("\n"))
 
+    def restart(self):
+        """A fresh app process with a fresh profile, on the same display and session bus."""
+        try:
+            self.proc.terminate()
+            self.proc.wait(10)
+        except Exception:
+            pass
+        self.home = tempfile.mkdtemp(prefix="chvd-home-")
+        os.makedirs(os.path.join(self.home, "Documents"), exist_ok=True)
+        self.env.update(HOME=self.home, XDG_CONFIG_HOME=os.path.join(self.home, ".config"))
+        self.replies = queue.Queue()
+        self.log_path = os.path.join(self.out, "app-2.log")
+        self.launch()
+
     def stop(self):
         try:
             self.proc.terminate()
@@ -73,12 +87,19 @@ class App:
 
     # ── driver ─────────────────────────────────────────────────────────────
     def send(self, line, timeout=40):
-        self.proc.stdin.write(line.replace("\n", " ") + "\n")
+        self._n = getattr(self, "_n", 0) + 1
+        n = str(self._n)
+        self.proc.stdin.write(n + " " + line.replace("\n", " ") + "\n")
         self.proc.stdin.flush()
-        reply = self.replies.get(timeout=timeout)
-        if reply.startswith("ERR "):
-            raise RuntimeError(reply[4:])
-        return json.loads(reply[3:]) if reply.startswith("OK ") else reply
+        end = time.time() + timeout
+        while True:
+            reply = self.replies.get(timeout=max(0.1, end - time.time()))
+            rid, _, rest = reply.partition(" ")
+            if rid != n:
+                continue  # a late answer to an earlier command that timed out here
+            if rest.startswith("ERR "):
+                raise RuntimeError(rest[4:])
+            return json.loads(rest[3:])
 
     def js(self, body):
         return self.send("js " + body)

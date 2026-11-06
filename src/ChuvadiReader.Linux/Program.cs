@@ -90,7 +90,13 @@ public static class Program
 #endif
 
             Native.Run();
-            manager.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            Mark("main loop ended");
+
+            // The window is gone, so the page can no longer answer. Components that dispose through
+            // JS interop would wait for it forever and keep the process alive with no window. Give
+            // disposal a moment, then end, as the Windows app ends when its window closes.
+            var disposed = manager.DisposeAsync().AsTask().Wait(TimeSpan.FromSeconds(1));
+            Mark(disposed ? "disposed" : "disposal still waiting on the page; exiting");
             return 0;
         }
         catch (Exception ex)
