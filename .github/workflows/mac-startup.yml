@@ -5,12 +5,9 @@ name: Mac startup
 # Fair comparison: all variants are built and launched on the SAME runner, in interleaved rounds
 # (A B C, A B C, …), so machine-to-machine differences between hosted runners cancel out.
 
+# Manual only (D-90).
 on:
   workflow_dispatch:
-  push:
-    branches: [platform/mac]
-    paths:
-      - '.github/workflows/mac-startup.yml'
 
 jobs:
   startup:

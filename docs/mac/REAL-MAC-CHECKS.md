@@ -95,7 +95,16 @@ version and the Mac model, and attach a screenshot where it says so.
 - [ ] Links in a PDF open in the default browser; mailto opens Mail.
 - [ ] Certificate signing with a .pfx (needs Foundation's Mac Catalyst `IsMacOS()` fix, finding F6).
 
-## 9. System
+## 9. Licence and notices (texts are DRAFT until counsel removes the DRAFT line)
+- [ ] Finder → Chuvadi.app → Get Info: "Copyright © 2026 Sthraas Intelligence Pvt Ltd. All rights reserved."
+- [ ] Chuvadi menu → About Chuvadi: the same copyright line.
+- [ ] Right-click Chuvadi.app → Show Package Contents → Contents/Resources/legal: LICENSE.txt, EULA.txt,
+      THIRD-PARTY-NOTICES.txt, DOTNET-RUNTIME-THIRD-PARTY-NOTICES.txt, DOTNET-MACCATALYST-LICENSE.txt.
+- [ ] Settings › About › Licences: licence agreement, licence, privacy, notices tabs as on Windows, plus a
+      **.NET runtime** tab showing the Mono runtime notices followed by the .NET for Mac Catalyst licence.
+- [ ] Every legal text still starts with its DRAFT line.
+
+## 10. System
 - [ ] Dark mode switch in System Settings while Chuvadi is open (if the theme follows the system).
 - [ ] Sleep and wake with a document open: still works.
 - [ ] Activity Monitor: memory after opening a 100-page PDF ______ MB; CPU idles at ~0 % when idle.
