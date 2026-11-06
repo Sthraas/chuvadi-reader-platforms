@@ -7,6 +7,7 @@ using ChuvadiReader.Web.Components;
 using ChuvadiReader.Web.Files;
 using ChuvadiReader.Web.Hosting;
 using ChuvadiReader.Web.Hosting.Acme;
+using ChuvadiReader.Web.Hosting.Workers;
 using ChuvadiReader.Web.Platform;
 using ChuvadiReader.Web.Auth;
 using Microsoft.AspNetCore.Authentication;
@@ -33,22 +34,123 @@ public static class Program
         configure?.Invoke(builder);
         var env = builder.Environment;
         var devSignIn = env.IsDevelopment() || env.IsEnvironment("Testing");
+        var mode = builder.Configuration.GetValue("Portal:Mode", PortalMode.Single);
 
         // ── settings ────────────────────────────────────────────────────────────────────
         builder.Services.AddOptions<PortalOptions>()
             .Bind(builder.Configuration.GetSection(PortalOptions.Section))
             .Validate(o => !string.IsNullOrWhiteSpace(o.DataRoot), "Portal:DataRoot is required.")
-            .Validate(o => devSignIn || Uri.TryCreate(o.PublicOrigin, UriKind.Absolute, out var u) && u.Scheme == Uri.UriSchemeHttps,
+            .Validate(o => devSignIn || o.Mode == PortalMode.Worker || Uri.TryCreate(o.PublicOrigin, UriKind.Absolute, out var u) && u.Scheme == Uri.UriSchemeHttps,
                 "Portal:PublicOrigin must be the portal's https address outside Development.")
             .Validate(o => o.UploadChunkBytes is >= 64 * 1024 and <= 16 * 1024 * 1024, "Portal:UploadChunkBytes must be 64 KB–16 MB.")
+            .Validate(o => o.IdleTimeout > o.ExpiryWarning && o.ExpiryWarning > TimeSpan.Zero, "Portal:IdleTimeout must be longer than Portal:ExpiryWarning.")
+            .Validate(o => o.Mode != PortalMode.Worker || !string.IsNullOrEmpty(o.WorkerSocket) && !string.IsNullOrEmpty(o.WorkerOwner),
+                "A worker is started by the gateway only.")
             .ValidateOnStart();
+        builder.Services.AddOptions<SangamOptions>().Bind(builder.Configuration.GetSection(SangamOptions.Section));
+        builder.Services.AddSingleton(TimeProvider.System);
 
+        switch (mode)
+        {
+            case PortalMode.Worker:
+                ConfigureWorker(builder);
+                break;
+            case PortalMode.Gateway:
+                ConfigureFront(builder, devSignIn, gateway: true);
+                break;
+            default:
+                ConfigureFront(builder, devSignIn, gateway: false);
+                break;
+        }
+
+        // Keys for cookies, sign-in flows and circuit state live in memory only: nothing outlives the
+        // process, and a restart ends every session anyway (no server storage; D-24, D-28). Sangam signs a
+        // person straight back in if their Sangam session is still on.
+        builder.Services.Configure<Microsoft.AspNetCore.DataProtection.KeyManagement.KeyManagementOptions>(o =>
+        {
+            o.XmlRepository = new InMemoryKeyRepository();
+            o.XmlEncryptor = new Microsoft.AspNetCore.DataProtection.XmlEncryption.NullXmlEncryptor(); // never written anywhere
+        });
+
+        var app = builder.Build();
+        var sangam = app.Services.GetRequiredService<IOptions<SangamOptions>>().Value;
+
+        if (mode == PortalMode.Worker)
+        {
+            // Reached only through the gateway's socket; the gateway did TLS, sign-in and security headers.
+            app.UseGatewayForwarding();
+            app.UseAuthentication();
+            app.UseAuthorization();
+            app.UseAntiforgery();
+            app.MapStaticAssets().AllowAnonymous();
+            app.MapPortalFiles();
+            app.MapWorkerControl();
+            MapReader(app);
+            return app;
+        }
+
+        if (!env.IsDevelopment())
+        {
+            app.UseExceptionHandler("/error", createScopeForErrors: !(mode == PortalMode.Gateway));
+        }
+
+        // ACME http-01 answers come first: plain HTTP, no redirect, no sign-in.
+        app.UseHttp01Challenges();
+        app.UsePortalSecurityHeaders(hsts: !devSignIn);
+        if (!devSignIn)
+        {
+            app.UseHttpsRedirection();
+        }
+
+        if (mode == PortalMode.Gateway)
+        {
+            app.UseWebSockets();
+        }
+
+        app.UseAuthentication();
+        app.UseActivityTracking();
+        app.UseAuthorization();
+        if (mode == PortalMode.Single)
+        {
+            app.UseAntiforgery();
+        }
+
+        app.MapStaticAssets().AllowAnonymous();
+        app.MapActivity();
+        if (sangam.IsConfigured)
+        {
+            app.MapSangamSignIn();
+        }
+
+        app.MapSignedOutPage(withSangam: sangam.IsConfigured);
+        if (mode == PortalMode.Gateway)
+        {
+            app.MapGatewayRelay();
+        }
+        else
+        {
+            app.MapPortalFiles();
+            MapReader(app);
+        }
+
+        return app;
+    }
+
+    private static void MapReader(WebApplication app)
+        => app.MapRazorComponents<HostPage>()
+            .AddInteractiveServerRenderMode()
+            .AddAdditionalAssemblies(typeof(ChuvadiReader.Ui.App).Assembly);
+
+    /// <summary>What faces the browser: TLS, sign-in, session expiry. The single process also runs the
+    /// Reader; the gateway relays to each person's worker instead (D-24).</summary>
+    private static void ConfigureFront(WebApplicationBuilder builder, bool devSignIn, bool gateway)
+    {
         // ── Kestrel: TLS from a pluggable source, small default body limit ────────────
         var tls = builder.Configuration.GetSection(TlsOptions.Section).Get<TlsOptions>();
         builder.WebHost.ConfigureKestrel((context, k) =>
         {
             k.AddServerHeader = false;
-            k.Limits.MaxRequestBodySize = 64 * 1024; // uploads raise it per chunk (FileEndpoints)
+            k.Limits.MaxRequestBodySize = 64 * 1024; // uploads raise it per chunk (FileEndpoints, GatewayRelay)
             k.Limits.MaxRequestHeadersTotalSize = 32 * 1024;
             k.Limits.RequestHeadersTimeout = TimeSpan.FromSeconds(30);
             if (tls is { CertificatePath.Length: > 0 })
@@ -87,7 +189,6 @@ public static class Program
         }
 
         // ── sign-in ─────────────────────────────────────────────────────────────────────
-        builder.Services.AddOptions<SangamOptions>().Bind(builder.Configuration.GetSection(SangamOptions.Section));
         var sangam = builder.Configuration.GetSection(SangamOptions.Section).Get<SangamOptions>() ?? new();
         builder.Services.TryAddSingleton<IHttpClientFactoryLite, DefaultHttpClientFactoryLite>();
         if (sangam.IsConfigured)
@@ -96,7 +197,6 @@ public static class Program
             builder.Services.AddSingleton<SangamMetadata>();
             builder.Services.AddSingleton<JwtVerifier>();
             builder.Services.AddSingleton<ClientAuthentication>();
-            builder.Services.AddSingleton<PortalSessions>();
             builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
                 .AddCookie(o =>
                 {
@@ -139,12 +239,57 @@ public static class Program
         }
 
         builder.Services.AddAuthorization(o => o.FallbackPolicy = o.DefaultPolicy);
-        builder.Services.AddCascadingAuthenticationState();
 
-        // ── Blazor Server ───────────────────────────────────────────────────────────────
+        // ── sign-ins, their tabs and their expiry (D-30) ────────────────────────────────
+        builder.Services.AddSingleton<PortalSessions>();
+        builder.Services.AddSingleton<SessionClock>();
+        builder.Services.AddHostedService<SessionClockService>();
+        if (gateway)
+        {
+            // Each person's Reader runs in their own worker process (D-24).
+            builder.Services.AddSingleton<WorkerPool>();
+            builder.Services.AddSingleton<ITabControl>(sp => sp.GetRequiredService<WorkerPool>());
+            builder.Services.AddHostedService<WorkerSupervisor>();
+            return;
+        }
+
+        builder.Services.AddSingleton<OpenTabs>();
+        builder.Services.AddSingleton<ITabControl>(sp => sp.GetRequiredService<OpenTabs>());
+        AddReaderHost(builder);
+    }
+
+    /// <summary>One person's Reader behind the gateway (D-24): a Unix socket, the gateway's identity, no TLS.</summary>
+    private static void ConfigureWorker(WebApplicationBuilder builder)
+    {
+        var socket = builder.Configuration["Portal:WorkerSocket"];
+        builder.WebHost.ConfigureKestrel(k =>
+        {
+            k.AddServerHeader = false;
+            k.Limits.MaxRequestBodySize = 64 * 1024;
+            k.Limits.MaxRequestHeadersTotalSize = 32 * 1024;
+            if (!string.IsNullOrEmpty(socket))
+            {
+                File.Delete(socket);
+                k.ListenUnixSocket(socket);
+            }
+        });
+        builder.Services.AddSingleton(WorkerHost.ReadSecret());
+        builder.Services.AddHostedService<GatewayLifeline>();
+        builder.Services.AddAuthentication(GatewayIdentityHandler.SchemeName)
+            .AddScheme<AuthenticationSchemeOptions, GatewayIdentityHandler>(GatewayIdentityHandler.SchemeName, null);
+        builder.Services.AddAuthorization(o => o.FallbackPolicy = o.DefaultPolicy);
+        builder.Services.AddSingleton<OpenTabs>();
+        builder.Services.AddSingleton<ITabControl>(sp => sp.GetRequiredService<OpenTabs>());
+        AddReaderHost(builder);
+    }
+
+    /// <summary>Blazor Server and the Reader with its per-session file handling (single process or worker).</summary>
+    private static void AddReaderHost(WebApplicationBuilder builder)
+    {
+        builder.Services.AddCascadingAuthenticationState();
         builder.Services.AddRazorComponents().AddInteractiveServerComponents(o =>
         {
-            o.DetailedErrors = env.IsDevelopment();
+            o.DetailedErrors = builder.Environment.IsDevelopment();
             o.DisconnectedCircuitRetentionPeriod = TimeSpan.FromMinutes(3);
             o.DisconnectedCircuitMaxRetained = 500;
             o.JSInteropDefaultCallTimeout = TimeSpan.FromMinutes(1);
@@ -153,8 +298,8 @@ public static class Program
             o.MaximumReceiveMessageSize = 64 * 1024;
         });
 
-        builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddSingleton<TransferRegistry>();
+        builder.Services.AddSingleton<CircuitCounter>();
         builder.Services.AddHostedService<PortalHousekeeping>();
 
         // ── per-session (per circuit) services ──────────────────────────────────────────
@@ -163,37 +308,6 @@ public static class Program
         builder.Services.AddScoped<OutboxDelivery>();
         builder.Services.AddScoped<CircuitHandler, SessionLifetime>();
         AddReader(builder.Services);
-
-        var app = builder.Build();
-
-        if (!env.IsDevelopment())
-        {
-            app.UseExceptionHandler("/error", createScopeForErrors: true);
-        }
-
-        // ACME http-01 answers come first: plain HTTP, no redirect, no sign-in.
-        app.UseHttp01Challenges();
-        app.UsePortalSecurityHeaders(hsts: !devSignIn);
-        if (!devSignIn)
-        {
-            app.UseHttpsRedirection();
-        }
-
-        app.UseAuthentication();
-        app.UseAuthorization();
-        app.UseAntiforgery();
-
-        app.MapStaticAssets().AllowAnonymous();
-        app.MapPortalFiles();
-        if (sangam.IsConfigured)
-        {
-            app.MapSangamSignIn();
-        }
-        app.MapRazorComponents<HostPage>()
-            .AddInteractiveServerRenderMode()
-            .AddAdditionalAssemblies(typeof(ChuvadiReader.Ui.App).Assembly);
-
-        return app;
     }
 
     /// <summary>

@@ -42,8 +42,19 @@ public static class SangamSignIn
         app.MapGet(o.CallbackPath, (Delegate)CallbackAsync).AllowAnonymous();
         app.MapGet("/signout", (Delegate)SignOutAsync).AllowAnonymous();
         app.MapGet(o.SignedOutCallbackPath, (Delegate)SignedOutCallbackAsync).AllowAnonymous();
-        app.MapGet(SignedOutPath, () => Results.Content(SignedOutPage, "text/html; charset=utf-8")).AllowAnonymous();
         app.MapPost(o.BackChannelLogoutPath, (Delegate)BackChannelLogoutAsync).AllowAnonymous().DisableAntiforgery();
+        return app;
+    }
+
+    /// <summary>The signed-out page (every mode except worker). Without Sangam (Development) "sign in again" just goes home.</summary>
+    public static IEndpointRouteBuilder MapSignedOutPage(this IEndpointRouteBuilder app, bool withSangam)
+    {
+        app.MapGet(SignedOutPath, () => Results.Content(SignedOutPage, "text/html; charset=utf-8")).AllowAnonymous();
+        if (!withSangam)
+        {
+            app.MapGet("/signin", () => Results.Redirect("/")).AllowAnonymous();
+        }
+
         return app;
     }
 
@@ -224,6 +235,7 @@ public static class SangamSignIn
         }
 
         var now = time.GetUtcNow();
+        claims.Add(new Claim(SessionClock.SignedInClaim, now.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture)));
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, "Sangam", "name", "role"));
         var props = new AuthenticationProperties
         {
@@ -384,10 +396,10 @@ public static class SangamSignIn
     private static IResult Fail(string message)
         => Results.Content(Page("Sign-in didn't complete", System.Net.WebUtility.HtmlEncode(message), "/signin", "Try again"), "text/html; charset=utf-8", statusCode: 400);
 
-    private static readonly string SignedOutPage = Page("Signed out", "Your files were removed from the server.", "/signin", "Sign in again");
+    internal static readonly string SignedOutPage = Page("Signed out", "Your files were removed from the server.", "/signin", "Sign in again");
 
     // Functional pages only; the Web portal UI chat owns their final look.
-    private static string Page(string title, string message, string href, string action) =>
+    internal static string Page(string title, string message, string href, string action) =>
         "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">" +
         $"<title>{title} · Chuvadi</title><link rel=\"stylesheet\" href=\"/_content/ChuvadiReader.Ui/css/tokens.css\"></head>" +
         "<body style=\"margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--chvd-surface,#faf6ee);color:var(--chvd-ink,#1a1310);font-family:system-ui,sans-serif\">" +

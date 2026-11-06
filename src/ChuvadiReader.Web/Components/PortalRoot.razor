@@ -1,37 +1,50 @@
 @* The portal's interactive root: starts the per-connection browser bridge (viewport reports for the
-   form factor), registers this tab with the sign-in it belongs to (so a sign-out anywhere ends it), and
-   renders the unchanged Ui. Portal chrome from the Web portal UI chat lands in the Ui's own platform
-   components (Foundation), so nothing else is added here. *@
+   form factor, input reports for session expiry), registers this tab with the sign-in it belongs to
+   (so a sign-out or expiry anywhere ends it), shows the expiry warning (D-30) and renders the
+   unchanged Ui. Portal chrome from the Web portal UI chat lands in the Ui's own platform components. *@
 @using ChuvadiReader.Web.Auth
 @using ChuvadiReader.Web.Files
 @using ChuvadiReader.Web.Platform
 @implements IDisposable
 @inject ViewportReporter Viewport
-@inject IServiceProvider Services
+@inject OpenTabs Tabs
 @inject SessionSpace Space
 @inject BrowserBridge Browser
 @inject ILogger<PortalRoot> Log
+@inject Microsoft.Extensions.Options.IOptions<ChuvadiReader.Web.Hosting.PortalOptions> Options
 
 <ChuvadiReader.Ui.App />
+@if (_notice is not null)
+{
+    <ExpiryWarning Notice="_notice" />
+}
 
 @code {
     [CascadingParameter] private Task<Microsoft.AspNetCore.Components.Authorization.AuthenticationState>? Auth { get; set; }
 
     private IDisposable? _registration;
+    private ExpiryNotice? _notice;
 
     protected override async Task OnInitializedAsync()
     {
-        // Present only with Sangam sign-in (not with the Development sign-in).
-        if (Services.GetService(typeof(PortalSessions)) is PortalSessions sessions && Auth is not null)
+        if (Auth is not null)
         {
             var user = (await Auth).User;
             var sub = user.FindFirst("sub")?.Value;
             if (sub is not null)
             {
-                _registration = sessions.Open(sub, user.FindFirst("sid")?.Value, EndAsync);
+                _registration = Tabs.Open(sub, user.FindFirst("sid")?.Value, EndAsync, ShowNoticeAsync);
             }
         }
     }
+
+    /// <summary>The session is about to end (or, with null, no longer is).</summary>
+    private Task ShowNoticeAsync(ExpiryNotice? notice)
+        => InvokeAsync(() =>
+        {
+            _notice = notice;
+            StateHasChanged();
+        });
 
     /// <summary>Called when this tab's sign-in ends elsewhere: files go now, the browser to the signed-out page.</summary>
     private async Task EndAsync()
@@ -57,6 +70,9 @@
             try
             {
                 await Viewport.StartAsync();
+                // Input is reported at most once per 1/30 of the idle limit (a minute for 30 minutes).
+                var every = TimeSpan.FromTicks(Math.Clamp(Options.Value.IdleTimeout.Ticks / 30, TimeSpan.FromSeconds(5).Ticks, TimeSpan.FromMinutes(1).Ticks));
+                await Browser.TrackActivityAsync(every);
             }
             catch (Microsoft.JSInterop.JSDisconnectedException)
             {

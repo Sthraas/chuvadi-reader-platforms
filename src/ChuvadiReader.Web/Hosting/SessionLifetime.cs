@@ -13,24 +13,28 @@ public sealed class SessionLifetime : CircuitHandler
     private readonly SessionSpace _space;
     private readonly TransferRegistry _registry;
     private readonly Platform.WebAccount _account;
+    private readonly Workers.CircuitCounter _circuits;
 
-    public SessionLifetime(SessionSpace space, TransferRegistry registry, Platform.WebAccount account)
+    public SessionLifetime(SessionSpace space, TransferRegistry registry, Platform.WebAccount account, Workers.CircuitCounter circuits)
     {
         _space = space;
         _registry = registry;
         _account = account;
+        _circuits = circuits;
     }
 
     /// <summary>A session starts: its folders exist before any Reader service asks for a path, and the
     /// signed-in person is known.</summary>
     public override async Task OnCircuitOpenedAsync(Circuit circuit, CancellationToken cancellationToken)
     {
+        _circuits.Opened();
         await _space.EnsureAsync(cancellationToken).ConfigureAwait(false);
         await _account.LoadAsync().ConfigureAwait(false);
     }
 
     public override Task OnCircuitClosedAsync(Circuit circuit, CancellationToken cancellationToken)
     {
+        _circuits.Closed();
         _registry.ForgetSession(_space.SessionId);
         _space.Delete();
         return Task.CompletedTask;
