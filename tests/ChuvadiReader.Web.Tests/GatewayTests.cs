@@ -228,6 +228,26 @@ public class GatewayTests(GatewayFixture gateway) : IClassFixture<GatewayFixture
     }
 
     [Fact]
+    public async Task Many_requests_at_once_from_a_new_person_start_exactly_one_worker()
+    {
+        using var c = gateway.Client("gw-burst");
+        var answers = await Task.WhenAll(Enumerable.Range(0, 20).Select(_ => c.GetAsync("/")));
+        Assert.All(answers, a => Assert.Equal(HttpStatusCode.OK, a.StatusCode));
+        Assert.Single(gateway.Pool.Running, w => w.Key == UserKey.FromSub("gw-burst"));
+        Assert.Single(Directory.GetDirectories(Path.Combine(gateway.DataRoot, "workers")));
+    }
+
+    [Fact]
+    public async Task The_health_check_needs_no_sign_in_and_starts_no_worker()
+    {
+        using var anonymous = new HttpClient { BaseAddress = gateway.Base };
+        var resp = await anonymous.GetAsync("/healthz");
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        Assert.Equal("ok", await resp.Content.ReadAsStringAsync());
+        Assert.Empty(gateway.Pool.Running);
+    }
+
+    [Fact]
     public async Task Static_files_come_from_the_gateway_without_starting_a_worker()
     {
         using var c = gateway.Client("gw-static");

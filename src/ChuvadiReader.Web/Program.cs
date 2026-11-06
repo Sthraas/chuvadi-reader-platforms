@@ -127,6 +127,7 @@ public static class Program
         }
 
         app.MapStaticAssets().AllowAnonymous();
+        app.MapGet("/healthz", () => Results.Text("ok")).AllowAnonymous(); // for the host's monitoring; says nothing else
         app.MapActivity();
         if (sangam.IsConfigured)
         {
