@@ -186,10 +186,44 @@
     // Print the PDF with the browser's own viewer: load it in a hidden frame and call print() on it
     // (Chrome, Edge, Firefox). Safari can't print a PDF inside a frame, so there the PDF opens in a
     // new tab with its own print button.
+    // A tab the person opens themselves. Browsers block a window that a page opens on its own after a
+    // round trip to the server (it isn't the person's click any more), so the portal offers a link and
+    // the person's click on it opens the PDF in its own tab, with the browser's print button.
+    function offerTab(url) {
+        var old = document.querySelector('.chvd-print-offer');
+        if (old) old.parentNode.removeChild(old);
+        var box = document.createElement('div');
+        box.className = 'chvd-print-offer';
+        box.setAttribute('role', 'status');
+        var text = document.createElement('span');
+        text.textContent = 'This browser prints a PDF from its own tab.';
+        var link = document.createElement('a');
+        link.href = url;
+        link.target = '_blank';
+        link.rel = 'noopener';
+        link.className = 'btn primary';
+        link.textContent = 'Open the PDF to print';
+        var close = document.createElement('button');
+        close.type = 'button';
+        close.className = 'btn';
+        close.setAttribute('aria-label', 'Close');
+        close.textContent = 'Close';
+        function remove() { if (box.parentNode) box.parentNode.removeChild(box); }
+        link.addEventListener('click', function () { setTimeout(remove, 0); });
+        close.addEventListener('click', remove);
+        box.appendChild(text);
+        box.appendChild(link);
+        box.appendChild(close);
+        document.body.appendChild(box);
+        setTimeout(remove, 120000); // the print link expires after 30 minutes; the offer goes sooner
+        link.focus();
+    }
+
     function print(url) {
         if (isSafari()) {
-            window.open(url, '_blank', 'noopener');
-            return Promise.resolve(true);
+            // Safari can't print a PDF from inside a frame.
+            offerTab(url);
+            return Promise.resolve('tab');
         }
 
         return new Promise(function (resolve) {
@@ -211,16 +245,23 @@
                     try {
                         frame.contentWindow.focus();
                         frame.contentWindow.print();
-                        finish(true);
+                        finish('dialog');
                     } catch (e) {
-                        // Cross-viewer restriction: fall back to a new tab.
-                        window.open(url, '_blank', 'noopener');
-                        finish(true);
+                        // The PDF viewer refused print() from the page: let the person open it in a tab.
+                        offerTab(url);
+                        finish('tab');
                     }
                 }, 300);
             });
-            frame.addEventListener('error', function () { finish(false); });
-            setTimeout(function () { finish(false); }, 60000);
+            frame.addEventListener('error', function () { finish('failed'); });
+            // No PDF viewer in the page (the person set PDFs to download or to open elsewhere): the frame
+            // never loads, so offer the PDF in its own tab instead of failing.
+            setTimeout(function () {
+                if (!finished) {
+                    offerTab(url);
+                    finish('tab');
+                }
+            }, 20000);
             frame.src = url;
             document.body.appendChild(frame);
         });

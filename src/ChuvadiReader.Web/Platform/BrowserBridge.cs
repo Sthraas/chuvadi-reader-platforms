@@ -24,10 +24,10 @@ public sealed class BrowserBridge
     public ValueTask DownloadAsync(string url, string fileName, CancellationToken ct)
         => _js.InvokeVoidAsync("chvdPortal.download", ct, url, fileName);
 
-    /// <summary>Loads the print document in a hidden frame and opens the browser's print dialog.
-    /// Returns false when the browser couldn't load it.</summary>
-    public ValueTask<bool> PrintAsync(string url, CancellationToken ct)
-        => _js.InvokeAsync<bool>("chvdPortal.print", ct, url);
+    /// <summary>Hands a PDF to the browser to print: "dialog" when its print dialog opened, "tab" when the
+    /// person was offered the PDF in its own tab (Safari, or a browser without a PDF viewer), "failed".</summary>
+    public ValueTask<string> PrintAsync(string url, CancellationToken ct)
+        => _js.InvokeAsync<string>("chvdPortal.print", ct, url);
 
     /// <summary>Puts a PNG on the clipboard. Returns false when the browser refused.</summary>
     public ValueTask<bool> CopyImageAsync(byte[] png, CancellationToken ct)
