@@ -272,3 +272,12 @@ With a root adbd the touch tool works: a real tap on the bottom bar's Arrange sw
 Arrange (app bar "Bind all"). But Open with then failed: a file pushed and an intent sent by root
 don't give the app read access as the shell user's did. Order fixed: Open with as the shell user
 (the real path a file manager takes), then `adb root` for the gestures only.
+
+### 31. Run 42207618154 — first real swipe
+Open with as the shell user works again ("1 / 6"), touch input works as root, and the page fits the phone
+this time (overflowX 0 — the 54 px in step 29 was not reproduced). A real swipe reached the screen but the
+page did not change. Suspected cause, not yet proven: the Reader's desk is `touch-action: pan-x pan-y`, so
+Chrome claims a horizontal drag as its own pan and sends `pointercancel`, which mobile.js treats as "no
+swipe". To prove it, the test now records (passive listeners only) the pointer/touch events the page sees
+during each gesture and saves them as `events-<gesture>.json`. Also fixed a crash in my script when a state
+value was missing.

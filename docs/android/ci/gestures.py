@@ -114,6 +114,51 @@ def touch(*args):
     return True
 
 
+RECORDER_JS = r"""
+(() => {
+  if (!window.__chvdEv) {
+    window.__chvdEv = [];
+    const rec = e => window.__chvdEv.push({ t: Math.round(performance.now()), type: e.type,
+      pt: e.pointerType || null, n: e.touches ? e.touches.length : null,
+      target: (e.target && e.target.className && String(e.target.className).split(' ')[0]) || (e.target && e.target.tagName) || null });
+    for (const k of ['pointerdown', 'pointerup', 'pointercancel', 'touchstart', 'touchend', 'touchcancel', 'wheel', 'click'])
+      document.addEventListener(k, rec, { capture: true, passive: true });
+    let lastMove = 0;
+    document.addEventListener('pointermove', e => { const now = performance.now(); if (now - lastMove > 40) { lastMove = now; rec(e); } }, { capture: true, passive: true });
+  }
+  window.__chvdEv.length = 0;
+  return true;
+})()
+"""
+
+
+def events_since_reset():
+    """Pointer / touch events the page saw since the last recorder reset (passive listeners only)."""
+    try:
+        return cdp.evaluate("(window.__chvdEv || []).slice(0, 200)")
+    except SystemExit as e:
+        return [{"error": str(e)}]
+
+
+def gesture(name, *args):
+    """Records the page's events around one real gesture; saves them as evidence."""
+    try:
+        cdp.evaluate(RECORDER_JS)
+    except SystemExit as e:
+        print("  (event recorder unavailable: %s)" % e)
+    ok = touch(*args)
+    time.sleep(2)
+    evs = events_since_reset()
+    with open(os.path.join(OUT, f"events-{name}.json"), "w") as f:
+        json.dump(evs, f, indent=1)
+    kinds = {}
+    for e in evs:
+        key = e.get("type", "?") + ("/" + e["pt"] if e.get("pt") else "")
+        kinds[key] = kinds.get(key, 0) + 1
+    print(f"  page saw: {json.dumps(kinds)}")
+    return ok
+
+
 def counter_number(st):
     m = re.search(r"(\d+)", st.get("counter") or "")
     return int(m.group(1)) if m else None
@@ -196,8 +241,7 @@ if st0.get("desk"):
     # ── 2. Swipe left → next page ─────────────────────────────────────────────
     x1, y1 = to_screen(st0, d["x"] + d["w"] * 0.80, cy)
     x2, y2 = to_screen(st0, d["x"] + d["w"] * 0.20, cy)
-    touch("swipe", x1, y1, x2, y2, 250)
-    time.sleep(2)
+    gesture("swipe", "swipe", x1, y1, x2, y2, 250)
     st1 = state()
     shot("g2-swiped")
     check("swipe left moves to the next page", (counter_number(st1) or 0) > (counter_number(st0) or 0),
@@ -205,19 +249,17 @@ if st0.get("desk"):
 
     # ── 3. Double-tap → Fit width ⇄ Fit page ──────────────────────────────────
     sx, sy = to_screen(st1, cx, cy)
-    touch("doubletap", sx, sy)
-    time.sleep(2)
+    gesture("doubletap", "doubletap", sx, sy)
     st2 = state()
     shot("g3-doubletapped")
     check("double-tap flips the fit mode", st2.get("fit") != st1.get("fit") and st2.get("fit") in ("width", "page"),
-          {"before": st1.get("fit"), "after": st2.get("fit"), "pageW": [st1.get("page", {}).get("w"), st2.get("page", {}).get("w")]})
+          {"before": st1.get("fit"), "after": st2.get("fit"), "pageW": [(st1.get("page") or {}).get("w"), (st2.get("page") or {}).get("w")]})
 
     # ── 4. Pinch out → zoom in ────────────────────────────────────────────────
     st2d = st2.get("desk") or d
     pcx, pcy = to_screen(st2, st2d["x"] + st2d["w"] / 2, st2d["y"] + st2d["h"] / 2)
     span = min(st2d["w"] * st2["dpr"], 900)
-    touch("pinch", pcx, pcy, round(span * 0.25), round(span * 0.85), 600)
-    time.sleep(2)
+    gesture("pinch", "pinch", pcx, pcy, round(span * 0.25), round(span * 0.85), 600)
     st3 = state()
     shot("g4-pinched")
     w2, w3 = (st2.get("page") or {}).get("w") or 0, (st3.get("page") or {}).get("w") or 0
@@ -244,8 +286,7 @@ if m:
         a, c = cards[0], cards[2]
         ax, ay = to_screen(st4, a["x"] + a["w"] / 2, a["y"] + a["h"] / 2)
         tx, ty = to_screen(st4, c["x"] + c["w"] * 0.75, c["y"] + c["h"] / 2)
-        touch("longdrag", ax, ay, tx, ty, 800, 700)
-        time.sleep(2)
+        gesture("longdrag", "longdrag", ax, ay, tx, ty, 800, 700)
         st5 = state()
         shot("g6-dragged")
         before, after = st4.get("order") or [], st5.get("order") or []
