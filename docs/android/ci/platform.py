@@ -1,0 +1,549 @@
+#!/usr/bin/env python3
+"""Emulator test of the Android platform layer (CI only). Runs after gestures.py on the same
+emulator, with the app installed and running. Each check acts the way a user or another app would
+(intents from the shell, real touches via touch.py, real key events via `input`) and reads the
+result from the page (cdp.py), from Android itself (dumpsys, uiautomator) or from the files the
+app produced. Screenshots and raw evidence go to the results folder.
+
+  1. Open with: .docx and .xlsx (ACTION_VIEW content://) → the document's text is on screen
+  2. Share to Chuvadi: ACTION_SEND with a PDF stream → a new tab with that PDF
+  3. Rotation with a document open → same process, same tab and page, no sideways overflow
+  4. Hardware keyboard: → next page, Ctrl = zoom, Ctrl F + typing finds text, Esc closes find
+  5. Soft keyboard: tap the find box → keyboard up, the box stays visible above it
+  6. Printing: Print card → PrintManager dialog → "Save as PDF" → the saved file has every page;
+     a custom range (2-3) gives a 2-page file
+  7. Back: closes an open card; on the phone closes a sheet (key and edge gesture); with nothing
+     open leaves the app; relaunch → same process, same tab
+  8. Split screen → the app re-lays out to the half window, same process, no sideways overflow;
+     back to full screen
+Writes platform.json; exits 1 if any check fails.
+
+    platform.py <results-dir>
+"""
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+import cdp  # noqa: E402
+
+OUT = sys.argv[1]
+PKG = "in.chuvadi.reader"
+os.makedirs(OUT, exist_ok=True)
+results = []
+import importlib.util  # noqa: E402
+_spec = importlib.util.spec_from_file_location("office", os.path.join(HERE, "make-test-office.py"))
+office = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(office)
+
+STATE_JS = r"""
+(() => {
+  const vis = e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < innerHeight; };
+  const desk = [...document.querySelectorAll('.rdesk')].find(vis) || null;
+  const page = [...document.querySelectorAll('.rpage')].find(vis) || null;
+  const card = document.querySelector('section.chvd-card[aria-label="Print"]');
+  const find = document.querySelector('.rfind-box');
+  const r = e => { if (!e) return null; const b = e.getBoundingClientRect(); return { x: b.x, y: b.y, w: b.width, h: b.height }; };
+  const root = document.documentElement;
+  return {
+    shell: root.dataset.shell || null, formFactor: root.dataset.formFactor || null,
+    dpr: devicePixelRatio, innerW: innerWidth, innerH: innerHeight,
+    vvH: window.visualViewport ? visualViewport.height : innerHeight,
+    overflowPage: root.scrollWidth - root.clientWidth,
+    tab: ((document.querySelector('.rtab.active .rtab-name') || document.querySelector('.ph-t') || {}).textContent || '').trim(),
+    counter: (document.querySelector('.ph-pager')?.textContent || document.querySelector('.tb-pg-box')?.value || '').trim(),
+    pages: document.querySelectorAll('.rpage').length,
+    pageW: page ? page.getBoundingClientRect().width : null,
+    desk: r(desk),
+    printCard: !!card, printButton: card ? (card.querySelector('.footer .primary')?.textContent || '').trim() : null,
+    sheet: !!document.querySelector('.ph-sheet'),
+    find: find ? { value: find.value, focused: document.activeElement === find, rect: r(find) } : null,
+    findCount: (document.querySelector('.rfind-count')?.textContent || '').trim(),
+    text: (document.body.innerText || '').slice(0, 20000),
+  };
+})()
+"""
+
+
+def adb(*args, check=False):
+    return subprocess.run(["adb", *args], check=check, capture_output=True, text=True).stdout
+
+
+def shot(name):
+    with open(os.path.join(OUT, name + ".png"), "wb") as f:
+        f.write(subprocess.run(["adb", "exec-out", "screencap", "-p"], capture_output=True).stdout)
+
+
+def save(name, text):
+    with open(os.path.join(OUT, name), "w") as f:
+        f.write(text)
+
+
+def dump():
+    """UI tree XML, after tapping "Wait" on the emulator's own System UI ANR dialog if it shows."""
+    xml = ""
+    for _ in range(3):
+        xml = subprocess.run(["adb", "exec-out", "uiautomator", "dump", "/dev/tty"], capture_output=True, text=True).stdout
+        if not re.search(r"isn.t responding", xml):
+            return xml
+        m = re.search(r'text="Wait"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', xml)
+        if not m:
+            return xml
+        x1, y1, x2, y2 = map(int, m.groups())
+        adb("shell", "input", "tap", str((x1 + x2) // 2), str((y1 + y2) // 2))
+        time.sleep(2)
+    return xml
+
+
+def node_center(xml, pattern):
+    """Centre of the first UI node whose attributes match `pattern` (a regex over the node tag)."""
+    for node in re.finditer(r"<node [^>]*>", xml):
+        n = node.group(0)
+        if re.search(pattern, n):
+            m = re.search(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', n)
+            if m:
+                x1, y1, x2, y2 = map(int, m.groups())
+                if x2 > x1 and y2 > y1:
+                    return (x1 + x2) // 2, (y1 + y2) // 2
+    return None
+
+
+def texts(xml):
+    return [t for t in re.findall(r'text="([^"]+)"', xml) if t.strip()]
+
+
+def state():
+    return cdp.evaluate(STATE_JS)
+
+
+def safe_state():
+    try:
+        return state()
+    except SystemExit as e:
+        return {"error": str(e)}
+
+
+def brief(st, *keys):
+    return {k: st.get(k) for k in keys}
+
+
+def check(name, ok, detail):
+    results.append({"check": name, "pass": bool(ok), "detail": detail})
+    print(("PASS " if ok else "FAIL ") + name + " — " + json.dumps(detail)[:700])
+    if not ok:
+        print(f"::error::platform check failed: {name}")
+
+
+def wait_for(pred, seconds, what):
+    end = time.time() + seconds
+    last = None
+    while time.time() < end:
+        last = safe_state()
+        try:
+            if "error" not in last and pred(last):
+                return last
+        except (KeyError, TypeError):
+            pass
+        dump()
+        time.sleep(2)
+    print(f"timed out waiting for {what}: {json.dumps(last)[:400]}")
+    return last or {}
+
+
+def pid():
+    return adb("shell", "pidof", PKG).strip()
+
+
+def resumed():
+    """The package of the resumed (top) activity."""
+    out = adb("shell", "dumpsys", "activity", "activities")
+    m = re.search(r"(?:topResumedActivity|mResumedActivity|ResumedActivity)[:=].*? ([\w.]+)/", out)
+    return m.group(1) if m else None
+
+
+def webview_origin():
+    m = re.search(r'class="android\.webkit\.WebView"[^>]*bounds="\[(\d+),(\d+)\]', dump())
+    return (int(m.group(1)), int(m.group(2))) if m else (0, 0)
+
+
+def touch(*args):
+    r = subprocess.run([sys.executable, os.path.join(HERE, "touch.py"), *map(str, args)], capture_output=True, text=True)
+    print("  " + (r.stdout.strip() or f"touch.py {' '.join(map(str, args))}"))
+    if r.returncode != 0:
+        print("  touch.py failed:\n" + r.stderr.strip())
+    return r.returncode == 0
+
+
+RECT_JS = r"""
+((sel, text) => {
+  const vis = e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
+  const els = [...document.querySelectorAll(sel)].filter(e => !text || (e.textContent || '').trim().startsWith(text)).filter(vis);
+  const e = els[0];
+  if (!e) return null;
+  e.scrollIntoView({ block: 'center', inline: 'center' });
+  const r = e.getBoundingClientRect();
+  return { x: r.x + r.width / 2, y: r.y + r.height / 2, dpr: devicePixelRatio };
+})(%s, %s)
+"""
+
+
+def tap_el(sel, text=None):
+    """A real tap on the page element matching `sel` (and starting with `text`)."""
+    try:
+        c = cdp.evaluate(RECT_JS % (json.dumps(sel), json.dumps(text)))
+    except SystemExit as e:
+        print("  page not reachable: %s" % e)
+        return False
+    if not c:
+        print(f"  no element {sel} {text or ''}")
+        return False
+    time.sleep(0.4)
+    ox, oy = webview_origin()
+    return touch("tap", round(ox + c["x"] * c["dpr"]), round(oy + c["y"] * c["dpr"]))
+
+
+def tap_node(pattern, what):
+    xml = dump()
+    c = node_center(xml, pattern)
+    if not c:
+        print(f"  {what} not on screen; texts: {texts(xml)[:30]}")
+        return False
+    return touch("tap", *c)
+
+
+def key(*codes):
+    if len(codes) == 1:
+        adb("shell", "input", "keyevent", codes[0])
+    else:
+        adb("shell", "input", "keycombination", *codes)
+    time.sleep(1.2)
+
+
+def media_uri(name):
+    for attempt in range(15):
+        for coll in ("downloads", "file"):
+            rows = adb("shell", "content", "query", "--uri", f"content://media/external/{coll}", "--projection", "_id",
+                       "--where", f"\"_display_name='{name}'\"")
+            m = re.search(r"_id=(\d+)", rows)
+            if m:
+                return f"content://media/external/{coll}/{m.group(1)}"
+        if attempt == 3:
+            adb("shell", "am", "broadcast", "-a", "android.intent.action.MEDIA_SCANNER_SCAN_FILE", "-d", f"file:///sdcard/Download/{name}")
+        time.sleep(2)
+    return None
+
+
+def counter_number(st):
+    m = re.search(r"(\d+)", st.get("counter") or "")
+    return int(m.group(1)) if m else None
+
+
+def counter_total(st):
+    m = re.search(r"/\s*(\d+)", st.get("counter") or "")
+    return int(m.group(1)) if m else None
+
+
+def pdf_pages(path):
+    with open(path, "rb") as f:
+        data = f.read()
+    return len(re.findall(rb"/Type\s*/Page(?![a-z])", data))
+
+
+def phone():
+    return (safe_state().get("shell") or "") == "phone"
+
+
+# ── 1. Open with: .docx and .xlsx ────────────────────────────────────────────
+DOCX, XLSX, SHARE_PDF = "chuvadi-test.docx", "chuvadi-test.xlsx", "chuvadi-share.pdf"
+office.docx(os.path.join(OUT, DOCX))
+office.xlsx(os.path.join(OUT, XLSX))
+subprocess.run([sys.executable, os.path.join(HERE, "make-test-pdf.py"), os.path.join(OUT, SHARE_PDF), "4"], check=True)
+for name in (DOCX, XLSX, SHARE_PDF):
+    adb("push", os.path.join(OUT, name), f"/sdcard/Download/{name}")
+
+for name, mime, marker, shotname in (
+        (DOCX, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", office.DOCX_MARKER, "p1-docx"),
+        (XLSX, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", office.XLSX_MARKER, "p2-xlsx")):
+    uri = media_uri(name)
+    print(adb("shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", str(uri), "-t", mime,
+              "-p", PKG, "--grant-read-uri-permission").strip())
+    st = wait_for(lambda s: marker in (s.get("text") or ""), 60, f"{name} to show")
+    shot(shotname)
+    check(f"Open with {name} (ACTION_VIEW content://) shows its content",
+          uri is not None and marker in (st.get("text") or ""), {"uri": uri, "tab": st.get("tab"), "marker": marker})
+
+# ── 2. Share to Chuvadi: ACTION_SEND with a PDF stream ────────────────────────
+# The URI goes in both EXTRA_STREAM (what a sharing app sets) and the data field, because `am`
+# grants --grant-read-uri-permission on the data URI; DocumentImport reads EXTRA_STREAM.
+uri = media_uri(SHARE_PDF)
+print(adb("shell", "am", "start", "-a", "android.intent.action.SEND", "-t", "application/pdf", "-d", str(uri),
+          "--eu", "android.intent.extra.STREAM", str(uri), "-p", PKG, "--grant-read-uri-permission").strip())
+st = wait_for(lambda s: SHARE_PDF.split(".")[0] in (s.get("tab") or "") and s.get("pages", 0) >= 1 and counter_total(s) == 4,
+              60, "the shared PDF to open")
+shot("p3-shared")
+check("Share to Chuvadi (ACTION_SEND, EXTRA_STREAM) opens the PDF in a new tab",
+      SHARE_PDF.split(".")[0] in (st.get("tab") or "") and counter_total(st) == 4, brief(st, "tab", "counter", "pages"))
+
+# Touch input (touch.py) needs a root adbd; the intents above ran as the shell user on purpose
+# (a grant from root's `am` doesn't reach the app the same way).
+print(adb("root").strip())
+adb("wait-for-device")
+for _ in range(20):
+    if adb("shell", "id -u").strip() == "0":
+        break
+    time.sleep(1)
+time.sleep(2)
+
+# ── 3. Rotation with a document open ─────────────────────────────────────────
+base = wait_for(lambda s: counter_total(s) == 4, 30, "the shared PDF")
+pid0 = pid()
+adb("shell", "cmd", "window", "user-rotation", "lock", "1")
+land = wait_for(lambda s: s["innerW"] > s["innerH"], 20, "landscape")
+time.sleep(1.5)
+land = safe_state()
+shot("p4-landscape")
+check("rotation to landscape keeps the process, tab and page; no sideways overflow",
+      pid() == pid0 and land.get("innerW", 0) > land.get("innerH", 0) and land.get("tab") == base.get("tab")
+      and land.get("counter") == base.get("counter") and (land.get("overflowPage") or 0) <= 1,
+      {"pid": [pid0, pid()], "size": [land.get("innerW"), land.get("innerH")], "tab": land.get("tab"),
+       "counter": [base.get("counter"), land.get("counter")], "overflowPage": land.get("overflowPage"), "shell": land.get("shell")})
+adb("shell", "cmd", "window", "user-rotation", "lock", "0")
+port = wait_for(lambda s: s["innerH"] > s["innerW"], 20, "portrait")
+time.sleep(1.5)
+port = safe_state()
+check("rotation back to portrait keeps the process and tab",
+      pid() == pid0 and port.get("tab") == base.get("tab") and (port.get("overflowPage") or 0) <= 1,
+      {"pid": pid(), "size": [port.get("innerW"), port.get("innerH")], "tab": port.get("tab"), "overflowPage": port.get("overflowPage")})
+
+# ── 4. Hardware keyboard ─────────────────────────────────────────────────────
+# Focus the page with a tap on the desk margin (not a button), then real key events.
+st = safe_state()
+if st.get("desk"):
+    d = st["desk"]
+    ox, oy = webview_origin()
+    touch("tap", round(ox + (d["x"] + d["w"] / 2) * st["dpr"]), round(oy + (d["y"] + 8) * st["dpr"]))
+    time.sleep(1)
+k0 = safe_state()
+key("KEYCODE_DPAD_RIGHT")
+k1 = wait_for(lambda s: (counter_number(s) or 0) > (counter_number(k0) or 0), 6, "→ to change the page")
+check("keyboard → goes to the next page", (counter_number(k1) or 0) > (counter_number(k0) or 0),
+      {"before": k0.get("counter"), "after": k1.get("counter")})
+key("KEYCODE_CTRL_LEFT", "KEYCODE_EQUALS")
+k2 = wait_for(lambda s: (s.get("pageW") or 0) > (k1.get("pageW") or 0) * 1.05, 6, "Ctrl = to zoom in")
+check("keyboard Ctrl = zooms in", (k2.get("pageW") or 0) > (k1.get("pageW") or 0) * 1.05,
+      {"pageW": [k1.get("pageW"), k2.get("pageW")]})
+key("KEYCODE_CTRL_LEFT", "KEYCODE_0")
+key("KEYCODE_CTRL_LEFT", "KEYCODE_F")
+kf = wait_for(lambda s: s.get("find") is not None, 6, "Ctrl F to open find")
+adb("shell", "input", "text", "test")
+kf = wait_for(lambda s: (s.get("find") or {}).get("value") == "test" and re.search(r"[1-9]", s.get("findCount") or ""), 10, "find results")
+shot("p5-find")
+check("keyboard Ctrl F opens find; typed text finds matches",
+      (kf.get("find") or {}).get("value") == "test" and bool(re.search(r"[1-9]", kf.get("findCount") or "")),
+      {"find": kf.get("find"), "count": kf.get("findCount")})
+
+# ── 5. Soft keyboard ─────────────────────────────────────────────────────────
+# The emulator may report a hardware keyboard; ask Android to show the on-screen one anyway.
+adb("shell", "settings", "put", "secure", "show_ime_with_hard_keyboard", "1")
+key("KEYCODE_ESCAPE")  # close find from step 4
+h_pre = safe_state()  # window height with no keyboard
+key("KEYCODE_CTRL_LEFT", "KEYCODE_F")
+h0 = wait_for(lambda s: s.get("find") is not None, 6, "find to open")
+tap_el(".rfind-box")
+time.sleep(2.5)
+ime = adb("shell", "dumpsys", "input_method")
+win_ime = adb("shell", "dumpsys", "window", "InputMethod")
+save("ime.txt", ime + "\n\n" + win_ime)
+shown = bool(re.search(r"(mInputShown|mIsInputViewShown|isInputViewShown)\S*=true", ime)) or "imeVisible=true" in win_ime
+h1 = safe_state()
+shot("p6-soft-keyboard")
+f = (h1.get("find") or {}).get("rect") or {}
+visible = f and f.get("y", -1) >= 0 and f.get("y", 0) + f.get("h", 0) <= (h1.get("vvH") or 0) + 1
+check("soft keyboard opens for the find box and the box stays visible above it",
+      shown and (h1.get("find") or {}).get("focused") and visible and (h1.get("innerH") or 0) < (h_pre.get("innerH") or 0),
+      {"imeShown": shown, "focused": (h1.get("find") or {}).get("focused"), "findRect": f,
+       "innerH": [h_pre.get("innerH"), h1.get("innerH")], "visualViewportH": h1.get("vvH")})
+key("KEYCODE_BACK")   # hides the keyboard (Android's own first back)
+key("KEYCODE_ESCAPE")  # closes find
+time.sleep(1)
+
+
+# ── 6. Printing through PrintManager ─────────────────────────────────────────
+def open_print_card():
+    if phone():
+        tap_el('.ph-bar button[aria-label="More"]')
+        wait_for(lambda s: s.get("sheet"), 8, "the ⋮ menu")
+        tap_el(".ph-row", "Print")
+    else:
+        key("KEYCODE_CTRL_LEFT", "KEYCODE_P")
+    return wait_for(lambda s: s.get("printCard"), 10, "the Print card")
+
+
+def print_and_save(tag):
+    """Taps the card's Print button, then saves through the system "Save as PDF" printer.
+    Returns (dialog_seen, saved_pdf_path_or_None, evidence)."""
+    adb("shell", "touch", "/data/local/tmp/chvd-print-mark")
+    time.sleep(1.1)
+    tap_el('section.chvd-card[aria-label="Print"] .footer .primary')
+    seen, xml = False, ""
+    for _ in range(15):
+        time.sleep(2)
+        if (resumed() or "").startswith("com.android.printspooler"):
+            seen = True
+            break
+    time.sleep(3)  # preview renders
+    xml = dump()
+    shot(f"p7-print-dialog-{tag}")
+    ev = {"resumed": resumed(), "dialogTexts": texts(xml)[:40]}
+    if not seen:
+        return False, None, ev
+    # "Save as PDF" is the emulator's default printer; its button saves through the file picker.
+    if not tap_node(r'resource-id="com\.android\.printspooler:id/print_button"', "the PDF button"):
+        return True, None, ev
+    time.sleep(4)
+    xml = dump()
+    shot(f"p8-save-{tag}")
+    ev["pickerTexts"] = texts(xml)[:40]
+    tap_node(r'(text="(SAVE|Save)"|resource-id="android:id/button1")', "Save")
+    path = None
+    for _ in range(15):
+        time.sleep(2)
+        found = adb("shell", "find", "/sdcard", "-name", "'*.pdf'", "-newer", "/data/local/tmp/chvd-print-mark").split()
+        if found:
+            path = found[0]
+            break
+    if path:
+        local = os.path.join(OUT, f"printed-{tag}.pdf")
+        adb("pull", path, local)
+        adb("shell", "rm", "-f", f"'{path}'")
+        ev["saved"] = path
+        return True, local, ev
+    return True, None, ev
+
+
+pc = open_print_card()
+shot("p7-print-card")
+check("Print opens the Print card", pc.get("printCard"), brief(pc, "printButton", "shell"))
+if pc.get("printCard"):
+    seen, local, ev = print_and_save("all")
+    check("Print hands the document to Android's print dialog (PrintManager)", seen, ev)
+    n = pdf_pages(local) if local else None
+    check("Save as PDF from the print dialog gives every page (4)", n == 4, {"pages": n, **{k: ev.get(k) for k in ("saved", "pickerTexts")}})
+    # Back in the app: the card is still open after printing; a custom range goes through
+    # PageOperations.Assemble into a temporary PDF.
+    wait_for(lambda s: True, 5, "the app")
+    pc = safe_state() if safe_state().get("printCard") else open_print_card()
+    tap_el('section.chvd-card[aria-label="Print"] .seg button', "Custom")
+    time.sleep(1)
+    tap_el('section.chvd-card[aria-label="Print"] input')
+    time.sleep(1)
+    adb("shell", "input", "text", "2-3")
+    if "imeVisible=true" in adb("shell", "dumpsys", "window", "InputMethod"):
+        key("KEYCODE_BACK")  # hide the keyboard so it doesn't cover the Print button
+    pr = wait_for(lambda s: "2" in (s.get("printButton") or ""), 6, "the custom range")
+    seen2, local2, ev2 = print_and_save("range")
+    n2 = pdf_pages(local2) if local2 else None
+    check("Printing a custom range (2-3) gives a 2-page PDF", seen2 and n2 == 2,
+          {"button": pr.get("printButton"), "pages": n2, "saved": ev2.get("saved"), "resumed": ev2.get("resumed")})
+
+# ── 7. Back ──────────────────────────────────────────────────────────────────
+wait_for(lambda s: True, 5, "the app")
+if not safe_state().get("printCard"):
+    open_print_card()
+b0 = safe_state()
+key("KEYCODE_BACK")
+b1 = safe_state()
+check("back closes an open card (Print) and stays in the app",
+      b0.get("printCard") and not b1.get("printCard") and resumed() == PKG,
+      {"cardBefore": b0.get("printCard"), "cardAfter": b1.get("printCard"), "resumed": resumed()})
+if b1.get("printCard"):
+    tap_el('section.chvd-card[aria-label="Print"] button.close')
+    time.sleep(1)
+
+if phone():
+    tap_el('.ph-bar button[aria-label="More"]')
+    s0 = wait_for(lambda s: s.get("sheet"), 8, "the ⋮ menu")
+    key("KEYCODE_BACK")
+    s1 = safe_state()
+    check("phone: back (key) closes the ⋮ sheet and stays in the app",
+          s0.get("sheet") and not s1.get("sheet") and resumed() == PKG,
+          {"sheetBefore": s0.get("sheet"), "sheetAfter": s1.get("sheet"), "resumed": resumed()})
+    tap_el('.ph-bar button[aria-label="More"]')
+    s0 = wait_for(lambda s: s.get("sheet"), 8, "the ⋮ menu")
+    wm = re.search(r"(\d+)x(\d+)", adb("shell", "wm", "size"))
+    sw, sh = int(wm.group(1)), int(wm.group(2))
+    touch("swipe", 2, sh // 2, sw // 2, sh // 2, 250)   # the back gesture: from the left edge inwards
+    time.sleep(1.5)
+    s1 = safe_state()
+    shot("p9-back-gesture")
+    check("phone: back (edge gesture) closes the ⋮ sheet and stays in the app",
+          s0.get("sheet") and not s1.get("sheet") and resumed() == PKG,
+          {"sheetBefore": s0.get("sheet"), "sheetAfter": s1.get("sheet"), "resumed": resumed()})
+
+r0 = safe_state()
+pid0 = pid()
+key("KEYCODE_BACK")
+time.sleep(1.5)
+left = resumed()
+alive = pid()
+check("back with nothing open leaves the app; the process stays", left != PKG and alive == pid0,
+      {"resumed": left, "pid": [pid0, alive]})
+adb("shell", "monkey", "-p", PKG, "-c", "android.intent.category.LAUNCHER", "1")
+r1 = wait_for(lambda s: s.get("tab"), 20, "the app to come back")
+shot("p10-relaunched")
+check("relaunch returns to the same process and tab", pid() == pid0 and r1.get("tab") == r0.get("tab") and resumed() == PKG,
+      {"pid": [pid0, pid()], "tab": [r0.get("tab"), r1.get("tab")]})
+
+
+# ── 8. Split screen ──────────────────────────────────────────────────────────
+def task_id():
+    out = adb("shell", "dumpsys", "activity", "activities")
+    m = re.search(r"Task\{[0-9a-f]+ #(\d+)[^}]*?(?:A=|I=)[^ }]*" + re.escape(PKG), out)
+    return m.group(1) if m else None
+
+
+def wmshell(*args):
+    return adb("shell", "dumpsys", "activity", "service", "SystemUIService", "WMShell", *args)
+
+
+full = safe_state()
+pid0 = pid()
+adb("shell", "am", "start", "-a", "android.settings.SETTINGS")
+time.sleep(3)
+adb("shell", "monkey", "-p", PKG, "-c", "android.intent.category.LAUNCHER", "1")
+time.sleep(3)
+tid = task_id()
+out = wmshell("splitscreen", "moveToSideStage", str(tid), "1") if tid else "no task id"
+save("split-command.txt", f"task {tid}\n{out}\n" + adb("shell", "dumpsys", "activity", "activities")[:20000])
+split = wait_for(lambda s: s["innerW"] * s["innerH"] < full["innerW"] * full["innerH"] * 0.75, 20, "the split window")
+time.sleep(2)
+split = safe_state()
+shot("p11-split")
+in_split = split.get("innerW", 0) * split.get("innerH", 0) < full.get("innerW", 1) * full.get("innerH", 1) * 0.75
+check("split screen: the app re-lays out to the half window (same process, no sideways overflow)",
+      in_split and pid() == pid0 and (split.get("overflowPage") or 0) <= 1 and split.get("tab") == full.get("tab"),
+      {"size": [[full.get("innerW"), full.get("innerH")], [split.get("innerW"), split.get("innerH")]],
+       "formFactor": [full.get("formFactor"), split.get("formFactor")], "shell": [full.get("shell"), split.get("shell")],
+       "overflowPage": split.get("overflowPage"), "pid": [pid0, pid()], "command": out.strip()[:200]})
+wmshell("splitscreen", "removeFromSideStage", str(tid))
+adb("shell", "am", "start", "--windowingMode", "1", "-n", adb("shell", "cmd", "package", "resolve-activity", "--brief", PKG).split()[-1])
+back = wait_for(lambda s: abs(s["innerW"] - full["innerW"]) <= 2 and abs(s["innerH"] - full["innerH"]) <= 60, 20, "full screen")
+shot("p12-full-again")
+check("leaving split screen returns to the full window (same process)",
+      abs((back.get("innerW") or 0) - (full.get("innerW") or 0)) <= 2 and pid() == pid0,
+      {"size": [back.get("innerW"), back.get("innerH")], "formFactor": back.get("formFactor"), "pid": pid()})
+
+# ── No crash in our process during all of this ──────────────────────────────
+log = adb("logcat", "-d")
+crash = [ln for ln in log.splitlines() if re.search(rf"AndroidRuntime: Process: {re.escape(PKG)}|Fatal signal .*\({re.escape(PKG)}\)|ANR in {re.escape(PKG)}", ln)]
+check("no crash or ANR in the app", not crash, {"lines": crash[:5]})
+
+with open(os.path.join(OUT, "platform.json"), "w") as f:
+    json.dump(results, f, indent=2)
+failed = [r["check"] for r in results if not r["pass"]]
+print(f"{len(results) - len(failed)}/{len(results)} platform checks passed")
+sys.exit(1 if failed else 0)

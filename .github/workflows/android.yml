@@ -1,8 +1,8 @@
 name: Android
 
 # Builds the Android test composition (docs/android/integration/compose.sh): a pinned snapshot of
-# platform/foundation + the Mobile app UI chat's new Ui files from a pinned platform/mobile-ui + the
-# hooks re-based on Foundation (pending Foundation's combined patch) + this branch's Android host.
+# platform/mobile-ui (which contains platform/foundation — checked) + the Mobile UI chat's own hook
+# patch (pending Foundation's combined patch, D-26) + this branch's Android host.
 # Produces the Play Store .aab plus an .apk, then on Android emulators — phone and tablet, API 35
 # (the minimum) and API 36 (the latest) — runs the smoke test and real touch-gesture checks.
 #
@@ -20,8 +20,8 @@ on:
 env:
   # platform/foundation: Groups A, B and C applied; chuvadi-pdf 3.31.2 (D-54) + Chuvadi.Fonts 1.0.0.
   FOUNDATION_REF: be4498adb3f195d0a69a19adf2de709ff8a45f15
-  # platform/mobile-ui: phone shell, tablet sizing, touch gestures.
-  MOBILEUI_REF: ea5d775cde9f7ef15abcca3b14a18881f52d6463
+  # platform/mobile-ui: phone shell, tablet sizing, touch gestures; must contain FOUNDATION_REF.
+  MOBILEUI_REF: f29b6a6624a7fdcc04673743c9ddd374a5ec61f1
   DOTNET_NOLOGO: '1'
   DOTNET_CLI_TELEMETRY_OPTOUT: '1'
 
@@ -34,20 +34,15 @@ jobs:
         with:
           path: platforms
 
-      - name: Check out the Foundation snapshot (pinned, read-only)
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ env.FOUNDATION_REF }}
-          path: reader
-
-      - name: Check out the Mobile app UI snapshot (pinned, read-only)
+      - name: Check out the Mobile app UI snapshot (pinned, read-only; contains Foundation)
         uses: actions/checkout@v4
         with:
           ref: ${{ env.MOBILEUI_REF }}
-          path: mobileui
+          path: reader
+          fetch-depth: 0
 
-      - name: Compose Foundation + Mobile UI + Android host
-        run: bash platforms/docs/android/integration/compose.sh reader mobileui platforms
+      - name: Compose Mobile UI (+ its hooks) + Android host
+        run: bash platforms/docs/android/integration/compose.sh reader platforms ${{ env.FOUNDATION_REF }}
 
       - uses: actions/setup-dotnet@v4
         with:

@@ -321,3 +321,23 @@ mobile.js recognises it on three emulators. Smoke test passes on all four. What 
    pointercancel, so the WebView took the drag as a pan after the press armed. mobile.js needs to stop the pan once a press arms
    (`touch-action: none` on the armed element, or a non-passive touchmove `preventDefault`).
 Screenshots: `gestures-phone.png`, `gestures-tablet.png` (sent to the coordinator).
+
+### 35. Composition from platform/mobile-ui f29b6a6; platform-layer emulator tests
+- **Composition simplified.** platform/mobile-ui f29b6a6 already contains Foundation be4498a (merged), and the
+  Mobile UI chat now ships its own hook patch (`docs/mobile-ui/proposal/mobile-ui-hooks-2.patch`, H-1 MainLayout,
+  H-3 Reader). `compose.sh` now: checkout of mobile-ui → check that FOUNDATION_REF is an ancestor → apply that
+  patch (pending Foundation's combined patch, D-26) → Android host. My own `mobile-ui-on-foundation.patch` is
+  retired. Sandbox build of the composition: 0 warnings, 0 errors.
+- **`platform.py`** (third emulator stage, after gestures), each check evidenced by page state, Android state
+  (dumpsys / uiautomator) or the produced file:
+  Open with .docx / .xlsx (their text on screen) · Share to Chuvadi (ACTION_SEND EXTRA_STREAM → new tab) ·
+  rotation with a document open (same process, tab, page; no sideways overflow) · hardware keyboard
+  (→ next page, Ctrl = zoom, Ctrl F + typing finds) · soft keyboard (shows; the find box stays above it) ·
+  printing (Print card → PrintManager dialog → Save as PDF → the saved PDF has all 4 pages; range 2-3 → 2 pages) ·
+  back (closes a card; phone: closes the ⋮ sheet by key and by edge gesture; nothing open → leaves the app,
+  process kept; relaunch → same tab) · split screen (WMShell moveToSideStage → re-layout at the half window,
+  same process; then full screen again) · no crash / ANR.
+- Test files: `make-test-office.py` writes a minimal .docx and .xlsx (standard library); checked locally with
+  the Reader's own `DocxViewService` / `XlsxViewService` before use.
+- **Not testable from the UI: share out.** No Ui command calls `IShare` (Android implements it: chooser with a
+  read-only content URI). Reported to the coordinator.
