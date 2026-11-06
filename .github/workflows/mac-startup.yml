@@ -1,0 +1,70 @@
+name: Mac startup
+
+# D-50: compare the startup options the .NET for Mac Catalyst SDK offers (ReadyToRun is a CoreCLR format and
+# does not apply — Mac Catalyst runs on Mono). Each variant is built, ad-hoc signed and launched six times
+# through LaunchServices; the job summary lists bundle size and every launch's timings.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [platform/mac]
+    paths:
+      - '.github/workflows/mac-startup.yml'
+
+jobs:
+  startup:
+    name: ${{ matrix.variant }}
+    runs-on: macos-26
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: default (AOT on arm64, JIT on x64)
+            props: ''
+          - variant: interpreter
+            props: '-p:UseInterpreter=true'
+          - variant: AOT + LLVM
+            props: '-p:MtouchUseLlvm=true'
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      DOTNET_NOLOGO: '1'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.4xx'
+
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          sudo xcodebuild -runFirstLaunch
+
+      - name: Install MAUI Mac Catalyst workload (pinned)
+        run: dotnet workload install maui-maccatalyst --version 10.0.401
+
+      - name: Build
+        run: |
+          dotnet restore src/ChuvadiReader.Mac/ChuvadiReader.Mac.csproj --configfile ci/nuget.config
+          dotnet build src/ChuvadiReader.Mac/ChuvadiReader.Mac.csproj -c Release --no-restore ${{ matrix.props }}
+
+      - name: Sign and measure
+        run: |
+          APP=$(find src/ChuvadiReader.Mac/bin/Release -maxdepth 3 -name '*.app' -type d | awk -F/ '{print NF" "$0}' | sort -n | head -1 | cut -d' ' -f2-)
+          codesign --force --deep --sign - --entitlements src/ChuvadiReader.Mac/Platforms/MacCatalyst/Entitlements.plist "$APP"
+          {
+            echo "### ${{ matrix.variant }} — $(sysctl -n machdep.cpu.brand_string)"
+            echo "Bundle: $(du -sh "$APP" | cut -f1)"
+            echo '| launch | main | window | WebView ready | first render |'
+            echo '|---|---|---|---|---|'
+          } >> "$GITHUB_STEP_SUMMARY"
+          for i in 1 2 3 4 5 6; do
+            rm -f run.log
+            perl -e 'alarm shift; exec @ARGV' 120 open -W -n --env CHUVADI_SMOKE_EXIT=1 \
+              --stdout "$PWD/run.log" --stderr "$PWD/run.log" "$APP" || true
+            grep -q CHUVADI_SMOKE_OK run.log || { cat run.log; echo "launch $i failed"; exit 1; }
+            ms() { grep "CHUVADI_STARTUP $1 " run.log | sed -E 's/.* ([0-9]+)ms$/\1/'; }
+            echo "| $i | $(ms main) | $(ms window) | $(ms webview-ready) | $(ms first-render) |" | tee -a "$GITHUB_STEP_SUMMARY"
+          done
