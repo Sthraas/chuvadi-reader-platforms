@@ -1,0 +1,34 @@
+DRAFT FOR LEGAL REVIEW - NOT YET APPROVED BY ARUN'S COUNSEL. Do not ship in an installer until this line is removed.
+
+CHUVADI READER - END USER LICENCE AGREEMENT
+
+Please read this agreement before installing or using Chuvadi Reader. By installing, copying or using the software you agree to it. If you do not agree, do not install or use the software.
+
+1. Who this agreement is with. This agreement is between you (an individual, or the organisation you install the software for) and Sthraas Intelligence Pvt Ltd, India ("Sthraas"), the owner of Chuvadi Reader (the "Software").
+
+2. Licence. Chuvadi Reader is free. Sthraas grants you a free of charge, non-exclusive, non-transferable, revocable licence to install and use the Software on any number of devices you or your organisation own or control, for personal, educational, commercial or institutional work. The Software is licensed, not sold, and is not open-source software.
+
+3. What you may not do without Sthraas's written permission:
+   - share, publish, sell, rent, lend or redistribute the Software or its installers, or offer it as a hosted service to others;
+   - modify the Software or make derivative works of it;
+   - reverse engineer, decompile or disassemble it, except where the law allows this anyway;
+   - remove or change any copyright, trademark or licence notice.
+   Organisations may deploy the unmodified installer inside their own organisation.
+
+4. Your documents. The desktop and mobile apps work on your device; your documents are not sent to Sthraas. You remain the owner of your documents and are responsible for keeping copies of them. Features that work online (for example signing in, or the Chuvadi web portal) are covered by their own terms and privacy notice.
+
+5. Updates. Sthraas may release updates. Updates are covered by this agreement unless they come with their own terms.
+
+6. Third-party components. The Software includes components licensed under their own terms, listed in THIRD-PARTY-NOTICES.txt, which is installed with the Software.
+
+7. No warranty. The Software is provided "as is", without warranty of any kind, express or implied, including merchantability, fitness for a particular purpose and non-infringement. It is not a medical device and is not intended for diagnosis or treatment decisions.
+
+8. Limitation of liability. To the fullest extent permitted by law, Sthraas is not liable for any indirect, incidental, special or consequential damages, or for loss of data, documents, profits or revenue, arising from the Software. Where liability cannot be excluded, it is limited to the amount you paid for the Software (which is zero).
+
+9. Termination. This agreement ends automatically if you breach it. You must then stop using the Software and delete all copies.
+
+10. Governing law. Laws of India; courts at [CITY - to be confirmed].
+
+11. Contact. [legal contact address - to be confirmed]
+
+Copyright (c) 2026 Sthraas Intelligence Pvt Ltd. All rights reserved.

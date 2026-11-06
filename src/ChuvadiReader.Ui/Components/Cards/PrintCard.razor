@@ -66,7 +66,7 @@
 </section>
 
 @code {
-    private const string UnavailableText = "Printing isn't available on this platform";
+    private const string NoPrintingText = "Printing isn't available on this platform";
 
     public enum RangeMode { All, Current, Custom }
 
@@ -99,7 +99,12 @@
     private IPrintService PrintService =>
         _print ??= Services.GetService(typeof(IPrintService)) as IPrintService ?? new NoopPrintService();
 
-    private bool Available => PrintService.IsAvailable && !string.IsNullOrEmpty(Path);
+    private bool Available => PrintService.IsAvailable && !string.IsNullOrEmpty(Path) && Allowed;
+
+    /// <summary>False when the file's own permissions forbid printing (every platform).</summary>
+    private bool Allowed => Session?.Document.AllowsPrinting != false;
+
+    private string UnavailableText => Allowed ? NoPrintingText : PrintPermission.Refused;
 
     private int? PageCount => Session?.Document.PageCount;
 

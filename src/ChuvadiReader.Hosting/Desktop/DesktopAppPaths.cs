@@ -6,6 +6,9 @@ namespace ChuvadiReader.Hosting.Desktop;
 /// Standard per-user folders on Windows, macOS and Linux. The Windows values equal what Core uses
 /// today (%AppData%\Chuvadi, Documents); macOS uses ~/Library/Application Support/Chuvadi and Linux
 /// follows XDG ($XDG_CONFIG_HOME or ~/.config).
+/// The default save folder is the person's Documents folder even before it exists (it is created
+/// on first save): .NET returns "" for a missing Documents folder, and Core would then save under
+/// the temp folder, which Linux wipes at reboot (Linux chat, BUILD-LOG §17).
 /// </summary>
 public sealed class DesktopAppPaths : IAppPaths
 {
@@ -14,8 +17,32 @@ public sealed class DesktopAppPaths : IAppPaths
         AppDataFolder = ResolveAppData();
         // Same folder Core uses today (Path.GetTempPath()), so moving Core to IAppPaths changes nothing on desktop.
         WorkingFolder = Path.GetTempPath();
-        var docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-        DefaultSaveFolder = string.IsNullOrEmpty(docs) ? null : docs;
+        DefaultSaveFolder = ResolveSaveFolder(
+            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments, Environment.SpecialFolderOption.DoNotVerify),
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+    }
+
+    /// <summary>
+    /// The existing Documents folder when there is one (Windows: always, so nothing changes there);
+    /// else where it would be (XDG_DOCUMENTS_DIR as .NET reads it), unless that is the home folder
+    /// itself; else ~/Documents; null only when there is no home folder.
+    /// </summary>
+    public static string? ResolveSaveFolder(string? existing, string? unverified, string? home)
+    {
+        if (!string.IsNullOrEmpty(existing))
+        {
+            return existing;
+        }
+
+        static string Trim(string p) => p.TrimEnd('/', '\\');
+        if (!string.IsNullOrEmpty(unverified) && Path.IsPathRooted(unverified)
+            && (string.IsNullOrEmpty(home) || !string.Equals(Trim(unverified), Trim(home), StringComparison.Ordinal)))
+        {
+            return unverified;
+        }
+
+        return string.IsNullOrEmpty(home) ? null : Path.Combine(home, "Documents");
     }
 
     public string AppDataFolder { get; }

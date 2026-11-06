@@ -124,6 +124,15 @@ public sealed class GroupBcTests : IDisposable
             desktop.DefaultFolder);
     }
 
+    [Theory]
+    [InlineData("/home/a/Documents", "/home/a/Documents", "/home/a", "/home/a/Documents")]       // exists: as before
+    [InlineData("", "/home/a/Docs", "/home/a", "/home/a/Docs")]                                 // XDG folder not created yet
+    [InlineData("", "/home/a", "/home/a", "/home/a/Documents")]                                 // XDG points at home itself
+    [InlineData("", "", "/home/a", "/home/a/Documents")]                                        // nothing configured
+    [InlineData("", "", "", null)]                                                              // no home folder
+    public void Save_folder_falls_back_when_Documents_is_missing(string existing, string unverified, string home, string? expected) =>
+        Assert.Equal(expected, DesktopAppPaths.ResolveSaveFolder(existing, unverified, home)?.Replace('\\', '/'));
+
     private sealed class NullStorage : IAppStorage
     {
         public Task<string?> GetAsync(string key, CancellationToken ct = default) => Task.FromResult<string?>(null);

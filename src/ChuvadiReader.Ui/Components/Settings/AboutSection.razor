@@ -31,7 +31,7 @@
     <SettingsCard Title="Help" Full="true">
         <SettingRow Label="Keyboard shortcuts"><RowButton OnClick="OpenShortcuts">Open</RowButton></SettingRow>
         <SettingRow Label="What’s new" Soon="true"><RowButton>Open</RowButton></SettingRow>
-        <SettingRow Label="Licences" Hint="Open-source notices" Soon="true"><RowButton>Open</RowButton></SettingRow>
+        <SettingRow Label="Licences" Hint="Licence agreement and third-party notices"><RowButton OnClick="OpenLicences">Open</RowButton></SettingRow>
         <SettingRow Label="Send diagnostics file" Hint="Saved to Desktop — you choose who gets it" Soon="true"><RowButton>Create…</RowButton></SettingRow>
     </SettingsCard>
 </SettingsSection>
@@ -41,4 +41,9 @@
     [Parameter] public EventCallback OnShowShortcuts { get; set; }
 
     private Task OpenShortcuts() => OnShowShortcuts.InvokeAsync();
+
+    /// <summary>Raised when "Licences › Open" is clicked; the page switches to the Licences view.</summary>
+    [Parameter] public EventCallback OnShowLicences { get; set; }
+
+    private Task OpenLicences() => OnShowLicences.InvokeAsync();
 }
