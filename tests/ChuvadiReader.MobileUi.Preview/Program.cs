@@ -5,12 +5,12 @@ using ChuvadiReader.Hosting;
 using ChuvadiReader.MobileUi.Preview;
 using ChuvadiReader.Platform;
 
-// TESTING ONLY. CHVD_FF = phone | tablet | desktop (default phone). Desktop reports Windows so the
+// TESTING ONLY. CHVD_FF = phone | tablet | desktop | web (default phone). Desktop reports Windows so the
 // desktop chrome renders exactly as the WPF host shows it; phone and tablet report Android.
 var ff = (Environment.GetEnvironmentVariable("CHVD_FF") ?? "phone").ToLowerInvariant() switch
 {
     "tablet" => FormFactor.Tablet,
-    "desktop" => FormFactor.Desktop,
+    "desktop" or "web" => FormFactor.Desktop,
     _ => FormFactor.Phone,
 };
 
@@ -21,7 +21,13 @@ builder.Services.AddSingleton<IAppStorage, MemoryStorage>();
 builder.Services.AddSingleton<IFilePicker, FixturePicker>();
 builder.Services.AddSingleton<IImageClipboard, NoClipboard>();
 builder.Services.AddSingleton<IClipboard, NoClipboard>();
-builder.Services.AddSingleton<IPlatformInfo>(new PreviewPlatform(ff));
+var web = Environment.GetEnvironmentVariable("CHVD_FF") == "web";
+builder.Services.AddSingleton<IPlatformInfo>(new PreviewPlatform(ff, web));
+if (web)
+{
+    // The Web host registers these from its configuration; the preview uses the placeholders.
+    builder.Services.AddSingleton(new ChuvadiReader.Ui.Components.Platform.Portal.PortalLinks("https://chuvadi.in/download", null, null));
+}
 
 var app = builder.Build();
 app.UseAntiforgery();

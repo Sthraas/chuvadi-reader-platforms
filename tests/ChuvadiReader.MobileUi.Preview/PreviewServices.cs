@@ -9,10 +9,12 @@ using Path = System.IO.Path;
 
 namespace ChuvadiReader.MobileUi.Preview;
 
-/// <summary>Platform facts for the preview: Android phone / tablet, or Windows desktop.</summary>
-public sealed class PreviewPlatform(FormFactor formFactor) : IPlatformInfo
+/// <summary>Platform facts for the preview: Android phone / tablet, Windows desktop, or the Web portal
+/// (<paramref name="web"/>: server-side, no folders, account menu — for checking portal wording).</summary>
+public sealed class PreviewPlatform(FormFactor formFactor, bool web = false) : IPlatformInfo
 {
-    public PlatformKind Kind => formFactor == FormFactor.Desktop ? PlatformKind.Windows : PlatformKind.Android;
+    public PlatformKind Kind => web ? PlatformKind.Web
+        : formFactor == FormFactor.Desktop ? PlatformKind.Windows : PlatformKind.Android;
 
     public FormFactor FormFactor => formFactor;
 
@@ -22,11 +24,18 @@ public sealed class PreviewPlatform(FormFactor formFactor) : IPlatformInfo
         ? InputKinds.Mouse | InputKinds.Keyboard
         : InputKinds.Touch;
 
-    public ShellChrome Chrome => formFactor == FormFactor.Desktop
+    public ShellChrome Chrome => web ? new ShellChrome(WindowButtons.None, false, true, false, 0)
+        : formFactor == FormFactor.Desktop
         ? new ShellChrome(WindowButtons.Right, false, false, true, 0)
         : new ShellChrome(WindowButtons.None, false, false, false, 0);
 
-    public PlatformCapabilities Capabilities => FixedPlatformInfo.DesktopCapabilities;
+    public PlatformCapabilities Capabilities => web
+        ? FixedPlatformInfo.DesktopCapabilities with
+        {
+            PickFolders = false, SaveInPlace = false, WatchFolders = false, RevealInFolder = false,
+            SavesAsDownload = true, ServerSide = true,
+        }
+        : FixedPlatformInfo.DesktopCapabilities;
 
     public IKeyLabels Keys { get; } = new CtrlKeyLabels();
 }

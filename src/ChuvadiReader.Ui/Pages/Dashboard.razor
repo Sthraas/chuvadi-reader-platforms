@@ -31,7 +31,7 @@
             </h1>
             @if (Platform.Capabilities.ServerSide)
             {
-                <p class="blurb">@LibCountText in your library · @Recents.EncryptedCount encrypted · @ChuvadiReader.Ui.Components.Platform.PlatformText.ServerPrivacy</p>
+                <p class="blurb">@LibCountText in your library · @Recents.EncryptedCount encrypted · @ChuvadiReader.Ui.Components.Platform.PlatformText.HomeServerLine</p>
             }
             else
             {
@@ -45,10 +45,19 @@
                 <span class="drop-ic"><Icon Name="upload" Size="34" /></span>
                 <span class="drop-title">Drop your first document here</span>
                 <span class="drop-sub">PDF, Word or Excel — even password-protected ones.</span>
+                @if (IsPortal)
+                {
+                    <span class="first-actions">
+                        <button type="button" class="btn primary" @onclick="OpenFile">Upload a file…</button>
+                    </span>
+                }
+                else
+                {
                 <span class="first-actions">
                     <button type="button" class="btn primary" @onclick="OpenFile">Open a file…</button>
                     <button type="button" class="btn" @onclick="ChooseLibraryFolder">Choose a library folder</button>
                 </span>
+                }
             </div>
             <p class="tip">Tip: @Platform.Keys.Format("Ctrl K") finds any file or action. Try typing “merge”.</p>
         }
@@ -56,7 +65,14 @@
         {
             <button type="button" class="drop" @onclick="OpenFile" title="Drop a file anywhere on the window, or click to choose one">
                 <span class="drop-ic"><Icon Name="upload" Size="28" /></span>
+                @if (IsPortal)
+                {
+                    <span class="drop-title">Drop a document, or click to upload</span>
+                }
+                else
+                {
                 <span class="drop-title">Drop a document, or click to open</span>
+                }
                 <span class="chips">
                     <span class="chip on">pdf</span>
                     <span class="chip">docx</span>
@@ -261,15 +277,16 @@
 
     // ── Greeting ─────────────────────────────────────────────────────────
 
+    // The Web portal (H3 "Upload", U-11): uploads, not local files.
+    private bool IsPortal => Platform.Kind == ChuvadiReader.Platform.PlatformKind.Web;
+
     private static string DayLine => DateTime.Now.ToString("dddd d MMM yyyy · HH:mm");
 
     private string Greeting
     {
         get
         {
-            var h = DateTime.Now.Hour;
-            var part = h < 12 ? "morning" : h < 17 ? "afternoon" : "evening";
-            return string.IsNullOrWhiteSpace(Profile.Name) ? $"Good {part}." : $"Good {part}, {Profile.Name}.";
+            return GreetingText.For(DateTime.Now.Hour, Profile.Name);
         }
     }
 
