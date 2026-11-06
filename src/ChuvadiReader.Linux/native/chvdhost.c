@@ -335,11 +335,29 @@ static void on_maximized(GObject *obj, GParamSpec *pspec, gpointer data)
     S.event(CHVD_EVENT_MAXIMIZED_CHANGED, gtk_window_is_maximized(GTK_WINDOW(obj)) ? "1" : "0");
 }
 
+/* Window CSS: the pre-paint background and the Linux frame from the design handout — 12 px
+ * corners, square when maximised, tiled or full screen, and square without a compositor
+ * (solid-csd: GTK can't draw transparent corners there). The child (the web view) is clipped
+ * to the rounded box by overflow: hidden on the window. */
+static char S_background[16] = "#F2EAD6";
+
+static void apply_window_css(void)
+{
+    char *css = g_strdup_printf(
+        "window.chvd { background-color: %s; border-radius: 12px; }"
+        "window.chvd.maximized, window.chvd.fullscreen, window.chvd.tiled,"
+        "window.chvd.tiled-top, window.chvd.tiled-bottom, window.chvd.tiled-left, window.chvd.tiled-right,"
+        "window.chvd.solid-csd { border-radius: 0; }",
+        S_background);
+    gtk_css_provider_load_from_string(S.css, css);
+    g_free(css);
+}
+
 /* Background as "#RRGGBB" — painted by both the window and the web view until the page paints. */
 static void apply_background(const char *hex)
 {
     GdkRGBA rgba;
-    if (!hex || !gdk_rgba_parse(&rgba, hex))
+    if (!hex || strlen(hex) != 7 || !gdk_rgba_parse(&rgba, hex))
     {
         return;
     }
@@ -349,9 +367,17 @@ static void apply_background(const char *hex)
         webkit_web_view_set_background_color(S.view, &rgba);
     }
 
-    char *css = g_strdup_printf("window.chvd { background-color: %s; }", hex);
-    gtk_css_provider_load_from_string(S.css, css);
-    g_free(css);
+    g_strlcpy(S_background, hex, sizeof S_background);
+    apply_window_css();
+}
+
+/* Pinch-to-zoom (touchpad or touch screen) would zoom the whole page; the Reader zooms its own
+ * canvas. Claim the gesture before WebKit sees it, as the Windows host turns off pinch zoom. */
+static void on_zoom_begin(GtkGesture *gesture, GdkEventSequence *sequence, gpointer data)
+{
+    (void)data;
+    gtk_gesture_set_state(gesture, GTK_EVENT_SEQUENCE_CLAIMED);
+    (void)sequence;
 }
 
 /*
@@ -435,7 +461,13 @@ CHVD_EXPORT int chvd_create_window(const char *title, const char *app_id, int wi
     g_signal_connect(drop, "drop", G_CALLBACK(on_drop), NULL);
     gtk_widget_add_controller(window, GTK_EVENT_CONTROLLER(drop));
 
+    GtkGesture *zoom = gtk_gesture_zoom_new();
+    gtk_event_controller_set_propagation_phase(GTK_EVENT_CONTROLLER(zoom), GTK_PHASE_CAPTURE);
+    g_signal_connect(zoom, "begin", G_CALLBACK(on_zoom_begin), NULL);
+    gtk_widget_add_controller(GTK_WIDGET(S.view), GTK_EVENT_CONTROLLER(zoom));
+
     gtk_window_set_child(S.window, GTK_WIDGET(S.view));
+    gtk_widget_set_overflow(window, GTK_OVERFLOW_HIDDEN);
     apply_background(background);
 
     g_signal_connect(window, "close-request", G_CALLBACK(on_close_request), NULL);
@@ -750,4 +782,71 @@ CHVD_EXPORT void chvd_file_dialog(int kind, int token, const char *title, const 
     }
 
     g_object_unref(dialog); /* the async call keeps its own reference */
+}
+
+/* Puts text on the system clipboard. Main thread. */
+CHVD_EXPORT void chvd_clipboard_set_text(const char *text)
+{
+    gdk_clipboard_set_text(gdk_display_get_clipboard(gdk_display_get_default()), text ? text : "");
+}
+
+/* The desktop's window-button layout (GtkSettings gtk-decoration-layout, which GTK reads from
+ * GNOME's button-layout setting or KDE's GTK settings), e.g. "appmenu:minimize,maximize,close".
+ * Returns 1 when the close button is on the left, 0 when on the right. Main thread, after init. */
+CHVD_EXPORT int chvd_buttons_on_left(void)
+{
+    char *layout = NULL;
+    g_object_get(gtk_settings_get_default(), "gtk-decoration-layout", &layout, NULL);
+    int left = 0;
+    if (layout)
+    {
+        const char *colon = strchr(layout, ':');
+        const char *close = strstr(layout, "close");
+        left = close && colon && close < colon;
+        g_free(layout);
+    }
+
+    return left;
+}
+
+/* "Show in folder": asks the desktop's file manager to open the folder with the file selected
+ * (freedesktop org.freedesktop.FileManager1.ShowItems — Nautilus, Dolphin, Nemo, Thunar…).
+ * Any thread (GDBus sync calls are thread-safe). Returns 1 when a file manager accepted it. */
+CHVD_EXPORT int chvd_reveal(const char *path)
+{
+    if (!path || !*path)
+    {
+        return 0;
+    }
+
+    GError *error = NULL;
+    GDBusConnection *bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
+    if (!bus)
+    {
+        g_clear_error(&error);
+        return 0;
+    }
+
+    char *uri = g_filename_to_uri(path, NULL, NULL);
+    if (!uri)
+    {
+        g_object_unref(bus);
+        return 0;
+    }
+
+    const char *uris[] = {uri, NULL};
+    GVariant *reply = g_dbus_connection_call_sync(
+        bus, "org.freedesktop.FileManager1", "/org/freedesktop/FileManager1", "org.freedesktop.FileManager1",
+        "ShowItems", g_variant_new("(^ass)", uris, ""), NULL, G_DBUS_CALL_FLAGS_NONE, 5000, NULL, &error);
+
+    int ok = reply != NULL;
+    if (reply)
+    {
+        g_variant_unref(reply);
+    }
+
+    g_clear_error(&error);
+    g_free(uri);
+    g_object_unref(bus);
+    return ok;
 }

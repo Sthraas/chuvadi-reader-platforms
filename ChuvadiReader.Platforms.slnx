@@ -1,0 +1,17 @@
+<Solution>
+  <!--
+    Platform programme solution (new file). The existing ChuvadiReader.slnx is unchanged and
+    still builds the Windows app on its own. Platform chats add their host projects here.
+  -->
+  <Folder Name="/src/">
+    <Project Path="src/ChuvadiReader.Core/ChuvadiReader.Core.csproj" />
+    <Project Path="src/ChuvadiReader.Ui/ChuvadiReader.Ui.csproj" />
+    <Project Path="src/ChuvadiReader.Platform/ChuvadiReader.Platform.csproj" />
+    <Project Path="src/ChuvadiReader.Hosting/ChuvadiReader.Hosting.csproj" />
+    <Project Path="src/ChuvadiReader.Linux/ChuvadiReader.Linux.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ChuvadiReader.Tests/ChuvadiReader.Tests.csproj" />
+    <Project Path="tests/ChuvadiReader.Hosting.Tests/ChuvadiReader.Hosting.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -76,5 +76,14 @@ internal static unsafe partial class Native
     [LibraryImport(Lib, EntryPoint = "chvd_file_dialog", StringMarshalling = StringMarshalling.Utf8)]
     public static partial void FileDialog(int kind, int token, string title, string? initialFolder, string? initialName, string? filters);
 
+    [LibraryImport(Lib, EntryPoint = "chvd_clipboard_set_text", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial void ClipboardSetText(string text);
+
+    [LibraryImport(Lib, EntryPoint = "chvd_buttons_on_left")]
+    public static partial int ButtonsOnLeft();
+
+    [LibraryImport(Lib, EntryPoint = "chvd_reveal", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int Reveal(string path);
+
     public static string? Utf8(byte* p) => p == null ? null : Marshal.PtrToStringUTF8((nint)p);
 }

@@ -3,9 +3,11 @@ using ChuvadiReader.Core.Documents;
 using ChuvadiReader.Core.Lifecycle;
 using ChuvadiReader.Core.Reader;
 using ChuvadiReader.Core.Storage;
-using ChuvadiReader.Core.Theme;
 using ChuvadiReader.Core.Window;
+using ChuvadiReader.Hosting;
+using ChuvadiReader.Hosting.Desktop;
 using ChuvadiReader.Linux.Platform;
+using ChuvadiReader.Platform;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
@@ -23,8 +25,7 @@ public static class Program
     private static readonly Stopwatch Clock = Stopwatch.StartNew();
     private static readonly bool Timing = Environment.GetEnvironmentVariable("CHUVADI_TIMING") == "1";
 
-    private static readonly string LogPath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Chuvadi", "startup-error.log");
+    private static readonly string LogPath = Path.Combine(new DesktopAppPaths().AppDataFolder, "startup-error.log");
 
     [STAThread]
     public static int Main(string[] args)
@@ -48,9 +49,9 @@ public static class Program
 
             Mark("gtk init");
 
-            var appDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Chuvadi");
-            var storage = new FileAppStorage(appDataDir);
-            var services = BuildServices(storage);
+            var paths = new LinuxAppPaths(); // XDG config folder; Documents for saves
+            var storage = new FileAppStorage(paths.AppDataFolder);
+            var services = BuildServices(paths, storage, LinuxPlatformInfo.Create());
             Mark("services");
 
             var theme = (storage.GetSync("theme") ?? string.Empty).Trim().ToLowerInvariant();
@@ -100,57 +101,25 @@ public static class Program
     private const bool DevTools = false;
 #endif
 
-    private static ServiceProvider BuildServices(FileAppStorage storage)
+    private static ServiceProvider BuildServices(IAppPaths paths, FileAppStorage storage, IPlatformInfo platform)
     {
         var services = new ServiceCollection();
         services.AddBlazorWebView();
 
-        services.AddSingleton<IAppStorage>(storage);
-        services.AddSingleton<SaveFolderService>();
-        services.AddSingleton<CategoryService>();
-        services.AddSingleton<ThemeService>();
-        services.AddSingleton<UserProfileService>();
-        services.AddSingleton<RecentFilesService>();
-        services.AddSingleton<PinnedService>();
-        services.AddSingleton<WatchedFolderService>();
-        services.AddSingleton<LibraryService>();
-        services.AddSingleton<TagService>();
-        services.AddSingleton<FolderSearchService>();
-        services.AddSingleton<DocumentPropertiesService>();
-        services.AddSingleton<ExportService>();
-        services.AddSingleton<RedactService>();
-        services.AddSingleton<StampService>();
-        services.AddSingleton<DocxViewService>();
-        services.AddSingleton<XlsxViewService>();
-        services.AddSingleton<FlattenService>();
-        services.AddSingleton<RecoveryService>();
-        services.AddSingleton<PressService>();
-        services.AddSingleton<IPdfReader, ChuvadiPdfReader>();
-        services.AddSingleton<TabsService>();
-        services.AddSingleton<PdfToolsService>();
-        services.AddSingleton<BenchComposer>();
-        services.AddSingleton<BenchService>();
-        services.AddSingleton<SessionService>();
-        services.AddSingleton<OpenDocumentService>();
-        services.AddSingleton<BenchDropService>();
-        services.AddSingleton<RedactRequestService>();
-        services.AddSingleton<ShellService>();
-        services.AddSingleton<PreferencesService>();
-        services.AddSingleton<TextViewService>();
-        services.AddSingleton<MeasureService>();
-        services.AddSingleton<SignatureCheckService>();
-        services.AddSingleton<PasswordService>();
-        services.AddSingleton<CertificateSignService>();
-        services.AddSingleton<ChuvadiReader.Core.Licensing.IEntitlements, ChuvadiReader.Core.Licensing.DefaultEntitlements>();
-        services.AddSingleton<IAppReadySignal, AppReadySignal>();
+        // Every Core service and the seam defaults, once for all hosts (ChuvadiReader.Hosting).
+        services.AddChuvadiReader(AppStateLifetime.Process);
 
-        // Linux implementations of the platform interfaces.
+        // Linux implementations of the platform seams (a later registration wins).
+        services.AddSingleton<IAppPaths>(paths);
+        services.AddSingleton<IAppStorage>(storage);
+        services.AddSingleton<IPlatformInfo>(platform);
         services.AddSingleton<IUiScale, LinuxUiScale>();
         services.AddSingleton<IExternalLinks, LinuxExternalLinks>();
         services.AddSingleton<IWindowControls, LinuxWindowControls>();
         services.AddSingleton<IImageClipboard, LinuxImageClipboard>();
+        services.AddSingleton<IClipboard, LinuxClipboard>();
+        services.AddSingleton<IFileManager, LinuxFileManager>();
         services.AddSingleton<IFilePicker, GtkFilePicker>();
-        services.AddSingleton<IPrintService, NoopPrintService>();
 
         return services.BuildServiceProvider();
     }
@@ -165,10 +134,8 @@ public static class Program
         _ => "#F2EAD6",
     };
 
-    private static readonly string[] OpenExtensions = { ".pdf", ".docx", ".doc", ".xlsx", ".xls" };
-
-    private static bool IsSupportedFile(string path) =>
-        OpenExtensions.Contains(Path.GetExtension(path).ToLowerInvariant());
+    // Same list as the Open dialog (Core: DocumentFormatExtensions.OpenableExtensions), as on Windows.
+    private static bool IsSupportedFile(string path) => DocumentFormatExtensions.IsOpenable(path);
 
     private static void WireWindow(IServiceProvider services)
     {

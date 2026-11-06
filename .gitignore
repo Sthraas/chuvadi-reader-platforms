@@ -1,6 +1,8 @@
-reader/
-publish*/
-smoke*/
-bin/
+﻿bin/
 obj/
-src/ChuvadiReader.Linux/native/out/
+*.user
+.vs/
+.idea/
+localpackages/
+
+APPLY.ps1

@@ -1,0 +1,4025 @@
+@page "/reader"
+@implements IAsyncDisposable
+@inject NavigationManager Nav
+@inject TabsService Tabs
+@inject IFilePicker Picker
+@inject OpenDocumentService OpenDoc
+@inject RecentFilesService Recents
+@inject IJSRuntime JS
+@inject BenchService Bench
+@inject IImageClipboard Clip
+@inject DocumentPropertiesService DocProps
+@inject ExportService Export
+@inject SaveFolderService SaveFolders
+@inject PressService Press
+@inject IAppStorage Storage
+@inject RedactService Redact
+@inject StampService Stamp
+@inject ChuvadiReader.Core.Documents.FlattenService Flatten
+@inject ChuvadiReader.Core.Documents.RecoveryService Recovery
+@inject RedactRequestService RedactHandoff
+@inject IEntitlements Entitlements
+@inject ChuvadiReader.Platform.IPlatformInfo Platform
+@inject ChuvadiReader.Platform.IClipboard TextClip
+@inject ChuvadiReader.Platform.IFileWriteBack WriteBack
+@inject ChuvadiReader.Platform.IAppPaths Paths
+@inject ChuvadiReader.Platform.IFileManager FileManager
+@using ChuvadiReader.Core.Documents
+
+<PageTitle>Chuvadi · Reader</PageTitle>
+
+<div class="reader mview @(_reading ? "reading" : null) @(HasAnyCard ? "has-card" : null)" style="--reader-page-bg:@_pageBg">
+    @{
+        var tab = Tab;
+        var doc = tab?.Session?.Document;
+        var viewOnly = tab is not null && tab.Format.IsViewOnly();
+    }
+
+    @if (_pagesDrawer && (doc is not null || (viewOnly && _viewerOutline.Count > 0)))
+    {
+        <aside class="mdrawer" aria-label="Pages and outline">
+            <div class="mdrawer-tabs">
+                @if (!viewOnly)
+                {
+                    <button class="mdrawer-tab @(_drawerTab == "pages" ? "on" : null)" @onclick='() => SetDrawerTab("pages")'>Pages</button>
+                }
+                <button class="mdrawer-tab @(_drawerTab == "outline" || viewOnly ? "on" : null)" @onclick='() => SetDrawerTab("outline")'>Outline</button>
+                @if (!viewOnly)
+                {
+                    <button class="mdrawer-tab" disabled title="Attachments — coming soon">Attachments</button>
+                }
+                <button class="mdrawer-x" @onclick="() => _pagesDrawer = false" aria-label="Close"><Icon Name="x" Size="13" /></button>
+            </div>
+            @if (viewOnly)
+            {
+                <div class="mdrawer-body">
+                    @foreach (var o in _viewerOutline)
+                    {
+                        var oo = o;
+                        <button class="ol-row" style="padding-left:@(12 + (oo.Level - 1) * 12)px" @onclick="() => ViewerGoAnchor(oo.Anchor)">@oo.Title</button>
+                    }
+                </div>
+            }
+            else if (_drawerTab == "pages" && doc is not null && tab?.Session is { } thumbSession)
+            {
+                <div class="mdrawer-body">
+                    @for (var i = 0; i < doc.PageCount; i++)
+                    {
+                        var pi = i;
+                        @foreach (var ch in ChaptersAt(pi))
+                        {
+                            var chh = ch;
+                            <button class="chap" @onclick="() => GoTo(chh.PageIndex + 1)">§ @(string.IsNullOrWhiteSpace(chh.Title) ? "(untitled)" : chh.Title)</button>
+                        }
+                        <button class="thumb @(pi + 1 == CurPage ? "on" : null)" @onclick="() => GoTo(pi + 1)" title="Page @(pi + 1)">
+                            <span class="thumb-pg" style="aspect-ratio:@ThumbAspect">
+                                @if (thumbSession.TryGetRenderedSvg(pi, out var tsvg))
+                                {
+                                    <PageSvg Svg="@tsvg" Rotation="@RotationFor(pi)" />
+                                }
+                                else
+                                {
+                                    <span class="thumb-ph">@(pi + 1)</span>
+                                }
+                            </span>
+                            <span class="thumb-n">@(pi + 1)</span>
+                        </button>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="bm-acts">
+                    <button class="bm-act" @onclick="BmAddCurrent" title="Add a bookmark at the current page (@Platform.Keys.Format("Ctrl B"))"><Icon Name="plus" Size="13" /> Add</button>
+                    <button class="bm-act" @onclick="() => BmMove(-1)" disabled="@(_bmSel is null)" title="Move up"><Icon Name="chevron-up" Size="13" /></button>
+                    <button class="bm-act" @onclick="() => BmMove(1)" disabled="@(_bmSel is null)" title="Move down"><Icon Name="chevron-down" Size="13" /></button>
+                    <button class="bm-act" @onclick="BmIndent" disabled="@(_bmSel is null)" title="Indent (nest under the entry above)"><Icon Name="chevron-right" Size="13" /></button>
+                    <button class="bm-act" @onclick="BmOutdent" disabled="@(_bmSel is null)" title="Outdent"><Icon Name="chevron-left" Size="13" /></button>
+                    <button class="bm-act del" @onclick="BmDelete" disabled="@(_bmSel is null)" title="Delete"><Icon Name="trash" Size="13" /></button>
+                </div>
+                <div class="bm-tree">
+                    @if (_bmTree is null || _bmTree.Count == 0)
+                    {
+                        <div class="bm-empty">No bookmarks in this document. Use <strong>Add</strong> to create one at the current page, then Save.</div>
+                    }
+                    else
+                    {
+                        @foreach (var (node, depth) in BmFlat())
+                        {
+                            <div class="bm-row @(ReferenceEquals(node, _bmSel) ? "sel" : null)" style="padding-left:@(8 + depth * 16)px" @onclick="() => BmGo(node)" title="Go to page @(node.PageIndex + 1) · double-click to rename">
+                                @if (ReferenceEquals(node, _bmRenaming))
+                                {
+                                    <input class="bm-rename" value="@node.Title" @oninput="e => node.Title = e.Value?.ToString() ?? string.Empty" @onblur="BmEndRename" @onkeydown="BmRenameKey" @onclick:stopPropagation="true" />
+                                }
+                                else
+                                {
+                                    <span class="bm-title" @ondblclick="() => BmBeginRename(node)" title="Double-click to rename">@(string.IsNullOrWhiteSpace(node.Title) ? "(untitled)" : node.Title)</span>
+                                }
+                                <button class="bm-go" @onclick:stopPropagation="true" @onclick="() => BmGo(node)" title="Go to page @(node.PageIndex + 1)">p@(node.PageIndex + 1)</button>
+                            </div>
+                        }
+                    }
+                </div>
+                <div class="bm-foot">
+                    <span class="bm-status">@_bmStatus</span>
+                    <button class="bm-save" @onclick="BmSave" disabled="@_bmBusy">@(_bmBusy ? "saving…" : "Save bookmarks")</button>
+                </div>
+            }
+        </aside>
+    }
+
+    <div class="mview-canvas">
+    @if (_showProps)
+    {
+        <div @onclick="CloseProperties" style="position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:60;display:flex;align-items:center;justify-content:center">
+            <div @onclick:stopPropagation="true" style="width:440px;max-width:90%;max-height:82%;overflow:auto;background:var(--chvd-surface-mid);border:var(--chvd-stroke) solid var(--chvd-border);border-radius:12px;padding:18px 20px;color:var(--chvd-ink);font-family:var(--chvd-sans-display)">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+                    <span style="font-family:var(--chvd-serif-display);font-size:18px">Document properties</span>
+                    <button @onclick="CloseProperties" aria-label="Close" style="background:none;border:none;color:var(--chvd-ink-muted);cursor:pointer"><Icon Name="x" Size="16" /></button>
+                </div>
+                @if (_props is null)
+                {
+                    <div style="font-family:var(--chvd-mono);font-size:12px;color:var(--chvd-ink-muted)">reading…</div>
+                }
+                else
+                {
+                    <table style="width:100%;font-size:13px;border-collapse:collapse">
+                        @foreach (var (label, value) in PropRows())
+                        {
+                            <tr>
+                                <td style="color:var(--chvd-ink-muted);font-family:var(--chvd-mono);font-size:11px;padding:5px 12px 5px 0;vertical-align:top;white-space:nowrap">@label</td>
+                                <td style="padding:5px 0;word-break:break-word">@value</td>
+                            </tr>
+                        }
+                    </table>
+                }
+            </div>
+        </div>
+    }
+
+    @if (_showExport)
+    {
+        <div @onclick="CloseExport" style="position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:60;display:flex;align-items:center;justify-content:center">
+            <div @onclick:stopPropagation="true" style="width:470px;max-width:92%;background:var(--chvd-surface-mid);border:var(--chvd-stroke) solid var(--chvd-border);border-radius:12px;padding:18px 20px;color:var(--chvd-ink);font-family:var(--chvd-sans-display)">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+                    <span style="font-family:var(--chvd-serif-display);font-size:18px">Export as image</span>
+                    <button @onclick="CloseExport" aria-label="Close" style="background:none;border:none;color:var(--chvd-ink-muted);cursor:pointer"><Icon Name="x" Size="16" /></button>
+                </div>
+
+                <div style="font-family:var(--chvd-mono);font-size:11px;color:var(--chvd-ink-muted);margin-bottom:7px">format</div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px">
+                    @foreach (var f in _formats)
+                    {
+                        <button @onclick="() => _expFormat = f" style="@Chip(_expFormat == f)">@f.ToString().ToUpperInvariant()</button>
+                    }
+                </div>
+
+                <div style="font-family:var(--chvd-mono);font-size:11px;color:var(--chvd-ink-muted);margin-bottom:7px">pages</div>
+                <div style="display:flex;gap:6px;margin-bottom:16px">
+                    <button @onclick="() => _expAll = false" style="@Chip(!_expAll)">This page (@CurPage)</button>
+                    <button @onclick="() => _expAll = true" style="@Chip(_expAll)">All pages@(Doc is not null ? $" ({Doc.PageCount})" : "")</button>
+                </div>
+
+                @if (_expFormat != ExportFormat.Svg)
+                {
+                    <div style="font-family:var(--chvd-mono);font-size:11px;color:var(--chvd-ink-muted);margin-bottom:7px">resolution</div>
+                    <div style="display:flex;gap:6px;margin-bottom:18px">
+                        @foreach (var d in _dpis)
+                        {
+                            <button @onclick="() => _expDpi = d" style="@Chip(_expDpi == d)">@d dpi</button>
+                        }
+                    </div>
+                }
+
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;font-family:var(--chvd-mono);font-size:11px;color:var(--chvd-ink-muted)">
+                    <Icon Name="folder" Size="13" />
+                    <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="@_expFolder">@_expFolder</span>
+                    @if (Platform.Capabilities.PickFolders)
+                    {
+                        <button @onclick="ChangeExportFolder" style="background:none;border:none;color:var(--chvd-binding);cursor:pointer;font-family:var(--chvd-mono);font-size:11px">change…</button>
+                    }
+                </div>
+
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+                    <span style="font-family:var(--chvd-serif-body);font-size:12px;color:var(--chvd-ink-muted);flex:1">@(_expStatus ?? "Saved files are never overwritten.")</span>
+                    <button @onclick="RunExport" disabled="@_expBusy" style="font-family:var(--chvd-mono);font-size:13px;padding:8px 18px;border-radius:8px;border:none;cursor:pointer;background:var(--chvd-binding);color:var(--chvd-surface-lo);@(_expBusy ? "opacity:0.6" : "")">@(_expBusy ? "exporting…" : "Export →")</button>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (_showPress)
+    {
+        <div @onclick="ClosePress" style="position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:60;display:flex;align-items:center;justify-content:center">
+            <div @onclick:stopPropagation="true" style="width:500px;max-width:94%;max-height:88%;overflow:auto;background:var(--chvd-surface-mid);border:var(--chvd-stroke) solid var(--chvd-border);border-radius:12px;padding:18px 20px;color:var(--chvd-ink);font-family:var(--chvd-sans-display)">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+                    <span style="font-family:var(--chvd-serif-display);font-size:18px">Press</span>
+                    <button @onclick="ClosePress" aria-label="Close" style="background:none;border:none;color:var(--chvd-ink-muted);cursor:pointer"><Icon Name="x" Size="16" /></button>
+                </div>
+
+                <div style="font-family:var(--chvd-mono);font-size:11px;color:var(--chvd-ink-muted);margin-bottom:7px">quality preset</div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
+                    @foreach (var p in _presets)
+                    {
+                        <button @onclick="() => _pressPreset = p" style="@Chip(_pressPreset == p)">@p.ToString()</button>
+                    }
+                </div>
+
+                @if (_pressPreset == PressPreset.Custom)
+                {
+                    <div style="background:var(--chvd-surface-lo);border:var(--chvd-stroke) solid var(--chvd-border-soft);border-radius:10px;padding:12px 14px;margin-bottom:14px">
+                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+                            <span style="font-family:var(--chvd-mono);font-size:11px;color:var(--chvd-ink-muted);width:96px">jpeg quality</span>
+                            <input type="range" min="10" max="95" step="1" @bind="_pressQuality" @bind:event="oninput" style="flex:1" />
+                            <span style="font-family:var(--chvd-mono);font-size:12px;width:28px;text-align:right">@_pressQuality</span>
+                        </div>
+                        <label style="display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:10px;cursor:pointer">
+                            <input type="checkbox" @bind="_pressRecompress" /> recompress images
+                        </label>
+                        <div style="display:flex;gap:14px">
+                            <label style="flex:1;font-family:var(--chvd-mono);font-size:11px;color:var(--chvd-ink-muted)">min stream bytes
+                                <input type="number" @bind="_pressMinStream" style="width:100%;margin-top:3px;background:var(--chvd-surface-hi);border:var(--chvd-stroke) solid var(--chvd-border);border-radius:6px;color:var(--chvd-ink);padding:4px 6px;font-family:var(--chvd-mono);font-size:12px" />
+                            </label>
+                            <label style="flex:1;font-family:var(--chvd-mono);font-size:11px;color:var(--chvd-ink-muted)">min image pixels
+                                <input type="number" @bind="_pressMinPixels" style="width:100%;margin-top:3px;background:var(--chvd-surface-hi);border:var(--chvd-stroke) solid var(--chvd-border);border-radius:6px;color:var(--chvd-ink);padding:4px 6px;font-family:var(--chvd-mono);font-size:12px" />
+                            </label>
+                        </div>
+                    </div>
+                }
+
+                <label style="display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:@(_pressUseTarget ? "8px" : "14px");cursor:pointer">
+                    <input type="checkbox" @bind="_pressUseTarget" /> aim for a target size
+                </label>
+                @if (_pressUseTarget)
+                {
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+                        <input type="number" step="0.1" min="0.1" @bind="_pressTargetMb" style="width:90px;background:var(--chvd-surface-hi);border:var(--chvd-stroke) solid var(--chvd-border);border-radius:6px;color:var(--chvd-ink);padding:5px 8px;font-family:var(--chvd-mono);font-size:13px" />
+                        <span style="font-family:var(--chvd-mono);font-size:12px;color:var(--chvd-ink-muted)">MB — steps quality down until it fits</span>
+                    </div>
+                }
+
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;font-family:var(--chvd-mono);font-size:11px;color:var(--chvd-ink-muted)">
+                    <Icon Name="folder" Size="13" />
+                    <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="@_pressFolder">@_pressFolder</span>
+                    @if (Platform.Capabilities.PickFolders)
+                    {
+                        <button @onclick="ChangePressFolder" style="background:none;border:none;color:var(--chvd-binding);cursor:pointer;font-family:var(--chvd-mono);font-size:11px">change…</button>
+                    }
+                </div>
+
+                @if (_pressResult is not null)
+                {
+                    <div style="background:var(--chvd-surface-lo);border:var(--chvd-stroke) solid var(--chvd-border-soft);border-radius:10px;padding:12px 14px;margin-bottom:14px">
+                        <div style="font-size:15px;margin-bottom:6px">@SizeOf(_pressResult.BeforeBytes) → <span style="color:var(--chvd-binding)">@SizeOf(_pressResult.AfterBytes)</span> <span style="font-family:var(--chvd-mono);font-size:12px;color:var(--chvd-ink-muted)">(@_pressResult.SavedPercent.ToString("0.#")% smaller)</span></div>
+                        <div style="font-family:var(--chvd-mono);font-size:11px;color:var(--chvd-ink-muted)">@_pressResult.ImagesRecompressed images · @_pressResult.StreamsCompressed streams · @_pressResult.ObjectsRemoved objects removed</div>
+                        <button @onclick="OpenPressResult" style="margin-top:10px;font-family:var(--chvd-mono);font-size:12px;color:var(--chvd-binding);background:none;border:var(--chvd-stroke) solid var(--chvd-binding);border-radius:6px;padding:5px 12px;cursor:pointer">open pressed file</button>
+                    </div>
+                }
+
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+                    <span style="font-family:var(--chvd-serif-body);font-size:12px;color:var(--chvd-ink-muted);flex:1">@(_pressStatus ?? "A new …-pressed.pdf is created; the original is untouched.")</span>
+                    <button @onclick="RunPress" disabled="@_pressBusy" style="font-family:var(--chvd-mono);font-size:13px;padding:8px 18px;border-radius:8px;border:none;cursor:pointer;background:var(--chvd-binding);color:var(--chvd-surface-lo);@(_pressBusy ? "opacity:0.6" : "")">@(_pressBusy ? "pressing…" : "Press →")</button>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (tab is null)
+    {
+        <div class="rempty">
+            <Icon Name="file-pdf" Size="40" />
+            <div class="rempty-t">Open a document to start reading</div>
+            <button class="rempty-btn" @onclick="OpenViaPicker">Fetch…</button>
+        </div>
+    }
+    else if (tab.IsLoading)
+    {
+        <div class="rempty">
+            <div class="rload-icon"><Icon Name="file-pdf" Size="40" /></div>
+            <div class="rempty-t">Opening @tab.FileName…</div>
+        </div>
+    }
+    else if (tab.Error is not null)
+    {
+        <div class="rempty">
+            <Icon Name="file-pdf" Size="40" />
+            <div class="rempty-t">@tab.Error</div>
+            <button class="rempty-btn" @onclick="OpenViaPicker">Fetch…</button>
+        </div>
+    }
+    else if (viewOnly)
+    {
+        <div class="rviewer">
+            @switch (tab.Format)
+            {
+                case DocumentFormat.Docx:
+                    <DocxView @ref="_viewer" Path="@tab.Path" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" />
+                    break;
+                case DocumentFormat.Xlsx:
+                    <XlsxView @ref="_viewer" Path="@tab.Path" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" />
+                    break;
+                case DocumentFormat.Markdown:
+                    <MarkdownView @ref="_viewer" Path="@tab.Path" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" />
+                    break;
+                case DocumentFormat.Html:
+                    <HtmlView @ref="_viewer" Path="@tab.Path" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" />
+                    break;
+                default:
+                    <TextView @ref="_viewer" Path="@tab.Path" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" />
+                    break;
+            }
+        </div>
+        @if (_viewerFindOpen)
+        {
+            <div class="rfind">
+                <input class="rfind-box" placeholder="Find in @tab.Format.Label()…" value="@_viewerFindInput"
+                       @oninput="e => _viewerFindInput = e.Value?.ToString() ?? string.Empty"
+                       @onkeydown="OnViewerFindKey" />
+                <span class="rfind-count">@(_viewerFind is null ? "" : $"{_viewerFindCount} found")</span>
+                <button class="rfind-x" @onclick="CloseViewerFind" title="Close (Esc)"><Icon Name="x" Size="14" /></button>
+            </div>
+        }
+    }
+    else if (tab.Session is { Document.IsXfaForm: true })
+    {
+        <div class="rempty">
+            <Icon Name="file-pdf" Size="40" />
+            <div class="rempty-t">@tab.FileName is a dynamic XFA form, which Chuvadi can't display.</div>
+            <div class="rempty-sub">This form's content lives entirely in a separate XFA layer with no static page to draw. Open it in Adobe Acrobat to view or fill it. (Hybrid XFA forms that have page content open normally.)</div>
+        </div>
+    }
+    else if (tab.Session is not null)
+    {
+        var session = tab.Session;
+        @if (_renderFailed && !_recoverBannerDismissed)
+        {
+            <div class="rrecover-banner">
+                <span class="rrecover-dot">!</span>
+                <span class="rrecover-msg">Some pages of this file couldn't be read.</span>
+                <button class="rrecover-btn" @onclick="TryRecovery" disabled="@_recovering">@(_recovering ? "Recovering…" : "Try recovery")</button>
+                @if (_recoverStatus is not null)
+                {
+                    <span class="rrecover-status">@_recoverStatus</span>
+                }
+                <button class="rrecover-x" @onclick="() => _recoverBannerDismissed = true" title="Dismiss"><Icon Name="x" Size="13" /></button>
+            </div>
+        }
+        <div class="rdesk @LayoutClass @(CurScale > 1.001 ? "zoomed" : null) @(Tab?.ScrollLocked == true ? "locked" : null)"
+             style="--rpage-zoom:@Zoom" tabindex="-1" @ref="_desk">
+            @foreach (var n in _pages)
+            {
+                <div class="rpage-wrap" data-page="@n" @key="n">
+                    <div class="rpage @(_curl ? "curl" : null)">
+                        @if (session.TryGetRenderedSvg(n, out var svg))
+                        {
+                            <PageSvg Svg="@svg" Rotation="@RotationFor(n)" />
+                        }
+                        else
+                        {
+                            <div class="rpage-load">page @(n + 1)</div>
+                        }
+                        @if (_markup)
+                        {
+                            <div class="mk-layer @(_mkTool == "text" ? "textmode" : null) @(IsShapeTool(_mkTool) ? "drawmode" : null)" data-page="@n"
+                                 @onpointerdown="e => MkDown(e, n)" @onpointermove="MkMove" @onpointerup="MkUp">
+                                @if (_texts.TryGetValue(n, out var tboxes))
+                                {
+                                    @foreach (var t in tboxes)
+                                    {
+                                        var tb = t;
+                                        var isSel = ReferenceEquals(_selText, tb);
+                                        <div class="mk-text @(isSel ? "sel" : null)"
+                                             style="left:@Pct(tb.X);top:@Pct(tb.Y);width:@Pct(tb.W);height:@Pct(tb.H);transform:rotate(@Deg(tb.Rotation)deg)"
+                                             @onpointerdown:stopPropagation="true" @onpointerdown="() => SelectText(n, tb)">
+                                            <textarea class="mk-ta" spellcheck="false"
+                                                      style="@TextStyle(tb)"
+                                                      @bind="tb.Text" @bind:event="oninput"
+                                                      @onfocus="() => SelectText(n, tb)"></textarea>
+                                            @if (isSel)
+                                            {
+                                                <span class="mk-th move" title="Move"
+                                                      @onpointerdown:stopPropagation="true" @onpointerdown="e => StartMove(e, n, tb)">✣</span>
+                                                <span class="mk-th resize" title="Resize"
+                                                      @onpointerdown:stopPropagation="true" @onpointerdown="e => StartResize(e, n, tb)"></span>
+                                            }
+                                        </div>
+                                    }
+                                }
+                                @if (_textDraft is { } td && _textDraftPage == n)
+                                {
+                                    <div class="mk-text draft" style="left:@Pct(td.X);top:@Pct(td.Y);width:@Pct(td.W);height:@Pct(td.H)"></div>
+                                }
+
+                                @* Shapes: rect/ellipse as boxes; line/arrow/freehand as an SVG overlay. *@
+                                @if (_shapes.TryGetValue(n, out var shapeList))
+                                {
+                                    @foreach (var s in shapeList.Where(s => s.Kind == ShapeKind.Rectangle || s.Kind == ShapeKind.Ellipse))
+                                    {
+                                        var sb = s;
+                                        var selS = ReferenceEquals(_selShape, sb);
+                                        <div class="mk-shape rect @(sb.Kind == ShapeKind.Ellipse ? "ell" : null) @(sb.BehindContent ? "behind" : null) @(selS ? "sel" : null)"
+                                             style="left:@Pct(sb.X);top:@Pct(sb.Y);width:@Pct(sb.W);height:@Pct(sb.H);border-color:@sb.StrokeHex;border-width:@(ShapeBorderPx(sb.StrokeWidthPt))px;background:@(string.IsNullOrEmpty(sb.FillHex) ? "transparent" : sb.FillHex);@(sb.Kind == ShapeKind.Ellipse ? "border-radius:50%;" : "")transform:rotate(@(F(sb.Rotation))deg)"
+                                             @onpointerdown:stopPropagation="true" @onpointerdown="e => StartMoveShape(e, n, sb)">
+                                            @if (selS)
+                                            {
+                                                <span class="mk-th resize" title="Resize"
+                                                      @onpointerdown:stopPropagation="true" @onpointerdown="e => StartResizeShape(e, n, sb)"></span>
+                                            }
+                                        </div>
+                                    }
+
+                                    <svg class="mk-shape-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+                                        @foreach (var s in shapeList.Where(s => s.Kind == ShapeKind.Line || s.Kind == ShapeKind.Arrow))
+                                        {
+                                            var sb = s;
+                                            var selS = ReferenceEquals(_selShape, sb);
+                                            <line x1="@F(sb.X * 100)" y1="@F(sb.Y * 100)" x2="@F((sb.X + sb.W) * 100)" y2="@F((sb.Y + sb.H) * 100)"
+                                                  stroke="@sb.StrokeHex" stroke-width="@F(sb.StrokeWidthPt)" stroke-linecap="round"
+                                                  vector-effect="non-scaling-stroke" class="@(selS ? "sel" : null)" />
+                                            @if (sb.Kind == ShapeKind.Arrow)
+                                            {
+                                                <polyline points="@ArrowHeadPoints(sb)" fill="none" stroke="@sb.StrokeHex" stroke-width="@F(sb.StrokeWidthPt)"
+                                                          stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" />
+                                            }
+                                            <line x1="@F(sb.X * 100)" y1="@F(sb.Y * 100)" x2="@F((sb.X + sb.W) * 100)" y2="@F((sb.Y + sb.H) * 100)"
+                                                  stroke="transparent" stroke-width="12" vector-effect="non-scaling-stroke"
+                                                  style="pointer-events:stroke;cursor:move"
+                                                  @onpointerdown:stopPropagation="true" @onpointerdown="e => StartMoveShape(e, n, sb)" />
+                                        }
+                                        @foreach (var s in shapeList.Where(s => s.Kind == ShapeKind.Freehand && s.Points is { Count: >= 2 }))
+                                        {
+                                            var sb = s;
+                                            var selS = ReferenceEquals(_selShape, sb);
+                                            <polyline points="@PointsAttr(sb.Points!)" fill="none" stroke="@sb.StrokeHex" stroke-width="@F(sb.StrokeWidthPt)"
+                                                      stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" class="@(selS ? "sel" : null)" />
+                                            <polyline points="@PointsAttr(sb.Points!)" fill="none" stroke="transparent" stroke-width="12"
+                                                      vector-effect="non-scaling-stroke" style="pointer-events:stroke;cursor:move"
+                                                      @onpointerdown:stopPropagation="true" @onpointerdown="e => StartMoveShape(e, n, sb)" />
+                                        }
+                                    </svg>
+
+                                    @foreach (var s in shapeList.Where(s => (s.Kind == ShapeKind.Line || s.Kind == ShapeKind.Arrow) && ReferenceEquals(_selShape, s)))
+                                    {
+                                        var sb = s;
+                                        <span class="mk-line-end" style="left:@Pct(sb.X);top:@Pct(sb.Y)" title="Move start"
+                                              @onpointerdown:stopPropagation="true" @onpointerdown="e => StartLineEnd(e, n, sb, false)"></span>
+                                        <span class="mk-line-end" style="left:@Pct(sb.X + sb.W);top:@Pct(sb.Y + sb.H)" title="Move end"
+                                              @onpointerdown:stopPropagation="true" @onpointerdown="e => StartLineEnd(e, n, sb, true)"></span>
+                                    }
+                                }
+                                @if (_shapeDraft is { } sd && _shapeDraftPage == n)
+                                {
+                                    @if (_mkTool == "line" || _mkTool == "arrow")
+                                    {
+                                        <svg class="mk-shape-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+                                            <line x1="@F(sd.X * 100)" y1="@F(sd.Y * 100)" x2="@F((sd.X + sd.W) * 100)" y2="@F((sd.Y + sd.H) * 100)"
+                                                  stroke="@_shapeStroke" stroke-width="@F(_shapeStrokeWidth)" stroke-linecap="round"
+                                                  vector-effect="non-scaling-stroke" stroke-dasharray="4 3" />
+                                        </svg>
+                                    }
+                                    else if (_mkTool == "freehand" && _freehandPts is { Count: >= 2 })
+                                    {
+                                        <svg class="mk-shape-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+                                            <polyline points="@PointsAttr(_freehandPts)" fill="none" stroke="@_shapeStroke" stroke-width="@F(_shapeStrokeWidth)"
+                                                      stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" />
+                                        </svg>
+                                    }
+                                    else
+                                    {
+                                        <div class="mk-shape rect draft @(_mkTool == "ellipse" ? "ell" : null)" style="left:@Pct(sd.X);top:@Pct(sd.Y);width:@Pct(sd.W);height:@Pct(sd.H);border-color:@_shapeStroke;@(_mkTool == "ellipse" ? "border-radius:50%;" : "")"></div>
+                                    }
+                                }
+
+                                @* Images. *@
+                                @if (_images.TryGetValue(n, out var imageList))
+                                {
+                                    @foreach (var im in imageList)
+                                    {
+                                        var ib = im;
+                                        var selI = ReferenceEquals(_selImage, ib);
+                                        <div class="mk-image @(ib.BehindContent ? "behind" : null) @(selI ? "sel" : null)"
+                                             style="left:@Pct(ib.X);top:@Pct(ib.Y);width:@Pct(ib.W);height:@Pct(ib.H);opacity:@F(ib.Opacity);transform:rotate(@(F(ib.Rotation))deg)"
+                                             @onpointerdown:stopPropagation="true" @onpointerdown="e => StartMoveImage(e, n, ib)">
+                                            <img src="@ib.DataUrl" draggable="false" />
+                                            @if (selI)
+                                            {
+                                                <span class="mk-th resize" title="Resize"
+                                                      @onpointerdown:stopPropagation="true" @onpointerdown="e => StartResizeImage(e, n, ib)"></span>
+                                            }
+                                        </div>
+                                    }
+                                }
+                            </div>
+                        }
+                        @if (_measureOn && !_markup)
+                        {
+                            <div class="mk-layer drawmode ms-layer" data-page="@n" @onpointerdown="e => MsDown(e, n)">
+                                @if (_msPage == n && _msA is { } ma)
+                                {
+                                    <svg class="mk-shape-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+                                        @if (_msB is { } mb)
+                                        {
+                                            <line x1="@F(ma.X * 100)" y1="@F(ma.Y * 100)" x2="@F(mb.X * 100)" y2="@F(mb.Y * 100)" stroke="#2c3e8c" stroke-width="1.5" vector-effect="non-scaling-stroke" />
+                                        }
+                                    </svg>
+                                    <span class="ms-dot" style="left:@Pct(ma.X);top:@Pct(ma.Y)"></span>
+                                    @if (_msB is { } mb2)
+                                    {
+                                        <span class="ms-dot" style="left:@Pct(mb2.X);top:@Pct(mb2.Y)"></span>
+                                        @if (_measure is { } mr)
+                                        {
+                                            <span class="ms-label" style="left:@Pct((ma.X + mb2.X) / 2);top:@Pct((ma.Y + mb2.Y) / 2)">@mr.DistanceLabel</span>
+                                        }
+                                    }
+                                }
+                            </div>
+                        }
+                        @if (_findOpen && _findByPage.TryGetValue(n, out var pageHits))
+                        {
+                            @foreach (var fm in pageHits)
+                            {
+                                var isCur = ReferenceEquals(fm, CurrentFindMatch);
+                                @foreach (var hb in fm.Boxes)
+                                {
+                                    <div class="rfind-hl @(isCur ? "cur" : null)"
+                                         style="left:@Pct(hb.X);top:@Pct(hb.Y);width:@Pct(hb.W);height:@Pct(hb.H * 1.3)"></div>
+                                }
+                            }
+                        }
+                        @if (Tab?.StampOpen == true)
+                        {
+                            <StampPreview Watermark="Tab!.Watermark" HeaderFooter="Tab!.HeaderFooter"
+                                          PageNumber="n + 1" TotalPages="doc?.PageCount ?? 1"
+                                          FileName="@(Tab?.FileName ?? "document.pdf")" />
+                        }
+                        @if (_curl)
+                        {
+                            <span class="rcurl"></span>
+                        }
+                    </div>
+                    @if (doc is not null)
+                    {
+                        <button class="rpage-send" title="Send page @(n + 1) to a desk"
+                                @onclick="() => ToggleSendMenu(n)" @onclick:stopPropagation="true">
+                            <Icon Name="grid-view" Size="14" />
+                        </button>
+                        @if (_sendMenuPage == n)
+                        {
+                            <div class="rpage-send-menu" @onclick:stopPropagation="true">
+                                <div class="rsm-h">Send page @(n + 1) to…</div>
+                                @foreach (var d in Bench.Desks)
+                                {
+                                    var dd = d;
+                                    <button class="rsm-item" @onclick="() => SendPageToDesk(n, dd.Id)">
+                                        <Icon Name="grid-view" Size="13" /> <span>@DeskLabel(dd)</span>
+                                    </button>
+                                }
+                                <button class="rsm-item rsm-new" @onclick="() => SendPageToNewDesk(n)" disabled="@(!Bench.CanAddDesk)" title="@(Bench.CanAddDesk ? "Add a new desk" : "30-desk limit reached")">
+                                    <Icon Name="plus" Size="13" /> <span>New desk</span>
+                                </button>
+                            </div>
+                        }
+                    }
+                </div>
+            }
+        </div>
+    }
+
+    @if (doc is not null && _sigReport is { HasSignatures: true } sr && _showSigBanner && !_markup)
+    {
+        <div class="rsigbanner">
+            <SignatureBanner Signature="@sr.Signatures[0]" OnDetails='() => OpenCard("signatures")' />
+            <button class="rsigbanner-x" @onclick="() => _showSigBanner = false" aria-label="Hide"><Icon Name="x" Size="12" /></button>
+        </div>
+    }
+
+    <div class="fcards">
+        @if (_markup && doc is not null)
+        {
+            @if (_sigOpen)
+            {
+                <FloatCard Title="Signature" Meta="drawn as an overlay" OnClose="CloseSignature">
+                    <div class="fc-seg">
+                        <button class="@(_sigMode == "type" ? "on" : null)" @onclick='() => _sigMode = "type"'>Type</button>
+                        <button class="@(_sigMode == "upload" ? "on" : null)" @onclick='() => _sigMode = "upload"'>Upload</button>
+                    </div>
+                    @if (_sigMode == "type")
+                    {
+                        <input class="fc-in" placeholder="Type your name" maxlength="60" @bind="_sigText" @bind:event="oninput" />
+                        <div class="fc-row">
+                            <select class="fc-sel fc-grow" @bind="_sigFontName">
+                                @foreach (var f in _sigFonts)
+                                {
+                                    <option value="@f.Name">@f.Name</option>
+                                }
+                            </select>
+                            <label class="fc-sw on" title="Ink colour" style="background:@_sigColor"><input type="color" @bind="_sigColor" @bind:event="oninput" /></label>
+                        </div>
+                        <div class="sig-preview" style="@SigPreviewStyle">@(string.IsNullOrWhiteSpace(_sigText) ? "Your signature" : _sigText)</div>
+                        <button class="fc-btn primary" disabled="@(string.IsNullOrWhiteSpace(_sigText))" @onclick="PlaceTypedSignature">Place signature</button>
+                    }
+                    else
+                    {
+                        <p class="fc-note">Pick a PNG or JPG of your signature — a transparent PNG sits best on the page.</p>
+                        <button class="fc-btn primary" @onclick="UploadSignature">Choose image…</button>
+                    }
+                    @if (_sigError is { } se)
+                    {
+                        <div class="fc-status err">@se</div>
+                    }
+                    else
+                    {
+                        <p class="fc-note">Placed signatures are normal overlays — drag, resize, or delete them, then Save. For a certificate signature use Protect › Sign with certificate.</p>
+                    }
+                </FloatCard>
+            }
+            else if (_selText is { } sel)
+            {
+                <FloatCard Title="Text box" Meta="@SelMeta(_selTextPage, _texts, sel)">
+                    <div class="fc-seg">
+                        @foreach (var fam in new[] { "Helvetica", "Times", "Courier" })
+                        {
+                            var ff = fam;
+                            <button class="@(sel.FontFamily == ff ? "on" : null)" @onclick="() => { MkSnap(); sel.FontFamily = ff; }">@ff</button>
+                        }
+                    </div>
+                    <div class="fc-row">
+                        <button class="fc-btn fc-sq @(sel.Bold ? "on" : null)" @onclick="() => { MkSnap(); sel.Bold = !sel.Bold; }" title="Bold"><b>B</b></button>
+                        <button class="fc-btn fc-sq @(sel.Italic ? "on" : null)" @onclick="() => { MkSnap(); sel.Italic = !sel.Italic; }" title="Italic"><i>I</i></button>
+                        <button class="fc-btn fc-sq" @onclick="() => { MkSnap(); sel.FontSizePt = Math.Max(6, sel.FontSizePt - 1); }" title="Smaller">−</button>
+                        <input class="fc-num fc-grow" type="number" min="6" max="200" step="1" value="@sel.FontSizePt" @onchange="e => { MkSnap(); SetSize(sel, e); }" title="Size (pt)" />
+                        <button class="fc-btn fc-sq" @onclick="() => { MkSnap(); sel.FontSizePt = Math.Min(200, sel.FontSizePt + 1); }" title="Larger">+</button>
+                    </div>
+                    <div class="fc-seg">
+                        @foreach (var (al, lbl) in new[] { ("left", "Left"), ("center", "Centre"), ("right", "Right"), ("justify", "Justify") })
+                        {
+                            var a = al;
+                            <button class="@(sel.Align == a ? "on" : null)" @onclick="() => { MkSnap(); sel.Align = a; }">@lbl</button>
+                        }
+                    </div>
+                    <div class="fc-row">
+                        <span class="fc-lbl">Colour</span>
+                        <span class="fc-swatches">
+                            @foreach (var (_, hex) in _mkColorPresets)
+                            {
+                                var h = hex;
+                                <button class="fc-sw @(string.Equals(sel.ColorHex, h, StringComparison.OrdinalIgnoreCase) ? "on" : null)" style="background:@h" @onclick="() => { MkSnap(); sel.ColorHex = h; }" title="@h"></button>
+                            }
+                            <label class="fc-sw" title="Custom colour" style="background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red)"><input type="color" value="@sel.ColorHex" @onchange="e => { MkSnap(); SetTextColor(sel, e); }" /></label>
+                        </span>
+                    </div>
+                    <div class="fc-row">
+                        <span class="fc-lbl">Rotation</span>
+                        <input class="fc-num" type="number" min="-180" max="180" step="1" value="@sel.Rotation" @onchange="e => { MkSnap(); SetRotation(sel, e); }" title="Rotation (°)" /> °
+                    </div>
+                    <div class="fc-foot">
+                        <button class="fc-btn fc-grow" @onclick="DuplicateSelected"><Icon Name="copy" Size="13" /> Duplicate</button>
+                        <button class="fc-btn fc-grow danger" @onclick="() => { MkSnap(); RemoveSelectedText(); }"><Icon Name="trash" Size="13" /> Delete</button>
+                    </div>
+                </FloatCard>
+            }
+            else if (_selShape is { } ssel)
+            {
+                <FloatCard Title="@ShapeKindLabel(ssel.Kind)" Meta="@SelMeta(_selShapePage, _shapes, ssel)">
+                    <div class="fc-row">
+                        <span class="fc-lbl">Stroke</span>
+                        <label class="fc-sw on" title="Stroke colour" style="background:@ssel.StrokeHex"><input type="color" value="@ssel.StrokeHex" @onchange="e => { MkSnap(); SetShapeStroke(ssel, e); }" /></label>
+                        <input class="fc-num" type="number" min="0.25" max="60" step="0.25" value="@ssel.StrokeWidthPt" @onchange="e => { MkSnap(); SetShapeWidth(ssel, e); }" title="Stroke width (pt)" /> pt
+                    </div>
+                    @if (ssel.Kind == ShapeKind.Rectangle || ssel.Kind == ShapeKind.Ellipse)
+                    {
+                        <div class="fc-row">
+                            <span class="fc-lbl">Fill</span>
+                            <button class="fc-btn @(string.IsNullOrEmpty(ssel.FillHex) ? null : "on")" @onclick="() => { MkSnap(); ToggleShapeFill(ssel); }">@(string.IsNullOrEmpty(ssel.FillHex) ? "None" : "On")</button>
+                            @if (!string.IsNullOrEmpty(ssel.FillHex))
+                            {
+                                <label class="fc-sw on" title="Fill colour" style="background:@ssel.FillHex"><input type="color" value="@ssel.FillHex" @onchange="e => { MkSnap(); SetShapeFill(ssel, e); }" /></label>
+                            }
+                        </div>
+                    }
+                    <div class="fc-row">
+                        <span class="fc-lbl">Rotation</span>
+                        <input class="fc-num" type="number" min="-180" max="180" step="1" value="@ssel.Rotation" @onchange="e => { MkSnap(); SetShapeRotation(ssel, e); }" title="Rotation (°)" /> °
+                    </div>
+                    <label class="fc-toggle">Place behind page content <input type="checkbox" checked="@ssel.BehindContent" @onchange="() => { MkSnap(); ssel.BehindContent = !ssel.BehindContent; }" /></label>
+                    <div class="fc-foot">
+                        <button class="fc-btn fc-grow" @onclick="DuplicateSelected"><Icon Name="copy" Size="13" /> Duplicate</button>
+                        <button class="fc-btn fc-grow danger" @onclick="() => { MkSnap(); RemoveSelectedShape(); }"><Icon Name="trash" Size="13" /> Delete</button>
+                    </div>
+                </FloatCard>
+            }
+            else if (_selImage is { } isel)
+            {
+                <FloatCard Title="Image" Meta="@SelMeta(_selImagePage, _images, isel)">
+                    <div class="fc-row">
+                        <span class="fc-lbl">Opacity</span>
+                        <input class="fc-grow" type="range" min="0.1" max="1" step="0.05" value="@isel.Opacity" @oninput="e => SetImageOpacity(isel, e)" @onchange="_ => MkSnap()" />
+                        <span class="fc-meta">@(((int)Math.Round(isel.Opacity * 100)))%</span>
+                    </div>
+                    <div class="fc-row">
+                        <span class="fc-lbl">Rotation</span>
+                        <input class="fc-num" type="number" min="-180" max="180" step="1" value="@isel.Rotation" @onchange="e => { MkSnap(); SetImageRotation(isel, e); }" title="Rotation (°)" /> °
+                    </div>
+                    <div class="fc-row">
+                        <button class="fc-btn @(isel.Lock ? "on" : null)" @onclick="() => ToggleImageLock(isel)" title="Keep the aspect ratio while resizing"><Icon Name="lock" Size="13" /> @(isel.Lock ? "Aspect locked" : "Aspect free")</button>
+                        <button class="fc-btn" @onclick="AddImageViaPicker" title="Add another image"><Icon Name="file-image" Size="13" /> Add image</button>
+                    </div>
+                    <label class="fc-toggle">Place behind page content <input type="checkbox" checked="@isel.BehindContent" @onchange="() => { MkSnap(); isel.BehindContent = !isel.BehindContent; }" /></label>
+                    <div class="fc-foot">
+                        <button class="fc-btn fc-grow" @onclick="DuplicateSelected"><Icon Name="copy" Size="13" /> Duplicate</button>
+                        <button class="fc-btn fc-grow danger" @onclick="() => { MkSnap(); RemoveSelectedImage(); }"><Icon Name="trash" Size="13" /> Delete</button>
+                    </div>
+                </FloatCard>
+            }
+            else if (_mkStatus is not null)
+            {
+                <FloatCard Title="Marks" Meta="@MarkCountLabel" OnClose="() => { _mkStatus = null; _mkSavedPath = null; }">
+                    <div class="fc-status @(_mkError ? "err" : null)">@_mkStatus</div>
+                    @if (_mkSavedPath is not null)
+                    {
+                        <button class="fc-btn" @onclick="OpenRedacted">Open it</button>
+                    }
+                </FloatCard>
+            }
+        }
+
+        @if (doc is not null && tab is not null)
+        {
+            @switch (_card)
+            {
+                case "layers":
+                    <LayersCard Path="@tab.Path" Session="@tab.Session" CurrentPage="@CurPage" OnClose="CloseCard" OnMessage="OnCardMessage" OnLayersChanged="OnLayersChanged" />
+                    break;
+                case "measure":
+                    <MeasureCard Path="@tab.Path" Session="@tab.Session" CurrentPage="@CurPage" OnClose="CloseMeasure" OnMessage="OnCardMessage" Measurement="@_measure" OnClear="ClearMeasure" />
+                    break;
+                case "signatures":
+                    <SignaturesCard Path="@tab.Path" Session="@tab.Session" CurrentPage="@CurPage" OnClose="CloseCard" OnMessage="OnCardMessage" OnReport="OnSigReport" />
+                    break;
+                case "print":
+                    <PrintCard Path="@tab.Path" Session="@tab.Session" CurrentPage="@CurPage" OnClose="CloseCard" OnMessage="OnCardMessage" />
+                    break;
+                case "password":
+                    <PasswordCard Path="@tab.Path" Session="@tab.Session" CurrentPage="@CurPage" OnClose="CloseCard" OnMessage="OnCardMessage" OnSaved="OnProtectedSaved" />
+                    break;
+                case "cert":
+                    <FloatCard Title="Sign with certificate" Meta="always a new file" OnClose="CloseCard">
+                        <div class="fc-row">
+                            <button class="fc-btn fc-grow" @onclick="PickCert"><Icon Name="certification" Size="13" /> @(_certPath is null ? "Choose certificate (.pfx)…" : System.IO.Path.GetFileName(_certPath))</button>
+                        </div>
+                        <input class="fc-in" type="password" placeholder="Certificate password" @bind="_certPwd" @bind:event="oninput" />
+                        <input class="fc-in" placeholder="Reason (optional)" @bind="_certReason" @bind:event="oninput" />
+                        <input class="fc-in" placeholder="Location (optional)" @bind="_certLocation" @bind:event="oninput" />
+                        @if (_certSummary is not null)
+                        {
+                            <div class="fc-note">@_certSummary</div>
+                        }
+                        <p class="fc-note">An invisible digital signature is added; the signed copy is checked before it is saved. A visible signature box is waiting on the PDF library.</p>
+                        <div class="fc-foot">
+                            <button class="fc-btn primary fc-grow" disabled="@(_certPath is null || _certBusy)" @onclick="SignWithCertificate">@(_certBusy ? "Signing…" : "Save signed copy")</button>
+                        </div>
+                    </FloatCard>
+                    break;
+                case "stamp":
+                    var st = tab;
+                    var wm = st.Watermark;
+                    var hf = st.HeaderFooter;
+                    <FloatCard Title="@(_stampFocus == "watermark" ? "Watermark" : "Stamp")" Meta="preview on the page" Width="290" OnClose="CloseStamp">
+                        <div class="fc-card-scroll">
+                            <div class="fc-grp">Watermark</div>
+                            <input class="fc-in" placeholder="Watermark text (blank = off)" @bind="wm.Text" @bind:event="oninput" />
+                            <div class="fc-row">
+                                <select class="fc-sel fc-grow" @bind="wm.FontFamily">
+                                    <option value="Helvetica">Helvetica</option>
+                                    <option value="Times">Times</option>
+                                    <option value="Courier">Courier</option>
+                                </select>
+                                <button class="fc-btn fc-sq @(wm.Bold ? "on" : null)" @onclick="() => wm.Bold = !wm.Bold"><b>B</b></button>
+                                <button class="fc-btn fc-sq @(wm.Italic ? "on" : null)" @onclick="() => wm.Italic = !wm.Italic"><i>I</i></button>
+                                <label class="fc-sw on" title="Colour" style="background:@wm.ColorHex"><input type="color" @bind="wm.ColorHex" @bind:event="oninput" /></label>
+                            </div>
+                            <div class="fc-row"><span class="fc-lbl">Size</span><input class="fc-grow" type="range" min="8" max="144" step="1" @bind="wm.FontSize" @bind:event="oninput" /><span class="fc-meta">@(((int)wm.FontSize))</span></div>
+                            <div class="fc-row"><span class="fc-lbl">Opacity</span><input class="fc-grow" type="range" min="0.05" max="1" step="0.05" @bind="wm.Opacity" @bind:event="oninput" /><span class="fc-meta">@(((int)(wm.Opacity * 100)))%</span></div>
+                            <div class="fc-row">
+                                <span class="fc-lbl">Angle</span>
+                                <div class="fc-seg fc-grow">
+                                    @foreach (var a in new[] { 0, 45, 90, 315 })
+                                    {
+                                        var aa = a;
+                                        <button class="@((int)wm.RotationDegrees == aa ? "on" : null)" @onclick="() => wm.RotationDegrees = aa">@(aa)°</button>
+                                    }
+                                </div>
+                            </div>
+                            <label class="fc-toggle">All pages <input type="checkbox" @bind="wm.AllPages" /></label>
+                            @if (!wm.AllPages)
+                            {
+                                <div class="fc-row"><span class="fc-lbl">Pages</span><input type="number" min="1" class="fc-num" @bind="wm.FromPage" /> – <input type="number" min="0" class="fc-num" @bind="wm.ToPage" placeholder="end" /></div>
+                            }
+
+                            <div class="fc-grp">Header / footer</div>
+                            <label class="fc-toggle">Header <input type="checkbox" @bind="hf.HeaderEnabled" /></label>
+                            @if (hf.HeaderEnabled)
+                            {
+                                <div class="stamp-slots">
+                                    <BandSlotEditor @bind-Value="hf.HeaderLeft" Placeholder="left" />
+                                    <BandSlotEditor @bind-Value="hf.HeaderCenter" Placeholder="center" />
+                                    <BandSlotEditor @bind-Value="hf.HeaderRight" Placeholder="right" />
+                                </div>
+                            }
+                            <label class="fc-toggle">Footer <input type="checkbox" @bind="hf.FooterEnabled" /></label>
+                            @if (hf.FooterEnabled)
+                            {
+                                <div class="stamp-slots">
+                                    <BandSlotEditor @bind-Value="hf.FooterLeft" Placeholder="left" />
+                                    <BandSlotEditor @bind-Value="hf.FooterCenter" Placeholder="center" />
+                                    <BandSlotEditor @bind-Value="hf.FooterRight" Placeholder="right" />
+                                </div>
+                            }
+                            <div class="fc-row"><span class="fc-lbl">Size</span><input class="fc-grow" type="range" min="6" max="24" step="1" @bind="hf.FontSize" @bind:event="oninput" /><span class="fc-meta">@(((int)hf.FontSize))</span><label class="fc-sw on" title="Text colour" style="background:@hf.ColorHex"><input type="color" @bind="hf.ColorHex" @bind:event="oninput" /></label></div>
+                            <div class="fc-row">
+                                <label class="fc-toggle fc-grow">Band fill <input type="checkbox" @bind="hf.BackgroundEnabled" /></label>
+                                @if (hf.BackgroundEnabled)
+                                {
+                                    <label class="fc-sw on" style="background:@hf.BackgroundHex"><input type="color" @bind="hf.BackgroundHex" @bind:event="oninput" /></label>
+                                }
+                            </div>
+                            <label class="fc-toggle">All pages <input type="checkbox" @bind="hf.AllPages" /></label>
+                            @if (!hf.AllPages)
+                            {
+                                <div class="fc-row"><span class="fc-lbl">Pages</span><input type="number" min="1" class="fc-num" @bind="hf.FromPage" /> – <input type="number" min="0" class="fc-num" @bind="hf.ToPage" placeholder="end" /></div>
+                            }
+                            <div class="fc-note">Fit: Overlay (Shrink fits await a library fix).</div>
+                        </div>
+                        <div class="fc-foot">
+                            <button class="fc-btn fc-grow" @onclick="StampSaveInPlace" disabled="@(!HasStamp || _stampSaving)" title="Overwrite the open file">@(_stampSaving ? "Saving…" : "Save")</button>
+                            <button class="fc-btn primary fc-grow" @onclick="StampSaveAs" disabled="@(!HasStamp || _stampSaving)" title="Save to a new file">@(_stampSaving ? "Saving…" : "Save as new PDF")</button>
+                        </div>
+                        @if (_stampStatus is { } stst)
+                        {
+                            <div class="fc-status @(_stampError ? "err" : null)">@stst</div>
+                        }
+                    </FloatCard>
+                    break;
+            }
+        }
+
+        @if (_card == "view" && tab is not null)
+        {
+            <FloatCard Title="View" Meta="@(viewOnly ? tab.Format.Label() : $"{ZoomPct}%")" OnClose="CloseCard">
+                <div class="fc-card-scroll">
+                @if (viewOnly)
+                {
+                    <div class="fc-grp">Text size</div>
+                    <div class="fc-seg">
+                        @foreach (var sz in new[] { 85, 100, 115, 130, 150 })
+                        {
+                            var z = sz;
+                            <button class="@(_textSize == z ? "on" : null)" @onclick="() => _textSize = z">@z%</button>
+                        }
+                    </div>
+                    <div class="fc-grp">Reading width</div>
+                    <div class="fc-seg">
+                        @foreach (var w in new[] { "narrow", "normal", "wide" })
+                        {
+                            var ww = w;
+                            <button class="@(_readWidth == ww ? "on" : null)" @onclick="() => _readWidth = ww">@ww</button>
+                        }
+                    </div>
+                    @if (tab.Format == DocumentFormat.Text)
+                    {
+                        <label class="fc-toggle">Wrap lines <input type="checkbox" checked="@_wrap" @onchange="() => _wrap = !_wrap" /></label>
+                    }
+                }
+                else
+                {
+                    <div class="fc-grp">Fit</div>
+                    <div class="fc-row">
+                        <button class="fc-btn fc-grow @(Tab?.FitMode == ReaderFitMode.Width ? "on" : null)" @onclick="FitWidth">Width</button>
+                        <button class="fc-btn fc-grow @(Tab?.FitMode == ReaderFitMode.Page ? "on" : null)" @onclick="FitPage">Page</button>
+                        <button class="fc-btn fc-grow" @onclick="ActualSize" title="Actual size (100%)">100%</button>
+                    </div>
+                    <div class="fc-grp">Zoom</div>
+                    <div class="fc-chips">
+                        @foreach (var p in _zoomPresets)
+                        {
+                            <button class="fc-chip @(ZoomPct == p ? "on" : null)" @onclick="() => ZoomPreset(p)">@p%</button>
+                        }
+                    </div>
+                    <div class="fc-grp">Page layout</div>
+                    <div class="fc-seg">
+                        <button class="@(!TwoPageOn ? "on" : null)" @onclick="() => SetColumns(false)">Single</button>
+                        <button class="@(TwoPageOn && Tab?.CoverAlone != true ? "on" : null)" @onclick="() => SetColumns(true)">Two-page</button>
+                        <button class="@(TwoPageOn && Tab?.CoverAlone == true ? "on" : null)" @onclick="CoverLayout">Cover</button>
+                    </div>
+                    <label class="fc-toggle">Show cover alone <input type="checkbox" checked="@(Tab?.CoverAlone == true)" @onchange="ToggleCover" /></label>
+                    <label class="fc-toggle">Scroll (continuous) <input type="checkbox" checked="@ContinuousOn" @onchange="ToggleContinuous" /></label>
+                    <label class="fc-toggle">Lock scrolling <input type="checkbox" checked="@(Tab?.ScrollLocked == true)" @onchange="ToggleScrollLock" /></label>
+                    <div class="fc-grp">Rotate view</div>
+                    <div class="fc-seg">
+                        <button class="@(_rotScope == RotateScopeKind.Page ? "on" : null)" @onclick="() => _rotScope = RotateScopeKind.Page">Page</button>
+                        <button class="@(_rotScope == RotateScopeKind.Onward ? "on" : null)" @onclick="() => _rotScope = RotateScopeKind.Onward">Onward</button>
+                        <button class="@(_rotScope == RotateScopeKind.Document ? "on" : null)" @onclick="() => _rotScope = RotateScopeKind.Document">All</button>
+                    </div>
+                    <div class="fc-row">
+                        <button class="fc-btn fc-grow" @onclick="() => RotateScopeBy(-90)"><Icon Name="rotate-ccw" Size="14" /> Left</button>
+                        <button class="fc-btn fc-grow" @onclick="() => RotateScopeBy(90)"><Icon Name="rotate-cw" Size="14" /> Right</button>
+                    </div>
+                    <div class="fc-grp">Tools</div>
+                    <div class="fc-row">
+                        <button class="fc-btn fc-grow @(_tool == ReaderTool.Hand ? "on" : null)" @onclick="() => SetTool(ReaderTool.Hand)">Hand</button>
+                        <button class="fc-btn fc-grow @(_tool == ReaderTool.Marquee ? "on" : null)" @onclick="() => SetTool(ReaderTool.Marquee)" title="Drag a box to zoom into it">Marquee</button>
+                        <button class="fc-btn fc-grow @(_tool == ReaderTool.Loupe ? "on" : null)" @onclick="() => SetTool(ReaderTool.Loupe)">Loupe</button>
+                    </div>
+                    <div class="fc-row"><span class="fc-lbl">Lens</span>
+                        <div class="fc-seg fc-grow">
+                            <button class="@(_loupeRadius == 60 ? "on" : null)" @onclick="() => SetLoupe(60, _loupeMag)">S</button>
+                            <button class="@(_loupeRadius == 84 ? "on" : null)" @onclick="() => SetLoupe(84, _loupeMag)">M</button>
+                            <button class="@(_loupeRadius == 112 ? "on" : null)" @onclick="() => SetLoupe(112, _loupeMag)">L</button>
+                        </div>
+                    </div>
+                    <div class="fc-row"><span class="fc-lbl">Magnify</span>
+                        <div class="fc-seg fc-grow">
+                            <button class="@(_loupeMag == 1.5 ? "on" : null)" @onclick="() => SetLoupe(_loupeRadius, 1.5)">1.5×</button>
+                            <button class="@(_loupeMag == 2.2 ? "on" : null)" @onclick="() => SetLoupe(_loupeRadius, 2.2)">2×</button>
+                            <button class="@(_loupeMag == 3.0 ? "on" : null)" @onclick="() => SetLoupe(_loupeRadius, 3.0)">3×</button>
+                        </div>
+                    </div>
+                    <div class="fc-grp">Page colour <span style="text-transform:none;letter-spacing:0">· view only</span></div>
+                    <div class="fc-swatches">
+                        @foreach (var (name, hex) in _pageBgPresets)
+                        {
+                            <button class="fc-sw @(SameColor(_pageBg, hex) ? "on" : null)" style="background:@hex" title="@name" @onclick="() => SetPageBg(hex)"></button>
+                        }
+                        <label class="fc-sw" title="Custom" style="background:@_pageBg"><input type="color" value="@_pageBg" @oninput="OnCustomPageBg" /></label>
+                        <button class="fc-chip" @onclick='() => SetPageBg("#ffffff")'>Reset</button>
+                    </div>
+                    <div class="fc-grp">Display</div>
+                    <label class="fc-toggle">Strip under the page on hover <input type="checkbox" checked="@_hoverEnabled" @onchange="() => _hoverEnabled = !_hoverEnabled" /></label>
+                    <label class="fc-toggle">Page-curl corner <input type="checkbox" checked="@_curl" @onchange="() => _curl = !_curl" /></label>
+                    <button class="fc-btn" @onclick="ToggleReading"><Icon Name="expand" Size="14" /> @(_reading ? "Exit full screen" : "Full screen / reading")</button>
+                }
+                </div>
+            </FloatCard>
+        }
+    </div>
+
+    @if (_snapMenuOpen && _snapBase64 is not null)
+    {
+        <div class="rsnap-backdrop" @onclick="CloseSnapMenu"></div>
+        <div class="rsnap-menu" @onclick:stopPropagation="true">
+            <div class="rsnap-head">Snapshot · page @(_snapPage + 1)</div>
+            <img class="rsnap-preview" src="data:image/png;base64,@_snapBase64" alt="snapshot preview" />
+            @if (!_snapDeskMenu)
+            {
+                <button class="rsnap-item" @onclick="SnapshotSave"><Icon Name="download" Size="15" /> <span>Save as PNG…</span></button>
+                <button class="rsnap-item" @onclick="SnapshotCopy"><Icon Name="copy" Size="15" /> <span>Copy to clipboard</span></button>
+                <button class="rsnap-item" @onclick="() => _snapDeskMenu = true"><Icon Name="grid-view" Size="15" /> <span>Send to desk…</span></button>
+            }
+            else
+            {
+                <div class="rsnap-desks">
+                    @foreach (var dd in Bench.Desks)
+                    {
+                        <button class="rsnap-item" @onclick="() => SnapshotToDesk(dd.Id)"><Icon Name="grid-view" Size="13" /> <span>@DeskLabel(dd)</span></button>
+                    }
+                    <button class="rsnap-item rsnap-new" @onclick="SnapshotToNewDesk" disabled="@(!Bench.CanAddDesk)" title="@(Bench.CanAddDesk ? "Add a new desk" : "30-desk limit reached")"><Icon Name="plus" Size="13" /> <span>New desk</span></button>
+                </div>
+            }
+            @if (_snapStatus is { } ss)
+            {
+                <div class="rsnap-status">@ss</div>
+            }
+        </div>
+    }
+
+    @if (doc is not null && _findOpen)
+    {
+        <div class="rfind">
+            <input class="rfind-box" placeholder="Find in document…" value="@_findQuery"
+                   @ref="_findBoxRef"
+                   @oninput="e => _findQuery = e.Value?.ToString() ?? string.Empty"
+                   @onfocus="OnFindFocus" @onkeydown="OnFindKey" />
+            <button class="rfind-chip @(_findWholeWord ? "on" : null)" @onclick="ToggleWholeWord" title="Whole word">word</button>
+            <span class="rfind-count">@FindCountLabel</span>
+            @if (_findStatus is { } fs)
+            {
+                <span class="rfind-note">@fs</span>
+            }
+            <button class="rfind-nav" @onclick="PrevMatch" disabled="@(_findMatches.Count == 0)" title="Previous (Shift+Enter)"><Icon Name="chevron-up" Size="15" /></button>
+            <button class="rfind-nav" @onclick="NextMatch" disabled="@(_findMatches.Count == 0)" title="Next (Enter)"><Icon Name="chevron-down" Size="15" /></button>
+            <button class="rfind-x" @onclick="CloseFind" title="Close (Esc)"><Icon Name="x" Size="14" /></button>
+        </div>
+    }
+
+    @if (doc is not null && _reading)
+    {
+        @* Immersive: the rails are hidden, so the old bottom-edge bar comes back for view controls. *@
+        <div class="rhoverzone"></div>
+        <div class="rfloat">
+            <button class="vbtn" @onclick="ZoomOut" title="Zoom out"><Icon Name="zoom-out" Size="15" /></button>
+            <span class="rzoom">@ZoomPct%</span>
+            <button class="vbtn" @onclick="ZoomIn" title="Zoom in"><Icon Name="zoom-in" Size="15" /></button>
+            <span class="rsep"></span>
+            <button class="vbtn @(Tab?.FitMode == ReaderFitMode.Width ? "on" : null)" @onclick="FitWidth" title="Fit width"><Icon Name="fit-width" Size="17" /></button>
+            <button class="vbtn @(Tab?.FitMode == ReaderFitMode.Page ? "on" : null)" @onclick="FitPage" title="Fit page"><Icon Name="fit-page" Size="17" /></button>
+            <span class="rsep"></span>
+            <button class="vbtn @(!TwoPageOn ? "on" : null)" @onclick="() => SetColumns(false)" title="Single page"><Icon Name="page-single" Size="17" /></button>
+            <button class="vbtn @(TwoPageOn ? "on" : null)" @onclick="() => SetColumns(true)" title="Two-page"><Icon Name="page-facing" Size="17" /></button>
+            <span class="rsep"></span>
+            <button class="vbtn" @onclick="() => RotateScopeBy(-90)" title="Rotate left"><Icon Name="rotate-ccw" Size="17" /></button>
+            <button class="vbtn" @onclick="() => RotateScopeBy(90)" title="Rotate right"><Icon Name="rotate-cw" Size="17" /></button>
+            <button class="vbtn @(_tool == ReaderTool.Hand ? "on" : null)" @onclick="() => SetTool(ReaderTool.Hand)" title="Hand (pan)"><Icon Name="hand" Size="17" /></button>
+            <button class="vbtn" @onclick="ToggleReading" title="Exit full screen"><Icon Name="expand" Size="15" /></button>
+        </div>
+    }
+
+    @if (doc is not null && _hoverEnabled && !_reading)
+    {
+        <div class="pstrip" role="toolbar" aria-label="This page">
+            <span class="pstrip-pg">p @CurPage</span>
+            <button @onclick="() => RotateCurrent(90)" title="Rotate this page (view only)"><Icon Name="rotate-cw" Size="14" /> Rotate page</button>
+            <button @onclick="() => ToggleSendMenu(CurPage - 1)" title="Send this page to a desk in Arrange"><Icon Name="grid-view" Size="14" /> To desk</button>
+            <button @onclick="() => SetTool(ReaderTool.Snapshot)" title="Snapshot a region (S)"><Icon Name="snapshot" Size="14" /> Snapshot</button>
+            <button @onclick="AddBookmarkHere" title="Bookmark this page (@Platform.Keys.Format("Ctrl B"))"><Icon Name="bookmark" Size="14" /> Bookmark</button>
+            <button disabled title="Peek — coming soon"><Icon Name="eye" Size="14" /> Peek</button>
+        </div>
+    }
+
+    @if (doc is not null && _reading)
+    {
+        <button class="rexit" @onclick="ToggleReading" title="Exit full screen (Esc)"><Icon Name="x" Size="15" /> exit</button>
+    }
+
+    @if (_sendMenuPage is not null)
+    {
+        <div class="rpage-send-backdrop" @onclick="() => _sendMenuPage = null"></div>
+    }
+    @if (_toast is { } toast)
+    {
+        <div class="rpage-toast">@toast</div>
+    }
+    </div>
+
+    @if (tab is not null && (doc is not null || viewOnly))
+    {
+        <div class="mview-rails">
+            @if (viewOnly)
+            {
+                <SideRail Kind="tools" Heading="TOOLS">
+                    <RailButton Icon="outline" Label="Outline" Active="_pagesDrawer" OnClick="TogglePagesDrawer" Disabled="@(_viewerOutline.Count == 0)" />
+                    <RailButton Icon="find-in-page" Label="Find" Keys="Ctrl F" Active="_viewerFindOpen" OnClick="OpenViewerFind" />
+                    <RailButton Icon="copy" Label="Copy all" OnClick="CopyAllViewerText" />
+                    <RailButton Icon="print" Label="Print" DisabledReason="Convert to PDF first" />
+                    @if (tab.Format is DocumentFormat.Markdown or DocumentFormat.Html)
+                    {
+                        <RailButton Icon="@(_showSource ? "eye" : "data-table")" Label="@(_showSource ? "Show rendered" : "Show source")" Active="_showSource" OnClick="() => _showSource = !_showSource" />
+                    }
+                    <RailButton Icon="sliders" Label="View" Class="rb-viewfold" Active='_card == "view"' OnClick='() => ToggleCard("view")' />
+                    <RailSpacer />
+                    <RailButton Icon="file-pdf" Label="Convert to PDF" Primary="true" DisabledReason="Coming with the Layout library" />
+                </SideRail>
+                <SideRail Kind="view" Heading="VIEW">
+                    <RailButton Icon="zoom-in" Label="Larger text" Size="18" OnClick="() => _textSize = Math.Min(200, _textSize + 10)" />
+                    <RailText Title="Text size">@_textSize%</RailText>
+                    <RailButton Icon="zoom-out" Label="Smaller text" Size="18" OnClick="() => _textSize = Math.Max(60, _textSize - 10)" />
+                    <RailSep />
+                    <RailButton Icon="page-single" Label="Narrow column" Size="18" Active='_readWidth == "narrow"' OnClick='() => _readWidth = "narrow"' />
+                    <RailButton Icon="columns" Label="Normal width" Size="18" Active='_readWidth == "normal"' OnClick='() => _readWidth = "normal"' />
+                    <RailButton Icon="fit-width" Label="Wide" Size="18" Active='_readWidth == "wide"' OnClick='() => _readWidth = "wide"' />
+                    @if (tab.Format == DocumentFormat.Text)
+                    {
+                        <RailSep />
+                        <RailButton Icon="list-view" Label="Wrap lines" Size="18" Active="_wrap" OnClick="() => _wrap = !_wrap" />
+                    }
+                </SideRail>
+            }
+            else if (_markup)
+            {
+                <SideRail Kind="tools" Heading="MARK">
+                    <RailButton Icon="text-box" Label="Text" Keys="T" Active='_mkTool == "text" && !_sigOpen' OnClick='() => PickMkTool("text")' />
+                    <RailButton Icon="file-image" Label="Image" Keys="I" Active='_mkTool == "image" && !_sigOpen' OnClick="PickImageTool" />
+                    <RailButton Icon="shape-rect" Label="Rectangle" Keys="B" Active='_mkTool == "rect" && !_sigOpen' OnClick='() => PickMkTool("rect")' />
+                    <RailButton Icon="shape-ellipse" Label="Ellipse" Keys="E" Active='_mkTool == "ellipse" && !_sigOpen' OnClick='() => PickMkTool("ellipse")' />
+                    <RailButton Icon="minus" Label="Line" Keys="L" Active='_mkTool == "line" && !_sigOpen' OnClick='() => PickMkTool("line")' />
+                    <RailButton Icon="arrow-anno" Label="Arrow" Keys="A" Active='_mkTool == "arrow" && !_sigOpen' OnClick='() => PickMkTool("arrow")' />
+                    <RailButton Icon="freehand" Label="Draw" Keys="D" Active='_mkTool == "freehand" && !_sigOpen' OnClick='() => PickMkTool("freehand")' />
+                    <RailButton Icon="signature" Label="Signature" Keys="G" Active="_sigOpen" OnClick="OpenSignature" />
+                    <RailButton Icon="highlight" Label="Highlight" Keys="H" DisabledReason="Coming soon" />
+                    <RailButton Icon="sticky-note" Label="Note" Keys="N" DisabledReason="Coming soon" />
+                    <RailButton Icon="form-field" Label="Fill form" DisabledReason="Coming soon" />
+                    <RailSep />
+                    <RailButton Icon="undo" Label="Undo" Keys="Ctrl Z" Disabled="@(_mkUndo.Count == 0)" OnClick="MkUndo" />
+                    <RailButton Icon="redo" Label="Redo" Keys="Ctrl Y" Disabled="@(_mkRedo.Count == 0)" OnClick="MkRedo" />
+                    <RailButton Icon="trash" Label="Clear all marks" Disabled="@(OverlayCount == 0 || _mkSaving)" OnClick="() => { MkSnap(); ClearMarkup(); }" />
+                    <RailButton Icon="sliders" Label="View" Class="rb-viewfold" Active='_card == "view"' OnClick='() => ToggleCard("view")' />
+                    <RailSpacer />
+                    <RailButton Icon="save" Label="Save" Keys="Ctrl S" Disabled="@(OverlayCount == 0 || _mkSaving)" OnClick="SaveInPlace" />
+                    <RailButton Icon="download" Label="Save as new PDF" Keys="Ctrl Shift S" Primary="true" Disabled="@(OverlayCount == 0 || _mkSaving)" OnClick="SaveMarkup" />
+                </SideRail>
+            }
+            else if (_protect)
+            {
+                <SideRail Kind="tools" Heading="PROTECT">
+                    <RailButton Icon="redact" Label="Redact box" Keys="R" OnClick="() => GoRedact(false)" />
+                    <RailButton Icon="find-in-page" Label="Find & redact" OnClick="() => GoRedact(true)" />
+                    <RailButton Icon="stamp" Label="Stamp" Active='_card == "stamp" && _stampFocus != "watermark"' OnClick='() => OpenStamp("stamp")' />
+                    <RailButton Icon="watermark" Label="Watermark" Active='_card == "stamp" && _stampFocus == "watermark"' OnClick='() => OpenStamp("watermark")' />
+                    <RailButton Icon="compress" Label="Flatten" Disabled="_flattening" OnClick="FlattenNow" />
+                    <RailButton Icon="doc-lock" Label="Password" Active='_card == "password"' OnClick='() => ToggleCard("password")' />
+                    <RailButton Icon="certification" Label="Sign with certificate" DisabledReason="@(ChuvadiReader.Core.Documents.CertificateSignService.IsAvailable ? null : ChuvadiReader.Core.Documents.CertificateSignService.WaitingReason)" Active='_card == "cert"' OnClick='() => ToggleCard("cert")' />
+                    <RailButton Icon="sliders" Label="View" Class="rb-viewfold" Active='_card == "view"' OnClick='() => ToggleCard("view")' />
+                    <RailSpacer />
+                    <RailButton Icon="download" Label="Save redacted copy" Primary="true" OnClick="() => GoRedact(false)" />
+                </SideRail>
+            }
+            else
+            {
+                <SideRail Kind="tools" Heading="READ">
+                    <RailButton Icon="page-single" Label="Pages & outline" Active="_pagesDrawer" OnClick="TogglePagesDrawer" />
+                    <RailButton Icon="bookmark" Label="Add bookmark" Keys="Ctrl B" OnClick="AddBookmarkHere" />
+                    <RailButton Icon="snapshot" Label="Snapshot" Keys="S" Active="_tool == ReaderTool.Snapshot" OnClick="() => SetTool(ReaderTool.Snapshot)" />
+                    <RailButton Icon="skin-layer" Label="Layers" Active='_card == "layers"' OnClick='() => ToggleCard("layers")' />
+                    <RailButton Icon="measure-tool" Label="Measure" Keys="M" Active="_measureOn" OnClick="ToggleMeasure" />
+                    <RailButton Icon="certification" Label="Signatures" Active='_card == "signatures"' OnClick='() => ToggleCard("signatures")' />
+                    <RailButton Icon="find-in-page" Label="Find" Keys="Ctrl F" Active="_findOpen" OnClick="OpenFindFromShell" />
+                    <RailButton Icon="sliders" Label="View" Class="rb-viewfold" Active='_card == "view"' OnClick='() => ToggleCard("view")' />
+                    <RailSep />
+                    <RailButton Icon="print" Label="Print" Keys="Ctrl P" Active='_card == "print"' OnClick='() => ToggleCard("print")' />
+                    <RailButton Icon="eye" Label="Immersive" Keys="F11" Active="_reading" OnClick="ToggleReading" />
+                </SideRail>
+            }
+
+            @if (!viewOnly)
+            {
+                <SideRail Kind="view" Heading="VIEW">
+                    <RailButton Icon="zoom-in" Label="Zoom in" Keys="Ctrl +" Size="18" Disabled="@(CurScale >= 8.0)" OnClick="ZoomIn" />
+                    <RailText Title="Zoom">@ZoomPct%</RailText>
+                    <RailButton Icon="zoom-out" Label="Zoom out" Keys="Ctrl −" Size="18" Disabled="@(CurScale <= 0.1)" OnClick="ZoomOut" />
+                    <RailSep />
+                    <RailButton Icon="fit-width" Label="Fit width" Keys="@(_markup ? null : "W")" Size="18" Active="@(Tab?.FitMode == ReaderFitMode.Width)" OnClick="FitWidth" />
+                    <RailButton Icon="fit-page" Label="Fit page" Keys="@(_markup ? null : "P")" Size="18" Active="@(Tab?.FitMode == ReaderFitMode.Page)" OnClick="FitPage" />
+                    <RailSep />
+                    <RailButton Icon="page-single" Label="Single page" Size="18" Active="!TwoPageOn" OnClick="() => SetColumns(false)" />
+                    <RailButton Icon="page-facing" Label="Two-page" Size="18" Active="@(TwoPageOn && Tab?.CoverAlone != true)" OnClick="() => SetColumns(true)" />
+                    <RailButton Icon="page-cover" Label="Cover alone" Size="18" Active="@(TwoPageOn && Tab?.CoverAlone == true)" OnClick="CoverLayout" />
+                    <RailSep />
+                    <RailButton Icon="rotate-cw" Label="Rotate view" Keys="Ctrl ]" Size="18" OnClick="() => RotateScopeBy(90)" />
+                    <RailButton Icon="hand" Label="Hand" Keys="@(_markup ? null : "H")" Size="18" Active="_tool == ReaderTool.Hand" OnClick="() => SetTool(ReaderTool.Hand)" />
+                    <RailButton Icon="loupe" Label="Loupe" Keys="@(_markup ? null : "L")" Size="18" Active="_tool == ReaderTool.Loupe" OnClick="() => SetTool(ReaderTool.Loupe)" />
+                    <RailSep />
+                    <RailButton Icon="sliders" Label="More view options" Size="18" Active='_card == "view"' OnClick='() => ToggleCard("view")' />
+                </SideRail>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private async Task OpenInBench()
+    {
+        var active = Tabs.Active;
+        if (active?.Path is null)
+        {
+            return;
+        }
+
+        await Bench.AddSourceAsync(active.Path, active.FileName);
+        Nav.NavigateTo("/bench");
+    }
+
+    private async Task SendToRedact()
+    {
+        var active = Tabs.Active;
+        if (active?.Path is null) return;
+
+        // If there are unsaved overlays (text/shapes/images), flatten them into a temp PDF
+        // so the shapes travel into Redact baked in; otherwise send the original file.
+        if (OverlayCount > 0)
+        {
+            try
+            {
+                var temp = System.IO.Path.Combine(
+                    ScratchFiles.Folder(Paths),
+                    System.IO.Path.GetFileNameWithoutExtension(active.Path) + "-toredact-" + Guid.NewGuid().ToString("N").Substring(0, 8) + ".pdf");
+                await Redact.FlattenToFileAsync(
+                    active.Path, temp,
+                    new Dictionary<int, PageRedaction>(), _mkColor,
+                    BuildTextsDict(), BuildImagesDict(), BuildShapesDict());
+                RedactHandoff.Request(temp, active.FileName);
+                Nav.NavigateTo("/redact");
+                return;
+            }
+            catch
+            {
+                // Fall back to sending the original if flattening fails.
+            }
+        }
+
+        RedactHandoff.Request(active.Path, active.FileName);
+        Nav.NavigateTo("/redact");
+    }
+
+    private async Task ShowProperties()
+    {
+        var active = Tabs.Active;
+        if (active?.Path is null)
+        {
+            return;
+        }
+
+        _showProps = true;
+        _props = null;
+        StateHasChanged();
+        try
+        {
+            _props = await DocProps.ReadAsync(active.Path);
+        }
+        catch
+        {
+            _props = new DocProperties(System.IO.Path.GetFileName(active.Path),
+                null, null, null, null, null, null, null, null,
+                active.Session?.Document.PageCount ?? 0, "—", false, null, false, false, 0);
+        }
+    }
+
+    private void CloseProperties()
+    {
+        _showProps = false;
+        _props = null;
+    }
+
+    private void ShowExport()
+    {
+        _showExport = true;
+        _expStatus = null;
+        _expFolder = SaveFolders.SubFolder("Export");
+    }
+
+    private void CloseExport() => _showExport = false;
+
+    private async Task ChangeExportFolder()
+    {
+        var folder = await Picker.PickFolderAsync();
+        if (folder is not null)
+        {
+            _expFolder = folder;
+        }
+    }
+
+    private async Task RunExport()
+    {
+        var active = Tabs.Active;
+        if (active?.Path is null || string.IsNullOrEmpty(_expFolder))
+        {
+            return;
+        }
+
+        _expBusy = true;
+        _expStatus = "exporting…";
+        StateHasChanged();
+        try
+        {
+            var n = await Export.ExportAsync(active.Path, _expFolder, _expFormat, _expAll, CurPage - 1, _expDpi);
+            if (n > 0) await WriteBack.DeliverOrThrowAsync(_expFolder);
+            _expStatus = $"Exported {n} file{(n == 1 ? "" : "s")} → {_expFolder}";
+        }
+        catch (Exception ex)
+        {
+            _expStatus = "Export failed: " + ex.Message;
+        }
+        finally
+        {
+            _expBusy = false;
+        }
+    }
+
+    private static string Chip(bool on) =>
+        "font-family:var(--chvd-mono);font-size:12px;padding:6px 12px;border-radius:8px;cursor:pointer;border:var(--chvd-stroke) solid " +
+        (on
+            ? "var(--chvd-binding);color:var(--chvd-binding);background:var(--chvd-binding-soft)"
+            : "var(--chvd-border);color:var(--chvd-ink);background:var(--chvd-surface-lo)");
+
+    private void ShowPress()
+    {
+        _showPress = true;
+        _pressStatus = null;
+        _pressResult = null;
+        _pressFolder = Press.DefaultFolder;
+    }
+
+    private void ClosePress() => _showPress = false;
+
+    private async Task ChangePressFolder()
+    {
+        var folder = await Picker.PickFolderAsync();
+        if (folder is not null)
+        {
+            _pressFolder = folder;
+        }
+    }
+
+    private async Task RunPress()
+    {
+        var active = Tabs.Active;
+        if (active?.Path is null)
+        {
+            return;
+        }
+
+        _pressBusy = true;
+        _pressResult = null;
+        _pressStatus = "pressing…";
+        StateHasChanged();
+        try
+        {
+            if (_pressUseTarget && _pressTargetMb > 0)
+            {
+                _pressResult = await Press.PressToTargetAsync(active.Path, _pressFolder, (long)(_pressTargetMb * 1024 * 1024));
+            }
+            else
+            {
+                var opts = _pressPreset == PressPreset.Custom
+                    ? new PressOptions(_pressRecompress, _pressQuality, _pressMinStream, _pressMinPixels)
+                    : PressOptions.For(_pressPreset);
+                _pressResult = await Press.PressAsync(active.Path, _pressFolder, opts);
+            }
+
+            await WriteBack.DeliverOrThrowAsync(_pressResult?.OutputPath);
+            _pressStatus = null;
+        }
+        catch (Exception ex)
+        {
+            _pressStatus = "Press failed: " + ex.Message;
+        }
+        finally
+        {
+            _pressBusy = false;
+        }
+    }
+
+    private async Task OpenPressResult()
+    {
+        if (_pressResult is null)
+        {
+            return;
+        }
+
+        var path = _pressResult.OutputPath;
+        var name = System.IO.Path.GetFileName(path);
+        var format = DocumentFormatExtensions.FromPath(path);
+        _showPress = false;
+        await Recents.TouchAsync(new RecentItem(name, path, format, DateTimeOffset.Now, false));
+        await Tabs.OpenAsync(path, name, format);
+    }
+
+    private IEnumerable<(string Label, string Value)> PropRows()
+    {
+        if (_props is null)
+        {
+            yield break;
+        }
+
+        yield return ("File", _props.FileName);
+        if (_props.Title is not null) yield return ("Title", _props.Title);
+        if (_props.Author is not null) yield return ("Author", _props.Author);
+        if (_props.Subject is not null) yield return ("Subject", _props.Subject);
+        if (_props.Keywords is not null) yield return ("Keywords", _props.Keywords);
+        if (_props.Creator is not null) yield return ("Creator", _props.Creator);
+        if (_props.Producer is not null) yield return ("Producer", _props.Producer);
+        if (_props.Created is not null) yield return ("Created", _props.Created);
+        if (_props.Modified is not null) yield return ("Modified", _props.Modified);
+        yield return ("Pages", _props.PageCount.ToString());
+        yield return ("Page size", _props.PageSize);
+        yield return ("Encryption", _props.Encrypted ? (_props.Encryption ?? "Encrypted") : "None");
+        yield return ("XFA form", _props.IsXfa ? "Yes" : "No");
+        yield return ("Fast web view", _props.Linearized ? "Yes" : "No");
+        yield return ("File size", SizeOf(_props.SizeBytes));
+    }
+
+    private static string SizeOf(long bytes)
+    {
+        string[] units = { "B", "KB", "MB", "GB" };
+        double s = bytes;
+        var i = 0;
+        while (s >= 1024 && i < units.Length - 1)
+        {
+            s /= 1024;
+            i++;
+        }
+
+        return $"{s:0.#} {units[i]}";
+    }
+
+    private readonly HashSet<int> _rendering = new();
+    private List<int> _pages = new();
+
+    private string? _activeId;
+    private int _shownPageCount;
+    private bool _restoreScroll;
+    private int? _pendingJumpPage;
+    private readonly HashSet<string> _initiallyFitted = new();
+    private DocProperties? _props;
+    private bool _showProps;
+    private static readonly ExportFormat[] _formats =
+        { ExportFormat.Svg, ExportFormat.Png, ExportFormat.Jpg, ExportFormat.Bmp };
+    private static readonly int[] _dpis = { 96, 150, 300, 600 };
+    private bool _showExport;
+    private ExportFormat _expFormat = ExportFormat.Png;
+    private bool _expAll;
+    private int _expDpi = 150;
+    private bool _expBusy;
+    private string _expFolder = string.Empty;
+    private string? _expStatus;
+
+    private static readonly PressPreset[] _presets =
+        { PressPreset.Light, PressPreset.Balanced, PressPreset.Strong, PressPreset.Custom };
+    private bool _showPress;
+    private PressPreset _pressPreset = PressPreset.Balanced;
+    private int _pressQuality = 70;
+    private bool _pressRecompress = true;
+    private int _pressMinStream = 256;
+    private int _pressMinPixels = 10000;
+    private bool _pressUseTarget;
+    private double _pressTargetMb = 2;
+    private string _pressFolder = string.Empty;
+    private bool _pressBusy;
+    private PressResult? _pressResult;
+    private string? _pressStatus;
+    private int _loadGen;       // bumped when the active document changes or finishes loading
+    private int _observedGen;   // last generation the JS observers were attached to
+
+    private bool _curl = true;
+    private string _pageInput = "1";
+
+    private ElementReference _desk;
+    private IJSObjectReference? _js;
+    private DotNetObjectReference<Reader>? _ref;
+
+    private ReaderTab? Tab => Tabs.Active;
+    private PdfDocumentVm? Doc => Tab?.Session?.Document;
+    private int CurPage => Tab?.CurrentPage ?? 1;
+    private double CurScale => Tab?.Scale ?? 1.0;
+    private string Zoom => CurScale.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+
+    // ── Reader page colour (view-only tint; remembered per document) ──
+    private string _pageBg = "#ffffff";
+    private bool _pageColorOpen;
+    private string? _pageBgPath;
+    private static readonly (string Name, string Hex)[] _pageBgPresets =
+    {
+        ("White", "#ffffff"), ("Sepia", "#f4ecd8"), ("Soft gray", "#e8e8e8"),
+        ("Mint", "#e3f0e3"), ("Pale blue", "#e6eef7"),
+    };
+
+    private void TogglePageColor() => _pageColorOpen = !_pageColorOpen;
+
+    private static bool SameColor(string? a, string? b) =>
+        string.Equals(a?.TrimStart('#'), b?.TrimStart('#'), StringComparison.OrdinalIgnoreCase);
+
+    private static string PageBgKey(string path) => "readerPageBg:" + path;
+
+    private async Task SetPageBg(string hex)
+    {
+        _pageBg = hex;
+        var path = Tab?.Path;
+        _pageBgPath = path;
+        if (!string.IsNullOrEmpty(path))
+        {
+            try { await Storage.SetAsync(PageBgKey(path!), hex); } catch { }
+        }
+    }
+
+    private async Task OnCustomPageBg(ChangeEventArgs e)
+    {
+        var hex = e.Value?.ToString();
+        if (!string.IsNullOrWhiteSpace(hex)) await SetPageBg(hex!);
+    }
+
+    // Load the saved tint for a document when it becomes active (default white).
+    private async Task LoadPageBgAsync(string? path)
+    {
+        if (string.IsNullOrEmpty(path)) { _pageBg = "#ffffff"; _pageBgPath = null; return; }
+        _pageBgPath = path;
+        var bg = "#ffffff";
+        try { bg = await Storage.GetAsync(PageBgKey(path!)) ?? "#ffffff"; } catch { }
+        _pageBg = bg;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    // ── Markup mode (redact + add text; view-only until Save As to a new file) ──
+    private bool _markup;
+    private string _mkTool = "text";
+    private string? _mkDocPath;
+    private string _mkColor = "#000000";
+    private static readonly (string Name, string Hex)[] _mkColorPresets =
+    {
+        ("Black", "#000000"),
+        ("White", "#ffffff"),
+    };
+    private bool IsCustomColor => !_mkColorPresets.Any(p => string.Equals(p.Hex, _mkColor, StringComparison.OrdinalIgnoreCase));
+    private void OnMkColor(ChangeEventArgs e) => _mkColor = e.Value?.ToString() ?? "#000000";
+
+    // ── Signature tool ───────────────────────────────────────────────────────
+    // Typed signatures are rendered to a PNG on a JS canvas and placed as a normal
+    // image overlay, so they use the working image-stamp path (not text stamping).
+    private bool _sigOpen;
+    private string _sigMode = "type";
+    private string _sigText = "";
+    private string _sigColor = "#0b3d91";
+    private string _sigFontName = "Script";
+    private string? _sigError;
+
+    private sealed record SigFont(string Name, string Style, string Family);
+    private static readonly SigFont[] _sigFonts =
+    {
+        new("Script",  "",       "'Segoe Script','Brush Script MT','Lucida Handwriting',cursive"),
+        new("Elegant", "italic", "'Gabriola','Palatino Linotype','Book Antiqua',serif"),
+        new("Classic", "italic", "'Times New Roman',Georgia,serif"),
+    };
+    private SigFont CurrentSigFont => _sigFonts.FirstOrDefault(f => f.Name == _sigFontName) ?? _sigFonts[0];
+    private string SigCanvasFont => $"{CurrentSigFont.Style} 72px {CurrentSigFont.Family}".Trim();
+    private string SigPreviewStyle =>
+        $"font-style:{(string.IsNullOrEmpty(CurrentSigFont.Style) ? "normal" : CurrentSigFont.Style)};"
+        + $"font-family:{CurrentSigFont.Family};color:{_sigColor}";
+
+    private void OpenSignature()
+    {
+        if (!_markup) return;
+        EnsureMarkupDoc();
+        _sigError = null;
+        _sigOpen = true;
+    }
+
+    private void CloseSignature() => _sigOpen = false;
+
+    private async Task PlaceTypedSignature()
+    {
+        if (string.IsNullOrWhiteSpace(_sigText)) return;
+        _sigError = null;
+        try
+        {
+            int page = Math.Clamp(CurPage - 1, 0, (Doc?.PageCount ?? 1) - 1);
+            await CacheLayerRect(page);
+            string? dataUrl = _js is null
+                ? null
+                : await _js.InvokeAsync<string?>("renderSignature", _sigText.Trim(), SigCanvasFont, _sigColor);
+            var bytes = DataUrlToBytes(dataUrl);
+            if (bytes.Length == 0)
+            {
+                _sigError = "Could not render the signature.";
+                return;
+            }
+            AddImageBox(page, bytes, "image/png");
+            _sigOpen = false;
+        }
+        catch (Exception ex)
+        {
+            _sigError = $"Signature failed: {ex.Message}";
+        }
+        StateHasChanged();
+    }
+
+    private async Task UploadSignature()
+    {
+        _sigError = null;
+        EnsureMarkupDoc();
+        IReadOnlyList<string> paths;
+        try { paths = await Picker.PickImagesAsync(); }
+        catch { return; }
+        if (paths is null || paths.Count == 0) return;
+        int page = Math.Clamp(CurPage - 1, 0, (Doc?.PageCount ?? 1) - 1);
+        await CacheLayerRect(page);
+        try
+        {
+            var bytes = await Task.Run(() => System.IO.File.ReadAllBytes(paths[0]));
+            AddImageBox(page, bytes, MimeForPath(paths[0]));
+            _sigOpen = false;
+        }
+        catch (Exception ex)
+        {
+            _sigError = $"Could not load image: {ex.Message}";
+        }
+        StateHasChanged();
+    }
+
+    private static byte[] DataUrlToBytes(string? dataUrl)
+    {
+        if (string.IsNullOrEmpty(dataUrl)) return Array.Empty<byte>();
+        var comma = dataUrl.IndexOf(',');
+        try { return Convert.FromBase64String(comma >= 0 ? dataUrl[(comma + 1)..] : dataUrl); }
+        catch { return Array.Empty<byte>(); }
+    }
+
+    private sealed class TextBox
+    {
+        public double X { get; set; }
+        public double Y { get; set; }
+        public double W { get; set; }
+        public double H { get; set; }
+        public string Text { get; set; } = "";
+        public string FontFamily { get; set; } = "Helvetica";
+        public bool Bold { get; set; }
+        public bool Italic { get; set; }
+        public double FontSizePt { get; set; } = 14;
+        public string ColorHex { get; set; } = "#111111";
+        public string Align { get; set; } = "left";
+        public double Rotation { get; set; }
+        public double LineHeight { get; set; } = 1.2;
+    }
+
+    private sealed class ImageBox
+    {
+        public double X { get; set; }
+        public double Y { get; set; }
+        public double W { get; set; }
+        public double H { get; set; }
+        public byte[] Bytes { get; set; } = Array.Empty<byte>();
+        public string DataUrl { get; set; } = "";
+        public double Opacity { get; set; } = 1.0;   // 0–1 alpha, applied on stamp
+        public bool Lock { get; set; } = true;        // aspect lock on by default
+        public double Aspect { get; set; } = 1.0;     // natural width/height (pixels)
+        public double Rotation { get; set; }          // degrees, clockwise on screen
+        public bool BehindContent { get; set; }       // draw under the page content
+    }
+
+    private sealed class ShapeBox
+    {
+        public ShapeKind Kind { get; set; }
+        public double X { get; set; }
+        public double Y { get; set; }
+        public double W { get; set; }   // for a Line, a signed delta to the end point
+        public double H { get; set; }
+        public string? FillHex { get; set; }            // rectangle only; null = no fill
+        public string StrokeHex { get; set; } = "#E03131";
+        public double StrokeWidthPt { get; set; } = 2;
+        public double Rotation { get; set; }            // degrees, clockwise on screen
+        public bool BehindContent { get; set; }         // draw under the page content
+        public List<(double X, double Y)>? Points { get; set; }  // freehand path (normalised)
+    }
+
+    private enum MkMode
+    {
+        None, TextDraw, MoveText, ResizeText,
+        ShapeDraw, MoveShape, ResizeShape, MoveLineEnd,
+        MoveImage, ResizeImage,
+    }
+    private MkMode _mkMode = MkMode.None;
+
+    private readonly Dictionary<int, List<TextBox>> _texts = new();
+    private readonly Dictionary<int, List<ShapeBox>> _shapes = new();
+    private readonly Dictionary<int, List<ImageBox>> _images = new();
+    private TextBox? _selText;
+    private int _selTextPage = -1;
+    private ShapeBox? _selShape;
+    private int _selShapePage = -1;
+    private ImageBox? _selImage;
+    private int _selImagePage = -1;
+
+    // Shape draft + style defaults for new shapes.
+    private int _shapeDraftPage = -1;
+    private NormBox? _shapeDraft;
+    private List<(double X, double Y)>? _freehandPts;   // accumulates while drawing freehand
+    private string _shapeStroke = "#E03131";
+    private string? _shapeFill = null;          // null = no fill
+    private double _shapeStrokeWidth = 2;
+
+    private int _textDraftPage = -1;
+    private NormBox? _textDraft;
+    private double _mkStartX, _mkStartY;
+    private (double L, double T, double W, double H) _mkRect;
+
+    private TextBox? _dragText;
+    private ShapeBox? _dragShape;
+    private ImageBox? _dragImage;
+    private double _dragOX, _dragOY, _dragOW, _dragOH;
+    private List<(double X, double Y)>? _dragShapePts;   // freehand points snapshot at move start
+    private bool _lineEndIsEnd = true;           // which end of a line is being dragged
+
+    private bool _mkSaving;
+    private string? _mkStatus;
+    private bool _mkError;
+    private string? _mkSavedPath;
+    private bool _mkTagged;
+    private string? _mkTaggedPath;
+
+    private int TextCount => _texts.Values.Sum(v => v.Count);
+    private int ShapeCount => _shapes.Values.Sum(v => v.Count);
+    private int ImageCount => _images.Values.Sum(v => v.Count);
+    private int OverlayCount => TextCount + ShapeCount + ImageCount; // everything that's overlay-only
+
+    // ── Send page to a desk (Reader → Bench shortcut, one page at a time) ──
+    private int? _sendMenuPage;
+    private string? _toast;
+    private System.Threading.CancellationTokenSource? _toastCts;
+
+    private void ToggleSendMenu(int page) => _sendMenuPage = _sendMenuPage == page ? null : page;
+
+    private static string DeskLabel(Desk d) => string.IsNullOrWhiteSpace(d.Name) ? "Desk" : d.Name;
+
+    private async Task SendPageToDesk(int page, Guid deskId)
+    {
+        _sendMenuPage = null;
+        var active = Tabs.Active;
+        if (active?.Path is null) return;
+        try
+        {
+            var sourceIndex = await Bench.EnsureSourceAsync(active.Path, active.FileName);
+            if (sourceIndex < 0) return;
+            Bench.AddPageToDesk(deskId, sourceIndex, page);
+            var desk = Bench.Desks.FirstOrDefault(d => d.Id == deskId);
+            ShowToast($"Page {page + 1} → {(desk is null ? "desk" : DeskLabel(desk))}");
+        }
+        catch (Exception ex)
+        {
+            ShowToast($"Couldn't send page: {ex.Message}");
+        }
+    }
+
+    private async Task SendPageToNewDesk(int page)
+    {
+        if (!Bench.CanAddDesk) return;
+        var desk = Bench.AddDesk();
+        await SendPageToDesk(page, desk.Id);
+    }
+
+    private void ShowToast(string message)
+    {
+        _toast = message;
+        _toastCts?.Cancel();
+        _toastCts = new System.Threading.CancellationTokenSource();
+        var token = _toastCts.Token;
+        _ = Task.Run(async () =>
+        {
+            try { await Task.Delay(2600, token); } catch { return; }
+            if (token.IsCancellationRequested) return;
+            _toast = null;
+            await InvokeAsync(StateHasChanged);
+        });
+    }
+
+    // ── Watermark + header/footer (Stamp panel) — config lives on the active tab ──
+    private bool _stampSaving;
+    private string? _stampStatus;
+    private bool _stampError;
+
+    private bool HasStamp =>
+        Tab is { } t && (!string.IsNullOrWhiteSpace(t.Watermark.Text) || t.HeaderFooter.HasAnyContent);
+
+    private void ToggleStamp()
+    {
+        if (Tab is not { } t) return;
+        t.StampOpen = !t.StampOpen;
+        _stampStatus = null;
+        if (t.StampOpen && _markup) ToggleMarkup(); // don't run markup + stamp at once
+    }
+
+    private async Task StampSaveAs()
+    {
+        var active = Tabs.Active;
+        if (active?.Path is null || !HasStamp) return;
+        var suggested = System.IO.Path.GetFileNameWithoutExtension(active.Path) + "-stamped.pdf";
+        var output = await Picker.PickSavePdfAsync(suggested);
+        if (string.IsNullOrWhiteSpace(output)) return;
+        await RunStamp(output!, inPlace: false);
+    }
+
+    private async Task StampSaveInPlace()
+    {
+        var active = Tabs.Active;
+        if (active?.Path is null || !HasStamp) return;
+        var dir = System.IO.Path.GetDirectoryName(active.Path) ?? "";
+        var temp = System.IO.Path.Combine(dir, "~" + System.IO.Path.GetFileNameWithoutExtension(active.Path) + ".stamp-tmp.pdf");
+        await RunStamp(temp, inPlace: true, finalPath: active.Path);
+    }
+
+    private async Task RunStamp(string output, bool inPlace, string? finalPath = null)
+    {
+        var active = Tabs.Active;
+        if (active?.Path is null) return;
+
+        _stampSaving = true; _stampStatus = null; _stampError = false;
+        StateHasChanged();
+        await Task.Yield();
+        try
+        {
+            var wm = string.IsNullOrWhiteSpace(active.Watermark.Text) ? null : active.Watermark;
+            var hf = active.HeaderFooter.HasAnyContent ? active.HeaderFooter : null;
+            await Stamp.ApplyToFileAsync(active.Path, output, wm, hf, active.FileName);
+
+            if (inPlace && finalPath is not null)
+            {
+                await Tabs.ReloadActiveAsync(async () =>
+                {
+                    try
+                    {
+                        if (System.IO.File.Exists(finalPath)) System.IO.File.Replace(output, finalPath, null);
+                        else System.IO.File.Move(output, finalPath);
+                    }
+                    catch
+                    {
+                        System.IO.File.Copy(output, finalPath, true);
+                        try { System.IO.File.Delete(output); } catch { }
+                    }
+                    await Task.CompletedTask;
+                });
+                // The stamp is now baked into the file; retire the live preview so it doesn't
+                // double over the reloaded page, and confirm with a toast.
+                active.StampOpen = false;
+                _stampStatus = null;
+                ShowToast($"Saved → {System.IO.Path.GetFileName(finalPath)}");
+            }
+            else
+            {
+                _stampStatus = $"Saved → {System.IO.Path.GetFileName(output)}";
+            }
+            await WriteBack.DeliverOrThrowAsync(inPlace ? finalPath : output);
+            _stampError = false;
+        }
+        catch (Exception ex)
+        {
+            _stampStatus = ex.Message;
+            _stampError = true;
+        }
+        finally
+        {
+            _stampSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    // ── Snapshot (marquee a region → Save / Copy / Send to desk) ──
+    private string? _snapBase64;
+    private int _snapPage;
+    private bool _snapMenuOpen;
+    private bool _snapDeskMenu;
+    private string? _snapStatus;
+
+    [JSInvokable]
+    public void SnapshotCaptured(string base64, int pageIndex)
+    {
+        _snapBase64 = base64;
+        _snapPage = pageIndex;
+        _snapMenuOpen = true;
+        _snapDeskMenu = false;
+        _snapStatus = null;
+        InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public void SnapshotFailed(string message)
+    {
+        ShowToast(message);
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void CloseSnapMenu()
+    {
+        _snapMenuOpen = false;
+        _snapDeskMenu = false;
+        _snapBase64 = null;
+        _snapStatus = null;
+    }
+
+    private byte[]? SnapBytes()
+    {
+        try { return _snapBase64 is null ? null : Convert.FromBase64String(_snapBase64); }
+        catch { return null; }
+    }
+
+    private async Task SnapshotSave()
+    {
+        var bytes = SnapBytes();
+        if (bytes is null) return;
+        var stem = System.IO.Path.GetFileNameWithoutExtension(Tab?.FileName ?? "snapshot");
+        var name = $"{stem}-p{_snapPage + 1}.png";
+        var path = await Picker.PickSaveImageAsync(name);
+        if (string.IsNullOrWhiteSpace(path)) return;
+        try
+        {
+            await System.IO.File.WriteAllBytesAsync(path!, bytes);
+            await WriteBack.DeliverOrThrowAsync(path);
+            ShowToast("Saved snapshot");
+            CloseSnapMenu();
+        }
+        catch (Exception ex) { _snapStatus = ex.Message; }
+        StateHasChanged();
+    }
+
+    private async Task SnapshotCopy()
+    {
+        var bytes = SnapBytes();
+        if (bytes is null) return;
+        try
+        {
+            await Clip.SetImageAsync(bytes);
+            ShowToast("Copied to clipboard");
+            CloseSnapMenu();
+        }
+        catch (Exception ex) { _snapStatus = ex.Message; }
+        StateHasChanged();
+    }
+
+    private async Task SnapshotToDesk(Guid deskId)
+    {
+        var path = await SaveSnapTempAsync();
+        if (path is null) { StateHasChanged(); return; }
+        try
+        {
+            Bench.AddImageToDesk(deskId, path);
+            ShowToast("Sent to desk");
+            CloseSnapMenu();
+        }
+        catch (Exception ex) { _snapStatus = ex.Message; }
+        StateHasChanged();
+    }
+
+    private async Task SnapshotToNewDesk()
+    {
+        if (!Bench.CanAddDesk) return;
+        var desk = Bench.AddDesk();
+        await SnapshotToDesk(desk.Id);
+    }
+
+    private async Task<string?> SaveSnapTempAsync()
+    {
+        var bytes = SnapBytes();
+        if (bytes is null) return null;
+        try
+        {
+            var dir = System.IO.Path.Combine(ScratchFiles.Folder(Paths), "chuvadi-snaps");
+            System.IO.Directory.CreateDirectory(dir);
+            var path = System.IO.Path.Combine(dir, $"snap-{Guid.NewGuid():N}.png");
+            await System.IO.File.WriteAllBytesAsync(path, bytes);
+            return path;
+        }
+        catch (Exception ex) { _snapStatus = ex.Message; return null; }
+    }
+
+    // ── Find in document (Ctrl+F) ──
+    private bool _findOpen;
+    private string _findQuery = "";
+    private bool _findWholeWord;
+    private bool _findSearching;
+    private string? _findStatus;
+    private List<RedactService.RedactSearchMatch> _findMatches = new();
+    private Dictionary<int, List<RedactService.RedactSearchMatch>> _findByPage = new();
+    private int _findIndex = -1;
+    private ElementReference _findBoxRef;
+    private string? _lastFindQuery;
+
+    private RedactService.RedactSearchMatch? CurrentFindMatch =>
+        _findIndex >= 0 && _findIndex < _findMatches.Count ? _findMatches[_findIndex] : null;
+
+    private string FindCountLabel =>
+        _findSearching ? "…"
+        : _findMatches.Count == 0 ? (_lastFindQuery is null ? "" : "0/0")
+        : $"{_findIndex + 1}/{_findMatches.Count}";
+
+    [JSInvokable]
+    public async Task OpenFind()
+    {
+        _findOpen = true;
+        StateHasChanged();
+        await Task.Yield();
+        try { await _findBoxRef.FocusAsync(); } catch { }
+    }
+
+    private void ToggleWholeWord()
+    {
+        _findWholeWord = !_findWholeWord;
+        if (!string.IsNullOrWhiteSpace(_findQuery)) _ = RunFindSearch();
+    }
+
+    private void CloseFind()
+    {
+        _findOpen = false;
+        ClearFind();
+    }
+
+    private void ClearFind()
+    {
+        _findMatches = new();
+        _findByPage = new();
+        _findIndex = -1;
+        _findStatus = null;
+        _lastFindQuery = null;
+    }
+
+    private async Task OnFindFocus()
+    {
+        if (!string.IsNullOrEmpty(_findQuery)) return;   // never clobber a typed query
+        if (_js is null) return;
+        try
+        {
+            var sel = await _js.InvokeAsync<string?>("selectedText");
+            if (!string.IsNullOrWhiteSpace(sel))
+            {
+                _findQuery = sel!.Trim();
+                StateHasChanged();
+                await RunFindSearch();
+            }
+        }
+        catch { }
+    }
+
+    private async Task OnFindKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            // Re-search when the query changed; otherwise step to the next/previous match.
+            if (!string.Equals(_findQuery, _lastFindQuery, StringComparison.Ordinal)) await RunFindSearch();
+            else if (e.ShiftKey) await PrevMatch();
+            else await NextMatch();
+        }
+        else if (e.Key == "Escape")
+        {
+            CloseFind();
+        }
+    }
+
+    private async Task RunFindSearch()
+    {
+        var path = Tab?.Path;
+        if (path is null || string.IsNullOrWhiteSpace(_findQuery)) return;
+
+        _findSearching = true; _findStatus = null;
+        StateHasChanged();
+        await Task.Yield();
+        try
+        {
+            var found = await Redact.SearchAsync(path, _findQuery, caseSensitive: false, wholeWord: _findWholeWord);
+            _findMatches = found.Where(f => f.Boxes.Count > 0).ToList();
+            _findByPage = _findMatches.GroupBy(m => m.PageIndex).ToDictionary(g => g.Key, g => g.ToList());
+            _lastFindQuery = _findQuery;
+            _findIndex = _findMatches.Count > 0 ? 0 : -1;
+            if (_findIndex == 0) await JumpToFindMatch();
+        }
+        catch (Exception ex)
+        {
+            _findStatus = "Search failed: " + ex.Message;
+        }
+        finally
+        {
+            _findSearching = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task NextMatch()
+    {
+        if (_findMatches.Count == 0) return;
+        _findIndex = (_findIndex + 1) % _findMatches.Count;
+        await JumpToFindMatch();
+    }
+
+    private async Task PrevMatch()
+    {
+        if (_findMatches.Count == 0) return;
+        _findIndex = (_findIndex - 1 + _findMatches.Count) % _findMatches.Count;
+        await JumpToFindMatch();
+    }
+
+    private async Task JumpToFindMatch()
+    {
+        var m = CurrentFindMatch;
+        if (m is null || _js is null) return;
+        try { await _js.InvokeVoidAsync("scrollToPage", _desk, m.PageIndex); } catch { }
+        if (Tab is { } t)
+        {
+            t.CurrentPage = m.PageIndex + 1;   // keep the top-bar counter in step with the jump
+            _pageInput = t.CurrentPage.ToString();
+        }
+
+        StateHasChanged();
+    }
+
+    // ── Bookmarks panel (#41): read, navigate, edit, save ────────────────────────
+    private bool _bm;
+    private List<BookmarkNode>? _bmTree;
+    private BookmarkNode? _bmSel;
+    private BookmarkNode? _bmRenaming;
+    private string? _bmStatus;
+    private bool _bmBusy;
+    private readonly OutlineService _outline = new();
+
+    private void ToggleBookmarks()
+    {
+        _bm = !_bm;
+        if (_bm) LoadBookmarks();
+    }
+
+    private void LoadBookmarks()
+    {
+        _bmStatus = null; _bmSel = null; _bmRenaming = null;
+        var path = Tab?.Path;
+        try { _bmTree = path is null ? new() : _outline.Read(path).Select(n => n.Clone()).ToList(); }
+        catch { _bmTree = new(); }
+    }
+
+    private IEnumerable<(BookmarkNode node, int depth)> BmFlat()
+    {
+        var list = new List<(BookmarkNode, int)>();
+        void Walk(List<BookmarkNode> ns, int d)
+        {
+            foreach (var n in ns) { list.Add((n, d)); Walk(n.Children, d + 1); }
+        }
+        if (_bmTree is not null) Walk(_bmTree, 0);
+        return list;
+    }
+
+    private void BmSelect(BookmarkNode n) => _bmSel = n;
+
+    private async Task BmGo(BookmarkNode n)
+    {
+        _bmSel = n;
+        await GoTo(n.PageIndex + 1);
+    }
+
+    private void BmBeginRename(BookmarkNode n) { _bmSel = n; _bmRenaming = n; }
+    private void BmEndRename() => _bmRenaming = null;
+    private void BmRenameKey(KeyboardEventArgs e) { if (e.Key is "Enter" or "Escape") _bmRenaming = null; }
+
+    private void BmAddCurrent()
+    {
+        _bmTree ??= new();
+        var page = Math.Max(0, (Tab?.CurrentPage ?? 1) - 1);
+        var node = new BookmarkNode($"Page {page + 1}", page);
+        _bmTree.Add(node);
+        _bmSel = node; _bmRenaming = node;
+    }
+
+    private bool BmLocate(BookmarkNode target, List<BookmarkNode> list, BookmarkNode? owner,
+        out List<BookmarkNode> outList, out int idx, out BookmarkNode? outOwner)
+    {
+        for (var i = 0; i < list.Count; i++)
+        {
+            if (ReferenceEquals(list[i], target)) { outList = list; idx = i; outOwner = owner; return true; }
+            if (BmLocate(target, list[i].Children, list[i], out outList, out idx, out outOwner)) return true;
+        }
+        outList = null!; idx = -1; outOwner = null; return false;
+    }
+
+    private void BmMove(int dir)
+    {
+        if (_bmSel is null || _bmTree is null) return;
+        if (!BmLocate(_bmSel, _bmTree, null, out var list, out var idx, out _)) return;
+        var j = idx + dir;
+        if (j < 0 || j >= list.Count) return;
+        (list[idx], list[j]) = (list[j], list[idx]);
+    }
+
+    private void BmIndent()
+    {
+        if (_bmSel is null || _bmTree is null) return;
+        if (!BmLocate(_bmSel, _bmTree, null, out var list, out var idx, out _)) return;
+        if (idx == 0) return; // no preceding sibling to nest under
+        var prev = list[idx - 1];
+        list.RemoveAt(idx);
+        prev.Children.Add(_bmSel);
+    }
+
+    private void BmOutdent()
+    {
+        if (_bmSel is null || _bmTree is null) return;
+        if (!BmLocate(_bmSel, _bmTree, null, out var list, out var idx, out var owner)) return;
+        if (owner is null) return; // already top-level
+        if (!BmLocate(owner, _bmTree, null, out var ownerList, out var ownerIdx, out _)) return;
+        list.RemoveAt(idx);
+        ownerList.Insert(ownerIdx + 1, _bmSel);
+    }
+
+    private void BmDelete()
+    {
+        if (_bmSel is null || _bmTree is null) return;
+        if (!BmLocate(_bmSel, _bmTree, null, out var list, out var idx, out _)) return;
+        list.RemoveAt(idx);
+        _bmSel = null; _bmRenaming = null;
+    }
+
+    private async Task BmSave()
+    {
+        var path = Tab?.Path;
+        if (path is null || _bmTree is null) return;
+        _bmBusy = true; _bmStatus = null; StateHasChanged();
+        try
+        {
+            var output = System.IO.Path.Combine(ScratchFiles.Folder(Paths), $"chuvadi-toc-{Guid.NewGuid():N}.pdf");
+            await _outline.WriteToFileAsync(path, output, _bmTree);
+            await Tabs.ReloadActiveAsync(async () =>
+            {
+                try
+                {
+                    if (System.IO.File.Exists(path)) System.IO.File.Replace(output, path, null);
+                    else System.IO.File.Move(output, path);
+                }
+                catch
+                {
+                    System.IO.File.Copy(output, path, true);
+                    try { System.IO.File.Delete(output); } catch { }
+                }
+                await Task.CompletedTask;
+            });
+            await WriteBack.DeliverOrThrowAsync(path);
+            _bmStatus = $"Saved {BmFlat().Count()} bookmark(s)";
+        }
+        catch (Exception ex) { _bmStatus = ex.Message; }
+        finally { _bmBusy = false; StateHasChanged(); }
+    }
+
+    private static string Pct(double f) =>
+        (f * 100).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) + "%";
+    private static string Deg(double d) => d.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+    private static string F(double v) => v.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+    // On-screen rectangle border thickness (px) — a readable preview of the stroke width in points.
+    private static string ShapeBorderPx(double strokeWidthPt) =>
+        Math.Clamp(strokeWidthPt, 1, 12).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+    private static double Clamp01(double v) => v < 0 ? 0 : v > 1 ? 1 : v;
+
+    private async Task CheckTaggedAsync()
+    {
+        var path = Tab?.Path;
+        if (path is null) { _mkTagged = false; _mkTaggedPath = null; return; }
+        if (path == _mkTaggedPath) return;
+        _mkTaggedPath = path;
+        var tagged = false;
+        try { tagged = await Task.Run(() => Redact.IsTagged(path)); } catch { }
+        _mkTagged = tagged;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void ToggleMarkup()
+    {
+        _markup = !_markup;
+        _mkStatus = null; _mkSavedPath = null;
+        _mkMode = MkMode.None; _textDraft = null; _shapeDraft = null;
+        _selText = null; _selShape = null; _selImage = null;
+        if (_markup)
+        {
+            _ = CheckTaggedAsync();
+            if (_js is not null) _ = _js.InvokeVoidAsync("enableImageDrops");
+        }
+        else
+        {
+            if (_js is not null) _ = _js.InvokeVoidAsync("disableImageDrops");
+        }
+    }
+
+    private void SetMkTool(string tool)
+    {
+        _mkTool = tool;
+        _selText = null; _selShape = null; _selImage = null;
+        _mkStatus = null; _mkSavedPath = null;
+    }
+
+    private static bool IsShapeTool(string? t) =>
+        t is "rect" or "line" or "ellipse" or "arrow" or "freehand";
+
+    /// <summary>"x,y x,y …" in the 0–100 viewBox space for an SVG polyline/polygon.</summary>
+    private static string PointsAttr(IEnumerable<(double X, double Y)> pts) =>
+        string.Join(" ", pts.Select(p => $"{F(p.X * 100)},{F(p.Y * 100)}"));
+
+    /// <summary>Arrowhead barbs for a preview arrow, as an SVG polyline "barb tip barb"
+    /// in the 0–100 viewBox space. Approximate (the viewBox is non-uniform); the saved
+    /// PDF uses the library's exact arrowhead.</summary>
+    private static string ArrowHeadPoints(ShapeBox sb)
+    {
+        double x2 = (sb.X + sb.W) * 100, y2 = (sb.Y + sb.H) * 100;
+        double dx = sb.W * 100, dy = sb.H * 100, len = Math.Sqrt(dx * dx + dy * dy);
+        if (len < 0.001) return $"{F(x2)},{F(y2)}";
+        double ux = dx / len, uy = dy / len;
+        double head = Math.Max(3.0, sb.StrokeWidthPt * 1.6);
+        const double a = 0.5;
+        (double X, double Y) Barb(double sign)
+        {
+            double c = Math.Cos(a), s = sign * Math.Sin(a);
+            double rx = -ux * c + uy * s;
+            double ry = -ux * s - uy * c;
+            return (x2 + rx * head, y2 + ry * head);
+        }
+        var b1 = Barb(1); var b2 = Barb(-1);
+        return $"{F(b1.X)},{F(b1.Y)} {F(x2)},{F(y2)} {F(b2.X)},{F(b2.Y)}";
+    }
+
+    private void EnsureMarkupDoc()
+    {
+        var path = Tab?.Path;
+        if (path != _mkDocPath)
+        {
+            _mkDocPath = path;
+            _texts.Clear();
+            _shapes.Clear();
+            _images.Clear();
+            _selText = null; _selShape = null; _selImage = null;
+            _mkStatus = null; _mkSavedPath = null;
+        }
+    }
+
+    private async Task<bool> CacheLayerRect(int page)
+    {
+        try
+        {
+            var r = await JS.InvokeAsync<MkRect?>("chuvadiReaderMkRect", page);
+            if (r is null || r.width <= 0 || r.height <= 0) return false;
+            _mkRect = (r.left, r.top, r.width, r.height);
+            return true;
+        }
+        catch { return false; }
+    }
+
+    private async Task MkDown(PointerEventArgs e, int page)
+    {
+        if (!_markup || e.Button != 0) return;
+        EnsureMarkupDoc();
+        MkBeginGesture();
+        if (!await CacheLayerRect(page)) return;
+
+        _mkStartX = Clamp01((e.ClientX - _mkRect.L) / _mkRect.W);
+        _mkStartY = Clamp01((e.ClientY - _mkRect.T) / _mkRect.H);
+        _mkStatus = null; _mkSavedPath = null;
+
+        if (IsShapeTool(_mkTool))
+        {
+            _selShape = null;
+            _mkMode = MkMode.ShapeDraw;
+            _shapeDraftPage = page;
+            _shapeDraft = new NormBox(_mkStartX, _mkStartY, 0, 0);
+            _freehandPts = _mkTool == "freehand"
+                ? new List<(double X, double Y)> { (_mkStartX, _mkStartY) }
+                : null;
+        }
+        else if (_mkTool == "image")
+        {
+            // Image is placed via the picker / paste / drop, not by dragging on the page.
+            _mkMode = MkMode.None;
+        }
+        else
+        {
+            _selText = null;
+            _mkMode = MkMode.TextDraw;
+            _textDraftPage = page;
+            _textDraft = new NormBox(_mkStartX, _mkStartY, 0, 0);
+        }
+    }
+
+    private void MkMove(PointerEventArgs e)
+    {
+        if (_mkMode == MkMode.None) return;
+        MkBeginGesture();
+        var cx = Clamp01((e.ClientX - _mkRect.L) / _mkRect.W);
+        var cy = Clamp01((e.ClientY - _mkRect.T) / _mkRect.H);
+
+        switch (_mkMode)
+        {
+            case MkMode.TextDraw:
+                _textDraft = new NormBox(Math.Min(_mkStartX, cx), Math.Min(_mkStartY, cy),
+                                         Math.Abs(cx - _mkStartX), Math.Abs(cy - _mkStartY));
+                break;
+            case MkMode.MoveText when _dragText is { } d:
+                d.X = Clamp01(_dragOX + (cx - _mkStartX));
+                d.Y = Clamp01(_dragOY + (cy - _mkStartY));
+                if (d.X + d.W > 1) d.X = 1 - d.W;
+                if (d.Y + d.H > 1) d.Y = 1 - d.H;
+                break;
+            case MkMode.ResizeText when _dragText is { } d:
+                d.W = Math.Clamp(_dragOW + (cx - _mkStartX), 0.03, 1 - d.X);
+                d.H = Math.Clamp(_dragOH + (cy - _mkStartY), 0.02, 1 - d.Y);
+                break;
+
+            case MkMode.ShapeDraw:
+                if (_mkTool == "line" || _mkTool == "arrow")
+                {
+                    // Free endpoints (signed), so any angle is allowed.
+                    _shapeDraft = new NormBox(_mkStartX, _mkStartY, cx - _mkStartX, cy - _mkStartY);
+                }
+                else if (_mkTool == "freehand")
+                {
+                    (_freehandPts ??= new()).Add((cx, cy));
+                    var xs = _freehandPts.Select(p => p.X); var ys = _freehandPts.Select(p => p.Y);
+                    double minX = xs.Min(), minY = ys.Min();
+                    _shapeDraft = new NormBox(minX, minY, xs.Max() - minX, ys.Max() - minY);
+                }
+                else
+                {
+                    _shapeDraft = new NormBox(Math.Min(_mkStartX, cx), Math.Min(_mkStartY, cy),
+                                              Math.Abs(cx - _mkStartX), Math.Abs(cy - _mkStartY));
+                }
+                break;
+
+            case MkMode.MoveShape when _dragShape is { } s:
+                if (s.Kind == ShapeKind.Line || s.Kind == ShapeKind.Arrow)
+                {
+                    // Translate both endpoints, keeping them on-page.
+                    var nx = _dragOX + (cx - _mkStartX);
+                    var ny = _dragOY + (cy - _mkStartY);
+                    var minX = Math.Min(0, s.W); var maxX = Math.Max(0, s.W);
+                    var minY = Math.Min(0, s.H); var maxY = Math.Max(0, s.H);
+                    s.X = Math.Clamp(nx, -minX, 1 - maxX);
+                    s.Y = Math.Clamp(ny, -minY, 1 - maxY);
+                }
+                else if (s.Kind == ShapeKind.Freehand && _dragShapePts is { } op)
+                {
+                    // Translate every captured point by the same delta (clamped to page).
+                    double dx = cx - _mkStartX, dy = cy - _mkStartY;
+                    double maxDx = 1 - (s.X + s.W), maxDy = 1 - (s.Y + s.H);
+                    dx = Math.Clamp(dx, -s.X, maxDx);
+                    dy = Math.Clamp(dy, -s.Y, maxDy);
+                    s.Points = op.Select(p => (p.X + dx, p.Y + dy)).ToList();
+                    s.X = Clamp01(_dragOX + dx); s.Y = Clamp01(_dragOY + dy);
+                }
+                else
+                {
+                    s.X = Clamp01(_dragOX + (cx - _mkStartX));
+                    s.Y = Clamp01(_dragOY + (cy - _mkStartY));
+                    if (s.X + s.W > 1) s.X = 1 - s.W;
+                    if (s.Y + s.H > 1) s.Y = 1 - s.H;
+                }
+                break;
+            case MkMode.ResizeShape when _dragShape is { } s:
+                s.W = Math.Clamp(_dragOW + (cx - _mkStartX), 0.01, 1 - s.X);
+                s.H = Math.Clamp(_dragOH + (cy - _mkStartY), 0.01, 1 - s.Y);
+                break;
+            case MkMode.MoveLineEnd when _dragShape is { } s:
+                if (_lineEndIsEnd)
+                {
+                    s.W = cx - s.X;
+                    s.H = cy - s.Y;
+                }
+                else
+                {
+                    var endX = s.X + s.W; var endY = s.Y + s.H;
+                    s.X = cx; s.Y = cy;
+                    s.W = endX - cx; s.H = endY - cy;
+                }
+                break;
+
+            case MkMode.MoveImage when _dragImage is { } im:
+                im.X = Clamp01(_dragOX + (cx - _mkStartX));
+                im.Y = Clamp01(_dragOY + (cy - _mkStartY));
+                if (im.X + im.W > 1) im.X = 1 - im.W;
+                if (im.Y + im.H > 1) im.Y = 1 - im.H;
+                break;
+            case MkMode.ResizeImage when _dragImage is { } im:
+                var rw = Math.Clamp(_dragOW + (cx - _mkStartX), 0.02, 1 - im.X);
+                im.W = rw;
+                if (im.Lock && _mkRect.W > 0 && _mkRect.H > 0 && im.Aspect > 0)
+                {
+                    // Keep the on-screen pixel aspect of the source image.
+                    var pxW = rw * _mkRect.W;
+                    var pxH = pxW / im.Aspect;
+                    im.H = Math.Clamp(pxH / _mkRect.H, 0.02, 1 - im.Y);
+                }
+                else
+                {
+                    im.H = Math.Clamp(_dragOH + (cy - _mkStartY), 0.02, 1 - im.Y);
+                }
+                break;
+        }
+    }
+
+    private void MkUp(PointerEventArgs e)
+    {
+        MkUpCore(e);
+        MkEndGesture();
+    }
+
+    private void MkUpCore(PointerEventArgs e)
+    {
+        switch (_mkMode)
+        {
+            case MkMode.TextDraw:
+                {
+                    var d = _textDraft ?? new NormBox(_mkStartX, _mkStartY, 0, 0);
+                    // Tiny drag = a click → default-sized box anchored at the click point.
+                    var w = d.W < 0.04 ? 0.34 : d.W;
+                    var h = d.H < 0.03 ? 0.06 : d.H;
+                    var x = Math.Min(d.X, 1 - w);
+                    var y = Math.Min(d.Y, 1 - h);
+                    var tb = new TextBox { X = Clamp01(x), Y = Clamp01(y), W = w, H = h };
+                    if (!_texts.TryGetValue(_textDraftPage, out var tlist))
+                    {
+                        tlist = new List<TextBox>();
+                        _texts[_textDraftPage] = tlist;
+                    }
+                    tlist.Add(tb);
+                    _selText = tb;
+                    _selTextPage = _textDraftPage;
+                }
+                break;
+            case MkMode.ShapeDraw:
+                {
+                    var d = _shapeDraft ?? new NormBox(_mkStartX, _mkStartY, 0, 0);
+                    if (_mkTool == "line" || _mkTool == "arrow")
+                    {
+                        // Need a minimum length; a bare click does nothing.
+                        if (Math.Abs(d.W) > 0.01 || Math.Abs(d.H) > 0.01)
+                        {
+                            AddShape(_shapeDraftPage, new ShapeBox
+                            {
+                                Kind = _mkTool == "arrow" ? ShapeKind.Arrow : ShapeKind.Line,
+                                X = Clamp01(d.X), Y = Clamp01(d.Y), W = d.W, H = d.H,
+                                StrokeHex = _shapeStroke, StrokeWidthPt = _shapeStrokeWidth,
+                            });
+                        }
+                    }
+                    else if (_mkTool == "freehand")
+                    {
+                        if (_freehandPts is { Count: >= 2 })
+                        {
+                            AddShape(_shapeDraftPage, new ShapeBox
+                            {
+                                Kind = ShapeKind.Freehand,
+                                X = Clamp01(d.X), Y = Clamp01(d.Y), W = d.W, H = d.H,
+                                StrokeHex = _shapeStroke, StrokeWidthPt = _shapeStrokeWidth,
+                                Points = _freehandPts.ToList(),
+                            });
+                        }
+                    }
+                    else
+                    {
+                        // Tiny drag = a click → default-sized box at the click point.
+                        var w = d.W < 0.02 ? 0.20 : d.W;
+                        var h = d.H < 0.02 ? 0.12 : d.H;
+                        var x = Math.Min(d.X, 1 - w);
+                        var y = Math.Min(d.Y, 1 - h);
+                        AddShape(_shapeDraftPage, new ShapeBox
+                        {
+                            Kind = _mkTool == "ellipse" ? ShapeKind.Ellipse : ShapeKind.Rectangle,
+                            X = Clamp01(x), Y = Clamp01(y), W = w, H = h,
+                            FillHex = _shapeFill, StrokeHex = _shapeStroke, StrokeWidthPt = _shapeStrokeWidth,
+                        });
+                    }
+                }
+                break;
+        }
+
+        _mkMode = MkMode.None;
+        _textDraft = null; _shapeDraft = null; _freehandPts = null;
+        _textDraftPage = -1; _shapeDraftPage = -1;
+        _dragText = null; _dragShape = null; _dragImage = null;
+    }
+
+    private void AddShape(int page, ShapeBox sb)
+    {
+        if (!_shapes.TryGetValue(page, out var list))
+        {
+            list = new List<ShapeBox>();
+            _shapes[page] = list;
+        }
+        list.Add(sb);
+        _selShape = sb; _selShapePage = page;
+    }
+
+    private void SelectText(int page, TextBox tb)
+    {
+        _selText = tb; _selTextPage = page;
+        _mkStatus = null; _mkSavedPath = null;
+    }
+
+    private void RemoveSelectedText()
+    {
+        if (_selText is null) return;
+        if (_texts.TryGetValue(_selTextPage, out var list))
+        {
+            list.Remove(_selText);
+            if (list.Count == 0) _texts.Remove(_selTextPage);
+        }
+        _selText = null;
+        _mkStatus = null; _mkSavedPath = null;
+    }
+
+    private async Task StartMove(PointerEventArgs e, int page, TextBox tb)
+    {
+        if (!await CacheLayerRect(page)) return;
+        SelectText(page, tb);
+        _mkStartX = Clamp01((e.ClientX - _mkRect.L) / _mkRect.W);
+        _mkStartY = Clamp01((e.ClientY - _mkRect.T) / _mkRect.H);
+        _dragText = tb; _dragOX = tb.X; _dragOY = tb.Y;
+        _mkMode = MkMode.MoveText;
+    }
+
+    private async Task StartResize(PointerEventArgs e, int page, TextBox tb)
+    {
+        if (!await CacheLayerRect(page)) return;
+        SelectText(page, tb);
+        _mkStartX = Clamp01((e.ClientX - _mkRect.L) / _mkRect.W);
+        _mkStartY = Clamp01((e.ClientY - _mkRect.T) / _mkRect.H);
+        _dragText = tb; _dragOW = tb.W; _dragOH = tb.H;
+        _mkMode = MkMode.ResizeText;
+    }
+
+    // ── Shapes ────────────────────────────────────────────────────────────────
+    private void SelectShape(int page, ShapeBox sb)
+    {
+        _selShape = sb; _selShapePage = page;
+        _selText = null; _selImage = null;
+        _mkStatus = null; _mkSavedPath = null;
+    }
+
+    private void RemoveSelectedShape()
+    {
+        if (_selShape is null) return;
+        if (_shapes.TryGetValue(_selShapePage, out var list))
+        {
+            list.Remove(_selShape);
+            if (list.Count == 0) _shapes.Remove(_selShapePage);
+        }
+        _selShape = null;
+        _mkStatus = null; _mkSavedPath = null;
+    }
+
+    private async Task StartMoveShape(PointerEventArgs e, int page, ShapeBox sb)
+    {
+        if (!await CacheLayerRect(page)) return;
+        SelectShape(page, sb);
+        _mkStartX = Clamp01((e.ClientX - _mkRect.L) / _mkRect.W);
+        _mkStartY = Clamp01((e.ClientY - _mkRect.T) / _mkRect.H);
+        _dragShape = sb; _dragOX = sb.X; _dragOY = sb.Y;
+        _dragShapePts = sb.Points?.ToList();
+        _mkMode = MkMode.MoveShape;
+    }
+
+    private async Task StartResizeShape(PointerEventArgs e, int page, ShapeBox sb)
+    {
+        if (!await CacheLayerRect(page)) return;
+        SelectShape(page, sb);
+        _mkStartX = Clamp01((e.ClientX - _mkRect.L) / _mkRect.W);
+        _mkStartY = Clamp01((e.ClientY - _mkRect.T) / _mkRect.H);
+        _dragShape = sb; _dragOW = sb.W; _dragOH = sb.H;
+        _mkMode = MkMode.ResizeShape;
+    }
+
+    private async Task StartLineEnd(PointerEventArgs e, int page, ShapeBox sb, bool isEnd)
+    {
+        if (!await CacheLayerRect(page)) return;
+        SelectShape(page, sb);
+        _dragShape = sb; _lineEndIsEnd = isEnd;
+        _mkMode = MkMode.MoveLineEnd;
+    }
+
+    private void SetShapeStroke(ShapeBox sb, ChangeEventArgs e)
+    {
+        sb.StrokeHex = e.Value?.ToString() ?? "#E03131";
+        _shapeStroke = sb.StrokeHex;
+    }
+    private void SetShapeFill(ShapeBox sb, ChangeEventArgs e)
+    {
+        sb.FillHex = e.Value?.ToString();
+        _shapeFill = sb.FillHex;
+    }
+    private void ToggleShapeFill(ShapeBox sb)
+    {
+        sb.FillHex = string.IsNullOrEmpty(sb.FillHex) ? "#FFE08A" : null;
+        _shapeFill = sb.FillHex;
+    }
+    private void SetShapeWidth(ShapeBox sb, ChangeEventArgs e)
+    {
+        if (double.TryParse(e.Value?.ToString(), System.Globalization.CultureInfo.InvariantCulture, out var v))
+        {
+            sb.StrokeWidthPt = Math.Clamp(v, 0.25, 60);
+            _shapeStrokeWidth = sb.StrokeWidthPt;
+        }
+    }
+
+    private void SetShapeRotation(ShapeBox sb, ChangeEventArgs e)
+    {
+        if (double.TryParse(e.Value?.ToString(), System.Globalization.CultureInfo.InvariantCulture, out var v))
+            sb.Rotation = Math.Clamp(v, -180, 180);
+    }
+
+    private static string ShapeKindLabel(ShapeKind k) => k switch
+    {
+        ShapeKind.Line => "Line",
+        ShapeKind.Ellipse => "Ellipse",
+        ShapeKind.Arrow => "Arrow",
+        ShapeKind.Freehand => "Drawing",
+        _ => "Rectangle",
+    };
+
+    // ── Images ────────────────────────────────────────────────────────────────
+    private async Task AddImageViaPicker()
+    {
+        SetMkTool("image");
+        if (!_markup) return;
+        EnsureMarkupDoc();
+        IReadOnlyList<string> paths;
+        try { paths = await Picker.PickImagesAsync(); }
+        catch { return; }
+        if (paths is null || paths.Count == 0) return;
+
+        // Place onto the page currently most in view.
+        int page = Math.Clamp(CurPage - 1, 0, (Doc?.PageCount ?? 1) - 1);
+        await CacheLayerRect(page);   // so the initial height respects the image's aspect ratio
+        var first = paths[0];
+        try
+        {
+            var bytes = await Task.Run(() => System.IO.File.ReadAllBytes(first));
+            var mime = MimeForPath(first);
+            AddImageBox(page, bytes, mime);
+        }
+        catch (Exception ex)
+        {
+            _mkStatus = $"Could not load image: {ex.Message}";
+            _mkError = true;
+        }
+        StateHasChanged();
+    }
+
+    /// <summary>Called from JS when an image is pasted or dropped (base64 payload).</summary>
+    [JSInvokable]
+    public void OnImageDropped(int page, double fx, double fy, string base64, string mime)
+    {
+        if (!_markup) return;
+        if (Doc is null) return;
+        EnsureMarkupDoc();
+        try
+        {
+            var bytes = Convert.FromBase64String(base64);
+            int p = Math.Clamp(page, 0, Doc.PageCount - 1);
+            AddImageBox(p, bytes, string.IsNullOrEmpty(mime) ? "image/png" : mime, fx, fy);
+            InvokeAsync(StateHasChanged);
+        }
+        catch { }
+    }
+
+    [JSInvokable]
+    public void OnImagePasted(string base64, string mime)
+    {
+        if (!_markup) return;
+        if (Doc is null) return;
+        int page = Math.Clamp(CurPage - 1, 0, Doc.PageCount - 1);
+        OnImageDropped(page, -1, -1, base64, mime);
+    }
+
+    private void AddImageBox(int page, byte[] bytes, string mime, double fx = -1, double fy = -1)
+    {
+        if (bytes is null || bytes.Length == 0) return;
+        MkSnap();
+        var (natW, natH) = ImagePixelSize(bytes);
+        double aspect = natH > 0 ? (double)natW / natH : 1.0;
+
+        // Default width 30% of the page; height from aspect against the cached layer rect
+        // (fall back to a square-ish box if we can't measure the layer yet).
+        double w = 0.30;
+        double h = 0.30;
+        if (_mkRect.W > 0 && _mkRect.H > 0 && aspect > 0)
+        {
+            var pxW = w * _mkRect.W;
+            var pxH = pxW / aspect;
+            h = Clamp01(pxH / _mkRect.H);
+        }
+        double x = fx >= 0 ? Clamp01(fx - w / 2) : Clamp01(0.5 - w / 2);
+        double y = fy >= 0 ? Clamp01(fy - h / 2) : Clamp01(0.5 - h / 2);
+        if (x + w > 1) x = 1 - w;
+        if (y + h > 1) y = 1 - h;
+
+        var ib = new ImageBox
+        {
+            X = x, Y = y, W = w, H = h,
+            Bytes = bytes, Aspect = aspect, Lock = true, Opacity = 1.0,
+            DataUrl = $"data:{mime};base64,{Convert.ToBase64String(bytes)}",
+        };
+        if (!_images.TryGetValue(page, out var list))
+        {
+            list = new List<ImageBox>();
+            _images[page] = list;
+        }
+        list.Add(ib);
+        _selImage = ib; _selImagePage = page;
+        _selText = null; _selShape = null;
+        _mkStatus = null; _mkSavedPath = null;
+    }
+
+    private void SelectImage(int page, ImageBox ib)
+    {
+        _selImage = ib; _selImagePage = page;
+        _selText = null; _selShape = null;
+        _mkStatus = null; _mkSavedPath = null;
+    }
+
+    private void RemoveSelectedImage()
+    {
+        if (_selImage is null) return;
+        if (_images.TryGetValue(_selImagePage, out var list))
+        {
+            list.Remove(_selImage);
+            if (list.Count == 0) _images.Remove(_selImagePage);
+        }
+        _selImage = null;
+        _mkStatus = null; _mkSavedPath = null;
+    }
+
+    private void ToggleImageLock(ImageBox ib) => ib.Lock = !ib.Lock;
+
+    private void SetImageOpacity(ImageBox ib, ChangeEventArgs e)
+    {
+        if (double.TryParse(e.Value?.ToString(), System.Globalization.CultureInfo.InvariantCulture, out var v))
+            ib.Opacity = Math.Clamp(v, 0.1, 1.0);
+    }
+
+    private void SetImageRotation(ImageBox ib, ChangeEventArgs e)
+    {
+        if (double.TryParse(e.Value?.ToString(), System.Globalization.CultureInfo.InvariantCulture, out var v))
+            ib.Rotation = Math.Clamp(v, -180, 180);
+    }
+
+    private async Task StartMoveImage(PointerEventArgs e, int page, ImageBox ib)
+    {
+        if (!await CacheLayerRect(page)) return;
+        SelectImage(page, ib);
+        _mkStartX = Clamp01((e.ClientX - _mkRect.L) / _mkRect.W);
+        _mkStartY = Clamp01((e.ClientY - _mkRect.T) / _mkRect.H);
+        _dragImage = ib; _dragOX = ib.X; _dragOY = ib.Y;
+        _mkMode = MkMode.MoveImage;
+    }
+
+    private async Task StartResizeImage(PointerEventArgs e, int page, ImageBox ib)
+    {
+        if (!await CacheLayerRect(page)) return;
+        SelectImage(page, ib);
+        _mkStartX = Clamp01((e.ClientX - _mkRect.L) / _mkRect.W);
+        _mkStartY = Clamp01((e.ClientY - _mkRect.T) / _mkRect.H);
+        _dragImage = ib; _dragOW = ib.W; _dragOH = ib.H;
+        _mkMode = MkMode.ResizeImage;
+    }
+
+    private static string MimeForPath(string path) =>
+        (System.IO.Path.GetExtension(path) ?? "").ToLowerInvariant() switch
+        {
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".gif" => "image/gif",
+            ".bmp" => "image/bmp",
+            ".webp" => "image/webp",
+            ".tif" or ".tiff" => "image/tiff",
+            _ => "image/png",
+        };
+
+    /// <summary>Reads pixel dimensions from a PNG, JPEG, GIF or BMP header without decoding the
+    /// whole image. Returns (0,0) if it can't be determined (callers fall back to a square box).</summary>
+    private static (int W, int H) ImagePixelSize(byte[] b)
+    {
+        try
+        {
+            // PNG
+            if (b.Length > 24 && b[0] == 0x89 && b[1] == 0x50 && b[2] == 0x4E && b[3] == 0x47)
+            {
+                int w = (b[16] << 24) | (b[17] << 16) | (b[18] << 8) | b[19];
+                int h = (b[20] << 24) | (b[21] << 16) | (b[22] << 8) | b[23];
+                return (w, h);
+            }
+            // GIF
+            if (b.Length > 10 && b[0] == (byte)'G' && b[1] == (byte)'I' && b[2] == (byte)'F')
+            {
+                int w = b[6] | (b[7] << 8);
+                int h = b[8] | (b[9] << 8);
+                return (w, h);
+            }
+            // BMP
+            if (b.Length > 26 && b[0] == (byte)'B' && b[1] == (byte)'M')
+            {
+                int w = b[18] | (b[19] << 8) | (b[20] << 16) | (b[21] << 24);
+                int h = b[22] | (b[23] << 8) | (b[24] << 16) | (b[25] << 24);
+                return (w, Math.Abs(h));
+            }
+            // JPEG — scan for a SOF marker.
+            if (b.Length > 4 && b[0] == 0xFF && b[1] == 0xD8)
+            {
+                int i = 2;
+                while (i + 9 < b.Length)
+                {
+                    if (b[i] != 0xFF) { i++; continue; }
+                    int marker = b[i + 1];
+                    if (marker is >= 0xC0 and <= 0xCF && marker != 0xC4 && marker != 0xC8 && marker != 0xCC)
+                    {
+                        int h = (b[i + 5] << 8) | b[i + 6];
+                        int w = (b[i + 7] << 8) | b[i + 8];
+                        return (w, h);
+                    }
+                    int len = (b[i + 2] << 8) | b[i + 3];
+                    if (len <= 0) break;
+                    i += 2 + len;
+                }
+            }
+        }
+        catch { }
+        return (0, 0);
+    }
+
+    private void SetFont(TextBox tb, ChangeEventArgs e) => tb.FontFamily = e.Value?.ToString() ?? "Helvetica";
+    private void SetTextColor(TextBox tb, ChangeEventArgs e) => tb.ColorHex = e.Value?.ToString() ?? "#111111";
+    private void SetSize(TextBox tb, ChangeEventArgs e)
+    {
+        if (double.TryParse(e.Value?.ToString(), System.Globalization.CultureInfo.InvariantCulture, out var v))
+            tb.FontSizePt = Math.Clamp(v, 4, 400);
+    }
+    private void SetRotation(TextBox tb, ChangeEventArgs e)
+    {
+        if (double.TryParse(e.Value?.ToString(), System.Globalization.CultureInfo.InvariantCulture, out var v))
+            tb.Rotation = v;
+    }
+
+    private static string TextStyle(TextBox tb)
+    {
+        var fam = tb.FontFamily switch
+        {
+            "Times" => "'Times New Roman',Times,serif",
+            "Courier" => "'Courier New',monospace",
+            _ => "'Helvetica Neue',Arial,sans-serif",
+        };
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        return $"font-family:{fam};font-size:{tb.FontSizePt.ToString(inv)}px;color:{tb.ColorHex};"
+             + $"text-align:{tb.Align};line-height:{tb.LineHeight.ToString(inv)};"
+             + $"font-weight:{(tb.Bold ? "700" : "400")};font-style:{(tb.Italic ? "italic" : "normal")}";
+    }
+
+    private void ClearMarkup()
+    {
+        _texts.Clear();
+        _shapes.Clear();
+        _images.Clear();
+        _selText = null; _selShape = null; _selImage = null;
+        _mkStatus = null; _mkSavedPath = null;
+    }
+
+    private Dictionary<int, PageText> BuildTextsDict() =>
+        _texts
+            .Where(kv => kv.Value.Any(t => !string.IsNullOrEmpty(t.Text)))
+            .ToDictionary(
+                kv => kv.Key,
+                kv => new PageText(RotationFor(kv.Key),
+                    kv.Value.Where(t => !string.IsNullOrEmpty(t.Text))
+                        .Select(t => new TextAnno(t.X, t.Y, t.W, t.H, t.Text, t.FontFamily,
+                            t.Bold, t.Italic, t.FontSizePt, t.ColorHex, t.Align, t.Rotation, t.LineHeight))
+                        .ToList() as IReadOnlyList<TextAnno>));
+
+    private Dictionary<int, PageShape> BuildShapesDict() =>
+        _shapes
+            .Where(kv => kv.Value.Count > 0)
+            .ToDictionary(
+                kv => kv.Key,
+                kv => new PageShape(RotationFor(kv.Key),
+                    kv.Value.Select(s => new ShapeAnno(
+                            s.X, s.Y, s.W, s.H, s.Kind,
+                            (s.Kind == ShapeKind.Rectangle || s.Kind == ShapeKind.Ellipse) ? s.FillHex : null,
+                            s.StrokeHex, s.StrokeWidthPt, s.Rotation,
+                            s.BehindContent,
+                            s.Points is { Count: > 0 } ? (IReadOnlyList<(double X, double Y)>)s.Points.ToList() : null))
+                        .ToList() as IReadOnlyList<ShapeAnno>));
+
+    private Dictionary<int, PageImage> BuildImagesDict() =>
+        _images
+            .Where(kv => kv.Value.Any(i => i.Bytes.Length > 0))
+            .ToDictionary(
+                kv => kv.Key,
+                kv => new PageImage(RotationFor(kv.Key),
+                    kv.Value.Where(i => i.Bytes.Length > 0)
+                        .Select(i => new ImageAnno(i.X, i.Y, i.W, i.H, i.Bytes, i.Rotation, i.Opacity, i.BehindContent))
+                        .ToList() as IReadOnlyList<ImageAnno>));
+
+    private async Task SaveInPlace()
+    {
+        var active = Tabs.Active;
+        // Overlay-only save.
+        if (active?.Path is null || OverlayCount == 0) return;
+
+        _mkSaving = true; _mkStatus = null; _mkSavedPath = null; _mkError = false;
+        StateHasChanged();
+        await Task.Yield();
+        try
+        {
+            var src = active.Path;
+            var texts = BuildTextsDict();
+            var imgs = BuildImagesDict();
+            var shps = BuildShapesDict();
+            var dir = System.IO.Path.GetDirectoryName(src) ?? "";
+            var temp = System.IO.Path.Combine(dir, "~" + System.IO.Path.GetFileNameWithoutExtension(src) + ".chuvadi-tmp.pdf");
+
+            // Build the edited file beside the original (no redactions here).
+            await Redact.FlattenToFileAsync(src, temp, new Dictionary<int, PageRedaction>(), _mkColor, texts, imgs, shps);
+
+            // Release the open document, swap the file in, then reopen in place.
+            await Tabs.ReloadActiveAsync(async () =>
+            {
+                try
+                {
+                    if (System.IO.File.Exists(src)) System.IO.File.Replace(temp, src, null);
+                    else System.IO.File.Move(temp, src);
+                }
+                catch
+                {
+                    System.IO.File.Copy(temp, src, true);
+                    try { System.IO.File.Delete(temp); } catch { }
+                }
+                await Task.CompletedTask;
+            });
+
+            await WriteBack.DeliverOrThrowAsync(src);
+
+            // Flattened into the file now — clear the editable overlays.
+            _texts.Clear();
+            _shapes.Clear();
+            _images.Clear();
+            _selText = null; _selShape = null; _selImage = null;
+            _mkStatus = $"Saved to {System.IO.Path.GetFileName(src)}";
+            _mkError = false;
+        }
+        catch (Exception ex)
+        {
+            _mkStatus = ex.Message;
+            _mkError = true;
+        }
+        finally
+        {
+            _mkSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveMarkup()
+    {
+        var active = Tabs.Active;
+        if (active?.Path is null || OverlayCount == 0) return;
+
+        var suggested = System.IO.Path.GetFileNameWithoutExtension(active.Path) + "-edited.pdf";
+        var output = await Picker.PickSavePdfAsync(suggested);
+        if (string.IsNullOrWhiteSpace(output)) return;
+
+        _mkSaving = true; _mkStatus = null; _mkSavedPath = null; _mkError = false;
+        StateHasChanged();
+        await Task.Yield();
+        try
+        {
+            var texts = BuildTextsDict();
+            var imgs = BuildImagesDict();
+            var shps = BuildShapesDict();
+
+            await Redact.FlattenToFileAsync(active.Path, output!, new Dictionary<int, PageRedaction>(), _mkColor, texts, imgs, shps);
+            await WriteBack.DeliverOrThrowAsync(output);
+            _mkSavedPath = output;
+            _mkStatus = $"Saved → {System.IO.Path.GetFileName(output)}";
+            _mkError = false;
+        }
+        catch (Exception ex)
+        {
+            _mkStatus = ex.Message;
+            _mkError = true;
+        }
+        finally
+        {
+            _mkSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OpenRedacted()
+    {
+        if (_mkSavedPath is null) return;
+        var name = System.IO.Path.GetFileName(_mkSavedPath);
+        var format = DocumentFormatExtensions.FromPath(_mkSavedPath);
+        await Recents.TouchAsync(new RecentItem(name, _mkSavedPath, format, DateTimeOffset.Now, false));
+        await Tabs.OpenAsync(_mkSavedPath, name, format);
+        _markup = false;
+        _mkStatus = null; _mkSavedPath = null;
+    }
+
+    // ── Flatten to a static PDF (XFA form data / AcroForm fields / markup) ──────
+    private bool _isXfaDoc;
+    private bool _flattening;
+
+    // ── Recovery (opt-in): a page failed to decode, offer to open a repaired copy ──
+    private bool _renderFailed;          // set when any page throws during render
+    private bool _recoverBannerDismissed;
+    private bool _recovering;
+    private string? _recoverStatus;
+
+    // User-initiated only. Repairs the file via the library's PdfRepairer into a new
+    // "(recovered)" copy and opens it as a new tab. Never automatic: it rewrites the
+    // document, so the original stays untouched and the user chooses to do this.
+    private async Task TryRecovery()
+    {
+        var source = Tab?.Path;
+        if (string.IsNullOrEmpty(source) || _recovering)
+        {
+            return;
+        }
+
+        _recovering = true;
+        _recoverStatus = null;
+        StateHasChanged();
+        try
+        {
+            var result = await Recovery.RecoverAsync(source!);
+            var name = System.IO.Path.GetFileName(result.OutputPath);
+            var format = DocumentFormatExtensions.FromPath(result.OutputPath);
+            await Recents.TouchAsync(new RecentItem(name, result.OutputPath, format, DateTimeOffset.Now, false));
+            await Tabs.OpenAsync(result.OutputPath, name, format);
+        }
+        catch (Exception ex)
+        {
+            _recoverStatus = "Couldn't recover: " + ex.Message;
+        }
+        finally
+        {
+            _recovering = false;
+            StateHasChanged();
+        }
+    }
+
+    // ── Shell: mode switch (Read · Mark · Arrange · Protect) + Document menu ──────
+    // Phase 1b-i. Read/Mark drive the existing markup toggle; Arrange/Protect reuse the
+    // existing hand-off methods (they navigate to Bench/Redact until those re-parent in 1c/1d).
+    private bool _docMenuOpen;
+    private void ToggleDocMenu() => _docMenuOpen = !_docMenuOpen;
+    private void CloseDocMenu() => _docMenuOpen = false;
+
+    private void SetRead() => SetLocalMode(DocMode.Read);
+    private void SetMark() => SetLocalMode(DocMode.Mark);
+
+    private async Task DocProperties() { CloseDocMenu(); await ShowProperties(); }
+    private void DocExport() { CloseDocMenu(); ShowExport(); }
+    private void DocPress() { CloseDocMenu(); ShowPress(); }
+    private async Task DocFlatten() { CloseDocMenu(); await FlattenNow(); }
+    private void DocNav(string path) { CloseDocMenu(); Nav.NavigateTo(path); }
+
+    private void RefreshDocKind(string? path)
+    {
+        try { _isXfaDoc = !string.IsNullOrEmpty(path) && Flatten.Probe(path!).IsXfa; }
+        catch { _isXfaDoc = false; }
+    }
+
+    private async Task FlattenNow()
+    {
+        var source = Tab?.Path;
+        if (string.IsNullOrEmpty(source) || _flattening) return;
+
+        _flattening = true;
+        StateHasChanged();
+        try
+        {
+            var baseName = System.IO.Path.GetFileNameWithoutExtension(source);
+            var output = await Picker.PickSavePdfAsync(baseName + " (flattened).pdf");
+            if (string.IsNullOrEmpty(output)) return;
+
+            await Flatten.FlattenToFileAsync(source!, output);
+            await WriteBack.DeliverOrThrowAsync(output);
+
+            var name = System.IO.Path.GetFileName(output);
+            var format = DocumentFormatExtensions.FromPath(output);
+            await Recents.TouchAsync(new RecentItem(name, output, format, DateTimeOffset.Now, false));
+            await Tabs.OpenAsync(output, name, format);
+            Shell.Notify($"Flattened copy saved → {name}");
+        }
+        catch (Exception ex)
+        {
+            Shell.Notify("Couldn't flatten this PDF: " + ex.Message, isError: true);
+        }
+        finally
+        {
+            _flattening = false;
+            StateHasChanged();
+        }
+    }
+
+    private sealed class MkRect
+    {
+        public double left { get; set; }
+        public double top { get; set; }
+        public double width { get; set; }
+        public double height { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Tabs.Changed += OnTabsChanged;
+        OpenDoc.Requested += OnOpenRequestedLive;
+
+        ShellInit();
+
+        // Rebuild the strip from the last session (no-op after the first time).
+        await Tabs.RestoreAsync();
+
+        // A pending request from the dashboard/recents opens (or focuses) a tab.
+        await OpenPendingAsync();
+
+        SyncActive();
+    }
+
+    // A file dropped on the window (or any open request) while the reader is already
+    // open: navigation to /reader is a no-op, so consume the pending open directly.
+    private void OnOpenRequestedLive() => _ = InvokeAsync(OpenPendingAsync);
+
+    private async Task OpenPendingAsync()
+    {
+        if (string.IsNullOrEmpty(OpenDoc.PendingPath))
+        {
+            return;
+        }
+
+        var path = OpenDoc.PendingPath!;
+        var name = OpenDoc.PendingName ?? System.IO.Path.GetFileName(path);
+        var format = DocumentFormatExtensions.FromPath(path);
+        _pendingJumpPage = OpenDoc.PendingPage;
+        OpenDoc.Clear();
+        await Recents.TouchAsync(new RecentItem(name, path, format, DateTimeOffset.Now, false));
+        await Tabs.OpenAsync(path, name, format);
+        StateHasChanged();
+    }
+
+    private void OnTabsChanged()
+    {
+        if (Tabs.Tabs.Count == 0)
+        {
+            // Last document closed — leave the reader for the dashboard.
+            Nav.NavigateTo("/");
+            return;
+        }
+
+        SyncActive();
+        InvokeAsync(StateHasChanged);
+    }
+
+    // Detect when the active tab (or its loaded page count) changed, and rebuild the
+    // page list so the desk re-points to the new document and restores its scroll.
+    private void SyncActive()
+    {
+        var tab = Tabs.Active;
+        var id = tab?.Id;
+        var pageCount = tab?.Session?.Document.PageCount ?? 0;
+
+        if (id != _activeId)
+        {
+            _activeId = id;
+            _shownPageCount = pageCount;
+            _pageInput = (tab?.CurrentPage ?? 1).ToString();
+            _rendering.Clear();
+            _pages = pageCount > 0 ? Enumerable.Range(0, pageCount).ToList() : new();
+            _loadGen++;
+            _restoreScroll = pageCount > 0;
+            _pageColorOpen = false;
+            _renderFailed = false;
+            _recoverBannerDismissed = false;
+            _recoverStatus = null;
+            if (tab?.Path != _pageBgPath) _ = LoadPageBgAsync(tab?.Path);
+            if (tab?.Path != _mkDocPath)
+            {
+                _mkDocPath = tab?.Path;
+                _texts.Clear();
+                _shapes.Clear();
+                _images.Clear();
+                _selText = null; _selShape = null; _selImage = null;
+                _mkStatus = null; _mkSavedPath = null; _mkMode = MkMode.None; _textDraft = null; _shapeDraft = null;
+                _mkTagged = false; _mkTaggedPath = null;
+                if (_markup) _ = CheckTaggedAsync();
+            }
+            RefreshDocKind(tab?.Path);
+            OnActiveDocChanged(tab);
+            ApplyShellModeForTab(tab);
+        }
+        else if (pageCount != _shownPageCount)
+        {
+            _shownPageCount = pageCount;
+            _pageInput = (tab?.CurrentPage ?? 1).ToString();
+            _rendering.Clear();
+            _pages = pageCount > 0 ? Enumerable.Range(0, pageCount).ToList() : new();
+            _loadGen++;
+            _restoreScroll = pageCount > 0;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        PublishShell();
+        var tab = Tabs.Active;
+        if (tab?.Session is null)
+        {
+            return;
+        }
+
+        if (tab.Session.Document.IsXfaForm)
+        {
+            return;   // no desk is rendered for XFA documents
+        }
+
+        if (_js is null)
+        {
+            try
+            {
+                _js = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/ChuvadiReader.Ui/js/reader.js");
+                _ref = DotNetObjectReference.Create(this);
+            }
+            catch
+            {
+                return;
+            }
+        }
+
+        if (_observedGen != _loadGen)
+        {
+            _observedGen = _loadGen;
+            try { await _js.InvokeVoidAsync("init", _desk, _ref); }
+            catch { }
+
+            if (_tool != ReaderTool.None)
+            {
+                try { await _js.InvokeVoidAsync("setTool", _desk, ToolStr(_tool)); }
+                catch { }
+            }
+
+            if (!_initiallyFitted.Contains(tab.Id))
+            {
+                // First time this document is shown — open it fitted to the page.
+                _initiallyFitted.Add(tab.Id);
+                _restoreScroll = false;
+                tab.TwoPage = false;
+                tab.Continuous = false;
+                await ApplyFit(ReaderFitMode.Page);
+            }
+            else if (_restoreScroll)
+            {
+                _restoreScroll = false;
+                try { await _js.InvokeVoidAsync("setScrollTop", _desk, tab.ScrollTop); }
+                catch { }
+            }
+
+            if (_pendingJumpPage is { } jump)
+            {
+                _pendingJumpPage = null;
+                await GoTo(jump);
+            }
+        }
+    }
+
+    private async Task OpenViaPicker()
+    {
+        var path = await Picker.PickDocumentAsync();
+        if (string.IsNullOrEmpty(path))
+        {
+            return;
+        }
+
+        var name = System.IO.Path.GetFileName(path);
+        var format = DocumentFormatExtensions.FromPath(path);
+        await Recents.TouchAsync(new RecentItem(name, path, format, DateTimeOffset.Now, false));
+        await Tabs.OpenAsync(path, name, format);
+    }
+
+    private async Task SwitchTo(string id)
+    {
+        if (id == _activeId)
+        {
+            return;
+        }
+
+        await SaveActiveScrollAsync();
+        await Tabs.ActivateAsync(id);
+    }
+
+    private async Task CloseTab(string id)
+    {
+        if (id == _activeId)
+        {
+            await SaveActiveScrollAsync();
+        }
+
+        await Tabs.CloseAsync(id);
+    }
+
+    [JSInvokable]
+    public async Task ReorderTabTo(string dragId, int insertIndex)
+    {
+        if (string.IsNullOrEmpty(dragId))
+        {
+            return;
+        }
+
+        await Tabs.MoveToAsync(dragId, insertIndex);
+    }
+
+    [JSInvokable]
+    public void OnScroll(double top)
+    {
+        // Keep the active tab's scroll position fresh in memory as the user scrolls, so
+        // returning from the dashboard restores it even if teardown-time interop fails.
+        if (Tabs.Active is { } tab)
+        {
+            tab.ScrollTop = top;
+        }
+    }
+
+    // Lazy-render trigger from the IntersectionObserver.
+    private void EnsureRendered(int n)
+    {
+        var session = Tabs.Active?.Session;
+        if (session is null || session.TryGetRenderedSvg(n, out _) || !_rendering.Add(n))
+        {
+            return;
+        }
+
+        _ = RenderOneAsync(session, n);
+    }
+
+    private async Task RenderOneAsync(IPdfSession session, int n)
+    {
+        try
+        {
+            await session.RenderPageSvgAsync(n);
+        }
+        catch
+        {
+            // A failed page stays a placeholder; surface the opt-in recovery banner.
+            _renderFailed = true;
+        }
+        finally
+        {
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    [JSInvokable]
+    public Task RenderPage(int n)
+    {
+        EnsureRendered(n);
+        return Task.CompletedTask;
+    }
+
+    [JSInvokable]
+    public Task OnPageVisible(int page)
+    {
+        var tab = Tabs.Active;
+        if (tab?.Session is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        page = Math.Clamp(page, 1, tab.Session.Document.PageCount);
+        if (page != tab.CurrentPage)
+        {
+            tab.CurrentPage = page;
+            _pageInput = page.ToString();
+            StateHasChanged();
+        }
+
+        return Task.CompletedTask;
+    }
+
+    [JSInvokable]
+    public async Task CloseActiveTab()
+    {
+        await SaveActiveScrollAsync();
+        await Tabs.CloseActiveAsync();
+    }
+
+    [JSInvokable]
+    public async Task CloseOtherTabs()
+    {
+        await SaveActiveScrollAsync();
+        await Tabs.CloseOthersAsync();
+    }
+
+    [JSInvokable]
+    public async Task CloseAllTabs()
+    {
+        await Tabs.CloseAllAsync();
+        Nav.NavigateTo("/");
+    }
+
+    [JSInvokable]
+    public async Task CycleTab(int direction)
+    {
+        await SaveActiveScrollAsync();
+        await Tabs.CycleAsync(direction);
+    }
+
+    [JSInvokable]
+    public async Task ActivateTabIndex(int oneBased)
+    {
+        var list = Tabs.Tabs;
+        if (oneBased < 1 || oneBased > list.Count)
+        {
+            return;
+        }
+
+        var id = list[oneBased - 1].Id;
+        if (id == _activeId)
+        {
+            return;
+        }
+
+        await SaveActiveScrollAsync();
+        await Tabs.ActivateAsync(id);
+    }
+
+    [JSInvokable]
+    public void ZoomKey(int dir)
+    {
+        if (Tabs.Active is not { } t)
+        {
+            return;
+        }
+
+        t.Scale = dir > 0 ? Math.Min(8.0, t.Scale + 0.25)
+                : dir < 0 ? Math.Max(0.1, t.Scale - 0.25)
+                : 1.0;
+        t.FitMode = ReaderFitMode.Free;
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public Task NavPage(int delta) => GoTo(CurPage + delta);
+
+    private async Task GoTo(int page)
+    {
+        var tab = Tabs.Active;
+        if (tab?.Session is null)
+        {
+            return;
+        }
+
+        page = Math.Clamp(page, 1, tab.Session.Document.PageCount);
+        tab.CurrentPage = page;
+        _pageInput = page.ToString();
+
+        if (_js is not null)
+        {
+            try { await _js.InvokeVoidAsync("scrollToPage", _desk, page - 1); }
+            catch { }
+        }
+    }
+
+    private async Task OnJumpChange(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var p))
+        {
+            await GoTo(p);
+        }
+        else
+        {
+            _pageInput = CurPage.ToString();
+        }
+
+        if (_js is not null)
+        {
+            try { await _js.InvokeVoidAsync("focusDesk"); }
+            catch { }
+        }
+    }
+
+    private void ZoomIn()
+    {
+        if (Tabs.Active is { } t)
+        {
+            t.Scale = Math.Min(8.0, t.Scale + 0.25);
+            t.FitMode = ReaderFitMode.Free;
+        }
+    }
+
+    private void ZoomOut()
+    {
+        if (Tabs.Active is { } t)
+        {
+            t.Scale = Math.Max(0.1, t.Scale - 0.25);
+            t.FitMode = ReaderFitMode.Free;
+        }
+    }
+
+    // ── view system ──────────────────────────────────────────────────────────
+    private bool _hoverEnabled = true;
+    private bool _drawerOpen;
+    private bool _drawerPinned;
+    private bool _reading;
+    private ReaderTool _tool = ReaderTool.None;
+    private RotateScopeKind _rotScope = RotateScopeKind.Page;
+    private double _loupeRadius = 84;
+    private double _loupeMag = 2.2;
+    private static readonly int[] _zoomPresets = { 50, 75, 100, 125, 150, 200, 400 };
+
+    // Per-tab view undo (rotation + layout/fit only; zoom & scroll are not undone).
+    private readonly Dictionary<ReaderTab, Stack<ViewSnapshot>> _undo = new();
+
+    private sealed record ViewSnapshot(
+        Dictionary<int, int> Rotations, bool TwoPage, bool Continuous, bool CoverAlone,
+        ReaderFitMode FitMode, double Scale);
+
+    private enum RotateScopeKind { Page, Onward, Document }
+
+    private int PageStep => TwoPageOn ? 2 : 1;
+
+    private int ZoomPct => (int)Math.Round(CurScale * 100);
+    private bool TwoPageOn => Tab?.TwoPage == true;
+    private bool ContinuousOn => Tab?.Continuous == true;
+    private string LayoutClass
+    {
+        get
+        {
+            var cls = TwoPageOn ? (Tab?.CoverAlone == true ? "two cover" : "two") : "";
+            if (!ContinuousOn)
+            {
+                cls = (cls.Length > 0 ? cls + " " : "") + "snap";
+            }
+            return cls;
+        }
+    }
+
+    private int RotationFor(int pageIndex) =>
+        Tab is { } t && t.PageRotations.TryGetValue(pageIndex, out var r) ? r : 0;
+
+    private void TogglePin() => _drawerPinned = !_drawerPinned;
+
+    private async Task SetLoupe(double radius, double mag)
+    {
+        _loupeRadius = radius;
+        _loupeMag = mag;
+        if (_js is not null)
+        {
+            try { await _js.InvokeVoidAsync("configLoupe", radius, mag); }
+            catch { }
+        }
+    }
+
+    // Snapshot the undoable view-state of the active tab before a change.
+    private void PushUndo()
+    {
+        var tab = Tabs.Active;
+        if (tab is null)
+        {
+            return;
+        }
+
+        if (!_undo.TryGetValue(tab, out var stack))
+        {
+            stack = new Stack<ViewSnapshot>();
+            _undo[tab] = stack;
+        }
+
+        stack.Push(new ViewSnapshot(
+            new Dictionary<int, int>(tab.PageRotations), tab.TwoPage, tab.Continuous,
+            tab.CoverAlone, tab.FitMode, tab.Scale));
+
+        if (stack.Count > 50)
+        {
+            // keep the stack bounded
+            var keep = stack.ToArray()[..50];
+            stack.Clear();
+            for (var i = keep.Length - 1; i >= 0; i--)
+            {
+                stack.Push(keep[i]);
+            }
+        }
+    }
+
+    [JSInvokable]
+    public void Undo()
+    {
+        if (_markup && _mkUndo.Count > 0)
+        {
+            MkUndo();
+            StateHasChanged();
+            return;
+        }
+
+        var tab = Tabs.Active;
+        if (tab is null || !_undo.TryGetValue(tab, out var stack) || stack.Count == 0)
+        {
+            return;
+        }
+
+        var s = stack.Pop();
+        tab.PageRotations.Clear();
+        foreach (var kv in s.Rotations)
+        {
+            tab.PageRotations[kv.Key] = kv.Value;
+        }
+        tab.TwoPage = s.TwoPage;
+        tab.Continuous = s.Continuous;
+        tab.CoverAlone = s.CoverAlone;
+        tab.FitMode = s.FitMode;
+        tab.Scale = s.Scale;
+        StateHasChanged();
+    }
+
+    private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
+
+    private async Task ToggleReading()
+    {
+        _reading = !_reading;
+        await SetImmersive(_reading);
+    }
+
+    private async Task SetImmersive(bool on)
+    {
+        if (_js is not null)
+        {
+            try { await _js.InvokeVoidAsync("setImmersive", on); }
+            catch { }
+        }
+    }
+
+    // Esc: close the drawer first; otherwise leave full-screen / reading mode.
+    [JSInvokable]
+    public async Task OnEscape()
+    {
+        if (_measureOn)
+        {
+            CloseMeasure();
+            StateHasChanged();
+            return;
+        }
+
+        if (_card is not null)
+        {
+            CloseCard();
+            StateHasChanged();
+            return;
+        }
+
+        if (_pagesDrawer)
+        {
+            _pagesDrawer = false;
+            StateHasChanged();
+            return;
+        }
+
+        if (_findOpen)
+        {
+            _findOpen = false;
+            ClearFind();
+            StateHasChanged();
+            return;
+        }
+
+        if (_drawerOpen)
+        {
+            _drawerOpen = false;
+            StateHasChanged();
+            return;
+        }
+
+        if (_reading)
+        {
+            _reading = false;
+            await SetImmersive(false);
+            StateHasChanged();
+        }
+    }
+
+    private void ZoomPreset(int pct)
+    {
+        if (Tabs.Active is { } t)
+        {
+            t.Scale = pct / 100.0;
+            t.FitMode = ReaderFitMode.Free;
+        }
+    }
+
+    private async Task FitWidth()
+    {
+        PushUndo();
+        if (Tabs.Active is { } t) { t.TwoPage = false; t.Continuous = true; }
+        StateHasChanged();
+        await Task.Delay(30);
+        await ApplyFit(ReaderFitMode.Width);
+    }
+
+    private async Task FitPage()
+    {
+        PushUndo();
+        if (Tabs.Active is { } t) { t.TwoPage = false; t.Continuous = false; }
+        StateHasChanged();
+        await Task.Delay(30);
+        await ApplyFit(ReaderFitMode.Page);
+    }
+
+    private async Task ApplyFit(ReaderFitMode mode)
+    {
+        var tab = Tabs.Active;
+        if (tab?.Session is null || _js is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var s = await _js.InvokeAsync<double>("measureFit", _desk, mode == ReaderFitMode.Width ? "width" : "page");
+            if (s > 0)
+            {
+                tab.Scale = s;
+                tab.FitMode = mode;
+                StateHasChanged();
+            }
+        }
+        catch { }
+    }
+
+    private void ActualSize()
+    {
+        PushUndo();
+        if (Tabs.Active is { } t)
+        {
+            t.Scale = 1.0;
+            t.FitMode = ReaderFitMode.Free;
+        }
+    }
+
+    private async Task SetColumns(bool two)
+    {
+        var tab = Tabs.Active;
+        if (tab is null)
+        {
+            return;
+        }
+
+        PushUndo();
+        tab.TwoPage = two;
+        StateHasChanged();
+
+        if (tab.FitMode != ReaderFitMode.Free)
+        {
+            await Task.Delay(40);   // let the desk re-render with the new column class
+            await ApplyFit(tab.FitMode);
+        }
+    }
+
+    private async Task ToggleContinuous()
+    {
+        var tab = Tabs.Active;
+        if (tab is null)
+        {
+            return;
+        }
+
+        PushUndo();
+        tab.Continuous = !tab.Continuous;
+        StateHasChanged();
+
+        if (tab.FitMode != ReaderFitMode.Free)
+        {
+            await Task.Delay(40);
+            await ApplyFit(tab.FitMode);
+        }
+    }
+
+    private void ToggleCover()
+    {
+        PushUndo();
+        if (Tabs.Active is { } t)
+        {
+            t.CoverAlone = !t.CoverAlone;
+        }
+    }
+
+    private void RotateCurrent(int delta) => RotatePages(CurPage - 1, CurPage - 1, delta);
+
+    private void RotateScopeBy(int delta)
+    {
+        var tab = Tabs.Active;
+        if (tab?.Session is null)
+        {
+            return;
+        }
+
+        var last = tab.Session.Document.PageCount - 1;
+        var (from, to) = _rotScope switch
+        {
+            RotateScopeKind.Document => (0, last),
+            RotateScopeKind.Onward => (CurPage - 1, last),
+            _ => (CurPage - 1, CurPage - 1),
+        };
+        RotatePages(from, to, delta);
+    }
+
+    private void RotatePages(int from, int to, int delta)
+    {
+        var tab = Tabs.Active;
+        if (tab is null)
+        {
+            return;
+        }
+
+        PushUndo();
+        for (var i = from; i <= to; i++)
+        {
+            var cur = tab.PageRotations.TryGetValue(i, out var r) ? r : 0;
+            var next = ((cur + delta) % 360 + 360) % 360;
+            if (next == 0)
+            {
+                tab.PageRotations.Remove(i);
+            }
+            else
+            {
+                tab.PageRotations[i] = next;
+            }
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task SetTool(ReaderTool tool)
+    {
+        _tool = _tool == tool ? ReaderTool.None : tool;
+        if (_js is not null)
+        {
+            try { await _js.InvokeVoidAsync("setTool", _desk, ToolStr(_tool)); }
+            catch { }
+        }
+        StateHasChanged();
+    }
+
+    private static string ToolStr(ReaderTool t) => t switch
+    {
+        ReaderTool.Hand => "hand",
+        ReaderTool.Marquee => "area",
+        ReaderTool.Loupe => "loupe",
+        ReaderTool.Snapshot => "snapshot",
+        _ => "none",
+    };
+
+    private void ToggleScrollLock()
+    {
+        if (Tabs.Active is { } t)
+        {
+            t.ScrollLocked = !t.ScrollLocked;
+        }
+    }
+
+    [JSInvokable]
+    public void OnZoomChanged(double scale)
+    {
+        if (Tabs.Active is { } t)
+        {
+            t.Scale = scale;
+            t.FitMode = ReaderFitMode.Free;
+            StateHasChanged();
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnDeskResize()
+    {
+        var tab = Tabs.Active;
+        if (tab?.Session is null || tab.FitMode == ReaderFitMode.Free || _js is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var s = await _js.InvokeAsync<double>("measureFit", _desk, tab.FitMode == ReaderFitMode.Width ? "width" : "page");
+            if (s > 0)
+            {
+                tab.Scale = s;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch { }
+    }
+
+    private async Task SaveActiveScrollAsync()
+    {
+        var tab = Tabs.Active;
+        if (tab?.Session is null || _js is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var top = await _js.InvokeAsync<double>("getScrollTop", _desk);
+            Tabs.UpdateViewState(tab.Id, tab.CurrentPage, tab.Scale, top);
+        }
+        catch
+        {
+            // best-effort; scroll memory is a nicety
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        ShellDispose();
+        Tabs.Changed -= OnTabsChanged;
+        OpenDoc.Requested -= OnOpenRequestedLive;
+
+        try
+        {
+            await SaveActiveScrollAsync();
+            await Tabs.SaveAsync();
+        }
+        catch
+        {
+            // leaving the page must never throw
+        }
+
+        try
+        {
+            if (_js is not null)
+            {
+                await _js.InvokeVoidAsync("dispose");
+                await _js.DisposeAsync();
+            }
+        }
+        catch
+        {
+            // disposing during teardown must never throw
+        }
+
+        _ref?.Dispose();
+    }
+}

@@ -4,7 +4,9 @@ on:
   push:
     branches: [platform/linux]
     paths:
-      - "src/ChuvadiReader.Linux/**"
+      - "src/**"
+      - "tests/**"
+      - "ci/**"
       - "tools/linux/**"
       - ".github/workflows/linux.yml"
   pull_request:
@@ -42,17 +44,21 @@ jobs:
             xvfb mutter imagemagick dbus-x11
           dotnet --info | head -8
 
-      - name: Prepare tree (chuvadi-reader at the pinned commit + new Linux files)
-        run: bash tools/linux/prepare-tree.sh "$PWD/reader"
+      # Packages: the committed ci/packages feed (byte-identical to the Windows app), coordinator D-01,
+      # copied to ./localpackages, which the repo's nuget.config points to.
+      - name: Package feed
+        run: bash scripts/setup-feed.sh
 
       - name: Build (warnings are errors)
-        run: dotnet build reader/src/ChuvadiReader.Linux -c Release
+        run: dotnet build src/ChuvadiReader.Linux -c Release -warnaserror
 
-      - name: Run the Reader's existing tests
-        run: dotnet test reader/tests/ChuvadiReader.Tests -c Release
+      - name: Run the Reader's and the host kit's tests
+        run: |
+          dotnet test tests/ChuvadiReader.Tests -c Release
+          dotnet test tests/ChuvadiReader.Hosting.Tests -c Release
 
       - name: Publish (ReadyToRun)
-        run: dotnet publish reader/src/ChuvadiReader.Linux -c Release -r linux-${{ matrix.arch }} --self-contained false -o publish
+        run: dotnet publish src/ChuvadiReader.Linux -c Release -r linux-${{ matrix.arch }} --self-contained false -o publish
 
       - name: Load the AppArmor profile the .deb ships (WebKit sandbox needs userns on Ubuntu 24.04+)
         run: |

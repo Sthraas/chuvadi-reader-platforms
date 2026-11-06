@@ -1,0 +1,155 @@
+@page "/settings"
+@using ChuvadiReader.Ui.Components.Settings
+@implements IDisposable
+@inject ThemeService Theme
+@inject UserProfileService Profile
+@inject SaveFolderService SaveFolders
+@inject PreferencesService Prefs
+@inject WatchedFolderService Watched
+@inject LibraryService Lib
+@inject NavigationManager Nav
+@inject ChuvadiReader.Platform.IPlatformInfo Platform
+
+<PageTitle>Chuvadi · Settings</PageTitle>
+
+@*
+    Settings: a 244 px section nav + the section's cards. Every change saves immediately
+    (each control calls its service). Unbuilt features stay visible, greyed out with a
+    "Coming soon" tooltip. Deep link: /settings?section=reading (ids in Sections below).
+*@
+<div class="settings">
+    <nav class="snav" aria-label="Settings sections">
+        <h1 class="snav-title" tabindex="-1">Settings</h1>
+        @foreach (var s in Sections)
+        {
+            var on = s.Id == _active;
+            <button type="button" class="snav-item @(on ? "on" : null)" aria-current="@(on ? "page" : null)" @onclick="() => Show(s.Id)">
+                <Icon Name="@s.Icon" Size="17" />
+                <span class="snav-label">@s.Label</span>
+                @if (s.IsNew)
+                {
+                    <span class="snav-note">new</span>
+                }
+            </button>
+        }
+        <div class="snav-foot">
+            Chuvadi @AppInfo.Version · chuvadi-pdf @AppInfo.Libraries[0].Version<br />
+            Changes save automatically<br />
+            @(Platform.Capabilities.ServerSide ? ChuvadiReader.Ui.Components.Platform.PlatformText.ServerPrivacy : "Stored on this device only")
+        </div>
+    </nav>
+
+    <div class="sbody" @key="_active">
+        @switch (_active)
+        {
+            case "reading":
+                <ReadingSection Rev="_rev" />
+                break;
+            case "saving":
+                <SavingSection Rev="_rev" />
+                break;
+            case "library":
+                <LibrarySection Rev="_rev" />
+                break;
+            case "account":
+                <AccountSection />
+                break;
+            case "kiosk":
+                <KioskSection />
+                break;
+            case "language":
+                <LanguageSection Rev="_rev" />
+                break;
+            case "accessibility":
+                <AccessibilitySection Rev="_rev" />
+                break;
+            case "shortcuts":
+                <ShortcutsSection />
+                break;
+            case "about":
+                <AboutSection OnShowShortcuts='() => Show("shortcuts")' />
+                break;
+            default:
+                <AppearanceSection Rev="_rev" />
+                break;
+        }
+    </div>
+</div>
+
+@code {
+    private sealed record Section(string Id, string Icon, string Label, bool IsNew);
+
+    private static readonly IReadOnlyList<Section> Sections = new[]
+    {
+        new Section("appearance", "sliders", "Appearance", false),
+        new Section("reading", "reading-mode", "Reading", false),
+        new Section("saving", "save", "Saving & files", false),
+        new Section("library", "library", "Library & folders", false),
+        new Section("account", "user", "Account & roles", true),
+        new Section("kiosk", "lock", "Kiosk", true),
+        new Section("language", "star", "Language", true),
+        new Section("accessibility", "accessibility", "Accessibility", true),
+        new Section("shortcuts", "menu", "Shortcuts", false),
+        new Section("about", "info", "About", false),
+    };
+
+    /// <summary>Optional deep link: /settings?section=reading.</summary>
+    [SupplyParameterFromQuery(Name = "section")]
+    public string? SectionQuery { get; set; }
+
+    private string _active = "appearance";
+    private int _rev;
+
+    protected override void OnInitialized()
+    {
+        Theme.Changed += OnAnyChanged;
+        SaveFolders.Changed += OnAnyChanged;
+        Prefs.Changed += OnAnyChanged;
+        Watched.Changed += OnAnyChanged;
+        Lib.Changed += OnAnyChanged;
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrEmpty(SectionQuery) && Sections.Any(s => s.Id == SectionQuery))
+        {
+            _active = SectionQuery!;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Profile.HydrateAsync();
+        if (!Prefs.IsHydrated)
+        {
+            await Prefs.HydrateAsync();
+        }
+
+        await Watched.HydrateAsync();
+
+        // Library & folders shows per-category counts; scan only if nothing has been scanned yet
+        // (HydrateAsync always rescans, and Home normally did that already).
+        if (Lib.Entries.Count == 0 && !Lib.IsScanning)
+        {
+            _ = Lib.HydrateAsync();
+        }
+    }
+
+    // Changing section re-keys the scroll container, so it starts at the top.
+    private void Show(string id) => _active = id;
+
+    private void OnAnyChanged() => InvokeAsync(() =>
+    {
+        _rev++;
+        StateHasChanged();
+    });
+
+    public void Dispose()
+    {
+        Theme.Changed -= OnAnyChanged;
+        SaveFolders.Changed -= OnAnyChanged;
+        Prefs.Changed -= OnAnyChanged;
+        Watched.Changed -= OnAnyChanged;
+        Lib.Changed -= OnAnyChanged;
+    }
+}
