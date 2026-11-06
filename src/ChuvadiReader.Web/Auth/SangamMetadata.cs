@@ -23,7 +23,7 @@ public sealed class SangamOptions
     public string? PrivateKeyId { get; set; }
 
     /// <summary>What the portal asks for: who the person is, nothing more.</summary>
-    public string Scope { get; set; } = "openid profile email";
+    public string Scope { get; set; } = "openid profile email org.current";
 
     /// <summary>Optional Sangam screen languages (<c>en</c>, <c>hi</c>, <c>ml</c>).</summary>
     public string? UiLocales { get; set; }
