@@ -127,7 +127,7 @@ Runbook §8 on the VM, in order. They cover the start-up refusal, `/healthz`, Le
 
 | Run | Result |
 |---|---|
-| Shared solution build (`-warnaserror`) and tests | 0 warnings; Reader 171, Hosting 33, Mobile UI 11, Web UI 16 passed |
+| Shared solution build (`-warnaserror`) and tests | 0 warnings; Reader 171, Hosting 33, Mobile UI 11, Web UI 19 passed |
 | Web tests | 140/140 |
 | `flows.py` through the gateway | Chrome 6/6, Firefox 6/6, WebKit 6/6, Chromium (no PDF viewer) 6/6 |
 | `sangam_signin.py` through the gateway, real local Sangam | Chrome, Firefox, WebKit: all checks pass (back-channel 0–4 s) |
