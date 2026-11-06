@@ -47,3 +47,22 @@
 .chvd-expiry p { margin: 0 0 12px; line-height: 1.45; color: var(--chvd-ink-soft, inherit); }
 .chvd-expiry .chvd-expiry-msg { color: var(--chvd-error, #a33); }
 .chvd-expiry-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+
+/* Planned-restart banner: bottom left, above the status bar (it stays up for a while, so it must
+   not cover the top bar's controls), on the Ui's tokens. */
+.chvd-maint {
+    position: fixed;
+    left: 16px;
+    bottom: calc(var(--chvd-statusbar-h, 24px) + 8px);
+    z-index: 10001;
+    width: min(460px, calc(100vw - 32px));
+    box-sizing: border-box;
+    padding: 8px 14px;
+    background: var(--chvd-paper, #fbf7ef);
+    color: var(--chvd-ink, #1a1310);
+    border: 1px solid var(--chvd-warn, #b7791f);
+    border-radius: var(--chvd-radius-md, 8px);
+    box-shadow: var(--chvd-shadow-popover, 0 6px 20px rgba(0, 0, 0, .14));
+    font-size: var(--chvd-fs-ui, 13px);
+    line-height: 1.45;
+}

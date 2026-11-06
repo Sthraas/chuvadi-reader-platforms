@@ -36,6 +36,8 @@ public sealed class RecordingTabs : ITabControl
         Notices.Add((sub, sid, notice));
         return Task.CompletedTask;
     }
+
+    public Task AnnounceAsync(MaintenanceNotice? notice) => Task.CompletedTask;
 }
 
 /// <summary>D-30: 30 minutes idle, 8 hours at most, a warning 5 minutes before.</summary>

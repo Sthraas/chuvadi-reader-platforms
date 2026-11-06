@@ -181,3 +181,20 @@ Findings for Sangam's team are in `SANGAM-INTEGRATION.md` (`login_hint` unsuppor
 ```
 dotnet test tests/ChuvadiReader.Web.Tests -c Release   # 123 passed, 0 warnings
 ```
+
+### 21. Second combined patch, the 12a sign-in page, L-8, restart banner — 7 Nov
+- Rebased the Web commits onto `platform/foundation` @ `2fafb60` (second combined patch, `COMBINED-HOOKS-2.md`) without conflicts.
+- **PortalLinks:** already registered by the host. It now takes two arguments (`DesktopAppUrl`, `AccountSettingsUrl`) from the Web portal UI chat's `0c99e19`. `Portal:ForgotPasswordUrl` is removed (no password field, D-34), and the desktop-app default is the Ui's own `PlaceholderDesktopAppUrl`. `PortalLinks` is registered in every mode, because the gateway renders the sign-in page.
+- **12a sign-in page** (U-9 a, integrated from `0c99e19`; its `src/ChuvadiReader.Ui/Components/Platform/Portal/` files are taken as they are):
+  - `GET /signin` renders `PortalSignIn` to plain HTML on the server with its own tiny service set. No circuit is needed, so there's no worker before sign-in.
+  - `js/signin.js` sends "Continue with Sangam" to `GET /signin/sangam` (the old redirect), with a safe return address. Sign-in failures show their reason on the same page.
+  - The Sangam ID field stays off until Sangam pre-fills `login_hint`.
+- **Fix:** `UseExceptionHandler("/error")` had no `/error` endpoint. Outside Development, an unexpected failure was sent to sign-in and looped until the address was too long. `/error` is now an anonymous page (test added). Found when the first version of the sign-in page threw in single mode, because Blazor's circuit navigation manager can't run outside a circuit; fixed by the page's own service set.
+- **L-8:** `WebPrintService` refuses a file whose permissions forbid printing, with `PrintPermission.Refused`, before anything reaches the browser. Without this check the whole file would be handed over, and a range or password print copy would carry no protection at all. Tests: refused for whole and range prints, with no copy made; a protected file that allows printing still prints.
+- **Multi-file open (F-3 queue):** nothing for the host to do. The Ui's open paths call the one-file picker, and the Ui has no drop handler yet (see the report).
+- **Restart banner** (updates at quiet hours, announced in advance):
+  - `MaintenanceAnnouncer` reads `Portal:MaintenanceNoticeFile` every 15 s. A time without its zone is refused with a log line.
+  - `ITabControl.AnnounceAsync`; the gateway passes the notice to every worker, and to workers started later.
+  - `MaintenanceBanner` shows bottom-left in every tab until the time passes or the file is removed.
+  - 6 tests, plus a browser check.
+- Checks: build 0/0; 134/134 tests; the real-Sangam e2e through the gateway, now starting at 12a, passes.

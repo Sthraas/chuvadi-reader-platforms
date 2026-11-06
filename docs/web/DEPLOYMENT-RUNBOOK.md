@@ -104,6 +104,7 @@ Portal__Workers__SocketFolder=/run/chuvadi-portal
 Portal__Workers__MaxWorkers=<40>
 Portal__Workers__MemoryLimitMB=<1536>
 Portal__AccountSettingsUrl=<Sangam self-service address>
+Portal__MaintenanceNoticeFile=/var/lib/chuvadi/maintenance
 Portal__DesktopAppUrl=<download page>
 Portal__Tls__CertificatePath=/var/lib/chuvadi/tls/cert.pem
 Portal__Tls__KeyPath=/var/lib/chuvadi/tls/key.pem
@@ -167,17 +168,24 @@ WantedBy=multi-user.target
 2. `curl -sk https://127.0.0.1:8443/healthz` → `ok` (plain HTTP is redirected to HTTPS, like everything but the ACME challenge).
 3. **Let's Encrypt staging**: `journalctl -u chuvadi-portal | grep -i acme` shows the order and the install. `curl -vk https://<domain>/healthz` shows the staging issuer. Then set the production directory URL, restart, and check that the browser shows a trusted certificate.
 4. `curl -sI http://<domain>/` → 307 to `https://<domain>/` (port 443, not 8443). `curl -sI https://<domain>/healthz` shows HSTS, CSP, `X-Content-Type-Options`, no `Server` header.
-5. In a browser: `https://<domain>/` → Sangam → back signed in. The status bar shows the person. Open, print and merge a PDF, and download the result.
+5. In a browser: `https://<domain>/` → the portal's sign-in page (12a) → "Continue with Sangam" → Sangam → back signed in. The status bar shows the person. Open, print and merge a PDF, and download the result.
 6. Sign out from the account menu → the signed-out page; `ls /srv/chuvadi/data/workers` is empty within about 3 minutes.
 7. Sign in, sign out on Sangam itself → the portal tab goes to the signed-out page (back-channel).
 8. Leave a tab idle: the warning comes at 25 minutes and the session ends at 30 (D-30).
-9. Load (optional, from a separate machine with the Development sign-in **off**): not possible against production, which only takes Sangam sign-ins. Run `tests/web-e2e/load.py` against a staging VM of the same size instead.
+9. Write a notice time an hour ahead into `/var/lib/chuvadi/maintenance`: the banner shows in an open tab; delete the file and it goes.
+10. Load (optional, from a separate machine with the Development sign-in **off**): not possible against production, which only takes Sangam sign-ins. Run `tests/web-e2e/load.py` against a staging VM of the same size instead.
 
 ## 9. Operating
 - **Logs**: `journalctl -u chuvadi-portal -f`. Worker lines are prefixed `ChuvadiReader.Web.Worker.<key>` (a hash, never the person's id).
 - **Health**: E2E monitoring polls `https://<domain>/healthz` (anonymous, says only `ok`).
 - **Certificates** renew by themselves 30 days before expiry, with no restart. Let's Encrypt mails the contact address if renewal keeps failing.
-- **Updates**: install the new version (section 4), then `systemctl restart chuvadi-portal`. This ends all sessions, so do it at a quiet hour and announce it.
+- **Updates** happen at a quiet hour, announced in advance (coordinator, 7 Nov):
+  1. At least an hour before, write the restart time with its zone into the notice file:
+     `echo '2026-11-08T22:00+05:30' | sudo -u chuvadi tee /var/lib/chuvadi/maintenance`.
+     A second line can replace the standard text.
+  2. Within 15 seconds, every open tab shows: "The portal restarts for an update at 22:00 (in about N minutes). Download anything you want to keep before then…". People who arrive later see it too.
+  3. Install the new version (section 4). At the announced time run `systemctl restart chuvadi-portal`, then `rm /var/lib/chuvadi/maintenance`. The banner goes by itself once the time passes.
+  - A restart ends all sessions: files are removed, and people sign in again (Sangam usually does that without asking).
 - **Rollback**: point `/opt/chuvadi-portal` back to the previous folder and restart.
 - **Backups**: no personal data to back up. Keep the env file, the Sangam client key and the ACME account key (all on the LUKS volume) in Pezhai.
 

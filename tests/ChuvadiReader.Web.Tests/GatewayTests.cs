@@ -248,6 +248,16 @@ public class GatewayTests(GatewayFixture gateway) : IClassFixture<GatewayFixture
     }
 
     [Fact]
+    public async Task The_error_page_needs_no_sign_in_so_a_failure_cannot_loop()
+    {
+        using var anonymous = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { BaseAddress = gateway.Base };
+        var resp = await anonymous.GetAsync("/error");
+        Assert.Equal(HttpStatusCode.InternalServerError, resp.StatusCode);
+        Assert.Contains("Something went wrong", await resp.Content.ReadAsStringAsync());
+        Assert.Empty(gateway.Pool.Running);
+    }
+
+    [Fact]
     public async Task Static_files_come_from_the_gateway_without_starting_a_worker()
     {
         using var c = gateway.Client("gw-static");

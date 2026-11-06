@@ -291,6 +291,11 @@ public sealed class WorkerPool : ITabControl, IAsyncDisposable
         }
 
         _log.LogInformation("Worker {Key} started (pid {Pid}) in {Ms} ms", key[..8], process.Id, started.ElapsedMilliseconds);
+        if (_maintenance is { } announced)
+        {
+            await AnnounceToAsync(worker, announced).ConfigureAwait(false); // a person arriving now sees it too
+        }
+
         return worker;
     }
 
@@ -352,7 +357,6 @@ public sealed class WorkerPool : ITabControl, IAsyncDisposable
         env["Portal__AllowCertificateUpload"] = _portal.AllowCertificateUpload ? "true" : "false";
         env["Portal__DesktopAppUrl"] = _portal.DesktopAppUrl;
         env["Portal__AccountSettingsUrl"] = _portal.AccountSettingsUrl ?? string.Empty;
-        env["Portal__ForgotPasswordUrl"] = _portal.ForgotPasswordUrl ?? string.Empty;
         return psi;
     }
 
@@ -548,6 +552,31 @@ public sealed class WorkerPool : ITabControl, IAsyncDisposable
     }
 
     private sealed record EndResult(int Ended);
+
+    private MaintenanceNotice? _maintenance;
+
+    public async Task AnnounceAsync(MaintenanceNotice? notice)
+    {
+        _maintenance = notice;
+        await Task.WhenAll(Running.Select(w => AnnounceToAsync(w, notice))).ConfigureAwait(false);
+    }
+
+    private async Task AnnounceToAsync(WorkerProcess worker, MaintenanceNotice? notice)
+    {
+        try
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Post, WorkerHost.ControlPrefix + "/maintenance")
+            {
+                Content = JsonContent.Create(new WorkerHost.MaintenanceRequest(notice?.At, notice?.Message)),
+            };
+            worker.Sign(req, null);
+            using var resp = await worker.Client.SendAsync(req).ConfigureAwait(false);
+        }
+        catch (HttpRequestException ex)
+        {
+            _log.LogDebug("Couldn't reach worker {Key}: {Message}", worker.Key[..8], ex.Message);
+        }
+    }
 
     private WorkerProcess? Find(string sub)
         => _workers.TryGetValue(UserKey.FromSub(sub), out var lazy) && lazy.IsValueCreated && lazy.Value.IsCompletedSuccessfully && !lazy.Value.Result.HasExited

@@ -31,6 +31,15 @@ def outbox_code(page, address):
         time.sleep(0.5)
     return None
 
+def continue_with_sangam(page, label):
+    """The portal's own sign-in page (12a) first; its one button leaves for Sangam."""
+    page.wait_for_url(portal + "/signin**", timeout=30000)
+    body = page.inner_text("body")
+    check(label + ": the portal's sign-in page (12a) shows",
+          "Continue with Sangam" in body and "Download the desktop app" in body and page.query_selector("input[type=password]") is None)
+    page.click("button.psi-sangam")
+    page.wait_for_url(sangam + "/login**", timeout=30000)
+
 tag = "".join(random.choice(string.ascii_lowercase) for _ in range(8))
 email = f"chuvadi.e2e.{tag}@example.in"
 mobile = "9" + "".join(random.choice(string.digits) for _ in range(9))
@@ -43,8 +52,9 @@ with sync_playwright() as p:
 
     # Register through the portal's own sign-in (so the return goes back to the portal).
     page.goto(portal + "/")
-    page.wait_for_url(sangam + "/login**", timeout=30000)
-    check("portal sends an anonymous visitor to Sangam", page.url.startswith(sangam + "/login"))
+    page.screenshot(path=os.path.join(out, "sangam-0-signin-page.png"))
+    continue_with_sangam(page, "anonymous visitor")
+    check("\"Continue with Sangam\" goes to Sangam", page.url.startswith(sangam + "/login"))
     page.click("text=Create an account")
     page.fill("input[name=FirstName]", "Chuvadi")
     page.fill("input[name=LastName]", "Tester")
@@ -133,7 +143,8 @@ with sync_playwright() as p:
         check("the other open tab of that sign-in is ended too", tab2.url.startswith(portal + "/signed-out"), tab2.url[:120])
         page.goto(portal + "/")
         page.wait_for_load_state("networkidle")
-        check("after sign-out the portal asks to sign in again", page.url.startswith(sangam + "/login"), page.url[:120])
+        check("after sign-out the portal asks to sign in again", page.url.startswith(portal + "/signin"), page.url[:120])
+        continue_with_sangam(page, "after sign-out")
 
         # Sign in again, then sign out on Sangam itself (not through the portal): Sangam's back-channel
         # logout must end the open portal tab. Needs the portal's back-channel address registered in Sangam.

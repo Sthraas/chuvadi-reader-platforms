@@ -13,6 +13,7 @@
 @inject ILogger<PortalRoot> Log
 @inject Microsoft.Extensions.Options.IOptions<ChuvadiReader.Web.Hosting.PortalOptions> Options
 
+<MaintenanceBanner />
 <ChuvadiReader.Ui.App />
 @if (_notice is not null)
 {

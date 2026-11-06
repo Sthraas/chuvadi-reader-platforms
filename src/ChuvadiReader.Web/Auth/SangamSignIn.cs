@@ -16,7 +16,8 @@ namespace ChuvadiReader.Web.Auth;
 /// The portal as a Sangam client: OpenID Connect Authorization Code flow with PKCE (S256), our own
 /// code on the framework's cookie authentication and Data Protection (no OpenID Connect package).
 /// <list type="number">
-/// <item><c>GET /signin</c> → Sangam's authorize endpoint (state, nonce, PKCE, kept in an encrypted, short-lived cookie).</item>
+/// <item><c>GET /signin</c> → the sign-in page (12a, <see cref="SignInPage"/>); "Continue with Sangam" →
+/// <c>GET /signin/sangam</c> → Sangam's authorize endpoint (state, nonce, PKCE, kept in an encrypted, short-lived cookie).</item>
 /// <item><c>GET /signin-sangam</c> → checks state and <c>iss</c> (RFC 9207), redeems the code with client
 /// authentication, verifies the ID token, signs the person in to the portal cookie.</item>
 /// <item><c>GET /signout</c> → ends the portal sign-in on every tab, then Sangam's end-session endpoint.</item>
@@ -38,7 +39,8 @@ public static class SangamSignIn
     {
         var o = app.ServiceProvider.GetRequiredService<IOptions<SangamOptions>>().Value;
 
-        app.MapGet("/signin", (Delegate)SignInAsync).AllowAnonymous();
+        app.MapGet("/signin", (Delegate)(Func<HttpContext, Task<IResult>>)(http => SignInPage.RenderAsync(http))).AllowAnonymous();
+        app.MapGet(SignInPage.StartPath, (Delegate)SignInAsync).AllowAnonymous();
         app.MapGet(o.CallbackPath, (Delegate)CallbackAsync).AllowAnonymous();
         app.MapGet("/signout", (Delegate)SignOutAsync).AllowAnonymous();
         app.MapGet(o.SignedOutCallbackPath, (Delegate)SignedOutCallbackAsync).AllowAnonymous();
@@ -128,7 +130,7 @@ public static class SangamSignIn
         string? state = q["state"];
         if (string.IsNullOrEmpty(state) || state.Length < 16)
         {
-            return Fail("The sign-in answer has no state.");
+            return await Fail(http, "The sign-in answer has no state.");
         }
 
         var cookieName = FlowCookiePrefix + state[..16];
@@ -136,7 +138,7 @@ public static class SangamSignIn
         http.Response.Cookies.Delete(cookieName, new CookieOptions { Path = o.CallbackPath, Secure = http.Request.IsHttps, HttpOnly = true, SameSite = SameSiteMode.Lax });
         if (stored is null)
         {
-            return Fail("This sign-in has expired or was started in another browser.");
+            return await Fail(http, "This sign-in has expired or was started in another browser.");
         }
 
         Flow flow;
@@ -146,13 +148,13 @@ public static class SangamSignIn
         }
         catch (CryptographicException)
         {
-            return Fail("This sign-in can't be read.");
+            return await Fail(http, "This sign-in can't be read.");
         }
 
         if (!CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(flow.State), Encoding.ASCII.GetBytes(state))
             || time.GetUtcNow().ToUnixTimeSeconds() - flow.CreatedUnix > (long)o.SignInTimeLimit.TotalSeconds)
         {
-            return Fail("This sign-in has expired.");
+            return await Fail(http, "This sign-in has expired.");
         }
 
         // RFC 9207: the answer must say it comes from our Sangam (mix-up defence) when Sangam supports it.
@@ -160,19 +162,19 @@ public static class SangamSignIn
         string? iss = q["iss"];
         if (iss is not null ? iss != o.Issuer : discovery["authorization_response_iss_parameter_supported"]?.GetValue<bool>() == true)
         {
-            return Fail("The sign-in answer isn't from the configured Sangam.");
+            return await Fail(http, "The sign-in answer isn't from the configured Sangam.");
         }
 
         if (q["error"].ToString() is { Length: > 0 } error)
         {
             log.LogInformation("Sangam returned {Error}: {Description}", error, q["error_description"].ToString());
-            return error == "access_denied" ? Results.Redirect(SignedOutPath) : Fail("Sangam didn't complete the sign-in.");
+            return error == "access_denied" ? Results.Redirect(SignedOutPath) : await Fail(http, "Sangam didn't complete the sign-in.");
         }
 
         string? code = q["code"];
         if (string.IsNullOrEmpty(code))
         {
-            return Fail("The sign-in answer has no code.");
+            return await Fail(http, "The sign-in answer has no code.");
         }
 
         // Redeem the code.
@@ -194,14 +196,14 @@ public static class SangamSignIn
         if (!resp.IsSuccessStatusCode)
         {
             log.LogWarning("Sangam's token endpoint refused the code: HTTP {Status} {Body}", (int)resp.StatusCode, body.Length > 300 ? body[..300] : body);
-            return Fail("Sangam didn't accept the sign-in.");
+            return await Fail(http, "Sangam didn't accept the sign-in.");
         }
 
         var tokens = JsonNode.Parse(body) as JsonObject;
         var idToken = (string?)tokens?["id_token"];
         if (idToken is null)
         {
-            return Fail("Sangam sent no ID token.");
+            return await Fail(http, "Sangam sent no ID token.");
         }
 
         Jwt id;
@@ -212,7 +214,7 @@ public static class SangamSignIn
         catch (SecurityTokenException ex)
         {
             log.LogWarning("ID token refused: {Message}", ex.Message);
-            return Fail("Sangam's answer couldn't be verified.");
+            return await Fail(http, "Sangam's answer couldn't be verified.");
         }
 
         var claims = new List<Claim> { new("sub", id.Claim("sub")!) };
@@ -393,8 +395,8 @@ public static class SangamSignIn
 
     private static string Random(int bytes) => AcmeJws.Base64Url(RandomNumberGenerator.GetBytes(bytes));
 
-    private static IResult Fail(string message)
-        => Results.Content(Page("Sign-in didn't complete", System.Net.WebUtility.HtmlEncode(message), "/signin", "Try again"), "text/html; charset=utf-8", statusCode: 400);
+    /// <summary>A sign-in that didn't complete: the sign-in page again, with the reason under the button.</summary>
+    private static Task<IResult> Fail(HttpContext http, string message) => SignInPage.RenderAsync(http, message, StatusCodes.Status400BadRequest);
 
     internal static readonly string SignedOutPage = Page("Signed out", "Your files were removed from the server.", "/signin", "Sign in again");
 

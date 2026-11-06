@@ -54,13 +54,10 @@ public sealed class PortalOptions
     public bool AllowCertificateUpload { get; set; }
 
     /// <summary>"Download the desktop app" / "Get the desktop app" (12a, 12b; D-35).</summary>
-    public string DesktopAppUrl { get; set; } = "https://chuvadi.in/download";
+    public string DesktopAppUrl { get; set; } = ChuvadiReader.Ui.Components.Platform.Portal.PortalLinks.PlaceholderDesktopAppUrl;
 
     /// <summary>"Account settings" in the account menu: Sangam's own self-service page (D-35). Empty hides the item.</summary>
     public string? AccountSettingsUrl { get; set; }
-
-    /// <summary>"Forgot?" beside the sign-in form's password field (12a). Empty hides the link.</summary>
-    public string? ForgotPasswordUrl { get; set; }
 
     /// <summary>A session ends after this long with nothing done (D-30).</summary>
     public TimeSpan IdleTimeout { get; set; } = TimeSpan.FromMinutes(30);
@@ -70,6 +67,10 @@ public sealed class PortalOptions
 
     /// <summary>How often expiry is checked.</summary>
     public TimeSpan ExpiryCheckInterval { get; set; } = TimeSpan.FromSeconds(15);
+
+    /// <summary>File announcing a planned restart in every open tab (line 1: ISO 8601 time with offset;
+    /// optional line 2: the text). Empty: no announcements. Production: <c>/var/lib/chuvadi/maintenance</c>.</summary>
+    public string? MaintenanceNoticeFile { get; set; }
 
     /// <summary>Where working copies may live (D-28).</summary>
     public StorageOptions Storage { get; set; } = new();

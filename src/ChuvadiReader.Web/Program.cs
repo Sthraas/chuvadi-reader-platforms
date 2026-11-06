@@ -50,6 +50,13 @@ public static class Program
         builder.Services.AddOptions<SangamOptions>().Bind(builder.Configuration.GetSection(SangamOptions.Section));
         builder.Services.AddSingleton(TimeProvider.System);
 
+        // Links of the portal chrome (D-35): the account menu in the Reader, and the sign-in page.
+        builder.Services.AddSingleton(sp =>
+        {
+            var o = sp.GetRequiredService<IOptions<PortalOptions>>().Value;
+            return new ChuvadiReader.Ui.Components.Platform.Portal.PortalLinks(o.DesktopAppUrl, NullIfEmpty(o.AccountSettingsUrl));
+        });
+
         // D-28: outside Development, working copies must be in RAM and never paged to disk in the clear.
         if (!devSignIn && mode != PortalMode.Worker)
         {
@@ -128,6 +135,10 @@ public static class Program
 
         app.MapStaticAssets().AllowAnonymous();
         app.MapGet("/healthz", () => Results.Text("ok")).AllowAnonymous(); // for the host's monitoring; says nothing else
+
+        // Where UseExceptionHandler sends an unexpected failure (anonymous, so it can never loop through sign-in).
+        app.Map("/error", () => Results.Content(SangamSignIn.Page("Something went wrong", "Please try again in a moment.", "/", "Back to the portal"),
+            "text/html; charset=utf-8", statusCode: StatusCodes.Status500InternalServerError)).AllowAnonymous().DisableAntiforgery();
         app.MapActivity();
         if (sangam.IsConfigured)
         {
@@ -256,6 +267,7 @@ public static class Program
         builder.Services.AddSingleton<PortalSessions>();
         builder.Services.AddSingleton<SessionClock>();
         builder.Services.AddHostedService<SessionClockService>();
+        builder.Services.AddHostedService<MaintenanceAnnouncer>();
         if (gateway)
         {
             // Each person's Reader runs in their own worker process (D-24).
@@ -334,12 +346,6 @@ public static class Program
         s.AddScoped<WebPlatformInfo>();
         s.AddScoped<IPlatformInfo>(sp => sp.GetRequiredService<WebPlatformInfo>());
         s.AddScoped<ViewportReporter>();
-        s.AddSingleton(sp =>
-        {
-            var o = sp.GetRequiredService<IOptions<PortalOptions>>().Value;
-            return new ChuvadiReader.Ui.Components.Platform.Portal.PortalLinks(
-                o.DesktopAppUrl, NullIfEmpty(o.AccountSettingsUrl), NullIfEmpty(o.ForgotPasswordUrl));
-        });
         s.AddScoped<WebAccount>();
         s.AddScoped<IAccount>(sp => sp.GetRequiredService<WebAccount>());
         s.AddScoped<IAppPaths, SessionAppPaths>();

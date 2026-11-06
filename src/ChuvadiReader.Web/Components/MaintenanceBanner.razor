@@ -1,0 +1,47 @@
+@* Planned-restart banner (coordinator, 7 Nov: updates at quiet hours, announced in advance). Shown in
+   every open tab while the operator's notice stands; host chrome on the Ui's tokens. *@
+@using ChuvadiReader.Web.Auth
+@implements IDisposable
+@inject OpenTabs Tabs
+@inject TimeProvider Time
+
+@if (Tabs.Maintenance is { } notice && notice.At > Time.GetUtcNow())
+{
+    <div class="chvd-maint" role="status" aria-live="polite">
+        @if (notice.Message is { Length: > 0 } custom)
+        {
+            @custom
+        }
+        else
+        {
+            <text>The portal restarts for an update at <b>@notice.At.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture)</b> (@Remaining(notice)).
+            Download anything you want to keep before then: your files are removed from the server when it restarts, and you sign in again.</text>
+        }
+    </div>
+}
+
+@code {
+    private Timer? _tick;
+
+    protected override void OnInitialized()
+    {
+        Tabs.MaintenanceChanged += OnChanged;
+        _tick = new Timer(_ => InvokeAsync(StateHasChanged), null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+    }
+
+    private string Remaining(MaintenanceNotice notice)
+    {
+        var left = notice.At - Time.GetUtcNow();
+        return left.TotalMinutes < 1.5 ? "in about a minute"
+            : left.TotalMinutes < 90 ? $"in about {(int)Math.Round(left.TotalMinutes)} minutes"
+            : $"in about {(int)Math.Round(left.TotalHours)} hours";
+    }
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Tabs.MaintenanceChanged -= OnChanged;
+        _tick?.Dispose();
+    }
+}
