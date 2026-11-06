@@ -59,7 +59,14 @@
                 </span>
                 }
             </div>
+            @if (ChuvadiReader.Platform.ShellLayouts.Shell(Platform) == ChuvadiReader.Platform.ShellLayout.Phone)
+            {
+                <p class="tip">@ChuvadiReader.Ui.Components.Platform.PlatformText.PhoneFindTip</p>
+            }
+            else
+            {
             <p class="tip">Tip: @Platform.Keys.Format("Ctrl K") finds any file or action. Try typing “merge”.</p>
+            }
         }
         else
         {

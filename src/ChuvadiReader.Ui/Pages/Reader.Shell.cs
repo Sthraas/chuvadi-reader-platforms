@@ -632,6 +632,34 @@ public partial class Reader
         _card = null;
     }
 
+    /// <summary>
+    /// The system Back gesture (Android; hosts without one never raise it): closes the open card
+    /// (measure included) exactly as Escape does, and consumes the gesture. With no card open it
+    /// returns false, so the host does its default (the previous screen, then leave the app).
+    /// </summary>
+    private bool OnBackRequested()
+    {
+        if (!_measureOn && _card is null)
+        {
+            return false;
+        }
+
+        _ = InvokeAsync(() =>
+        {
+            if (_measureOn)
+            {
+                CloseMeasure();
+            }
+            else
+            {
+                CloseCard();
+            }
+
+            StateHasChanged();
+        });
+        return true;
+    }
+
     private void OpenProtectCard(string what)
     {
         if (LocalMode != DocMode.Protect)

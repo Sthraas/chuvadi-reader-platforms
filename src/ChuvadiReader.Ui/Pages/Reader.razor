@@ -24,6 +24,7 @@
 @inject ChuvadiReader.Platform.IFileWriteBack WriteBack
 @inject ChuvadiReader.Platform.IAppPaths Paths
 @inject ChuvadiReader.Platform.IFileManager FileManager
+@inject ChuvadiReader.Platform.IAppLifecycle Lifecycle
 @using ChuvadiReader.Core.Documents
 
 <PageTitle>Chuvadi · Reader</PageTitle>
@@ -3191,6 +3192,7 @@
     {
         Tabs.Changed += OnTabsChanged;
         OpenDoc.Requested += OnOpenRequestedLive;
+        Lifecycle.BackRequested += OnBackRequested;
 
         ShellInit();
 
@@ -3995,6 +3997,7 @@
         ShellDispose();
         Tabs.Changed -= OnTabsChanged;
         OpenDoc.Requested -= OnOpenRequestedLive;
+        Lifecycle.BackRequested -= OnBackRequested;
 
         try
         {
