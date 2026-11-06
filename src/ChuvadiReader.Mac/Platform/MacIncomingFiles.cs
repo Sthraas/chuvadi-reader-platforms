@@ -6,9 +6,11 @@ namespace ChuvadiReader.Mac.Platform;
 
 /// <summary>
 /// Files arriving from outside the app — dropped from Finder, opened with Chuvadi from Finder
-/// ("Open With", double-click when Chuvadi is the default), or handed over at launch — go where
-/// HANDOFF §2 says: to the Bench shelf when the Bench is open, otherwise to the Reader. Files that
-/// arrive before the Ui has rendered wait until it has, then go in their arrival order.
+/// ("Open With", double-click when Chuvadi is the default, a drop on the Dock icon), or handed over at
+/// launch — go where HANDOFF §2 says: to the Bench shelf when the Bench is open, otherwise to the Reader,
+/// each file in its own tab of the one running app (macOS LaunchServices hands a file opened while Chuvadi
+/// runs to that instance, through SceneOpenUrl). Files that arrive before the Ui has rendered wait until
+/// it has, then go in their arrival order.
 /// Must be created before the first render (AppDelegate does), since the ready signal fires once.
 /// </summary>
 public sealed class MacIncomingFiles
@@ -76,8 +78,12 @@ public sealed class MacIncomingFiles
         }
         else
         {
-            // The Reader opens one document per request: the first, as the Windows drop does.
-            _open.Request(paths[0]);
+            // Single instance, tabbed (approved programme-wide): each file opens in its own tab of the
+            // running app, in arrival order — Finder "Open With", a drop on the Dock icon or the window.
+            foreach (var path in paths)
+            {
+                _open.Request(path);
+            }
         }
 
         return Task.CompletedTask;

@@ -285,3 +285,25 @@ inputs). Foundation's `ci.yml` / `platform-build.yml` still use v4 — reported,
   startup target (shared Ui/Blazor start, not Mac-specific).
 - Round-1 numbers include first-launch system work (Gatekeeper/LaunchServices registration) and are not a
   fair compare.
+
+---
+
+## 2026-11-07 — Session 4: second combined patch, single instance, print permission
+
+### 27. Rebased on `platform/foundation` at 2fafb60
+Second combined patch (open queue F-3, print permission L-8, wording, save-folder fallback) and
+Chuvadi.Print 1.0.0-rc.2 in the feed. Core 178/178, Hosting 33/33 on Linux with warnings as errors.
+
+### 28. Decisions applied
+- **Size (coordinator):** keep AOT (faster start) and framework-only trimming; full trimming later, when the
+  libraries are trim-annotated. Interpreter not taken. No change needed — this is what ships.
+- **Single instance, tabbed (programme-wide):** macOS LaunchServices hands a file opened while Chuvadi runs
+  (Finder Open With, double-click, a drop on the Dock icon) to the running app through `SceneOpenUrl`; the
+  app has one scene, so there is never a second window. `MacIncomingFiles` now requests **every** file, so
+  each opens in its own tab (Bench open → all join the shelf).
+- **Print permission (L-8):** `PrintDocumentBuilder` checks `PrintPermission.Allows` right after opening and
+  throws `PrintRefusedException` before any work; `MacPrintService` returns the same Failed result and
+  message as Windows, and the macOS panel never opens. Shared, so Android and Web get it. New test
+  `A_file_whose_permissions_forbid_printing_is_refused_before_any_work`.
+- **Licence (proprietary, free):** waiting for Foundation's LICENSE and EULA; then the bundle gets
+  `NSHumanReadableCopyright` and both files in `Contents/Resources`.

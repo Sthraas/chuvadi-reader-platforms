@@ -103,6 +103,19 @@ public class PrintDocumentBuilderTests
     }
 
     [Fact]
+    public async Task A_file_whose_permissions_forbid_printing_is_refused_before_any_work()
+    {
+        var src = await ThreePagesAsync();
+        var locked = TestPdf.TempOutput();
+        var mask = PasswordService.BuildPermissionMask(new PasswordProtectOptions { OpenPassword = "pw", AllowPrint = false });
+        TestSigning.ProtectRestricted(src, locked, "pw", mask);
+
+        var ex = await Assert.ThrowsAsync<PrintRefusedException>(
+            () => PrintDocumentBuilder.BuildAsync(locked, new PrintRequest { Password = "pw" }));
+        Assert.Equal(PrintPermission.Refused, ex.Message);
+    }
+
+    [Fact]
     public async Task Bad_range_gives_the_parser_message()
     {
         var src = await ThreePagesAsync();
