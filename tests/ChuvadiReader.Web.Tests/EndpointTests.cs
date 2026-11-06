@@ -188,3 +188,18 @@ public class EndpointTests : IClassFixture<PortalFixture>
         }
     }
 }
+
+/// <summary>The licences page in single mode: before sign-in on a full page load.</summary>
+public class LicencePageTests(PortalFixture portal) : IClassFixture<PortalFixture>
+{
+    [Fact]
+    public async Task The_licences_page_answers_without_a_circuit_in_single_mode()
+    {
+        using var c = portal.Client("licence-reader");
+        var resp = await c.GetAsync("/licence?part=licence");
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var html = await resp.Content.ReadAsStringAsync();
+        Assert.Contains(System.Net.WebUtility.HtmlEncode(ChuvadiReader.Ui.Components.Legal.LegalTexts.Licence[..40]), html);
+        Assert.DoesNotContain("blazor.web.js", html);
+    }
+}

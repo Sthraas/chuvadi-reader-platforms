@@ -357,6 +357,7 @@ public sealed class WorkerPool : ITabControl, IAsyncDisposable
         env["Portal__AllowCertificateUpload"] = _portal.AllowCertificateUpload ? "true" : "false";
         env["Portal__DesktopAppUrl"] = _portal.DesktopAppUrl;
         env["Portal__AccountSettingsUrl"] = _portal.AccountSettingsUrl ?? string.Empty;
+        env["Portal__TermsUrl"] = _portal.TermsUrl ?? string.Empty;
         return psi;
     }
 

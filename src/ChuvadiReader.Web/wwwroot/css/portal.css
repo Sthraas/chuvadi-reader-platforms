@@ -66,3 +66,8 @@
     font-size: var(--chvd-fs-ui, 13px);
     line-height: 1.45;
 }
+
+/* The licences page served before sign-in (StaticPages): the Ui page's own padding, which is scoped
+   to its Blazor page component and so absent here. */
+.chvd-static-licence { padding: 32px 40px; box-sizing: border-box; min-height: 100vh; background: var(--chvd-paper, #fbf7ef); }
+@media (max-width: 600px) { .chvd-static-licence { padding: 16px; } }
