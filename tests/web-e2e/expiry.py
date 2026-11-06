@@ -6,10 +6,22 @@ Opens a PDF, stays still until the warning shows, says "I'm still here" (the war
 the open document from the next warning, then stays still until the session ends: the tab goes to the
 signed-out page. With --data-root, also checks that the person's files are gone.
 
-Usage: python3 expiry.py <portal base> <some.pdf> <out folder> [--data-root <Portal:DataRoot>]
+Usage: python3 expiry.py <portal base> <some.pdf> <out folder> [--data-root <Portal:DataRoot>] [--browser chrome|chromium|firefox|webkit]
 """
 import os, sys, time
 from playwright.sync_api import sync_playwright
+
+
+def launch(p):
+    """--browser chrome (the machine's Chrome, default) | chromium | firefox | webkit (Safari's engine)."""
+    name = sys.argv[sys.argv.index("--browser") + 1] if "--browser" in sys.argv else "chrome"
+    if name == "chrome":
+        return p.chromium.launch(channel="chrome", args=["--no-sandbox"])
+    if name == "chromium":
+        return p.chromium.launch(args=["--no-sandbox"])
+    if name == "firefox":
+        return p.firefox.launch(firefox_user_prefs={"pdfjs.disabled": False})  # as real Firefox ships
+    return p.webkit.launch()
 
 base, pdf, out = sys.argv[1].rstrip('/'), sys.argv[2], sys.argv[3]
 data_root = sys.argv[sys.argv.index("--data-root") + 1] if "--data-root" in sys.argv else None
@@ -23,7 +35,7 @@ def files_under(root):
     return [os.path.join(d, f) for d, _, fs in os.walk(root) for f in fs] if root and os.path.isdir(root) else []
 
 with sync_playwright() as p:
-    b = p.chromium.launch(channel="chrome", args=["--no-sandbox"])
+    b = launch(p)
     ctx = b.new_context(viewport={"width": 1440, "height": 900}, accept_downloads=True)
     page = ctx.new_page()
     errors = []

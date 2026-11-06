@@ -13,7 +13,10 @@ Blazor Server portal for Chuvadi Reader: the unchanged `ChuvadiReader.Ui` render
 - Own ACME client (Let's Encrypt) built and tested against a strict fake ACME server (our test code).
 - Based on `platform/foundation` @ `63af90f`: chuvadi-pdf 3.31.2 (D-54; Pdf A/B cleared, D-55) and the combined hooks (D-26), so the portal shows the 12b account menu, the server status dot and the signed-in person; the host supplies `PortalLinks` and `IAccount.Unit`.
 - Rebased on `platform/foundation` @ `a4acc56` (third combined patch, part 1: the Web portal UI's decided portal files; licence and EULA). The 12a sign-in page ("Continue with Sangam" only, U-9 a) is served at `/signin`; `PortalLinks` takes two arguments. Browser printing refuses files whose permissions forbid it (L-8). Planned restarts are announced with a banner in every open tab.
-- Next: the terms link (the Foundation's EULA, not landed yet); deployment waits for B5/B6.
+- On `platform/foundation` @ `615afde` (third combined patch, part 2): "Terms of use" on the sign-in page opens `/licence` (licence agreement, licence, third-party notices), readable before sign-in.
+- Printing works in Safari and in browsers without a PDF viewer (an "Open the PDF to print" link the person clicks). The browser flows, sign-in and expiry e2e run in Chrome, Firefox and WebKit.
+- Test plan for the Web Test chat: `TEST-PLAN.md`.
+- Next: serve the Foundation's portal Terms of Use and Privacy Notice at `/terms` and `/privacy` when they land. Domain and E2E stay last (Arun).
 
 ## Build and test
 Requires the .NET 10 SDK (10.0.403 or later). Packages come from the committed `ci/packages` feed.
