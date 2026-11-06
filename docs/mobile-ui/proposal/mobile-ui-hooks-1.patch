@@ -1,0 +1,41 @@
+diff --git a/src/ChuvadiReader.Ui/Layout/MainLayout.razor b/src/ChuvadiReader.Ui/Layout/MainLayout.razor
+index 3b4a972..7598f80 100644
+--- a/src/ChuvadiReader.Ui/Layout/MainLayout.razor
++++ b/src/ChuvadiReader.Ui/Layout/MainLayout.razor
+@@ -27,6 +27,17 @@
+ 
+ <div class="shell">
+     <ChuvadiReader.Ui.Components.Settings.PreferencesHost />
++    <ChuvadiReader.Ui.Components.Platform.Phone.TouchSupport />
++
++    @if (PlatformView?.Shell == ChuvadiReader.Platform.ShellLayout.Phone)
++    {
++        <ChuvadiReader.Ui.Components.Platform.Phone.PhoneShell RequestMode="RequestMode" ModeDisabledReason="ModeDisabledReason"
++                                                               Open="AddTab" Find="FindNow" Go="Go" OnDocView="OnDocView">
++            @Body
++        </ChuvadiReader.Ui.Components.Platform.Phone.PhoneShell>
++    }
++    else
++    {
+ 
+     <header class="topbar @(_leftOpen ? "lb-open" : null)" @onmousedown="StartDrag">
+         <div class="tb-left">
+@@ -176,6 +187,7 @@
+             <span class="sb-clock">@_clock</span>
+         </span>
+     </footer>
++    }
+ 
+     @if (Shell.Messages.Count > 0)
+     {
+@@ -200,6 +212,10 @@
+ </div>
+ 
+ @code {
++    /// <summary>Platform layout (PlatformRoot). Phone renders the phone shell instead of the
++    /// top bar, left bar and status bar; every other layout renders this file's markup unchanged.</summary>
++    [CascadingParameter] public PlatformState? PlatformView { get; set; }
++
+     private static readonly (DocMode Mode, string Icon, string Label, string Key)[] _modeDefs =
+     {
+         (DocMode.Read, "reading-mode", "Read", "1"),
