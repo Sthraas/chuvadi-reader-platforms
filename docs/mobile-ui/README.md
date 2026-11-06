@@ -16,8 +16,8 @@ Design: `docs/design-handoff/Portal & Android.dc.html` 12d-12j, `Reader Side Rai
 | `src/ChuvadiReader.Ui/wwwroot/js/mobile.js` | Swipe paging (touch events), tap shows the page strip, long-press drag in Arrange, Shelf peek. Pinch and double-tap zoom are reader.js's own |
 | `tests/ChuvadiReader.MobileUi.Tests` | Contract tests: command ids exist; strip/sheet match the frames; every CSS rule is scoped |
 | `tests/ChuvadiReader.MobileUi.Preview` | **Testing only.** Blazor Server page that renders the Ui at phone/tablet/desktop |
-| `tools/mobile-ui/*.sh, *.py` | **Testing only.** Preview runner, headless-Chromium screenshots with touch emulation, pixel compare, `gestures.py` (CDP touch: swipe, double-tap, pinch, fit, long-press drag) |
-| `docs/mobile-ui/proposal/H5-…, H6-…, mobile-ui-hooks-3.patch` | The only existing-file changes (MainLayout, Settings.razor), **not applied**; for Foundation: `FOR-FOUNDATION.md` |
+| `tools/mobile-ui/*.sh, *.py` | **Testing only.** Preview runner, headless-Chromium screenshots with touch emulation, pixel compare, `gestures.py` (CDP touch: swipe, double-tap, pinch, fit, long-press drag), `checks.py` (→ paging, Document › Print, phone Redact fit width) |
+| `docs/mobile-ui/proposal/H5-…, H6-…, H7-…, H8-…, mobile-ui-hooks-3.patch` | The only existing-file changes (MainLayout, Settings, Redact, Reader), **not applied**; for Foundation: `FOR-FOUNDATION.md` |
 | `docs/mobile-ui/MU-8-PHONE-SCREENS.md`, `mocks/` | Phone Home / Library / Settings: the options and mocks behind D-45 (now built) |
 | `tools/mobile-ui/mocks.py` | **Design only.** Renders the mock frames |
 
@@ -50,6 +50,7 @@ tools/mobile-ui/compare.py before after      # IDENTICAL / CLOCK ONLY = pass
 # touch gestures (CDP touch events); <layout>-base runs unchanged platform/foundation for "before"
 tools/mobile-ui/run.sh phone      5185 out "gestures 412x915" "gestures 915x412" "gestures-jitter 412x915"
 tools/mobile-ui/run.sh tablet-base 5186 before "gestures 1280x800"
+tools/mobile-ui/run.sh phone      5187 out "checks 412x915"
 ```
 Run desktop and desktop-base **at the same time** (two ports, `CHVD_SCRATCH` apart): Home and Library
 show the clock and relative ages ("2m"), which differ if the runs are a minute apart. A difference of

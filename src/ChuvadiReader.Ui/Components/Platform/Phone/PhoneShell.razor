@@ -31,8 +31,8 @@
         @ChildContent
         @if (OnHome && Open is not null)
         {
-            <button class="ph-fab ph-fab-ext" @onclick="() => Then(Open)" aria-label="Open a document">
-                <Icon Name="plus" Size="18" /><span>Open</span>
+            <button class="ph-fab ph-fab-ext" @onclick="() => Then(Open)" aria-label="@(OpenLabel == "Open" ? "Open a document" : OpenLabel)">
+                <Icon Name="plus" Size="18" /><span>@OpenLabel</span>
             </button>
         }
         @if (Fab is { } fab)
@@ -93,7 +93,7 @@
     @if (_sheet == PhoneSheetKind.Menu)
     {
         <PhoneSheet Title="@null" OnClose="Close">
-            <button class="ph-row" @onclick="() => Then(Open)"><Icon Name="folder" Size="18" /><span class="ph-row-l">Open</span></button>
+            <button class="ph-row" @onclick="() => Then(Open)"><Icon Name="@OpenIcon" Size="18" /><span class="ph-row-l">@OpenLabel</span></button>
             <button class="ph-row" @onclick="() => Then(Find)"><Icon Name="find-in-page" Size="18" /><span class="ph-row-l">Find</span></button>
             <button class="ph-row" @onclick='() => Then(() => { Go?.Invoke("/library"); return Task.CompletedTask; })'><Icon Name="library" Size="18" /><span class="ph-row-l">Library</span></button>
             <button class="ph-row" @onclick='() => Then(() => { Go?.Invoke("/settings"); return Task.CompletedTask; })'><Icon Name="settings" Size="18" /><span class="ph-row-l">Settings</span></button>
@@ -121,6 +121,7 @@
                     </button>
                 }
             }
+            @MenuFooter?.Invoke(EventCallback.Factory.Create(this, Close))
         </PhoneSheet>
     }
     else if (_sheet == PhoneSheetKind.Tabs)
@@ -167,6 +168,14 @@
 
 @code {
     [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Label and icon of the ⋮ menu's Open row ("Upload" / "upload" on the Web portal).</summary>
+    [Parameter] public string OpenLabel { get; set; } = "Open";
+
+    [Parameter] public string OpenIcon { get; set; } = "folder";
+
+    /// <summary>Rows added at the foot of the ⋮ menu (the Web portal's account block). The argument closes the sheet.</summary>
+    [Parameter] public RenderFragment<EventCallback>? MenuFooter { get; set; }
 
     /// <summary>MainLayout's own mode switch (RequestMode).</summary>
     [Parameter] public Func<DocMode, Task>? RequestMode { get; set; }

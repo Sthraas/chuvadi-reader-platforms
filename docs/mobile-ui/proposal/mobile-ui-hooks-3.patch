@@ -47,3 +47,84 @@ index 594ebea..4ab482b 100644
  
      private void OnAnyChanged() => InvokeAsync(() =>
      {
+diff --git a/src/ChuvadiReader.Ui/Pages/Redact.razor b/src/ChuvadiReader.Ui/Pages/Redact.razor
+index 01cacc9..a6944c1 100644
+--- a/src/ChuvadiReader.Ui/Pages/Redact.razor
++++ b/src/ChuvadiReader.Ui/Pages/Redact.razor
+@@ -10,6 +10,7 @@
+ @inject IEntitlements Entitlements
+ @inject IJSRuntime JS
+ @inject ChuvadiReader.Platform.IFileWriteBack WriteBack
++@inject ChuvadiReader.Platform.IPlatformInfo Platform
+ 
+ <div class="redact-root mview">
+     <div class="rd-col">
+@@ -418,6 +419,7 @@
+             try
+             {
+                 await _js.InvokeVoidAsync("init", _desk, _ref);
++                await FitWidthOnPhoneAsync();
+             }
+             catch { }
+         }
+@@ -428,6 +430,20 @@
+         }
+     }
+ 
++    // Phone (Portal & Android): open at fit width, not the desktop's 100 % (the page is wider than the
++    // screen). The width is measured by the phone's own script; tablets and desktops keep 100 %.
++    private async Task FitWidthOnPhoneAsync()
++    {
++        if (Platform.FormFactor != ChuvadiReader.Platform.FormFactor.Phone) return;
++        await using var mobile = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/ChuvadiReader.Ui/js/mobile.js");
++        var fit = await mobile.InvokeAsync<double>("fitWidthZoom", _desk);
++        if (fit > 0 && Math.Abs(fit - _zoom) > 0.005)
++        {
++            _zoom = fit;
++            StateHasChanged();
++        }
++    }
++
+     // ── Lazy render ─────────────────────────────────────────────────────────
+     [JSInvokable]
+     public Task RenderPage(int n)
+diff --git a/src/ChuvadiReader.Ui/Pages/Reader.Shell.cs b/src/ChuvadiReader.Ui/Pages/Reader.Shell.cs
+index 4b29bf9..4b59491 100644
+--- a/src/ChuvadiReader.Ui/Pages/Reader.Shell.cs
++++ b/src/ChuvadiReader.Ui/Pages/Reader.Shell.cs
+@@ -406,10 +406,12 @@ public partial class Reader
+     {
+         var isPdf = !tab.Format.IsViewOnly();
+         var notPdf = isPdf ? null : "Convert to PDF first";
++        // These run from MainLayout's Document menu (or the phone ⋮ sheet), whose click re-renders only
++        // the layout: a command that opens a card must re-render the Reader itself.
+         yield return new("doc.props", "Properties", "Document", "info", null, DocProperties, notPdf);
+-        yield return new("doc.export", "Export pages as images", "Document", "download", null, () => { DocExport(); return Task.CompletedTask; }, notPdf);
+-        yield return new("doc.press", "Reduce file size (Press)", "Document", "compress", null, () => { DocPress(); return Task.CompletedTask; }, notPdf, "compress");
+-        yield return new("doc.print", "Print", "Document", "print", "Ctrl P", () => { OpenCard("print"); return Task.CompletedTask; }, notPdf);
++        yield return new("doc.export", "Export pages as images", "Document", "download", null, () => { DocExport(); StateHasChanged(); return Task.CompletedTask; }, notPdf);
++        yield return new("doc.press", "Reduce file size (Press)", "Document", "compress", null, () => { DocPress(); StateHasChanged(); return Task.CompletedTask; }, notPdf, "compress");
++        yield return new("doc.print", "Print", "Document", "print", "Ctrl P", () => { OpenCard("print"); StateHasChanged(); return Task.CompletedTask; }, notPdf);
+         yield return Sep("1");
+         yield return new("doc.flatten", "Flatten forms & marks", "Document", "compress", null, DocFlatten, notPdf ?? (_flattening ? "Flattening…" : null));
+         yield return new("doc.password", "Password-protect a copy", "Document", "doc-lock", null, () => { OpenProtectCard("password"); return Task.CompletedTask; }, notPdf);
+diff --git a/src/ChuvadiReader.Ui/Pages/Reader.razor b/src/ChuvadiReader.Ui/Pages/Reader.razor
+index 41cd124..ff0eb05 100644
+--- a/src/ChuvadiReader.Ui/Pages/Reader.razor
++++ b/src/ChuvadiReader.Ui/Pages/Reader.razor
+@@ -3523,8 +3523,14 @@
+         StateHasChanged();
+     }
+ 
++    // From reader.js (← / →). A JS call doesn't re-render the page, so the counter would lag behind
++    // (on a phone, one snapped page per screen, until the next tap).
+     [JSInvokable]
+-    public Task NavPage(int delta) => GoTo(CurPage + delta);
++    public async Task NavPage(int delta)
++    {
++        await GoTo(CurPage + delta);
++        StateHasChanged();
++    }
+ 
+     private async Task GoTo(int page)
+     {

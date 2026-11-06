@@ -165,3 +165,27 @@ used `IPlatformInfo`. Session 2's H1/H3 patches deleted (applied upstream).
 - Shelf drop-to-peek: my choice, please confirm.
 - "1 / 1 desks".
 - "Computer" wording in Settings (Appearance, Language, Kiosk), for PlatformText.
+
+## Session 3b, 7 Nov: coordinator decisions, Android run 42276742988
+
+- **Android run 42276742988** (four emulators) built the *pinned* `MOBILEUI_REF` f29b6a6 (session 2),
+  so its swipe and double-tap failures are the bugs fixed in 26739e8. The Android chat needs to bump
+  the pin and switch `compose.sh` to `mobile-ui-hooks-3.patch` (hooks-2 is gone).
+- Checked its other phone failures headless on today's tip:
+  - **Phone ⋮ › Print opens nothing.** Same on desktop Document › Print, Export and Press on
+    unchanged 63af90f: the Reader commands don't re-render the Reader. **H-8** (bug fix).
+  - **→ moves the page but the phone counter stays on 1** (desk scrolls 0 → 779 → 1558 px): NavPage
+    is called from JS, which doesn't re-render; the scroll observer usually covers it on desktop. H-8.
+  - **Find count empty**: the find box searches on Enter (design); the test needs Enter. The
+    dropped letters ("ttet") are host input.
+- **H-7 Redact fit width on a phone** (approved): 793 px page / 381 px overflow → zoom 0.47, no overflow.
+- **Shelf drop-to-peek** kept as my choice (OPTIONS.md).
+- **Web portal slot** in PhoneShell: `OpenLabel`, `OpenIcon`, `MenuFooter` (applied by hand: the
+  request patch was cut against the session-2 file). The Home Open button follows `OpenLabel`.
+- `tools/mobile-ui/checks.py` plus run.sh scenario `checks`.
+
+Evidence:
+- 0 warnings; 207 tests with H-5 to H-8 applied.
+- checks.py: PASS on phone portrait and landscape, tablet and desktop. On 63af90f, Print fails
+  (phone and desktop) and Redact overflows 381 px.
+- Desktop before/after run side by side: Read 1440 and Mark identical, the rest clock only.

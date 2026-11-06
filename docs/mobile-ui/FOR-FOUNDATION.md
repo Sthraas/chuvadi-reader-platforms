@@ -5,15 +5,17 @@ hooks (D-26): H-1 in MainLayout, reader.js pen/finger split (D-42), Bench's desk
 TabsService de-dup (D-48). So session 2's `H1-…`, `H3-…` and `mobile-ui-hooks-2.patch` are deleted;
 nothing from them is still waiting.
 
-Two new hooks, for MU-8 (D-45) and the Tabs sheet (D-43). They are **not** applied on this branch;
-`tools/mobile-ui/preview.sh` applies `proposal/mobile-ui-hooks-*.patch` in a scratch copy for testing.
-Both apply cleanly to 63af90f with `git apply`.
+Four new hooks. They are **not** applied on this branch; `tools/mobile-ui/preview.sh` applies
+`proposal/mobile-ui-hooks-3.patch` (all four) in a scratch copy for testing. It applies cleanly to
+63af90f with `git apply`.
 
 | Patch | File | Decision | Lines |
 |---|---|---|---|
 | `proposal/H5-mainlayout-tabs-sheet.patch` | `Ui/Layout/MainLayout.razor` | D-43 | +2 / −1 |
 | `proposal/H6-settings-phone-push.patch` | `Ui/Pages/Settings.razor` | D-45 Settings A | +15 / −2 |
-| `proposal/mobile-ui-hooks-3.patch` | both, concatenated | — | — |
+| `proposal/H7-redact-phone-fit-width.patch` | `Ui/Pages/Redact.razor` | Coordinator, 7 Nov | +16 / −0 |
+| `proposal/H8-reader-rerender-bugfix.patch` | `Ui/Pages/Reader.Shell.cs`, `Reader.razor` | **Bug fix**, found from Android run 42276742988 | +12 / −4 |
+| `proposal/mobile-ui-hooks-3.patch` | all four, concatenated | — | — |
 
 ## H-5: pass SwitchTab and CloseTab to the phone shell (MainLayout)
 Foundation's H-1 renders `PhoneShell` without `SwitchTab` / `CloseTab`, so the phone Tabs sheet (D-43)
@@ -37,19 +39,51 @@ lists tabs but can't switch or close them. H-5 adds the two parameters to the ex
 - **Alternative:** CSS only. The section list would show, but a tap couldn't open a new screen, so
   Back couldn't step out of a section (Settings B behaviour). That isn't what D-45 chose.
 
+## H-7: Redact on a phone opens at fit width (approved by the coordinator)
+At 100 % the page is 793 px wide on a 412 px phone (381 px of sideways overflow). When the document is
+first shown and `FormFactor == Phone`, Redact asks `mobile.js` `fitWidthZoom(desk)` for the zoom
+that fits the first page's width less a 16 px gutter each side, then uses it. Zoom in / out work as before.
+- **For:**
+  - ~16 lines in Redact.razor; the measuring lives in the phone's own script.
+  - Tablet and desktop never take the branch, and mobile.js is imported only on a phone.
+  - Headless: zoom 0.47, page 373 px in a 412 px desk, no overflow (`screens/2026-11-07/after/phone-redact-412x915.png`).
+- **Against:**
+  - Redact now imports a phone script, a small coupling.
+  - It waits up to 1.5 s for the first rendered page before measuring, using the A4 placeholder if
+    none has rendered.
+- **Alternatives:**
+  - Put the measuring in `redact.js`: everything stays in Redact's own files, but it edits two
+    existing files instead of one.
+  - CSS `!important` on `--rpage-zoom`: no hook, but it breaks zoom in / out. Not recommended.
+
+## H-8: bug fix: commands that don't re-render the Reader (all platforms, Windows included)
+Found while checking the Android run's phone failures, then confirmed on unchanged 63af90f on desktop:
+1. **Document › Print, Export pages as images and Reduce file size do nothing.** These commands set
+   Reader state from MainLayout's menu click (or the phone ⋮ sheet), which re-renders only the layout,
+   so the card never appears. Ctrl P works (`r.print` re-renders). Fix: `StateHasChanged()` in those
+   three lambdas, as `T(...)` already does for the Read commands.
+2. **← / → page, but the counter can lag.** reader.js calls `NavPage` over JS interop, which doesn't
+   re-render. The desktop usually hides this, because the page-visibility observer fires again
+   afterwards; on a phone (one snapped page) it often doesn't, so the counter stays on 1 until the
+   next tap. Fix: `NavPage` re-renders after `GoTo`.
+- **For:** fixes visible bugs on every platform; four one-line changes; nothing else changes on screen.
+- **Against:** Reader is the Reader chat's file. It may prefer to route these through its own `T(...)`
+  helper (same effect).
+- Desktop at rest is pixel-identical (below). Headless: Document › Print fails on 63af90f and opens the
+  card with H-8, on desktop, tablet and phone.
+
 ## Evidence (63af90f + this branch + hooks-3, in a scratch copy)
-- Programme solution: **0 warnings, 0 errors**; tests **161 + 28 + 14 + 4 = 207 pass**.
-- **Desktop pixel-identical:** before (63af90f) and after were run at the same time
+- Programme solution: **0 warnings, 0 errors**; tests **161 + 28 + 14 + 4 = 207 pass** (H-5 to H-8 applied).
+- **Desktop pixel-identical:** before (63af90f) and after (H-5 to H-8) were run at the same time
   (`screens/2026-11-07/desktop-compare.txt`).
-  - Read 1440×900 and 990×700, Arrange, Mark, Settings 1440×900 and 700×800: only the clock differs.
-  - Home: 5 pixels off by 1 colour level out of 255, on anti-aliased edges. The same region shows the
-    same 1-level noise in an A/A run (63af90f vs 63af90f).
-  - Library: 6 pixels off by 1 level on the anti-aliased ends of a bar. Same kind; this one didn't
-    recur in 3 A/A runs.
-  - Nothing visible. Earlier Home/Library differences (156 / 403 px) were "18:50" vs "18:51" and
-    "2m" vs "3m" ages from running before and after a minute apart.
-- StartupProbe not re-run: H-5 is inside the phone-only branch and H-6 is not on the startup path
-  (Dashboard is).
+  - Read 1440×900 and Mark: identical.
+  - Read 990×700, Arrange, Home, Library, Settings 1440×900 and 700×800: only the clock differs.
+  - An earlier run showed 1-colour-level anti-aliasing noise on 5–6 Home / Library pixels; the same
+    noise appears in A/A runs of 63af90f against itself.
+- Headless checks (`tools/mobile-ui/checks.py`, `screens/2026-11-07/*/checks-*.txt`): → paging,
+  Document › Print and phone Redact fit width pass on phone (portrait and landscape), tablet and desktop.
+- StartupProbe not re-run: H-5 is inside the phone-only branch; H-6, H-7 and H-8 are in Settings,
+  Redact and Reader, none of which is on the startup path (Dashboard is).
 
 ## D-46 desk counter: one owner
 Foundation's Bench now publishes the desk counter (`PublishDeskCounter`, bench.js `scrollDeskTo`).
@@ -59,6 +93,26 @@ fine; keep it". That was overtaken by 63af90f already shipping the Bench version
 Bench's counter is the one to keep.
 
 ## For the Android chat (via the coordinator)
+**Run 42276742988 tested the pinned snapshot `MOBILEUI_REF` f29b6a6 (session 2), not session 3**, so its
+gesture failures are the bugs already fixed in 26739e8. To test the fixes:
+1. In `android.yml`, set `MOBILEUI_REF` to the current `platform/mobile-ui` tip. Optionally set
+   `FOUNDATION_REF` to 63af90f; be4498a is still contained, so the check passes either way.
+2. In `compose.sh`, change `mobile-ui-hooks-2.patch` to `mobile-ui-hooks-3.patch`, in the `PATCH=`
+   line and its error message. hooks-2 is gone: Foundation applied it in 63af90f, and the reverse
+   check would fail on the new tip. hooks-3 holds H-5 to H-8.
+3. Test expectations to change:
+   - **double-tap**: expect zoom in and back (reader.js), not "flips the fit mode".
+   - **Find**: the box searches on **Enter** (Reader design); type, then press Enter, before
+     reading `.rfind-count`.
+4. Not mine, for the Android host: the typed find text arrives with letters dropped or doubled ("ttet",
+   "tet" for "test"). That's an IME / input issue on the host; the Reader's input is the same as on
+   desktop.
+5. The other failures in that run (Open with .docx / .xlsx, Share, Save as PDF from the print dialog,
+   custom range, back with nothing open on tablet API 35, soft keyboard over find) are host or Foundation
+   items, as far as I can tell: they involve intents, the print spooler and the host's back handling, not
+   files on this branch. I didn't reproduce them; please send any that point at the phone or tablet UI.
+
+Earlier notes, still valid:
 - **Double-tap now zooms** (reader.js: to at least 200 %, and back). My double-tap "Fit width ⇄ Fit page"
   flip is gone; both ran together on the same tap, which caused the size jumps (456 / 90 / 793 px). The
   emulator test should expect zoom in and back, not a fit flip.

@@ -1,0 +1,3 @@
+PASS → moves the page and the counter follows 1 / 13 → 2 / 13
+PASS Document menu › Print opens the Print card button Print 13 pages
+PASS Redact opens at fit width {'zoom': '1.11', 'page': 881, 'left': 17, 'desk': 915, 'overflow': 0}

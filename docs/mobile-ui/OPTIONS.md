@@ -16,6 +16,8 @@
 | Android host fixes | D-49 | Android chat |
 | chuvadi-pdf 3.31.2 | D-54 | Done (in 63af90f) |
 | F-4 PlatformState cascade | — | Done: TouchSupport and PhoneShell use `IPlatformInfo` + `ShellLayouts.Shell` |
+| Web portal PhoneShell slot | Coordinator, 7 Nov | Done: `OpenLabel`, `OpenIcon`, `MenuFooter` (Web UI chat's request patch). The Home Open button uses `OpenLabel` too |
+| Android run 42276742988 findings | Coordinator, 7 Nov | Run used pinned f29b6a6. H-8 bug fix (Document › Print / Export / Press, → counter); compose.sh and test changes for the Android chat (`FOR-FOUNDATION.md`) |
 
 ### MU-8 open points (need a decision)
 1. **Home search pill sits above the greeting**, not below the count line as in 4a. Dashboard has no
@@ -32,12 +34,12 @@
    (a) Keep it until the Reader chat builds the setting; the phone follows it automatically then.
    (b) A phone-only hook in Library to open with Shelf.
    **Recommend (a)**: it matches D-45 ("phone opens with Settings › Default view").
-4. **The redaction view opens at its desktop zoom on a phone** (page wider than the screen).
-   (a) A Redact hook: fit width when `FormFactor == Phone`.
-   (b) Leave it; pinch works.
-   Recommend (a).
-5. **Phone landscape, Arrange Shelf**: lifting a page out of the open Shelf drops the sheet to its
-   peek, so the desks are reachable. This is my interaction choice (not in the handout). Please confirm.
+4. **Redaction view on a phone**: decided (coordinator, 7 Nov): fit width on phones. Hook H-7
+   written (`FOR-FOUNDATION.md`), for Foundation's next combined patch.
+5. **Phone landscape, Arrange Shelf: my choice, kept (coordinator, 7 Nov).** Lifting a page out of the
+   open Shelf drops the sheet back to its peek, so the desks it covered (all of them in landscape) can
+   take the drop. The handout doesn't show this; I chose it because otherwise a Shelf page can't reach a
+   desk in landscape.
 6. Tablet desk counter reads "1 / 1 desks" (no singular). Bench's counter text; cosmetic.
 
 ---

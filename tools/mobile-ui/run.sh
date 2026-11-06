@@ -16,6 +16,8 @@ for spec in "$@"; do
   set -- $spec
   if [ "$1" = "gestures" ] || [ "$1" = "gestures-jitter" ]; then
     python3 "$HERE/gestures.py" "http://127.0.0.1:$PORT" "${2%x*}" "${2#*x}" "${1#gestures-}" | tee "$OUT/$1-$L-$2.txt"
+  elif [ "$1" = "checks" ]; then
+    python3 "$HERE/checks.py" "http://127.0.0.1:$PORT" "${2%x*}" "${2#*x}" | tee "$OUT/$1-$L-$2.txt"
   else
     python3 "$HERE/shoot.py" "http://127.0.0.1:$PORT" "$OUT" "$1" "${2%x*}" "${2#*x}"
   fi

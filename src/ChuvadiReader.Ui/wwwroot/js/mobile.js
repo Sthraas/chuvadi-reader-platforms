@@ -233,6 +233,21 @@ function cancelPress() {
     press = null;
 }
 
+// ── Redact on a phone opens at fit width (hook H-7 in Redact.razor calls this) ─
+/** The --rpage-zoom at which the first page fills the desk's width less a 16 px gutter each side. */
+export async function fitWidthZoom(desk) {
+    if (!desk) return 0;
+    // Prefer a rendered page (its real size) over the A4 placeholder; wait briefly for the first one.
+    for (let i = 0; i < 20 && !desk.querySelector('.rpage svg'); i++) await new Promise(r => setTimeout(r, 75));
+    const page = desk.querySelector('.rpage');
+    if (!page) return 0;
+    const z = parseFloat(getComputedStyle(desk).getPropertyValue('--rpage-zoom')) || 1;
+    const natW = page.getBoundingClientRect().width / z;
+    if (!natW) return 0;
+    const fit = (desk.clientWidth - 32) / natW;
+    return Math.max(0.3, Math.min(4, Math.floor(fit * 100) / 100));
+}
+
 // ── orientation (phone View sheet: "Two-page · landscape only") ──────────────
 let orientRef = null;
 let orientHandler = null;

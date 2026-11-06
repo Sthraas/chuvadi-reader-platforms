@@ -1,0 +1,2 @@
+PASS → moves the page and the counter follows 1 → 2
+PASS Document menu › Print opens the Print card button Print 13 pages

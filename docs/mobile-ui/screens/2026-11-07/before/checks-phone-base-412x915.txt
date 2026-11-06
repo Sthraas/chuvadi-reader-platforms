@@ -1,0 +1,3 @@
+PASS → moves the page and the counter follows 1 / 13 → 2 / 13
+FAIL Document menu › Print opens the Print card button None
+FAIL Redact opens at fit width {'zoom': '1', 'page': 793, 'left': 0, 'desk': 412, 'overflow': 381}
