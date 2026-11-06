@@ -20,8 +20,8 @@ public enum InstanceRole
 /// <summary>
 /// Single instance for Windows and Linux (decisions W-A, L-A, F-1, 7 Nov 2026; docs/foundation/SINGLE-INSTANCE.md).
 /// <list type="bullet">
-/// <item>Which copy runs: Windows — a named mutex per user and session (core library; the OS frees it if
-/// the copy dies). Linux and other Unix — an exclusive lock file in <c>$XDG_RUNTIME_DIR</c> (the kernel
+/// <item>Which copy runs: Windows — a named mutex per user and session, created (never acquired) by
+/// the running copy (core library; it disappears with the running copy's handle). Linux and other Unix — an exclusive lock file in <c>$XDG_RUNTIME_DIR</c> (the kernel
 /// frees it if the copy dies).</item>
 /// <item>Hand-over: Windows — a named pipe only this user can open; Unix — a Unix socket in the same
 /// 0700 folder. The running copy starts listening after its first paint, so a first launch pays only
@@ -135,24 +135,13 @@ public sealed class DesktopSingleInstance : IAppInstance, IDisposable
         lockFile = null;
         if (OperatingSystem.IsWindows())
         {
-            var m = new Mutex(initiallyOwned: true, name.MutexName, out var createdNew);
+            // The running copy is whoever created the named mutex; it is never acquired, only kept open.
+            // Ownership would tie it to one thread (re-entrant on that thread, abandoned if that thread
+            // ends — e.g. a pool thread under ClaimAsync). When the running copy exits or crashes its
+            // handle closes, the mutex disappears, and the next launch creates it again.
+            var m = new Mutex(initiallyOwned: false, name.MutexName, out var createdNew);
             if (createdNew)
             {
-                mutex = m;
-                return true;
-            }
-
-            try
-            {
-                if (m.WaitOne(0))
-                {
-                    mutex = m;
-                    return true;
-                }
-            }
-            catch (AbandonedMutexException)
-            {
-                // The previous copy died holding it: we own it now.
                 mutex = m;
                 return true;
             }
