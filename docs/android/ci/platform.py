@@ -257,6 +257,21 @@ def phone():
     return (safe_state().get("shell") or "") == "phone"
 
 
+def go_read():
+    """Read mode via a tap on the Read button (bottom bar / rail). Plain `input tap` works as the shell user."""
+    xml = dump()
+    c = node_center(xml, r'(text|content-desc)="Read( 1)?"')
+    if c:
+        adb("shell", "input", "tap", str(c[0]), str(c[1]))
+    return wait_for(lambda s: s.get("desk") is not None, 20, "Read mode")
+
+
+# ── 0. Read mode ─────────────────────────────────────────────────────────────
+# gestures.py ends in Arrange, where a file opened from another app goes onto the Shelf (by design,
+# like a desktop drop: PLATFORM-INTERFACE §4). Open with / Share are tested from Read.
+r = go_read()
+check("start in Read mode", r.get("desk") is not None, brief(r, "tab", "counter"))
+
 # ── 1. Open with: .docx and .xlsx ────────────────────────────────────────────
 DOCX, XLSX, SHARE_PDF = "chuvadi-test.docx", "chuvadi-test.xlsx", "chuvadi-share.pdf"
 office.docx(os.path.join(OUT, DOCX))
@@ -301,21 +316,22 @@ time.sleep(2)
 # ── 3. Rotation with a document open ─────────────────────────────────────────
 base = wait_for(lambda s: counter_total(s) == 4, 30, "the shared PDF")
 pid0 = pid()
+wide0 = base.get("innerW", 0) > base.get("innerH", 0)
 adb("shell", "cmd", "window", "user-rotation", "lock", "1")
-land = wait_for(lambda s: s["innerW"] > s["innerH"], 20, "landscape")
+land = wait_for(lambda s: (s["innerW"] > s["innerH"]) != wide0, 20, "the other orientation")
 time.sleep(1.5)
 land = safe_state()
-shot("p4-landscape")
-check("rotation to landscape keeps the process, tab and page; no sideways overflow",
-      pid() == pid0 and land.get("innerW", 0) > land.get("innerH", 0) and land.get("tab") == base.get("tab")
+shot("p4-rotated")
+check("rotation keeps the process, tab and page; no sideways overflow",
+      pid() == pid0 and (land.get("innerW", 0) > land.get("innerH", 0)) != wide0 and land.get("tab") == base.get("tab")
       and land.get("counter") == base.get("counter") and (land.get("overflowPage") or 0) <= 1,
       {"pid": [pid0, pid()], "size": [land.get("innerW"), land.get("innerH")], "tab": land.get("tab"),
        "counter": [base.get("counter"), land.get("counter")], "overflowPage": land.get("overflowPage"), "shell": land.get("shell")})
 adb("shell", "cmd", "window", "user-rotation", "lock", "0")
-port = wait_for(lambda s: s["innerH"] > s["innerW"], 20, "portrait")
+port = wait_for(lambda s: (s["innerW"] > s["innerH"]) == wide0, 20, "the natural orientation")
 time.sleep(1.5)
 port = safe_state()
-check("rotation back to portrait keeps the process and tab",
+check("rotation back keeps the process and tab",
       pid() == pid0 and port.get("tab") == base.get("tab") and (port.get("overflowPage") or 0) <= 1,
       {"pid": pid(), "size": [port.get("innerW"), port.get("innerH")], "tab": port.get("tab"), "overflowPage": port.get("overflowPage")})
 
@@ -383,6 +399,15 @@ def open_print_card():
     return wait_for(lambda s: s.get("printCard"), 10, "the Print card")
 
 
+def leave_spooler():
+    """Back out of the print dialog / file picker until the app is on top again."""
+    for _ in range(4):
+        if resumed() == PKG:
+            return
+        adb("shell", "input", "keyevent", "KEYCODE_BACK")
+        time.sleep(1.5)
+
+
 def print_and_save(tag):
     """Taps the card's Print button, then saves through the system "Save as PDF" printer.
     Returns (dialog_seen, saved_pdf_path_or_None, evidence)."""
@@ -401,8 +426,17 @@ def print_and_save(tag):
     ev = {"resumed": resumed(), "dialogTexts": texts(xml)[:40]}
     if not seen:
         return False, None, ev
-    # "Save as PDF" is the emulator's default printer; its button saves through the file picker.
+    # Pick the system "Save as PDF" printer if none is selected; its button saves through the file picker.
+    if node_center(xml, r'text="Select a printer"'):
+        tap_node(r'text="Select a printer"', "the printer list")
+        time.sleep(2)
+        tap_node(r'text="Save as PDF"', "Save as PDF")
+        time.sleep(3)
+        xml = dump()
+        shot(f"p7-print-dialog-{tag}-pdf")
+        ev["dialogTexts"] = texts(xml)[:40]
     if not tap_node(r'resource-id="com\.android\.printspooler:id/print_button"', "the PDF button"):
+        leave_spooler()
         return True, None, ev
     time.sleep(4)
     xml = dump()
@@ -416,6 +450,7 @@ def print_and_save(tag):
         if found:
             path = found[0]
             break
+    leave_spooler()
     if path:
         local = os.path.join(OUT, f"printed-{tag}.pdf")
         adb("pull", path, local)
@@ -425,6 +460,7 @@ def print_and_save(tag):
     return True, None, ev
 
 
+doc_pages = counter_total(safe_state())
 pc = open_print_card()
 shot("p7-print-card")
 check("Print opens the Print card", pc.get("printCard"), brief(pc, "printButton", "shell"))
@@ -432,7 +468,7 @@ if pc.get("printCard"):
     seen, local, ev = print_and_save("all")
     check("Print hands the document to Android's print dialog (PrintManager)", seen, ev)
     n = pdf_pages(local) if local else None
-    check("Save as PDF from the print dialog gives every page (4)", n == 4, {"pages": n, **{k: ev.get(k) for k in ("saved", "pickerTexts")}})
+    check(f"Save as PDF from the print dialog gives every page ({doc_pages})", n is not None and n == doc_pages, {"pages": n, **{k: ev.get(k) for k in ("saved", "pickerTexts")}})
     # Back in the app: the card is still open after printing; a custom range goes through
     # PageOperations.Assemble into a temporary PDF.
     wait_for(lambda s: True, 5, "the app")
