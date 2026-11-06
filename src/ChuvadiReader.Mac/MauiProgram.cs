@@ -63,7 +63,11 @@ public static class MauiProgram
         // Files opened with Chuvadi from Finder: at launch (scene connect) and while running.
         builder.ConfigureLifecycleEvents(events => events.AddiOS(ios => ios
             .SceneWillConnect((_, _, options) => Incoming(options.UrlContexts))
-            .SceneOpenUrl((_, contexts) => Incoming(contexts))));
+            .SceneOpenUrl((_, contexts) =>
+            {
+                Incoming(contexts);
+                return true;
+            })));
 
         var app = builder.Build();
         _services = app.Services;
