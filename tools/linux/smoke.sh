@@ -20,19 +20,24 @@ export GTK_A11Y=none # no accessibility bus in CI
 Xvfb :97 -screen 0 1920x1080x24 >"$out/xvfb.log" 2>&1 &
 xvfb=$!
 sleep 1
-dbus-run-session -- mutter --x11 --replace >"$out/mutter.log" 2>&1 &
+# One session bus for every run, as a desktop session has. (A bus per launch leaves its portal
+# services running after the app is stopped; they pile up and stall the machine.)
+read -r DBUS_SESSION_BUS_ADDRESS bus < <(dbus-daemon --session --fork --print-address=1 --print-pid=1 | tr '\n' ' ')
+export DBUS_SESSION_BUS_ADDRESS
+mutter --x11 --replace >"$out/mutter.log" 2>&1 &
 wm=$!
 sleep 3
 
 cleanup() {
     kill "$wm" "$xvfb" 2>/dev/null || true
+    kill "$bus" 2>/dev/null || true # its portals exit with it
 }
 trap cleanup EXIT
 
 status=0
 for i in $(seq 1 "$runs"); do
     log="$out/run-$i.log"
-    CHUVADI_TIMING=1 dbus-run-session -- "$app/chuvadi-reader" >"$log" 2>&1 &
+    CHUVADI_TIMING=1 "$app/chuvadi-reader" >"$log" 2>&1 &
     pid=$!
 
     rendered=0

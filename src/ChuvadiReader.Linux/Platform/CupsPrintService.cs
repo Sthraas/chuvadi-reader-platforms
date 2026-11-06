@@ -1,0 +1,313 @@
+using System.Collections.Concurrent;
+using System.Globalization;
+using Chuvadi.Pdf.Documents;
+using Chuvadi.Print;
+using Chuvadi.Print.Ipp;
+using ChuvadiReader.Core.Reader;
+using CorePrintResult = ChuvadiReader.Core.Reader.PrintResult;
+
+namespace ChuvadiReader.Linux.Platform;
+
+/// <summary>
+/// Printing on Linux (coordinator D-06, Arun's vector rule): the PDF itself goes to a CUPS queue,
+/// whose own filters lay it out for the printer. Nothing is rendered to images here.
+///
+/// Flow, as on Windows: the app's Print card (pages, copies, fit) → the desktop's print dialog
+/// (printer, copies, pages, two-sided, paper, printer options), preset from the card → the job is
+/// sent over IPP with Chuvadi.Print.Ipp (<see cref="IppDocumentTarget"/>: the PDF as-is, settings as
+/// IPP job attributes).
+///
+/// Not here yet (library): the raster fallback needs Chuvadi.Print.Pdf.Raster, which isn't released;
+/// CUPS queues accept PDF and convert it themselves, so every local queue prints without it.
+/// </summary>
+public sealed class CupsPrintService : IPrintService
+{
+    private static readonly ConcurrentDictionary<int, TaskCompletionSource<Dictionary<string, string>?>> Pending = new();
+    private static int _nextToken;
+
+    static CupsPrintService()
+    {
+        GtkHost.PrintResult += (token, lines) =>
+        {
+            if (Pending.TryRemove(token, out var tcs))
+            {
+                tcs.TrySetResult(lines.Length == 0 ? null : Parse(lines));
+            }
+        };
+    }
+
+    private static readonly CorePrintResult Cancelled = new(PrintOutcome.Cancelled, 0, "Printing cancelled");
+
+    /// <summary>True when a CUPS server runs on this machine (its socket exists). No network call.</summary>
+    public bool IsAvailable =>
+        File.Exists("/run/cups/cups.sock") || File.Exists("/var/run/cups/cups.sock") ||
+        Directory.Exists("/etc/cups");
+
+    public async Task<CorePrintResult> PrintAsync(string pdfPath, PrintRequest request, CancellationToken ct = default)
+    {
+        byte[] pdf;
+        int pageCount;
+        try
+        {
+            (pdf, pageCount) = await Task.Run(() => Load(pdfPath, request.Password), ct);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or FormatException)
+        {
+            return new CorePrintResult(PrintOutcome.Failed, 0, "Couldn't read the document: " + ex.Message);
+        }
+
+        if (!PageRangeParser.TryParse(request.PageRange, pageCount, request.CurrentPage, out var pages, out var rangeError))
+        {
+            return new CorePrintResult(PrintOutcome.Failed, 0, rangeError);
+        }
+
+        var title = request.JobName ?? Path.GetFileName(pdfPath);
+        var answer = await ShowDialog(title, pageCount, request, pages, ct);
+        if (answer is null)
+        {
+            return Cancelled;
+        }
+
+        return await Task.Run(() => Submit(pdf, pageCount, title, request, answer, ct), ct);
+    }
+
+    /// <summary>The PDF bytes to send and the page count. A file with an open password is sent
+    /// decrypted (CUPS can't open it), made in memory with the same library calls Core uses.</summary>
+    private static (byte[] Pdf, int PageCount) Load(string path, string? password)
+    {
+        if (string.IsNullOrEmpty(password))
+        {
+            using var doc = PdfDocument.Open(path);
+            return (File.ReadAllBytes(path), doc.PageCount);
+        }
+
+        using var protectedDoc = PdfDocument.Open(path, password);
+        using var ms = new MemoryStream();
+        protectedDoc.Save(ms, null);
+        return (ms.ToArray(), protectedDoc.PageCount);
+    }
+
+    private static Task<Dictionary<string, string>?> ShowDialog(
+        string title, int pageCount, PrintRequest request, IReadOnlyList<int> pages, CancellationToken ct)
+    {
+        var token = Interlocked.Increment(ref _nextToken);
+        var tcs = new TaskCompletionSource<Dictionary<string, string>?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        Pending[token] = tcs;
+        if (ct.CanBeCanceled)
+        {
+            ct.Register(() =>
+            {
+                if (Pending.TryRemove(token, out var t))
+                {
+                    t.TrySetCanceled(ct);
+                }
+            });
+        }
+
+        var preset = IsAll(request.PageRange) ? string.Empty
+            : string.Equals(request.PageRange?.Trim(), "current", StringComparison.OrdinalIgnoreCase) ? "current"
+            : ZeroBasedRanges(pages);
+        var copies = request.Copies ?? 1;
+        var current = Math.Clamp(request.CurrentPage, 0, Math.Max(0, pageCount - 1));
+        GtkHost.Post(() => Native.PrintDialog(token, "Print " + title, pageCount, current, preset, copies));
+        return tcs.Task;
+    }
+
+    private static CorePrintResult Submit(byte[] pdf, int pageCount, string title, PrintRequest request,
+        Dictionary<string, string> answer, CancellationToken ct)
+    {
+        var printer = answer.GetValueOrDefault("printer") ?? string.Empty;
+        string? uri;
+        try
+        {
+            uri = CupsQueues.List(cancellationToken: ct)
+                .FirstOrDefault(q => string.Equals(q.Name, printer, StringComparison.Ordinal))?.Uri;
+        }
+        catch (Exception ex) when (ex is IppException or IOException or System.Net.Http.HttpRequestException or TimeoutException)
+        {
+            return new CorePrintResult(PrintOutcome.Failed, 0, "Couldn't reach the print service (CUPS): " + ex.Message);
+        }
+
+        if (uri is null)
+        {
+            return new CorePrintResult(PrintOutcome.Failed, 0,
+                $"\"{printer}\" isn't set up as a printer on this computer yet. Add it in Settings › Printers, then print again.");
+        }
+
+        var selection = Selection(answer.GetValueOrDefault("pages"), pageCount, out var pagesSent);
+        var job = new PrintJob(pdf)
+            .WithTitle(title)
+            .WithPages(selection)
+            .WithCopies(Int(answer, "copies", 1), Int(answer, "collate", 1) == 1)
+            .WithDuplex(answer.GetValueOrDefault("duplex") switch
+            {
+                // GTK's names follow the binding edge in portrait: horizontal = flip on the long edge.
+                "horizontal" => Duplex.Vertical,
+                "vertical" => Duplex.Horizontal,
+                _ => Duplex.Simplex,
+            })
+            .WithOrientation(answer.GetValueOrDefault("orientation") switch
+            {
+                "landscape" => PageOrientation.Landscape,
+                "reverse-landscape" => PageOrientation.ReverseLandscape,
+                "reverse-portrait" => PageOrientation.ReversePortrait,
+                _ => PageOrientation.Portrait,
+            })
+            .WithScale(request.FitToPage ? ScaleMode.FitToPage : ScaleMode.ActualSize);
+
+        if (Paper(answer.GetValueOrDefault("paper")) is { } paper)
+        {
+            job.WithPaper(paper);
+        }
+
+        using var target = new IppDocumentTarget(uri).WithJobOptions(o =>
+        {
+            // Settings GTK's own CUPS printing passes as CUPS job attributes.
+            if (answer.GetValueOrDefault("page-set") is "even" or "odd")
+            {
+                o.AdditionalJobAttributes.Add(new IppAttribute("page-set", IppValue.Keyword(answer["page-set"])));
+            }
+
+            if (Int(answer, "reverse", 0) == 1)
+            {
+                o.AdditionalJobAttributes.Add(new IppAttribute("outputorder", IppValue.Keyword("reverse")));
+            }
+
+            var up = Int(answer, "number-up", 1);
+            if (up > 1)
+            {
+                o.AdditionalJobAttributes.Add(new IppAttribute("number-up", IppValue.Integer(up)));
+            }
+
+            // The queue's own options chosen in the dialog (tray, media type, resolution…).
+            foreach (var (key, value) in answer)
+            {
+                if (key.StartsWith("opt:", StringComparison.Ordinal))
+                {
+                    o.AdditionalJobAttributes.Add(new IppAttribute(key[4..], IppValue.Keyword(value)));
+                }
+            }
+        });
+
+        Chuvadi.Print.PrintResult sent;
+        try
+        {
+            sent = job.SubmitTo(target, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            return Cancelled;
+        }
+        catch (Exception ex) when (ex is IppException or IOException or NotSupportedException or InvalidOperationException
+                                       or System.Net.Http.HttpRequestException or TimeoutException)
+        {
+            return new CorePrintResult(PrintOutcome.Failed, 0, "The printer didn't take the job: " + ex.Message);
+        }
+
+        return sent.Status switch
+        {
+            PrintJobStatus.Failed => new CorePrintResult(PrintOutcome.Failed, 0, "The printer didn't take the job: " + sent.Error),
+            PrintJobStatus.Cancelled => Cancelled,
+            // Same wording as the Windows host.
+            _ => new CorePrintResult(PrintOutcome.Printed, pagesSent,
+                pagesSent == 1 ? "Sent 1 page to the printer" : $"Sent {pagesSent} pages to the printer"),
+        };
+    }
+
+    /// <summary>The dialog's page choice. GTK ranges are 0-based and inclusive.</summary>
+    private static PageSelection Selection(string? pages, int pageCount, out int count)
+    {
+        if (pages is not null && pages.StartsWith("current:", StringComparison.Ordinal)
+            && int.TryParse(pages.AsSpan(8), NumberStyles.None, CultureInfo.InvariantCulture, out var current))
+        {
+            count = 1;
+            return PageSelection.Current(Math.Clamp(current, 0, pageCount - 1) + 1);
+        }
+
+        if (pages is not null && pages.StartsWith("ranges:", StringComparison.Ordinal))
+        {
+            var list = new SortedSet<int>();
+            foreach (var part in pages[7..].Split(',', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var ab = part.Split('-');
+                if (ab.Length == 2
+                    && int.TryParse(ab[0], NumberStyles.None, CultureInfo.InvariantCulture, out var a)
+                    && int.TryParse(ab[1], NumberStyles.None, CultureInfo.InvariantCulture, out var b))
+                {
+                    for (var p = Math.Max(0, a); p <= Math.Min(b, pageCount - 1); p++)
+                    {
+                        list.Add(p + 1);
+                    }
+                }
+            }
+
+            if (list.Count > 0)
+            {
+                count = list.Count;
+                return PageSelection.Explicit(list.ToArray());
+            }
+        }
+
+        count = pageCount;
+        return PageSelection.All;
+    }
+
+    /// <summary>"iso_a4;595.276;841.890" → the dialog's paper size, in points.</summary>
+    private static PaperSize? Paper(string? text)
+    {
+        var parts = text?.Split(';');
+        if (parts is not { Length: 3 }
+            || !double.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var w)
+            || !double.TryParse(parts[2], NumberStyles.Float, CultureInfo.InvariantCulture, out var h)
+            || w <= 0 || h <= 0)
+        {
+            return null;
+        }
+
+        return new PaperSize(w, h, parts[0]);
+    }
+
+    private static bool IsAll(string? range)
+    {
+        var t = range?.Trim() ?? string.Empty;
+        return t.Length == 0 || t.Equals("all", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>Zero-based pages → "0-2,4" for the dialog (IPP and GTK take ascending ranges).</summary>
+    private static string ZeroBasedRanges(IReadOnlyList<int> pages)
+    {
+        var sorted = pages.Distinct().Order().ToArray();
+        var parts = new List<string>();
+        for (var i = 0; i < sorted.Length;)
+        {
+            var j = i;
+            while (j + 1 < sorted.Length && sorted[j + 1] == sorted[j] + 1)
+            {
+                j++;
+            }
+
+            parts.Add(string.Create(CultureInfo.InvariantCulture, $"{sorted[i]}-{sorted[j]}"));
+            i = j + 1;
+        }
+
+        return string.Join(',', parts);
+    }
+
+    private static int Int(Dictionary<string, string> d, string key, int fallback) =>
+        d.TryGetValue(key, out var v) && int.TryParse(v, NumberStyles.Integer, CultureInfo.InvariantCulture, out var n) ? n : fallback;
+
+    private static Dictionary<string, string> Parse(string[] lines)
+    {
+        var d = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var line in lines)
+        {
+            var eq = line.IndexOf('=');
+            if (eq > 0)
+            {
+                d[line[..eq]] = line[(eq + 1)..];
+            }
+        }
+
+        return d;
+    }
+}

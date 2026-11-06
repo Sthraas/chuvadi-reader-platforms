@@ -30,6 +30,12 @@ internal static unsafe class GtkHost
     /// <summary>Token, then the chosen paths (empty when cancelled).</summary>
     public static event Action<int, string[]>? DialogResult;
 
+    /// <summary>Print dialog answer: token, then key=value lines (empty when cancelled).</summary>
+    public static event Action<int, string[]>? PrintResult;
+
+    /// <summary>UI test builds only: token, then the script result (JSON, or "!error").</summary>
+    public static event Action<int, string>? JsResult;
+
     public static bool IsMainThread => Environment.CurrentManagedThreadId == _mainThreadId;
 
     /// <summary>Initialises GTK on the calling thread, which becomes the GTK main thread.
@@ -168,6 +174,14 @@ internal static unsafe class GtkHost
                 case Native.WindowEvent.DialogResult when text is not null:
                     var lines = text.Split('\n');
                     DialogResult?.Invoke(int.Parse(lines[0], System.Globalization.CultureInfo.InvariantCulture), lines[1..]);
+                    break;
+                case Native.WindowEvent.PrintResult when text is not null:
+                    var answer = text.Split('\n');
+                    PrintResult?.Invoke(int.Parse(answer[0], System.Globalization.CultureInfo.InvariantCulture), answer[1..]);
+                    break;
+                case Native.WindowEvent.JsResult when text is not null:
+                    var nl = text.IndexOf('\n');
+                    JsResult?.Invoke(int.Parse(text.AsSpan(0, nl), System.Globalization.CultureInfo.InvariantCulture), text[(nl + 1)..]);
                     break;
                 case Native.WindowEvent.FirstPaint:
                     FirstPaint?.Invoke();

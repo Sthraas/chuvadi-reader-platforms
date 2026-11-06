@@ -72,9 +72,11 @@ public static class Program
             WireWindow(services);
 
             _ = manager.AddRootComponentAsync(typeof(ChuvadiReader.Ui.App), "#app", ParameterView.Empty);
+            Mark("root component added");
             manager.Navigate("/");
+            Mark("navigation started");
             Native.Show(maximized: 1);
-            Mark("shown, navigating");
+            Mark("shown");
 
             if (Timing)
             {
@@ -83,6 +85,9 @@ public static class Program
             }
 
             OpenFromCommandLine(services, args);
+#if CHUVADI_UITEST
+            UiTestDriver.Start(services, manager);
+#endif
 
             Native.Run();
             manager.DisposeAsync().AsTask().GetAwaiter().GetResult();
@@ -120,6 +125,7 @@ public static class Program
         services.AddSingleton<IClipboard, LinuxClipboard>();
         services.AddSingleton<IFileManager, LinuxFileManager>();
         services.AddSingleton<IFilePicker, GtkFilePicker>();
+        services.AddSingleton<IPrintService, CupsPrintService>();
 
         return services.BuildServiceProvider();
     }

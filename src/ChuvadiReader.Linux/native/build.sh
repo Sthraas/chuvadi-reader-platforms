@@ -9,7 +9,7 @@ config="${2:-Release}"
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cc="${CC:-gcc}"
 
-if ! pkg-config --exists gtk4 webkitgtk-6.0; then
+if ! pkg-config --exists gtk4 gtk4-unix-print webkitgtk-6.0; then
     echo "error: GTK 4 and WebKitGTK 6.0 development files are missing." >&2
     echo "       sudo apt install libgtk-4-dev libwebkitgtk-6.0-dev" >&2
     exit 1
@@ -24,4 +24,4 @@ mkdir -p "$(dirname "$out")"
     -Wall -Wextra -Werror -Wno-unused-parameter \
     -Wl,--as-needed -Wl,-z,relro,-z,now -Wl,-soname,libchvdhost.so \
     -o "$out" "$here/chvdhost.c" \
-    $(pkg-config --cflags --libs gtk4 webkitgtk-6.0)
+    $(pkg-config --cflags --libs gtk4 gtk4-unix-print webkitgtk-6.0)

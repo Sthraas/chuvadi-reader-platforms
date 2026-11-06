@@ -16,6 +16,8 @@ internal static unsafe partial class Native
         ExternalLink = 4,
         FirstPaint = 5,
         DialogResult = 6,
+        PrintResult = 7,
+        JsResult = 8,
     }
 
     [LibraryImport(Lib, EntryPoint = "chvd_init")]
@@ -84,6 +86,12 @@ internal static unsafe partial class Native
 
     [LibraryImport(Lib, EntryPoint = "chvd_reveal", StringMarshalling = StringMarshalling.Utf8)]
     public static partial int Reveal(string path);
+
+    [LibraryImport(Lib, EntryPoint = "chvd_print_dialog", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial void PrintDialog(int token, string title, int pageCount, int currentPage, string pages, int copies);
+
+    [LibraryImport(Lib, EntryPoint = "chvd_eval_js", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial void EvalJs(int token, string script);
 
     public static string? Utf8(byte* p) => p == null ? null : Marshal.PtrToStringUTF8((nint)p);
 }

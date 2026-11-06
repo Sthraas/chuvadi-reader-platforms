@@ -23,6 +23,9 @@
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
 
+    <!-- UI test build only (dotnet build -p:UiTest=true): adds UiTestDriver. Never set for a release. -->
+    <DefineConstants Condition="'$(UiTest)' == 'true'">$(DefineConstants);CHUVADI_UITEST</DefineConstants>
+
     <ChvdNativeDir>$(MSBuildProjectDirectory)/native</ChvdNativeDir>
     <ChvdNativeLib>$(ChvdNativeDir)/out/$(RuntimeIdentifier)/libchvdhost.so</ChvdNativeLib>
     <ChvdNativeLib Condition="'$(RuntimeIdentifier)' == ''">$(ChvdNativeDir)/out/host/libchvdhost.so</ChvdNativeLib>
@@ -30,6 +33,8 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="10.0.0" />
+    <!-- Printing: the PDF as-is to CUPS over IPP (coordinator D-06). From the print-v1.0.0-rc.2 release. -->
+    <PackageReference Include="Chuvadi.Print.Ipp" Version="1.0.0-rc.2" />
   </ItemGroup>
 
   <ItemGroup>
