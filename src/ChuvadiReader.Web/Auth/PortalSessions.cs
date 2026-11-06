@@ -15,6 +15,11 @@ public enum ExpiryReason
 /// <summary>A session is about to end at <paramref name="EndsAt"/>; shown in every open tab of it.</summary>
 public sealed record ExpiryNotice(DateTimeOffset EndsAt, ExpiryReason Reason);
 
+/// <summary>A planned restart (updates at quiet hours, announced in advance): shown in every open tab.</summary>
+/// <param name="At">When the portal restarts.</param>
+/// <param name="Message">The operator's own wording, or null for the standard text.</param>
+public sealed record MaintenanceNotice(DateTimeOffset At, string? Message);
+
 /// <summary>
 /// Reaches the open browser tabs of a sign-in, wherever they run: in this process (<see cref="OpenTabs"/>)
 /// or in the person's worker process (the gateway's worker pool).
@@ -27,6 +32,9 @@ public interface ITabControl
 
     /// <summary>Shows (or, with null, takes down) the expiry warning in the open tabs of a sign-in.</summary>
     Task NoticeAsync(string sub, string? sid, ExpiryNotice? notice);
+
+    /// <summary>Shows (or, with null, takes down) a planned-restart banner in every open tab, now and later.</summary>
+    Task AnnounceAsync(MaintenanceNotice? notice);
 }
 
 /// <summary>The browser tabs open in this process, by sign-in. Singleton.</summary>
@@ -52,6 +60,23 @@ public sealed class OpenTabs : ITabControl
     }
 
     public int Count => _open.Count;
+
+    /// <summary>The planned restart being announced, or null.</summary>
+    public MaintenanceNotice? Maintenance { get; private set; }
+
+    /// <summary>Raised when <see cref="Maintenance"/> changes (tabs show or hide the banner).</summary>
+    public event Action? MaintenanceChanged;
+
+    public Task AnnounceAsync(MaintenanceNotice? notice)
+    {
+        if (Maintenance != notice)
+        {
+            Maintenance = notice;
+            MaintenanceChanged?.Invoke();
+        }
+
+        return Task.CompletedTask;
+    }
 
     public async Task<int> EndAsync(string? sub, string? sid)
     {

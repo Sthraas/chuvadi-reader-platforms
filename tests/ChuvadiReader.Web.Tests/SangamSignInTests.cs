@@ -73,10 +73,42 @@ public sealed class SangamSignInTests : IAsyncLifetime
     private async Task<HttpClient> SignedInAsync()
     {
         var (c, _) = Browser();
-        var r = await c.GetAsync("/signin?returnUrl=/library");
+        var r = await c.GetAsync("/signin/sangam?returnUrl=/library");
         Assert.Equal(HttpStatusCode.OK, r.StatusCode);
         Assert.Equal("/library", r.RequestMessage!.RequestUri!.AbsolutePath);
         return c;
+    }
+
+    [Fact]
+    public async Task The_sign_in_page_is_12a_with_continue_with_sangam_only()
+    {
+        var (c, _) = Browser(follow: false);
+        var page = await c.GetAsync("/signin?returnUrl=/library");
+        Assert.Equal(HttpStatusCode.OK, page.StatusCode);
+        var html = await page.Content.ReadAsStringAsync();
+        Assert.Contains("Continue with Sangam", html);
+        Assert.Contains("Download the desktop app", html);
+        Assert.Contains("https://chuvadi.in/download", html);
+        Assert.DoesNotContain("type=\"password\"", html); // D-34: no password on our page
+        Assert.DoesNotContain("name=\"username\"", html); // U-9 (a): no Sangam ID field yet
+        Assert.Contains("data-chvd-signin=\"/signin/sangam?returnUrl=%2Flibrary\"", html);
+        Assert.Contains("js/signin.js", html);
+        Assert.DoesNotContain("blazor.web.js", html); // no circuit before sign-in
+
+        // An unsafe return address never reaches the page.
+        var evil = await (await c.GetAsync("/signin?returnUrl=//evil.example/x")).Content.ReadAsStringAsync();
+        Assert.Contains("data-chvd-signin=\"/signin/sangam?returnUrl=%2F\"", evil);
+    }
+
+    [Fact]
+    public async Task A_failed_sign_in_shows_the_reason_on_the_sign_in_page()
+    {
+        var (c, _) = Browser();
+        var r = await c.GetAsync("/signin-sangam?code=abc&state=" + new string('a', 43) + "&iss=" + Uri.EscapeDataString(_sangam.Issuer));
+        Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode);
+        var html = await r.Content.ReadAsStringAsync();
+        Assert.Contains("psi-err", html);
+        Assert.Contains("Continue with Sangam", html);
     }
 
     [Fact]
@@ -94,7 +126,7 @@ public sealed class SangamSignInTests : IAsyncLifetime
     public async Task The_authorize_request_has_pkce_state_nonce_and_exact_redirect()
     {
         var (c, cookies) = Browser(follow: false);
-        var r = await c.GetAsync("/signin");
+        var r = await c.GetAsync("/signin/sangam");
         var q = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(r.Headers.Location!.Query);
         Assert.StartsWith(_sangam.Issuer + "connect/authorize", r.Headers.Location!.ToString(), StringComparison.Ordinal);
         Assert.Equal("code", q["response_type"]);
@@ -139,7 +171,7 @@ public sealed class SangamSignInTests : IAsyncLifetime
     public async Task A_callback_with_another_state_is_refused()
     {
         var (c, _) = Browser(follow: false);
-        var start = await c.GetAsync("/signin");
+        var start = await c.GetAsync("/signin/sangam");
         var q = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(start.Headers.Location!.Query);
         var state = q["state"].ToString();
         var forged = state[..16] + new string('x', state.Length - 16);
@@ -152,7 +184,7 @@ public sealed class SangamSignInTests : IAsyncLifetime
     {
         _sangam.OmitIssInResponse = true;
         var (c, _) = Browser();
-        var r = await c.GetAsync("/signin");
+        var r = await c.GetAsync("/signin/sangam");
         Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode);
     }
 
@@ -180,7 +212,7 @@ public sealed class SangamSignInTests : IAsyncLifetime
             }
         };
         var (c, _) = Browser();
-        var r = await c.GetAsync("/signin");
+        var r = await c.GetAsync("/signin/sangam");
         Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode);
         var (again, _) = Browser(follow: false);
         Assert.Equal(HttpStatusCode.Redirect, (await again.GetAsync("/")).StatusCode);
@@ -210,7 +242,7 @@ public sealed class SangamSignInTests : IAsyncLifetime
     public async Task A_copied_cookie_stops_working_after_back_channel_logout()
     {
         var (c, cookies) = Browser();
-        await c.GetAsync("/signin");
+        await c.GetAsync("/signin/sangam");
         var (copy, copyCookies) = Browser(follow: false);
         foreach (Cookie k in cookies.GetCookies(_base))
         {

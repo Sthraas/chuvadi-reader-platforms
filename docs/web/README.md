@@ -12,7 +12,8 @@ Blazor Server portal for Chuvadi Reader: the unchanged `ChuvadiReader.Ui` render
 - Based on `platform/foundation` (Group A applied); services through `AddChuvadiReader(AppStateLifetime.PerConnection)` with the portal's own `IPlatformInfo`, `IAppPaths`, `IAccount`, `IFileWriteBack`, `IClipboard`.
 - Own ACME client (Let's Encrypt) built and tested against a strict fake ACME server (our test code).
 - Based on `platform/foundation` @ `63af90f`: chuvadi-pdf 3.31.2 (D-54; Pdf A/B cleared, D-55) and the combined hooks (D-26), so the portal shows the 12b account menu, the server status dot and the signed-in person; the host supplies `PortalLinks` and `IAccount.Unit`.
-- Next: integrate the Web portal UI chat's "Continue with Sangam"-only 12a when it lands (U-9 (a)); deployment waits for B5/B6.
+- Rebased on `platform/foundation` @ `2fafb60` (second combined patch). Integrated the Web portal UI chat's `0c99e19`: the 12a sign-in page ("Continue with Sangam" only, U-9 a) at `/signin`, and the two-argument `PortalLinks`. Browser printing refuses files whose permissions forbid it (L-8). Planned restarts are announced with a banner in every open tab.
+- Next: the terms link (the Foundation's EULA, not landed yet); deployment waits for B5/B6.
 
 ## Build and test
 Requires the .NET 10 SDK (10.0.403 or later). Packages come from the committed `ci/packages` feed.
@@ -38,6 +39,7 @@ Session files go to `src/ChuvadiReader.Web/.portal-data` (git-ignored) and are d
 | `PublicOrigin` | The portal's https address, e.g. `https://chuvadi.in` (config value; required outside Development) |
 | `DataRoot` | Folder for session files; production: a tmpfs (D-28) |
 | `Storage:RequireMemoryFileSystem`, `Storage:RequireEncryptedSwap` | D-28 start-up checks, on outside Development |
+| `MaintenanceNoticeFile` | Planned-restart banner in every open tab: line 1 the time with its zone, optional line 2 the text (runbook §9) |
 | `IdleTimeout`, `ExpiryWarning`, `ExpiryCheckInterval` | 30 min, 5 min, 15 s (D-30); the 8-hour limit is `Sangam:AbsoluteSessionLifetime` |
 | `Workers:MaxWorkers`, `Workers:MemoryLimitMB` | 40 people at once, 1536 MB heap cap per worker (size them with the runbook's table) |
 | `Workers:IdleStop`, `Workers:CheckInterval`, `Workers:StartTimeout` | 2 min with no open tab, 30 s, 30 s |
@@ -47,7 +49,6 @@ Session files go to `src/ChuvadiReader.Web/.portal-data` (git-ignored) and are d
 | `AllowCertificateUpload` | Off (D-27) |
 | `DesktopAppUrl` | "Get the desktop app" in the account menu (D-35); placeholder `https://chuvadi.in/download` |
 | `AccountSettingsUrl` | "Account settings" → Sangam's self-service site (D-35); empty hides the item until its address is known |
-| `ForgotPasswordUrl` | "Forgot?" on the 12a form; empty hides it (no password field on our page, D-34) |
 | `Tls:CertificatePath`, `Tls:KeyPath`, `Tls:ReloadCheck` | PEM pair served by Kestrel (with ACME off: re-read every 5 min when changed; with ACME on: where issued certificates are stored) |
 | `Tls:Acme:Enabled` | Our own ACME client orders and renews Let's Encrypt certificates and swaps them in without restart |
 | `Tls:Acme:DirectoryUrl` | Default Let's Encrypt **staging**; set `https://acme-v02.api.letsencrypt.org/directory` for production |

@@ -146,15 +146,22 @@ public static class WorkerHost
 
     public sealed record NoticeRequest(string Sub, string? Sid, DateTimeOffset? EndsAt, ExpiryReason Reason);
 
+    public sealed record MaintenanceRequest(DateTimeOffset? At, string? Message);
+
     /// <summary>The gateway's control calls. Only the gateway can authenticate here.</summary>
     public static IEndpointRouteBuilder MapWorkerControl(this IEndpointRouteBuilder app)
     {
         var g = app.MapGroup(ControlPrefix).RequireAuthorization().DisableAntiforgery();
-        g.MapGet("/health", (OpenTabs tabs, CircuitCounter circuits) => Results.Json(new { tabs = tabs.Count, circuits = circuits.Count }));
+        g.MapGet("/health", (OpenTabs tabs, CircuitCounter circuits) => Results.Json(new { tabs = tabs.Count, circuits = circuits.Count, maintenance = tabs.Maintenance?.At }));
         g.MapPost("/end", async (EndRequest r, OpenTabs tabs) => Results.Json(new { ended = await tabs.EndAsync(r.Sub, r.Sid).ConfigureAwait(false) }));
         g.MapPost("/notice", async (NoticeRequest r, OpenTabs tabs) =>
         {
             await tabs.NoticeAsync(r.Sub, r.Sid, r.EndsAt is { } at ? new ExpiryNotice(at, r.Reason) : null).ConfigureAwait(false);
+            return Results.NoContent();
+        });
+        g.MapPost("/maintenance", async (MaintenanceRequest r, OpenTabs tabs) =>
+        {
+            await tabs.AnnounceAsync(r.At is { } at ? new MaintenanceNotice(at, r.Message) : null).ConfigureAwait(false);
             return Results.NoContent();
         });
         return app;

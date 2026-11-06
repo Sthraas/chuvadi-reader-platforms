@@ -15,7 +15,6 @@ public class PortalChromeTests(PortalFixture portal) : IClassFixture<PortalFixtu
         var links = portal.App.Services.GetRequiredService<PortalLinks>();
         Assert.Equal("https://chuvadi.in/download", links.DesktopAppUrl);
         Assert.Null(links.AccountSettingsUrl);
-        Assert.Null(links.ForgotPasswordUrl);
     }
 
     [Fact]
