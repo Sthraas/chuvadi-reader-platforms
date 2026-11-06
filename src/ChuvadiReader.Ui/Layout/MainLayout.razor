@@ -30,7 +30,10 @@
 
     <header class="topbar @(_leftOpen ? "lb-open" : null)" @onmousedown="StartDrag">
         <div class="tb-left">
-            <WindowButtons Side="ChuvadiReader.Platform.WindowButtons.Left" />
+            @if (Platform.Chrome.Buttons == ChuvadiReader.Platform.WindowButtons.Left)
+            {
+                <WindowButtons Side="ChuvadiReader.Platform.WindowButtons.Left" />
+            }
             <div class="tb-brandbox">
                 <button class="tb-brand" @onclick='() => Go("/")' @onmousedown:stopPropagation="true" @ondblclick:stopPropagation="true" title="Home">
                     @if (_leftOpen)
@@ -122,7 +125,14 @@
                 <Icon Name="search" Size="13" /><span class="tb-cmd-t">Find or do anything…</span><span class="kbd">@Platform.Keys.Format("Ctrl K")</span>
             </button>
             <button class="tb-icon" @onclick="ToggleTheme" title="@(Theme.Current.IsDark() ? "Switch to Cream paper" : "Switch to Night paper")" aria-label="Toggle light and dark"><Icon Name="@(Theme.Current.IsDark() ? "shift-day" : "shift-night")" Size="16" /></button>
-            <WindowButtons Side="ChuvadiReader.Platform.WindowButtons.Right" />
+            @if (Platform.Chrome.Buttons == ChuvadiReader.Platform.WindowButtons.Right)
+            {
+                <div class="traffic">
+                    <button class="tl tl-min" @onclick="() => Win.Minimize()" aria-label="Minimize"><Icon Name="minus" Size="10" /></button>
+                    <button class="tl tl-max" @onclick="() => Win.ToggleMaximize()" aria-label="@(Win.IsMaximized ? "Restore" : "Maximize")"><Icon Name="@(Win.IsMaximized ? "restore" : "square")" Size="9" /></button>
+                    <button class="tl tl-close" @onclick="() => Win.Close()" aria-label="Close"><Icon Name="x" Size="10" /></button>
+                </div>
+            }
         </div>
     </header>
 
@@ -158,7 +168,7 @@
     </div>
 
     <footer class="statusbar">
-        <StatusLocation />
+        <span class="sb-item"><span class="status-dot"></span>@(Platform.Capabilities.ServerSide ? "processed on the server · encrypted at rest · only you can see it" : "offline · on this device")</span>
         <span class="sb-div"></span>
         <span class="sb-item"><span class="sb-avatar">@Initials</span>@(Profile.Name ?? "This computer")</span>
         @if (!string.IsNullOrEmpty(Shell.Activity))
@@ -240,6 +250,11 @@
         Shell.CommandBarRequested += OpenCommandBarFromService;
         OpenDoc.Requested += OnOpenRequested;
         Nav.LocationChanged += OnLocationChanged;
+        if (Platform.Kind != ChuvadiReader.Platform.PlatformKind.Windows)
+        {
+            Platform.FormFactorChanged += OnFormFactorChanged;
+        }
+
         _clockTimer = new System.Threading.Timer(_ =>
         {
             _clock = DateTime.Now.ToString("HH:mm:ss");
@@ -598,6 +613,8 @@
             return;
         }
 
+        await ApplyPlatformAttributesAsync();
+
         try
         {
             await SaveFolders.HydrateAsync();
@@ -678,8 +695,42 @@
         }
     }
 
+    // <html data-shell / data-platform / data-form-factor / data-input> for platform CSS and reader.js.
+    // Absent = Windows desktop, so the Windows host makes no call (no startup cost there).
+    private async Task ApplyPlatformAttributesAsync()
+    {
+        if (Platform.Kind == ChuvadiReader.Platform.PlatformKind.Windows)
+        {
+            return;
+        }
+
+        try
+        {
+            await JS.InvokeVoidAsync("chuvadiTheme.setPlatform",
+                ChuvadiReader.Platform.ShellLayouts.Key(ChuvadiReader.Platform.ShellLayouts.Shell(Platform)),
+                ChuvadiReader.Platform.ShellLayouts.PlatformKey(Platform.Kind),
+                ChuvadiReader.Platform.ShellLayouts.FormFactorKey(Platform.FormFactor),
+                ChuvadiReader.Platform.ShellLayouts.InputKey(Platform.Input));
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+    }
+
+    // Android fold/rotate, browser resize: re-apply the attributes and re-render the shell.
+    private void OnFormFactorChanged() => _ = InvokeAsync(async () =>
+    {
+        await ApplyPlatformAttributesAsync();
+        StateHasChanged();
+    });
+
     public async ValueTask DisposeAsync()
     {
+        if (Platform.Kind != ChuvadiReader.Platform.PlatformKind.Windows)
+        {
+            Platform.FormFactorChanged -= OnFormFactorChanged;
+        }
+
         Theme.Changed -= OnThemeChanged;
         Win.StateChanged -= OnWinChanged;
         Tabs.Changed -= OnTabsChanged;

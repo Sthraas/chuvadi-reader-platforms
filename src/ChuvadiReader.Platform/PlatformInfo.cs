@@ -74,8 +74,12 @@ public sealed record PlatformCapabilities
     /// <summary>A folder picker exists (output folders, watched folders, Library roots).</summary>
     public bool PickFolders { get; init; }
 
-    /// <summary>"Save" can overwrite the file the person opened.</summary>
+    /// <summary>"Save" can overwrite the file the person opened (desktop: the file itself; Android: written back to the URI).</summary>
     public bool SaveInPlace { get; init; }
+
+    /// <summary>"Save" and "Save as" deliver a download instead of writing a file the person keeps
+    /// here (Web this release: no server storage; working copies are session-only).</summary>
+    public bool SavesAsDownload { get; init; }
 
     /// <summary>Folders can be watched for new files (Library, Watched folder).</summary>
     public bool WatchFolders { get; init; }

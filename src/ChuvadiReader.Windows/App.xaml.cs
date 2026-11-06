@@ -11,6 +11,7 @@ using ChuvadiReader.Core.Theme;
 using ChuvadiReader.Core.Window;
 using ChuvadiReader.Windows.Platform;
 using ChuvadiReader.Hosting;
+using ChuvadiReader.Hosting.Desktop;
 using ChuvadiReader.Platform;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -72,6 +73,7 @@ public partial class App : Application
             services.AddSingleton<IFilePicker, WpfFilePicker>();
             services.AddSingleton<IImageClipboard, WpfImageClipboard>();
             services.AddSingleton<IClipboard, WpfClipboard>();
+            services.AddSingleton<IFileManager, WpfFileManager>();
             services.AddSingleton<IPlatformInfo>(new FixedPlatformInfo(
                 PlatformKind.Windows,
                 InputKinds.Mouse | InputKinds.Keyboard | InputKinds.Touch,

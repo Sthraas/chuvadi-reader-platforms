@@ -31,6 +31,18 @@ window.chuvadiTheme = {
         else root.removeAttribute('data-reduce-motion');
     },
 
+    // Platform attributes (MainLayout.razor, first render and on form-factor change): data-shell desktop|tablet|phone|portal, data-platform,
+    // data-form-factor, data-input. Absent = Windows desktop (the Windows host never calls this, so
+    // it costs nothing at its startup). Other hosts should also put their initial values on <html>
+    // in their host page so the first paint already has the right layout.
+    setPlatform: function (shell, platform, formFactor, input) {
+        var root = document.documentElement;
+        root.setAttribute('data-shell', shell || 'desktop');
+        root.setAttribute('data-platform', platform || 'windows');
+        root.setAttribute('data-form-factor', formFactor || 'desktop');
+        root.setAttribute('data-input', input || '');
+    },
+
     // Convenience for startup: apply everything in one interop call.
     // prefs = { theme: 'light', scale: 100, reduceMotion: false } (any field optional).
     apply: function (prefs) {

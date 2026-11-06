@@ -1,6 +1,6 @@
 # For the Mobile app UI and Web portal UI chats
 
-How to switch platform chrome without touching existing Ui files. Applies once Group A of `EDITS-FOR-APPROVAL.md` is on `platform/foundation` (it adds the Platform reference and `PlatformRoot`); until then, code against the contracts in `src/ChuvadiReader.Platform`.
+How to switch platform chrome without touching existing Ui files. Groups A, B and C are applied on `platform/foundation`.
 
 ## The signal
 One value, four layouts — `ChuvadiReader.Platform.ShellLayout`:
@@ -10,14 +10,17 @@ One value, four layouts — `ChuvadiReader.Platform.ShellLayout`:
 | `Desktop` | Windows, macOS, Linux | Reader Side Rails |
 | `Tablet` | Android, `FormFactor.Tablet` | Portal & Android 12d-12f |
 | `Phone` | Android, `FormFactor.Phone` | Portal & Android 12g-12j |
-| `Portal` | Web (any browser size, see F-5) | Portal & Android 12a-12c |
+| `Portal` | Web in a desktop-sized browser | Portal & Android 12a-12c |
 
-It is derived by `ShellLayouts.From(kind, formFactor)` — hosts report kind and form factor, nobody sets the layout by hand. It changes at run time when the host raises `FormFactorChanged` (Android fold/unfold, rotation if the host maps it).
+It is derived by `ShellLayouts.From(kind, formFactor)` — hosts report kind and form factor, nobody sets the layout by hand. **Web follows the browser (F-5):** a phone- or tablet-sized browser gets `Phone` / `Tablet`, and the portal chrome (account menu, sign-in, server status text) still shows — test it with `Info.IsPortal()` or `Chrome.AccountMenu`, never with `Shell == Portal`. The value changes at run time when the host raises `FormFactorChanged` (Android fold/unfold, browser resize).
 
-## Three ways to read it
-1. **Razor, re-renders on change (preferred):** `[CascadingParameter] public PlatformState Platform { get; set; } = default!;` then `@switch (Platform.Shell) { … }`. `PlatformRoot` (in `App.razor`) cascades it.
-2. **Razor, one-off:** `@inject IPlatformInfo Info` then `Info.Shell()`.
-3. **CSS:** `<html data-shell="desktop|tablet|phone|portal">`, plus `data-platform`, `data-form-factor`, `data-input` (`touch`, `pen` …). Example: `html[data-shell="tablet"] .leftbar { width: 72px; }`.
+Web this release: no server storage — Save and Save as are browser downloads (`Capabilities.SavesAsDownload`); the account menu has Get the desktop app, Account settings, Sign out only.
+
+## How to read it
+1. **Razor:** `@inject IPlatformInfo Info`, then `@switch (Info.Shell()) { … }` and `Info.IsPortal()`. A component whose look depends on the form factor subscribes to `Info.FormFactorChanged` in `OnInitialized` and calls `InvokeAsync(StateHasChanged)` (unsubscribe in `Dispose`). MainLayout already re-renders the shell on every change.
+2. **CSS:** `<html data-shell="desktop|tablet|phone|portal">`, plus `data-platform`, `data-form-factor`, `data-input` (`touch`, `pen` …), set by MainLayout on non-Windows hosts (and by the host page for the first paint). Absent = Windows desktop. Example: `html[data-shell="tablet"] .leftbar { width: 72px; }`.
+
+There is no cascaded platform object on purpose: it cost ~25 extra JIT-compiled methods at Windows startup for nothing (startup rule, 6 Nov).
 
 Other facts on the same object: `Chrome` (window buttons left/right/none, native menu bar, account menu, title-bar drag, corner radius), `Capabilities` (pick folders, save in place, watch folders, reveal, drop files, share, server-side), `Keys.Format("Ctrl K")` (⌘ on macOS).
 

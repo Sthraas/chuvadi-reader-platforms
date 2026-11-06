@@ -4,10 +4,12 @@
 - .NET SDK 10.0 (10.0.4xx), git, curl, sha256sum (Linux/macOS; on Windows use Git Bash or WSL for the feed script).
 
 ## Package feed
+Packages come from chuvadi-reader's committed `ci/packages` (byte-identical to what the Windows app ships).
 ```bash
-scripts/setup-feed.sh
+scripts/setup-feed.sh                 # copy ci/packages → ./localpackages (what nuget.config points to)
+scripts/setup-feed.sh --verify-pack   # also check: chuvadi-pdf v3.31.1 re-packs to the same package set
 ```
-Creates `./localpackages` (git-ignored), which the repo's `nuget.config` already points to: chuvadi-pdf 3.31.1 packed from the unchanged tag, released Chuvadi packages with checksums, and LiPicons.Blazor / Docs 1.1.0 / Sheets 1.1.2 from `ci/packages` (what Core pins today).
+CI restores directly with `--configfile ci/nuget.config`.
 
 ## Build and test (any OS)
 ```bash

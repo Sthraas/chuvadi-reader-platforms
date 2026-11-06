@@ -5,7 +5,12 @@
 // keyboard shortcuts. During a toolbar-driven scroll the indicator tracking is
 // suppressed so it does not flicker through the pages it passes.
 
-import { isPrimary } from './platform.js';
+// The primary shortcut modifier: ⌘ on macOS (data-platform set by MainLayout), Ctrl everywhere else.
+function isPrimary(e) {
+    return document.documentElement.getAttribute('data-platform') === 'macos'
+        ? (e.metaKey === true && e.ctrlKey !== true)
+        : (e.ctrlKey === true && e.metaKey !== true);
+}
 
 let lazy = null;
 let spy = null;

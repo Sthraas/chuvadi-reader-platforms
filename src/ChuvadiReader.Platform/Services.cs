@@ -115,6 +115,14 @@ public interface IFileManager
     Task<bool> RevealAsync(string localPath, CancellationToken ct = default);
 }
 
+/// <summary>Default for hosts without a file manager (Android, Web).</summary>
+public sealed class NoFileManager : IFileManager
+{
+    public bool IsAvailable => false;
+
+    public Task<bool> RevealAsync(string localPath, CancellationToken ct = default) => Task.FromResult(false);
+}
+
 /// <summary>Share sheet (Android, macOS). No Ui calls this yet; adding a Share action is a design decision for Arun.</summary>
 public interface IShare
 {
@@ -141,24 +149,37 @@ public interface IAppLifecycle
 /// <summary>One command the Ui offers (the same list the Ctrl K command bar shows).</summary>
 /// <param name="Id">Stable id, e.g. "doc.print".</param>
 /// <param name="Label">User-facing label.</param>
-/// <param name="Group">Menu it belongs to: Document, Read, Mark, Arrange, Protect, View.</param>
-/// <param name="Keys">Canonical shortcut text ("Ctrl P"), or null.</param>
+/// <param name="Group">Section it belongs to (File, Tabs, Document, Read, Mark, Arrange, Protect, View…).</param>
+/// <param name="Keys">Canonical shortcut text ("Ctrl P"), or null. Show it with <see cref="IKeyLabels.Format"/>.</param>
 /// <param name="IsEnabled">False when the command can't run now.</param>
-public sealed record AppCommandInfo(string Id, string Label, string Group, string? Keys, bool IsEnabled);
+/// <param name="DisabledReason">Why it is disabled (tooltip text), or null.</param>
+/// <param name="IsSeparator">A divider between groups of menu items (Document menu only).</param>
+public sealed record AppCommandInfo(
+    string Id,
+    string Label,
+    string Group,
+    string? Keys,
+    bool IsEnabled,
+    string? DisabledReason = null,
+    bool IsSeparator = false);
 
 /// <summary>
-/// Lets a native menu (macOS menu bar) show and run the Ui's commands.
-/// The Ui publishes; the host reads and invokes.
+/// The Ui's commands for a native menu (macOS menu bar). Filled host-side from the shell's own
+/// command registry — the Ui needs no hook. Read <see cref="Commands"/> / <see cref="DocumentMenu"/>
+/// after each <see cref="Changed"/> and rebuild the menu.
 /// </summary>
 public interface IAppCommands
 {
-    IReadOnlyList<AppCommandInfo> Current { get; }
+    /// <summary>Every command the Ctrl K bar can run right now (global + the mounted page's).</summary>
+    IReadOnlyList<AppCommandInfo> Commands { get; }
 
+    /// <summary>The top bar's Document ▾ menu, in order, separators included.</summary>
+    IReadOnlyList<AppCommandInfo> DocumentMenu { get; }
+
+    /// <summary>Raised when either list, or any enabled state, may have changed.</summary>
     event Action? Changed;
 
-    /// <summary>Called by the Ui whenever its command list or enabled states change.</summary>
-    void Publish(IReadOnlyList<AppCommandInfo> commands, Func<string, Task> invoke);
-
-    /// <summary>Called by the host when a native menu item is chosen.</summary>
-    Task InvokeAsync(string id);
+    /// <summary>Runs a command by id. Returns false when the id is unknown or the command is disabled.
+    /// Call it on the Blazor dispatcher (e.g. <c>BlazorWebView.Dispatcher</c>), like any Ui action.</summary>
+    Task<bool> InvokeAsync(string id);
 }

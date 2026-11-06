@@ -8,6 +8,7 @@
 @inject WatchedFolderService Watched
 @inject LibraryService Lib
 @inject NavigationManager Nav
+@inject ChuvadiReader.Platform.IPlatformInfo Platform
 
 <PageTitle>Chuvadi · Settings</PageTitle>
 
@@ -34,7 +35,7 @@
         <div class="snav-foot">
             Chuvadi @AppInfo.Version · chuvadi-pdf @AppInfo.Libraries[0].Version<br />
             Changes save automatically<br />
-            Stored on this device only
+            @(Platform.Capabilities.ServerSide ? ChuvadiReader.Ui.Components.Platform.PlatformText.ServerPrivacy : "Stored on this device only")
         </div>
     </nav>
 

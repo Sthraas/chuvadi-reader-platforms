@@ -1,6 +1,6 @@
 # Chuvadi Reader — platform interface (DRAFT)
 
-Status: **draft for Arun's decision** (decisions F-1 … F-6 at the end). Platform chats can code against it now; anything that changes after Arun decides is listed in this file's history.
+Status: **decided** (F-1…F-7, coordinator on Arun's delegation, 6 Nov 2026 — see §8). Group A is applied on `platform/foundation`; Groups B/C are proposed in `EDITS-FOR-APPROVAL.md`.
 Code: `src/ChuvadiReader.Platform` (contracts) and `src/ChuvadiReader.Hosting` (shared host kit), branch `platform/foundation`. Both build with warnings as errors; tests in `tests/ChuvadiReader.Hosting.Tests`.
 Inventory of what this replaces: `docs/foundation/INVENTORY.md`. Visual reference: `docs/design-handoff/` per `docs/coordination/DESIGN-NOTE.md`.
 
@@ -50,21 +50,23 @@ New contracts (`ChuvadiReader.Platform`):
 | `IFileManager` | "Show in folder" | — host (desktop only) |
 | `IShare` | share sheet | — host (Android, macOS) |
 | `IAppLifecycle` | suspend / resume / Android back | `NoAppLifecycle` |
-| `IAppCommands` | Ui publishes its command list; macOS menu bar shows and runs it | `AppCommands` (registered) |
+| `IAppCommands` | the Ui's commands (Ctrl K list + Document ▾ menu) for the macOS menu bar; filled host-side from `ShellService`, no Ui hook | `ShellAppCommands` (registered) |
 
 ### What each value means for the Ui (form factor and chrome switch)
 
 | | Windows | macOS | Linux | Android tablet | Android phone | Web |
 |---|---|---|---|---|---|---|
-| `FormFactor` | Desktop | Desktop | Desktop | Tablet | Phone | Desktop (Phone/Tablet on small browsers — F-5) |
-| `Chrome.Buttons` | Right | Left | Right or Left (desktop's layout) | None | None | None |
+| `FormFactor` | Desktop | Desktop | Desktop | Tablet | Phone | follows the browser: Desktop / Tablet / Phone (F-5) |
+| `ShellLayout` | Desktop | Desktop | Desktop | Tablet | Phone | Portal at desktop width; Tablet / Phone in small browsers, portal chrome kept (`IsPortal()`) |
+| `Chrome.Buttons` | Right | Left | Right or Left (desktop's layout) | None | None | None (account menu) |
 | `Chrome.NativeMenuBar` | no | **yes** | no | no | no | no |
 | `Chrome.AccountMenu` | no | no | no | no | no | **yes** |
 | `Chrome.TitleBarDrag` | yes | yes | yes | no | no | no |
 | `Chrome.CornerRadiusPx` | 0 | 0 (native) | 12 | 0 | 0 | 0 |
-| `Keys.Primary` | Ctrl | ⌘ | Ctrl | Ctrl | Ctrl | Ctrl (⌘ when the browser is on a Mac — F-5) |
+| `Keys.Primary` | Ctrl | ⌘ | Ctrl | Ctrl | Ctrl | ⌘ on a Mac browser, else Ctrl (F-5) |
 | `Capabilities.PickFolders` | ✓ | ✓ | ✓ | ✓ (SAF tree) | ✓ (SAF tree) | ✗ |
-| `SaveInPlace` | ✓ | ✓ | ✓ | ✓ (URI write-back) | ✓ | ✓ (into the user's portal storage) |
+| `SaveInPlace` | ✓ | ✓ | ✓ | ✓ (URI write-back) | ✓ | ✗ |
+| `SavesAsDownload` | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ (Save and Save as deliver a browser download) |
 | `WatchFolders` | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ |
 | `RevealInFolder` | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ |
 | `DropFiles` | ✓ | ✓ | ✓ | ✗ (share-into instead) | ✗ | ✓ (upload) |
@@ -79,8 +81,8 @@ The Ui turns these into attributes on `<html>` (`data-shell`, `data-platform`, `
 
 Core is path-based end to end (tabs, recents, bench, sessions, save-in-place, print). Android gives content URIs and Web gives uploaded bytes.
 
-**Option C (recommended): working path + write-back.**
-Hosts always hand Core a readable local path. Desktop: the real file. Android: a copy in app-private storage made from the URI (permission persisted so recents reopen). Web: a copy in the signed-in person's encrypted per-user storage. After any write to such a path, Ui calls `IFileWriteBack.CommitAsync(path)`; desktop does nothing, Android writes the bytes back to the URI, Web stores the file (and offers the download for "Save as").
+**Option C — DECIDED: working path + write-back.**
+Hosts always hand Core a readable local path. Desktop: the real file. Android: a copy in app-private storage made from the URI (permission persisted so recents reopen). Web: a **session-only** working copy, encrypted, deleted on sign-out, session end or expiry — **no per-user server storage this release** (Arun). After any write to such a path, Ui calls `IFileWriteBack.CommitAsync(path)`; desktop does nothing, Android writes the bytes back to the URI, Web delivers the file as a **browser download** (Save and Save as alike).
 - For: Core logic untouched; ~25 one-line `CommitAsync` calls in Ui; zero behaviour change on Windows (`NoFileWriteBack`); every library call stays path/stream as today.
 - Against: Android and Web keep a working copy of each open document (disk use, cleanup needed); "Save" on Android is two steps (local write, then URI write) so a failed write-back must be shown; a future save path that forgets `CommitAsync` silently doesn't reach Android/Web (mitigated by a test that greps every save site).
 
@@ -106,7 +108,7 @@ Per DESIGN-NOTE, these are built as **new components** (new files under `src/Chu
 |---|---|---|
 | `PlatformRoot` — sets `data-platform`/`data-form-factor`/`data-input` on `<html>`, listens to `FormFactorChanged` | always | — |
 | `WindowButtons` — traffic lights left or right, or nothing | `Chrome.Buttons` | Revamp v3 frames |
-| `AccountMenu` — avatar + menu (My files, Shared with me, Get the desktop app, Account settings, Sign out) | `Chrome.AccountMenu` | 12b |
+| `AccountMenu` — avatar + menu: Get the desktop app, Account settings, Sign out (**no** My files / Shared with me: no storage or sharing this release) | `Chrome.AccountMenu` | 12b |
 | `PortalSignIn` — Sangam sign-in page | Web, not signed in | 12a |
 | `SangamGate` — "Signing needs a Sangam identity" card | any platform, gated action | 12c |
 | `StatusLocation` — "offline · on this device" / "processed on the server · encrypted at rest · only you can see it" | `Capabilities.ServerSide` | 12b |
@@ -115,29 +117,33 @@ Per DESIGN-NOTE, these are built as **new components** (new files under `src/Chu
 | macOS menu bar | native, built by the Mac host from `IAppCommands` | README "Platforms" |
 | Linux window chrome (12 px corners, GNOME/KDE button order) | Linux host + `Chrome` | README "Platforms" |
 
-## 6. Printing per platform — decision F-4
+## 6. Printing per platform — DECIDED (F-4)
 
-| Host | Proposal |
+**Rule (Arun): printing is vector — never pages rendered as images.**
+
+| Host | How |
 |---|---|
-| Windows | Keep `WpfPrintService` (WPF dialog + XPS over chuvadi-pdf raster). Moving to Chuvadi.Print is optional, later. |
-| macOS | OS print panel (`UIPrintInteractionController` / `NSPrintOperation`) fed the PDF — OS component, no rasteriser needed. |
-| Linux | Chuvadi.Print.Ipp to CUPS (`CupsQueues.List()` + `IppRoutes.CreateCupsRouter`) with an app-drawn print card (the existing PrintCard already has range/copies/fit) and a Reader-side `IPageRasterizer` adapter over Chuvadi.Pdf.Rendering (library decision #12: adapter now). Alternative: GTK print dialog via the OS (GtkPrintUnixDialog). |
-| Android | Android `PrintManager` with the PDF — OS print service, no rasteriser. |
-| Web | Browser print of the PDF (download/open in a new tab and print); server-side IPP only if Arun wants hub printing. |
+| Windows | Keep `WpfPrintService` **for now**. Note: today it rasterises pages (chuvadi-pdf raster → XPS images), which breaks the vector rule; moving Windows to vector (Chuvadi.Print XPS in rc.3, or the PDF through the spooler) is a later item for Arun. |
+| macOS | OS print panel fed the **PDF itself** (`NSPrintOperation` / `UIPrintInteractionController` with the PDF data) — vector. |
+| Linux | Send the **PDF as-is to CUPS** (CUPS filters are an OS component); raster only as a fallback when the queue can't take PDF. The app's PrintCard (range, copies, fit) stays the dialog. |
+| Android | `PrintManager` with the PDF document. |
+| Web | Browser print of the PDF. Server/hub printing later. |
 
 ## 7. Web-specific host settings (no Ui edits)
 
 - Register with `AppStateLifetime.PerConnection`.
+- No per-user server storage this release: working copies are session-only, encrypted at rest, deleted on sign-out, session end or expiry; `IAppPaths.WorkingFolder` is per session. Save / Save as → browser download (`SavesAsDownload`).
+- `IAppStorage` (settings): per signed-in person; where it lives is the Web chat's design within "no file storage".
 - Raise SignalR `MaximumReceiveMessageSize` (or stream) for image paste/drop and snapshots (INVENTORY B4).
-- Per-user `IAppPaths` and `IAppStorage`, encrypted at rest; delete working copies on sign-out/expiry.
 - Library blockers before any multi-user load: chuvadi-pdf **Pdf A** (name table never shrinks) and **Pdf B** (shared LiPi FontRenderer race).
 
-## 8. Decisions for Arun
+## 8. Decisions (coordinator, on Arun's delegation, 6 Nov 2026)
 
-- **F-1 File model:** C (working path + write-back, recommended), B (stream-first rewrite) or A (no write-back).
-- **F-2 Where contracts live:** (a) new project `ChuvadiReader.Platform`, referenced by Core (one line in Core's csproj) — as drafted, matches the kickoff; (b) same files inside Core under `ChuvadiReader.Core.Platform` — no csproj edit, but contracts mix with Core; (c) also move the existing host interfaces (IFilePicker, IPrintService, …) into Platform — one place for every contract, but ~20 `using` edits and a namespace change for Windows.
-- **F-3 Shared registration:** Windows switches to `AddChuvadiReader(...)` (one place, drift test retired) or keeps its own list (no Windows edit; the drift test keeps the kit in step).
-- **F-4 Printing per platform:** as §6.
-- **F-5 Web form factor and keys:** Web follows the browser (phone/tablet layouts on small screens, ⌘ labels for Mac browsers) or always desktop + Ctrl.
-- **F-7 Preview host for the UI chats:** a small Blazor Server dev host (Kestrel, .NET only, never shipped) that runs the real Ui with the platform and form factor chosen by URL, so phone/tablet/portal work can be seen and tested before the Android and Web hosts exist.
-- **F-6 `IClipboard` replaces `IImageClipboard`:** replace now (Windows edits) or keep both (Windows implements both; no Windows edit).
+- **F-1** C — working path + write-back. Web: session-only working copies; Save and Save as = browser download.
+- **F-2** (a) — new `ChuvadiReader.Platform` project, referenced by Core (applied in Group A).
+- **F-3** Windows uses `AddChuvadiReader(...)`; the set-equality test stays (applied in Group A).
+- **F-4** Vector printing per §6.
+- **F-5** Web follows the browser: phone/tablet layouts on small screens, ⌘ labels on Mac browsers.
+- **F-6** Keep both `IImageClipboard` and `IClipboard`.
+- **F-7** Dev-only preview host (never shipped).
+- Packages come from chuvadi-reader's committed `ci/packages` (byte-identical to the Windows app); re-packing from the tag is only a check.

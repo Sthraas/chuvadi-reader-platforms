@@ -41,41 +41,6 @@ public sealed class MacKeyLabels : IKeyLabels
     }
 }
 
-/// <summary>Holds the command list the Ui publishes, for native menus.</summary>
-public sealed class AppCommands : IAppCommands
-{
-    private readonly object _gate = new();
-    private IReadOnlyList<AppCommandInfo> _current = Array.Empty<AppCommandInfo>();
-    private Func<string, Task>? _invoke;
-
-    public IReadOnlyList<AppCommandInfo> Current
-    {
-        get { lock (_gate) return _current; }
-    }
-
-    public event Action? Changed;
-
-    public void Publish(IReadOnlyList<AppCommandInfo> commands, Func<string, Task> invoke)
-    {
-        ArgumentNullException.ThrowIfNull(commands);
-        ArgumentNullException.ThrowIfNull(invoke);
-        lock (_gate)
-        {
-            _current = commands;
-            _invoke = invoke;
-        }
-
-        Changed?.Invoke();
-    }
-
-    public Task InvokeAsync(string id)
-    {
-        Func<string, Task>? invoke;
-        lock (_gate) invoke = _invoke;
-        return invoke is null ? Task.CompletedTask : invoke(id);
-    }
-}
-
 /// <summary>Lifecycle for hosts that never suspend (desktop): events are never raised.</summary>
 public sealed class NoAppLifecycle : IAppLifecycle
 {
@@ -134,6 +99,7 @@ public sealed class FixedPlatformInfo(
         DropFiles = true,
         Share = false,
         MultipleWindows = false,
+        SavesAsDownload = false,
         ServerSide = false,
     };
 }

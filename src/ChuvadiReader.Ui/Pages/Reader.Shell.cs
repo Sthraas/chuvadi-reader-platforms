@@ -1,5 +1,6 @@
 using ChuvadiReader.Core.Documents;
 using ChuvadiReader.Core.Reader;
+using ChuvadiReader.Ui.Components.Platform;
 using ChuvadiReader.Ui.Components.Viewers;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -421,8 +422,14 @@ public partial class Reader
         }
 
         yield return Sep("3");
-        yield return new("doc.reveal", "Show in folder", "Document", "folder", null, () => Task.CompletedTask, "Coming soon");
-        yield return new("doc.copypath", "Copy file path", "Document", "copy", null, () => CopyTextAsync(tab.Path, "File path copied"));
+        // Real paths only exist where there is a file manager (desktop); a working copy's path means nothing to people.
+        if (Platform.Capabilities.RevealInFolder)
+        {
+            yield return new("doc.reveal", "Show in folder", "Document", "folder", null, () => RevealAsync(tab.Path),
+                FileManager.IsAvailable ? null : "Not available on this computer");
+            yield return new("doc.copypath", "Copy file path", "Document", "copy", null, () => CopyTextAsync(tab.Path, "File path copied"));
+        }
+
         yield return new("doc.tags", "Tags…", "Document", "tag", null, () => { Nav.NavigateTo("/library"); return Task.CompletedTask; }, null, "library category");
         yield return Sep("4");
         yield return new("doc.close", "Close", "Document", "close", "Ctrl W", CloseActiveTab);
@@ -715,8 +722,26 @@ public partial class Reader
         }
     }
 
+    private async Task RevealAsync(string path)
+    {
+        if (!await FileManager.RevealAsync(path))
+        {
+            Shell.Notify("Couldn't show the file in its folder", isError: true);
+        }
+    }
+
     private async Task OnProtectedSaved(string output)
     {
+        try
+        {
+            await WriteBack.DeliverOrThrowAsync(output);
+        }
+        catch (Exception ex)
+        {
+            Shell.Notify(ex.Message, isError: true);
+            return;
+        }
+
         var name = System.IO.Path.GetFileName(output);
         Shell.Notify($"Saved → {name}", false, "Open", () => OpenOutputAsync(output));
         await Task.CompletedTask;

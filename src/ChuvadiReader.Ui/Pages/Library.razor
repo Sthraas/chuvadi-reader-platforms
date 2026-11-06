@@ -5,6 +5,7 @@
 @inject FolderSearchService Search
 @inject PressService Press
 @inject IFilePicker Picker
+@inject ChuvadiReader.Platform.IPlatformInfo Platform
 @inject OpenDocumentService OpenDoc
 @inject RecentFilesService Recents
 @inject NavigationManager Nav
@@ -229,7 +230,10 @@
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;font-family:var(--chvd-mono);font-size:11px;color:var(--chvd-ink-muted)">
                     <Icon Name="folder" Size="13" />
                     <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="@_pressFolder">@_pressFolder</span>
-                    <button @onclick="ChangePressFolder" style="background:none;border:none;color:var(--chvd-binding);cursor:pointer;font-family:var(--chvd-mono);font-size:11px">change…</button>
+                    @if (Platform.Capabilities.PickFolders)
+                    {
+                        <button @onclick="ChangePressFolder" style="background:none;border:none;color:var(--chvd-binding);cursor:pointer;font-family:var(--chvd-mono);font-size:11px">change…</button>
+                    }
                 </div>
 
                 <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">

@@ -9,6 +9,7 @@
 #         build: src/ChuvadiReader.Linux/ChuvadiReader.Linux.csproj
 #
 # Zero-warnings policy: every build runs with -warnaserror.
+# Packages: always the committed ci/packages feed (coordinator decision, 6 Nov 2026).
 name: platform-build
 
 on:
@@ -41,8 +42,8 @@ on:
         description: Short unique name for this job's artifacts (e.g. shared, windows-app, linux).
         required: true
         type: string
-      full-feed:
-        description: true = build the full local feed with scripts/setup-feed.sh (chuvadi-pdf packed from v3.31.1 + released packages); false = the committed ci/packages feed only.
+      pack-check:
+        description: true = also re-pack chuvadi-pdf from the unchanged v3.31.2 tag and check it yields the same package set as ci/packages (a check only; builds always restore from ci/packages).
         required: false
         type: boolean
         default: false
@@ -63,19 +64,15 @@ jobs:
         if: inputs.workloads != ''
         run: dotnet workload install ${{ inputs.workloads }}
 
-      - name: Full local feed
-        if: inputs.full-feed
+      - name: Pack check (chuvadi-pdf tag vs ci/packages)
+        if: inputs.pack-check
         shell: bash
-        run: scripts/setup-feed.sh
+        run: scripts/setup-feed.sh --verify-pack
 
+      # Packages always come from the committed ci/packages feed (byte-identical to the Windows app).
       - name: Restore
         shell: bash
-        run: |
-          if [ "${{ inputs.full-feed }}" = "true" ]; then
-            dotnet restore "${{ inputs.build }}" ${{ inputs.build-args }}
-          else
-            dotnet restore "${{ inputs.build }}" --configfile ci/nuget.config ${{ inputs.build-args }}
-          fi
+        run: dotnet restore "${{ inputs.build }}" --configfile ci/nuget.config ${{ inputs.build-args }}
 
       - name: Build (warnings are errors)
         shell: bash

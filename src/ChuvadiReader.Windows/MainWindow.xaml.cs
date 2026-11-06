@@ -38,10 +38,9 @@ public partial class MainWindow : Window
         Drop += OnFileDrop;
     }
 
-    private static readonly string[] DropExtensions = { ".pdf", ".docx", ".doc", ".xlsx", ".xls" };
-
+    // Same list as the Open dialog (Core: DocumentFormatExtensions.OpenableExtensions).
     private static bool IsSupportedFile(string path)
-        => DropExtensions.Contains(System.IO.Path.GetExtension(path).ToLowerInvariant());
+        => ChuvadiReader.Core.Documents.DocumentFormatExtensions.IsOpenable(path);
 
     private static bool HasSupportedFile(DragEventArgs e)
         => e.Data.GetDataPresent(DataFormats.FileDrop)
