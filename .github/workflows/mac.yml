@@ -21,7 +21,6 @@ jobs:
     env:
       DOTNET_CLI_TELEMETRY_OPTOUT: '1'
       DOTNET_NOLOGO: '1'
-      APP: src/ChuvadiReader.Mac/bin/Release/net10.0-maccatalyst/ChuvadiReader.Mac.app
 
     steps:
       - uses: actions/checkout@v4
@@ -72,9 +71,20 @@ jobs:
       - name: Build universal app
         run: dotnet build src/ChuvadiReader.Mac/ChuvadiReader.Mac.csproj -c Release --no-restore
 
+      - name: Locate the app bundle
+        run: |
+          find src/ChuvadiReader.Mac/bin/Release -maxdepth 3 -name '*.app' -type d
+          # Per-architecture bundles sit one folder deeper; the universal bundle is the shallowest.
+          APP=$(find src/ChuvadiReader.Mac/bin/Release -maxdepth 3 -name '*.app' -type d | awk -F/ '{print NF" "$0}' | sort -n | head -1 | cut -d' ' -f2-)
+          [ -n "$APP" ] || { echo "no .app produced"; exit 1; }
+          EXE=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Contents/Info.plist")
+          echo "APP=$APP" >> "$GITHUB_ENV"
+          echo "BIN=$APP/Contents/MacOS/$EXE" >> "$GITHUB_ENV"
+          echo "app: $APP  executable: $EXE"
+          du -sh "$APP"
+
       - name: Verify both architectures
         run: |
-          BIN="$APP/Contents/MacOS/ChuvadiReader.Mac"
           ARCHS=$(lipo -archs "$BIN")
           echo "architectures: $ARCHS"
           [[ "$ARCHS" == *arm64* && "$ARCHS" == *x86_64* ]] || { echo "not universal"; exit 1; }
@@ -88,7 +98,7 @@ jobs:
         run: |
           set +e
           # macOS has no GNU timeout; perl's alarm gives a 120 s limit.
-          CHUVADI_SMOKE_EXIT=1 perl -e 'alarm shift; exec @ARGV' 120 "$APP/Contents/MacOS/ChuvadiReader.Mac" > smoke.log 2>&1
+          CHUVADI_SMOKE_EXIT=1 perl -e 'alarm shift; exec @ARGV' 120 "$BIN" > smoke.log 2>&1
           CODE=$?
           set -e
           cat smoke.log
