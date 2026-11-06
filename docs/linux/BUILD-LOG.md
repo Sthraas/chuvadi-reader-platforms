@@ -380,3 +380,10 @@ GTK dialog, decrypting the file or contacting CUPS. A file without encryption al
 ### Single instance (approved programme-wide)
 Waits for the Foundation's kit contract; the Linux side will be D-Bus (the session bus the app already uses
 for Show in folder) or a Unix socket — options with pros and cons when the contract lands.
+
+### 31. Green
+Run 42283536949 (commit `833cea3`): x64 and ARM64 each **107/107** in the full UI pass (with
+`31-print-not-allowed`), both `.deb` packages built, installed and launched with the licence and notices in
+`/usr/share/doc/chuvadi-reader/`; shared `platforms` workflow green. Local: 107/107. (One earlier local run
+failed the print step only because the sandbox's CUPS scheduler had exited — no service manager here; CI's
+runs under systemd.)
