@@ -21,7 +21,10 @@
         {
             <SettingRow Label="Network" Hint="offline · nothing leaves this device"><ValueChip Text="Offline" /></SettingRow>
         }
-        <SettingRow Label="Data folder" Hint="Settings, recent files and tabs" Stack="true"><ValueChip Text="@Paths.AppDataFolder" Wrap="true" /></SettingRow>
+        @if (!Platform.Capabilities.ServerSide)
+        {
+            <SettingRow Label="Data folder" Hint="Settings, recent files and tabs" Stack="true"><ValueChip Text="@Paths.AppDataFolder" Wrap="true" /></SettingRow>
+        }
         <SettingRow Label="Clear recent files & cache" Soon="true"><RowButton>Clear…</RowButton></SettingRow>
     </SettingsCard>
 

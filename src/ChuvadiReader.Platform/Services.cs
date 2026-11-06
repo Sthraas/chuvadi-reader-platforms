@@ -83,6 +83,10 @@ public interface IAccount
     /// <summary>Sangam ID when signed in.</summary>
     string? Email { get; }
 
+    /// <summary>Organisation unit shown after the Sangam ID ("arun@apulki · Records", design 12b), or null.
+    /// Default null, so existing implementations need no change.</summary>
+    string? Unit => null;
+
     event Action? Changed;
 
     /// <summary>Starts Sangam sign-in. Returns false where sign-in isn't available yet.</summary>

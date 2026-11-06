@@ -96,6 +96,25 @@ public sealed class HostingTests
         Assert.True(missing.Count == 0, "Registered by Windows but not by the kit: " + string.Join(", ", missing));
     }
 
+    /// <summary>D-48: restoring the saved tab set never shows the same file twice.</summary>
+    [Fact]
+    public async Task Restore_never_duplicates_a_tab()
+    {
+        var services = new ServiceCollection();
+        services.AddChuvadiReader(AppStateLifetime.Process);
+        var storage = new MemoryStorage();
+        await storage.SetAsync("tabs", """
+            [{"Path":"/nowhere/a.pdf","FileName":"a.pdf"},{"Path":"/NOWHERE/A.pdf","FileName":"A.pdf"},{"Path":"/nowhere/b.pdf","FileName":"b.pdf"}]
+            """);
+        services.AddSingleton<IAppStorage>(storage);
+        using var sp = services.BuildServiceProvider();
+        var tabs = sp.GetRequiredService<TabsService>();
+
+        await tabs.RestoreAsync();
+
+        Assert.Equal(["a.pdf", "b.pdf"], tabs.Tabs.Select(t => t.FileName));
+    }
+
     [Theory]
     [InlineData("Ctrl P", "⌘P")]
     [InlineData("Ctrl Shift S", "⇧⌘S")]
