@@ -10,10 +10,12 @@ newest on the runner).
 dotnet workload install maui-maccatalyst
 dotnet restore src/ChuvadiReader.Mac/ChuvadiReader.Mac.csproj --configfile ci/nuget.config
 dotnet build   src/ChuvadiReader.Mac/ChuvadiReader.Mac.csproj -c Release --no-restore
-# → src/ChuvadiReader.Mac/bin/Release/net10.0-maccatalyst/ChuvadiReader.Mac.app (arm64 + x86_64)
-codesign --force --deep --sign - src/ChuvadiReader.Mac/bin/Release/net10.0-maccatalyst/ChuvadiReader.Mac.app
+# → src/ChuvadiReader.Mac/bin/Release/net10.0-maccatalyst/Chuvadi.app (arm64 + x86_64)
+codesign --force --deep --sign - src/ChuvadiReader.Mac/bin/Release/net10.0-maccatalyst/Chuvadi.app
 ```
-Run: `open src/ChuvadiReader.Mac/bin/Release/net10.0-maccatalyst/ChuvadiReader.Mac.app`
+Run: `open src/ChuvadiReader.Mac/bin/Release/net10.0-maccatalyst/Chuvadi.app` (always through `open` or Finder — a Mac Catalyst app started by running its binary directly aborts).
+
+CI pins: workload set `10.0.401` (Mac Catalyst 26.5.10318) and `/Applications/Xcode_26.6.app`. Move both forward together when the runner image carries the Xcode a newer workload needs.
 
 Without a Mac: push to `platform/mac`; the **Mac** workflow builds, tests, smoke-launches and uploads
 `Chuvadi-mac-universal-unsigned.zip`.
@@ -21,14 +23,14 @@ Without a Mac: push to `platform/mac`; the **Mac** workflow builds, tests, smoke
 ## Installing the unsigned test build on a Mac
 The app is ad-hoc signed, not signed by an Apple Developer ID, so macOS blocks it on first open.
 1. Download `Chuvadi-mac-universal-unsigned.zip` from the workflow run's Artifacts and double-click it
-   (GitHub wraps it in a second zip — unzip until you see `ChuvadiReader.Mac.app`).
-2. Drag `ChuvadiReader.Mac.app` into **Applications**.
+   (GitHub wraps it in a second zip — unzip until you see `Chuvadi.app`).
+2. Drag `Chuvadi.app` into **Applications**.
 3. Double-click it. macOS says it "cannot be opened because Apple cannot check it for malicious
    software" (or "cannot verify the developer"). Click **Done** / **Cancel**.
 4. Open **System Settings → Privacy & Security**, scroll to the message about Chuvadi, click
    **Open Anyway**, enter your password, then **Open**. (On macOS 14 and earlier, Control-click the app
    in Applications → **Open** → **Open** also works.)
-5. Alternative in Terminal: `xattr -dr com.apple.quarantine /Applications/ChuvadiReader.Mac.app`,
+5. Alternative in Terminal: `xattr -dr com.apple.quarantine /Applications/Chuvadi.app`,
    then open normally.
 
 Only the first launch needs this. App state: `~/Library/Application Support/Chuvadi`; logs and
@@ -51,11 +53,12 @@ Needed for a normal double-click install with no warning:
   required, provisioning profile, App Store review. The sandbox would require security-scoped bookmarks
   for Recent files and watched folders, which Core's path-based model doesn't have today.
 
-## Open decisions (for Arun)
-See the latest status message from the Mac chat; summary:
-1. Window chrome (HTML dots top-right vs native traffic lights top-left vs standard title bar).
-2. Print path (native macOS print panel fed by Chuvadi.Pdf's rasteriser vs Chuvadi.Print.Ipp over CUPS).
-3. One MAUI project shared with Android, or two.
-4. Bundle identifier (provisional: `in.sthraas.chuvadi.reader`).
-5. Distribution: direct download (not sandboxed) vs Mac App Store (sandbox).
-6. Ui hooks: ⌘ shortcut labels; Mac menu bar commands.
+## Decisions (coordinator, 6 Nov 2026)
+- Separate `ChuvadiReader.Mac` project on the Foundation kit; window chrome and menu bar per the handout.
+- Printing: native macOS print panel fed a vector PDF prepared by chuvadi-pdf (never rasterised).
+- ⌘ labels: Foundation `Keys.Format`. Immersive: ⌃⌘F in the Mac menu.
+- Distribution: direct download, signed and notarised, not sandboxed; App Store later.
+- Publisher: Sthraas Intelligence Pvt Ltd. Apple Developer account after company registration — unsigned test
+  builds until then. Bundle ID `in.sthraas.chuvadi.reader` is provisional until the final domain (likely
+  chuvadi.in) is chosen; nothing is signed with it.
+- CI keeps the workload pin until the runner image has the Xcode the next workload needs.

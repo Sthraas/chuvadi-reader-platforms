@@ -127,3 +127,57 @@ changes, enabled state checked each time a menu opens. Actions run through
 - Shortcuts: every "Ctrl …" becomes ⌘ (Shift → ⇧, Alt → ⌥). Single-key shortcuts (R, 1–4) stay
   with the page so typing is never captured. macOS-owned keys (⌘C/V/X/A/Z/Q/H/M/,) are never taken.
   A key used by two commands is bound once (the first in menu order).
+
+---
+
+## 2026-11-06 — Session 1 (continued): first green build, Foundation kit
+
+### 11. More CI runs
+| Run | Result | Cause → fix |
+|---|---|---|
+| 3–6 | build ✘ | C# errors (IFilePicker clash with MAUI's, menu-builder API names, a lambda named `_`) fixed; then Xcode: the pinned pack 26.5.10318 needs **Xcode 26.6**, and the image's `Xcode_26.6.0.app` fails the build's SDK lookup → select `/Applications/Xcode_26.6.app` by name. |
+| 9 | build ✔, lipo ✘ | The bundle is `Chuvadi.app` (ApplicationTitle) → locate the shallowest `.app` and its CFBundleExecutable from the build output. |
+| 10–11 | smoke ✘ | `_mainSceneIdentifier should have been set` — a Catalyst app launched by running its binary directly gets no scene. Smoke now launches through LaunchServices: `open -W -n --env CHUVADI_SMOKE_EXIT=1 --stdout … Chuvadi.app`. (The scene manifest removed in the same step was not the cause; MAUI manages scenes, so it stays out.) |
+| **42135527900** | **✔ all steps** | universal (x86_64 + arm64), ad-hoc signed, launched to first render, artifact uploaded. Foundation's `platforms` workflow (shared code on 4 OSes, Windows app, pack check) ✔ on the same commit. |
+
+### 12. Rebased on `platform/foundation`
+- Skipped my own baseline import (Foundation's import of the same `c7b9e44` + Group A supersedes it).
+- Host now uses the kit: `AddChuvadiReader(AppStateLifetime.Process)` (no duplicated service list),
+  `IPlatformInfo` = `FixedPlatformInfo(MacOS, mouse+keyboard, buttons Left, NativeMenuBar, TitleBarDrag,
+  desktop capabilities, MacKeyLabels)`, `IClipboard` + `IImageClipboard` (`MacClipboard`, NSPasteboard),
+  `IFileManager` (`MacFileManager`, Finder reveal via NSWorkspace), `IAppPaths` (`MacAppPaths`).
+- **Window chrome**: per HANDOFF the Ui draws the traffic lights on the left (Group A `WindowButtons`, handout
+  15 px / gap 9). The host hides the native title bar completely (buttons and the invisible strip that would take
+  clicks on the top of the page) and moves/minimises/zooms/closes the real window through AppKit. The earlier
+  native-button repositioning and the host `mac.css` are removed.
+- **Menu bar** now built from `IAppCommands` (Foundation's `ShellAppCommands`): Document menu keeps the Ui's order
+  and separators; items run through `InvokeAsync(id)` on the Blazor dispatcher; Immersive takes ⌃⌘F and replaces
+  the system Enter Full Screen item (decision 6 Nov).
+- Host page: same shape as Windows; `theme.js` comes from the Ui (`_content/ChuvadiReader.Ui/js/theme.js`).
+- Drop accepts the Open panel's types (HANDOFF; F1 for the Mac).
+
+### 13. Printing (decision 6 Nov: native panel, vector)
+- New Core file `Reader/PrintDocumentBuilder.cs`: chuvadi-pdf opens the file (password if any) and
+  `PageOperations.Assemble` writes exactly the requested pages in order, unencrypted, still vector. Reusable by
+  Android and Web. 5 new tests (`PrintDocumentBuilderTests`); suite 166/166.
+- `MacPrintService` hands that PDF to `UIPrintInteractionController` (the macOS print panel). Copies, paper,
+  scaling and printer are chosen in the panel.
+
+### 14. Size — 519 MB → 166 MB
+`MtouchLink=SdkOnly`: only .NET's own framework is trimmed; Chuvadi libraries and app code untouched.
+Bundle 165.8 MB (native executable 109.5 MB for both architectures, MonoBundle 52.2 MB, web assets 4.1 MB);
+download zip 47 MB.
+
+### 15. Startup (CI Apple Silicon runner, cold first launch, ms since process start)
+| main | MAUI built | window | WebView ready | first render |
+|---|---|---|---|---|
+| 148 | 403 | 421 | 556 | 2434 |
+The 1.9 s from WebView ready to first render is Blazor starting inside WKWebView on a cold runner; to be
+measured on a real Mac and optimised next.
+
+### 16. Findings for Foundation / Core (no existing file changed)
+- **F6 (bug, Mac Catalyst)**: `OperatingSystem.IsMacOS()` is **false** under Mac Catalyst (`IsMacCatalyst`/`IsIOS`
+  are true). Effects: the kit's `DesktopAppPaths` would put Mac app data under `~/.config` (the Mac host registers
+  `MacAppPaths` instead); Core `CertificateSignService.cs:117` picks `EphemeralKeySet`, which macOS doesn't support
+  (signing with a .pfx would fail on Mac); `PasswordService.cs:185` uses case-sensitive path comparison on Mac.
+  Fix: test `OperatingSystem.IsMacOS() || OperatingSystem.IsMacCatalyst()`.
