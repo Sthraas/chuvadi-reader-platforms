@@ -67,7 +67,9 @@ Open choice — the wording (legal, Arun's):
 
 Recommendation: **(a)** unless Arun's EULA requires explicit acceptance, then **(b)** — a one-line text change. Also needed: the EULA's URL. The Web chat serves the Foundation's EULA (suggest `/terms`, a static page, readable signed-out) and passes it as `TermsUrl`.
 
-## U-14 Settings › Account says "Not signed in" on the portal (existing Ui; needs a decision)
+## ✔ decided (a) — U-14 Settings › Account says "Not signed in" on the portal
+Built in session 6: `PortalAccountRows` + `proposal/web-ui-hooks-4-account.patch` (see HOOKS).
+
 On the portal the person is always signed in with Sangam, but `Components/Settings/AccountSection.razor:7–10` shows **"User: Not signed in"** and **"Sign in with Sangam"** (desktop placeholders for the future Sangam sign-in). It is reached from Settings on every portal size, and on a phone it is **where the Home avatar ("AS", Mobile UI's new phone Home, D-61) leads** (`/settings?section=account`) — so on phone Home the account button opens a page that says you are not signed in and has no Sign out. (Sign out is reachable from the ⋮ sheet on Library, Settings and document views; Home has no ⋮.) Screenshot: `screenshots/phone-home-account.png`.
 
 Options:
@@ -77,7 +79,50 @@ Options:
 
 Recommendation: **(a)** — it fixes the false statement at its source and makes the avatar's existing route correct, with one hook. Also hide the portal-irrelevant rows? Not proposed: they are design-time desktop features and not untrue, only inapplicable; if the coordinator wants them hidden on the portal, it is the same hook.
 
-## Observations on the portal for other chats (existing text; not touched)
+## W — exact wording for the Foundation's `PlatformText` (coordinator 7 Nov: O-1 to O-3 go to the next combined patch)
+Desktop (Windows / Mac / Linux) keeps every string character for character. Each proposal says on which platforms it changes.
+
+| # | Where | Today | Proposed | Applies to |
+|---|---|---|---|---|
+| W-1 (O-1) | Library empty state, `Pages/Library.razor:105` (the "Nothing matches these filters." branch unchanged) | "No PDFs in Chuvadi Documents yet. Drop files into a category folder to see them here." | **"No PDFs here yet. Use Upload to open documents. Files are removed when you sign out."** | Web (`Capabilities.ServerSide`), every size |
+| W-2 (O-2) | Settings › Appearance toggle, `PlatformText.FollowSystemTheme` | "Follow the computer's light / dark setting" | **"Follow the browser's light / dark setting"** | Web, every size (Android keeps "phone's" / "device's") |
+| W-3 (O-2) | Settings › Language › Preferred name hint, `PlatformText.PreferredNameHint` | "Leave blank to use your computer's name. Stored locally, never sent anywhere." | **"Leave blank to use your Sangam name. Kept until you sign out."** | Web |
+| W-4 (O-3) | Home tip, `Pages/Dashboard.razor:62` | "Tip: Ctrl K finds any file or action. Try typing “merge”." | **"Tip: tap “Find or do anything” to reach any file or action. Try typing “merge”."** | Phone layout (Web phone and Android phone); tablets and desktop keep the Ctrl K tip |
+
+Why each is true:
+- W-1: the portal has no category folders; "Use Upload" names the portal's own button (H2) and does not depend on whether the Home drop zone works (D-78 is still open); "removed when you sign out" is the D-31 / `HomeServerLine` promise. It also stays true whether or not uploaded files appear in the Library (that is the Web chat's detail: the session's "Chuvadi Documents" is the download outbox).
+- W-2: on the portal the theme can only follow the browser (which follows the device); it is the browser's setting the page can read.
+- W-3: on the portal the default name is the Sangam display name (Web H6: account name first). Settings live in the session's memory today (`SessionAppStorage`); D-29 moves only *appearance* settings to browser storage, so the name is kept until sign-out either way. "Never sent anywhere" is not true on a server.
+- W-4: phones have no Ctrl key; "Find or do anything…" is the phone Home search box (Mobile UI 4a, `PhoneShell.razor:28`) that runs the same command bar. Keyed on the phone layout, not on input: the Android host always reports a keyboard (`AndroidHostServices.cs:30`), so input flags cannot tell.
+
+Suggested code (the Foundation's file, for its convenience):
+```csharp
+public static string FollowSystemTheme(IPlatformInfo platform) =>
+    platform.Kind == PlatformKind.Web
+        ? "Follow the browser's light / dark setting"
+        : $"Follow the {DeviceNoun(platform)}'s light / dark setting";
+
+public static string PreferredNameHint(IPlatformInfo platform) =>
+    platform.Kind == PlatformKind.Web ? "Leave blank to use your Sangam name. Kept until you sign out."
+    : platform.Kind == PlatformKind.Android
+        ? $"Leave blank to show no name. Stored on this {DeviceNoun(platform)}, never sent anywhere."
+        : "Leave blank to use your computer's name. Stored locally, never sent anywhere.";
+
+/// <summary>Library empty state (no filters).</summary>
+public static string LibraryEmpty(IPlatformInfo platform) =>
+    platform.Capabilities.ServerSide
+        ? "No PDFs here yet. Use Upload to open documents. Files are removed when you sign out."
+        : "No PDFs in Chuvadi Documents yet. Drop files into a category folder to see them here.";
+
+/// <summary>Home tip: phones have no Ctrl key.</summary>
+public static string CommandTip(IPlatformInfo platform) =>
+    ShellLayouts.Shell(platform) == ShellLayout.Phone
+        ? "Tip: tap “Find or do anything” to reach any file or action. Try typing “merge”."
+        : $"Tip: {platform.Keys.Format("Ctrl K")} finds any file or action. Try typing “merge”.";
+```
+(`Dashboard.razor:62` then renders `<p class="tip">@PlatformText.CommandTip(Platform)</p>` — same markup on desktop.)
+
+## Observations on the portal for other chats (existing text; not touched) — now W-1 to W-4 above
 - **O-1 (Foundation, Web wording like U-11):** Library empty state "No PDFs in Chuvadi Documents yet. Drop files into a category folder to see them here." (`Pages/Library.razor:105`) — the portal has no folders.
 - **O-2 (Foundation, `PlatformText`):** Web gets "computer" everywhere (`DeviceNoun` is "computer" for every non-Android kind): a phone browser shows "Follow the computer's light / dark setting" — on the portal it follows the browser's setting; and `PreferredNameHint` says "Leave blank to use your computer's name. Stored locally, never sent anywhere." — on the portal the name comes from Sangam and the setting is in browser storage (D-29). Suggest: Web → "Follow the browser's light / dark setting"; hint → "Leave blank to use your Sangam name. Stored in this browser."
 - **O-3 (Mobile UI / Foundation):** phone Home tip "Tip: Ctrl K finds any file or action" (`Dashboard.razor:62`) on a touch phone with no keyboard — on Web phone and Android phone.

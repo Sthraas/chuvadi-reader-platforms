@@ -146,3 +146,20 @@ Build `-warnaserror` 0 warnings; tests Hosting 33 + MobileUi 11 + WebUi 17 + Rea
 
 ### 7. CI did not run (account billing)
 Run 42286178538 on de5da8a: every job "was not started because recent account payments have failed or your spending limit needs to be increased" (GitHub billing for the `Sthraas` account) — no code ran. Local: build `-warnaserror` 0 warnings, 232 tests pass. The last green run on `platform/foundation` was 19:42 UTC (a4acc56). Needs Arun (Billing & plans); re-run CI once cleared.
+
+## 2026-11-07 — session 6 (coordinator 7 Nov 01:58: U-14 a; W wording for PlatformText; copyright; CI stopped — build locally)
+
+### 1. Checked all branches
+`platform/foundation` 615afde (third combined patch: Licences page and EULA in the app, D-77; my sign-in with the Terms link; `LicenceTextTests` in my test project), `platform/web` d30dbbe, `platform/mobile-ui` 745ef8e, `main` cab9981 (D-76 to D-81). Rebased onto 615afde: clean; my Portal files now equal the Foundation's copies.
+
+### 2. Copyright
+The Foundation sets it once for every assembly in `Directory.Build.props` (`Company`/`Authors` "Sthraas Intelligence Pvt Ltd", `Copyright` "© 2026 Sthraas Intelligence Pvt Ltd. All rights reserved.") and in `LICENSE`. My code compiles into `ChuvadiReader.Ui` and the dev-only preview/tests, all under that props file; the repo has no per-file headers, so none added. No visible copyright line in the 12a design; the in-app Licences page (D-77) carries it.
+
+### 3. U-14 (a)
+New `PortalAccountRows`(+css) and `proposal/web-ui-hooks-4-account.patch` (H6). "Account settings" hint made neutral after checking Sangam: its `/account` now forwards to a separate account portal whose contents this repo can't confirm. Verified as in HOOKS (portal three browsers × three sizes; Windows pixel-identical).
+
+### 4. W-1 to W-4
+Exact wording and suggested `PlatformText` code in OPTIONS. Checked: portal settings are session memory (`SessionAppStorage`), D-29 browser storage covers appearance only; Android reports a keyboard always; "Find or do anything…" is the phone Home search box.
+
+### 5. Build (CI stopped — local only)
+Committed state (hooks reverted), .NET SDK 10.0.403: build `-warnaserror` 0 warnings; tests Hosting 33 + MobileUi 11 + WebUi 19 + Reader 171 = **234 pass**. `web-ui-hooks-3-phone.patch` and `web-ui-hooks-4-account.patch` both `git apply --check` clean on 615afde. GitHub Actions not used (billing).
