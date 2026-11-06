@@ -1,5 +1,5 @@
 @using ChuvadiReader.Platform
-@implements IAsyncDisposable
+@implements IDisposable
 @inject IPlatformInfo Platform
 @inject IJSRuntime JS
 
@@ -20,7 +20,6 @@
     public RenderFragment? ChildContent { get; set; }
 
     private PlatformState _state = default!;
-    private IJSObjectReference? _module;
 
     protected override void OnInitialized()
     {
@@ -30,14 +29,9 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender) return;
-        try
+        if (firstRender)
         {
-            _module = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/ChuvadiReader.Ui/js/platform.js");
             await ApplyAsync();
-        }
-        catch (JSDisconnectedException)
-        {
         }
     }
 
@@ -48,18 +42,23 @@
         StateHasChanged();
     });
 
+    // Windows desktop is the page default (no attributes), so the Windows host makes no interop call
+    // at startup. Every other host sets the attributes once, then again on each form-factor change.
     private async Task ApplyAsync()
     {
-        if (_module is null) return;
-        await _module.InvokeVoidAsync("apply", _state.ShellKey, _state.KindKey, _state.FormFactorKey, _state.InputKey);
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        Platform.FormFactorChanged -= OnFormFactorChanged;
-        if (_module is not null)
+        if (_state.Kind == PlatformKind.Windows && _state.FormFactor == FormFactor.Desktop)
         {
-            try { await _module.DisposeAsync(); } catch (JSDisconnectedException) { }
+            return;
+        }
+
+        try
+        {
+            await JS.InvokeVoidAsync("chuvadiTheme.setPlatform", _state.ShellKey, _state.KindKey, _state.FormFactorKey, _state.InputKey);
+        }
+        catch (JSDisconnectedException)
+        {
         }
     }
+
+    public void Dispose() => Platform.FormFactorChanged -= OnFormFactorChanged;
 }

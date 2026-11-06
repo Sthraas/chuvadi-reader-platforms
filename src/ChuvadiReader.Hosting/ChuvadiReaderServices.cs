@@ -91,6 +91,7 @@ public static class ChuvadiReaderServices
         services.TryAdd(Describe<IAppPaths, Desktop.DesktopAppPaths>(lifetime));
         services.TryAdd(Describe<IAccount, LocalAccount>(lifetime));
         services.TryAdd(Describe<IAppLifecycle, NoAppLifecycle>(lifetime));
+        services.TryAdd(Describe<IFileManager, NoFileManager>(lifetime));
         return services;
     }
 

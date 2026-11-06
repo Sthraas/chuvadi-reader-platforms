@@ -73,6 +73,7 @@ public partial class App : Application
             services.AddSingleton<IFilePicker, WpfFilePicker>();
             services.AddSingleton<IImageClipboard, WpfImageClipboard>();
             services.AddSingleton<IClipboard, WpfClipboard>();
+            services.AddSingleton<IFileManager, WpfFileManager>();
             services.AddSingleton<IPlatformInfo>(new FixedPlatformInfo(
                 PlatformKind.Windows,
                 InputKinds.Mouse | InputKinds.Keyboard | InputKinds.Touch,

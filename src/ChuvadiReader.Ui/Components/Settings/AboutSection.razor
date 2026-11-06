@@ -1,5 +1,6 @@
 @namespace ChuvadiReader.Ui.Components.Settings
 @inject ChuvadiReader.Platform.IAppPaths Paths
+@inject ChuvadiReader.Platform.IPlatformInfo Platform
 
 <SettingsSection Title="About" Sub="Versions, licences and privacy.">
     <SettingsCard Title="Chuvadi Reader">
@@ -12,7 +13,14 @@
     </SettingsCard>
 
     <SettingsCard Title="Privacy">
-        <SettingRow Label="Network" Hint="offline · nothing leaves this device"><ValueChip Text="Offline" /></SettingRow>
+        @if (Platform.Capabilities.ServerSide)
+        {
+            <SettingRow Label="Network" Hint="@ChuvadiReader.Ui.Components.Platform.PlatformText.ServerPrivacy"><ValueChip Text="Server" /></SettingRow>
+        }
+        else
+        {
+            <SettingRow Label="Network" Hint="offline · nothing leaves this device"><ValueChip Text="Offline" /></SettingRow>
+        }
         <SettingRow Label="Data folder" Hint="Settings, recent files and tabs" Stack="true"><ValueChip Text="@Paths.AppDataFolder" Wrap="true" /></SettingRow>
         <SettingRow Label="Clear recent files & cache" Soon="true"><RowButton>Clear…</RowButton></SettingRow>
     </SettingsCard>

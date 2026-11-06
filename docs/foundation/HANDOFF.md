@@ -41,7 +41,7 @@ A registration after `AddChuvadiReader` wins.
 
 Files arriving from outside (drop, Open with, share intent, macOS open-file, upload): `BenchDropService.Drop(paths)` when `IsBenchActive`, else `OpenDocumentService.Request(path)` — working paths per F-1. Accept the same types as the Open dialog (Group C fixes the Windows list to match).
 
-Host page: copy the Windows `wwwroot/index.html` shape; load `_content/ChuvadiReader.Ui/js/theme.js` before the Blazor script; disable page zoom/pinch in the web view (the Reader zooms the canvas itself).
+Host page: copy the Windows `wwwroot/index.html` shape; load `_content/ChuvadiReader.Ui/js/theme.js` before the Blazor script; disable page zoom/pinch in the web view (the Reader zooms the canvas itself). **Put your initial `data-shell`, `data-platform`, `data-form-factor` and `data-input` on `<html>` in the host page** (Web: computed from the request / a tiny inline script; Android: from the device) so the first paint already has the right layout; `PlatformRoot` keeps them in sync afterwards with one `chuvadiTheme.setPlatform` call. Windows sets none (absent = Windows desktop) and makes no call — zero startup cost.
 
 ## 3. macOS menu bar — `IAppCommands` (decided: filled host-side from `ShellService`, no Ui hook)
 - `Commands`: everything the Ctrl K bar can run now (global + the mounted page's) — `Id`, `Label`, `Group` (File, Tabs, Document, Read, Mark, Arrange, Protect, View…), canonical `Keys`, `IsEnabled`, `DisabledReason`.
@@ -82,4 +82,4 @@ Packages come from chuvadi-reader's committed `ci/packages` (byte-identical to t
 - Layout not released; `Layout.Pdf` pins chuvadi-pdf [3.30.2] — Word/Excel exact view, Save as PDF and their printing.
 - Pdf A (name table never shrinks), Pdf B (LiPi FontRenderer race) — before Web multi-user load.
 - Docs 2.0.0 pending (Docs stays 1.1.0).
-- Windows printing is raster today (`WpfPrintService`), against the vector rule — kept for now by decision; to revisit.
+- **Known gap — Windows printing is raster** (`WpfPrintService` renders pages to images), against Arun's vector rule. Existing Reader behaviour, out of platform scope (coordinator, 6 Nov). Move it to Chuvadi.Print's vector XPS route when `Chuvadi.Print` 1.0.0-rc.3 is released. No change now.

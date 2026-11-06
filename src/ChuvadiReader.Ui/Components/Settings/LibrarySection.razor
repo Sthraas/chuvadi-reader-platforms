@@ -51,7 +51,7 @@
     </SettingsCard>
 
     <SettingsCard Title="Search" IsNew="true">
-        <SettingRow Label="Index text for fast Library search" Hint="Stays on this device" Soon="true">
+        <SettingRow Label="Index text for fast Library search" Hint="@(Platform.Capabilities.ServerSide ? ChuvadiReader.Ui.Components.Platform.PlatformText.ServerPrivacy : "Stays on this device")" Soon="true">
             <Toggle Value="false" />
         </SettingRow>
         <SettingRow Label="Include Word & Excel files" Soon="true">

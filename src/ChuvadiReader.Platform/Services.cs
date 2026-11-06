@@ -115,6 +115,14 @@ public interface IFileManager
     Task<bool> RevealAsync(string localPath, CancellationToken ct = default);
 }
 
+/// <summary>Default for hosts without a file manager (Android, Web).</summary>
+public sealed class NoFileManager : IFileManager
+{
+    public bool IsAvailable => false;
+
+    public Task<bool> RevealAsync(string localPath, CancellationToken ct = default) => Task.FromResult(false);
+}
+
 /// <summary>Share sheet (Android, macOS). No Ui calls this yet; adding a Share action is a design decision for Arun.</summary>
 public interface IShare
 {

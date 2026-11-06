@@ -425,7 +425,8 @@ public partial class Reader
         // Real paths only exist where there is a file manager (desktop); a working copy's path means nothing to people.
         if (Platform.Capabilities.RevealInFolder)
         {
-            yield return new("doc.reveal", "Show in folder", "Document", "folder", null, () => Task.CompletedTask, "Coming soon");
+            yield return new("doc.reveal", "Show in folder", "Document", "folder", null, () => RevealAsync(tab.Path),
+                FileManager.IsAvailable ? null : "Not available on this computer");
             yield return new("doc.copypath", "Copy file path", "Document", "copy", null, () => CopyTextAsync(tab.Path, "File path copied"));
         }
 
@@ -718,6 +719,14 @@ public partial class Reader
         catch
         {
             // a signature check is a nicety; never block reading
+        }
+    }
+
+    private async Task RevealAsync(string path)
+    {
+        if (!await FileManager.RevealAsync(path))
+        {
+            Shell.Notify("Couldn't show the file in its folder", isError: true);
         }
     }
 
