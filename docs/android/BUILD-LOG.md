@@ -300,3 +300,24 @@ step 32), double-tap: the two taps still reached the page 421 ms apart — each 
 costs ~170 ms on the CI emulator. Now both taps leave in one `cat` (one write per frame, microseconds
 apart): real kernel touch events, faster than a person; the check covers the app's double-tap handling
 (mobile.js's < 300 ms window), not human timing.
+
+### 34. Run 42212604032 (aef674d) — all four emulators, real gestures
+| Gesture | Phone 35 | Phone 36 | Tablet 35 | Tablet 36 |
+|---|---|---|---|---|
+| Open with (content://) | PASS | PASS | PASS | PASS |
+| swipe → next page | FAIL | FAIL | FAIL | FAIL |
+| double-tap → fit flips | FAIL | PASS (page → width) | PASS (page → width) | PASS (page → width) |
+| pinch → zoom in | PASS | PASS | PASS | PASS |
+| Arrange → 6 pages on the Shelf | PASS | PASS | PASS | PASS |
+| phone: tap Shelf header opens it | PASS | PASS | — | — |
+| long-press drag Shelf page → Desk 1 | PASS | PASS | FAIL | PASS |
+The double-tap now reaches the page as one (taps 51 ms apart on phone 35, 4 ms on tablet 35), and
+mobile.js recognises it on three emulators. Smoke test passes on all four. What is left is Mobile UI:
+1. **Swipe** never pages (all four): pointerdown → pointermove → pointercancel (`.rdesk` is `touch-action: pan-x pan-y`; mobile.js drops the swipe on cancel).
+2. **Phone Fit page is wrong.** On phone 36, Fit page is *wider* than Fit width (456 vs 342 CSS px; overflowX 54). On phone 35 the page
+   opened cut off, then after the swipe it showed at ~90 px wide, and the double-tap left it at 793 px (no fit button on). The
+   recogniser fired (counter jumped 1 → 3); the fit sizing is what's wrong.
+3. **Long-press drag is intermittent** (tablet 35 this run; passed there last run): pointerdown, the hold, one pointermove, then
+   pointercancel, so the WebView took the drag as a pan after the press armed. mobile.js needs to stop the pan once a press arms
+   (`touch-action: none` on the armed element, or a non-passive touchmove `preventDefault`).
+Screenshots: `gestures-phone.png`, `gestures-tablet.png` (sent to the coordinator).
