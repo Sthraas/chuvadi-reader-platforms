@@ -253,20 +253,18 @@ Recommendation: 1 now (in place), 3 after the libraries are trim-annotated; not 
 
 ### 24. Startup — the Mac Catalyst equivalent of ReadyToRun (D-50)
 ReadyToRun is a CoreCLR image format; .NET for Mac Catalyst runs on **Mono**, so it does not apply. The SDK's
-own levers are how managed code is compiled: AOT (default in Release on arm64), LLVM-optimised AOT, or the
-interpreter. Workflow `mac-startup.yml` builds each, launches six times through LaunchServices on the CI
-Apple Silicon runner (run 42270911133), ms since process start:
+own levers are how managed code is compiled: AOT (Release default on arm64), LLVM-optimised AOT, or the
+interpreter. First attempt (`mac-startup.yml`, one runner per variant, six launches each):
 
-| Variant | first render, launch 1 (cold) | launches 2–6 (warm) | median warm |
+| Run | default AOT, warm median | AOT + LLVM | interpreter |
 |---|---|---|---|
-| **default — AOT on arm64** (in use) | 2020 | 919 · 774 · 728 · 717 · 755 | **755** |
-| AOT + LLVM (`MtouchUseLlvm=true`) | 2711 | 2111 · 1915 · 1892 · 1878 · 1820 | 1892 |
-| interpreter (`UseInterpreter=true`) | 2697 | 2165 · 2089 · 2068 · 2055 · 2259 | 2089 |
+| 42270911133 | 755 ms | 1892 ms | 2089 ms |
+| 42271962808 | 1857 ms | 2048 ms | 1036 ms |
 
-Window by ~0.25 s and WebView ready by ~0.3 s in every warm launch; the rest is Blazor's first render.
-**Keep the default.** The default is ~2.5× faster to first render than either alternative. On Intel Macs
-(x64) the default uses JIT; no Intel runner is available to measure it — added to REAL-MAC-CHECKS (Intel Mac,
-if available).
+**The two runs contradict each other** — hosted runners differ machine to machine, so per-variant jobs are
+not comparable. Bundle sizes from the second run are reliable: **AOT 155 MB · AOT+LLVM 188 MB ·
+interpreter 43 MB**. The workflow now builds all three on one runner and launches them in 12 interleaved
+rounds (A B C, A B C…) — results in §26.
 
 ### 25. CI warnings
 Each job warned that `actions/checkout@v4`, `setup-dotnet@v4`, `upload-artifact@v4` target the deprecated
