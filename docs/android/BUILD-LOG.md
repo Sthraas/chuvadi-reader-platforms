@@ -178,3 +178,10 @@ failed only because the emulator's own System UI hung ("System UI isn't respondi
 `com.android.systemui`) and its dialog covered the screen; the screenshot shows the app fully
 rendered underneath and our logcat is clean. The test now taps "Wait" on that system dialog before
 reading the screen.
+
+### 20. Run 42139464288 — phone API 35 "crash" was the test tool
+Phone API 35 rendered (20 s) and rotated correctly, then failed on "FATAL EXCEPTION: UiAutomation"
+— the uiautomator tool's own process (pid 3392, "Bad file descriptor"), not the app (pid 3046).
+The crash check now counts only the app's own managed crashes, native crashes and ANRs; other
+processes' crashes are saved as evidence. Checked against that logcat (0 hits) and against sample
+lines of each real crash format (3 of 3 caught, the tool's line ignored).

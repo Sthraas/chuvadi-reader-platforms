@@ -109,7 +109,11 @@ fi
 adb shell cmd window user-rotation lock 0 2>/dev/null || adb shell settings put system user_rotation 0
 
 adb logcat -d > "$OUT/logcat.txt"
-grep -E "FATAL EXCEPTION|AndroidRuntime: Process: $PKG" "$OUT/logcat.txt" > "$OUT/crashes.txt"
+# Only our app's own failures count: a managed crash ("Process: <pkg>"), a native crash
+# ("Fatal signal … (<pkg>)") or an ANR. Other processes' crashes (e.g. the uiautomator tool itself)
+# are kept as evidence but don't fail the test.
+grep -E "AndroidRuntime: Process: $PKG|Fatal signal .*\($PKG\)|ANR in $PKG" "$OUT/logcat.txt" > "$OUT/crashes.txt"
+grep -E "FATAL EXCEPTION|Fatal signal|ANR in " "$OUT/logcat.txt" > "$OUT/other-process-crashes.txt" || true
 grep -E "chromium: \[INFO:CONSOLE" "$OUT/logcat.txt" | grep -iE "error|failed|uncaught" > "$OUT/console-errors.txt"
 if [ -s "$OUT/crashes.txt" ]; then echo "::error::crash in logcat"; cat "$OUT/crashes.txt"; fail=1; fi
 if [ -s "$OUT/console-errors.txt" ]; then echo "::error::WebView console errors"; cat "$OUT/console-errors.txt"; fail=1; fi
