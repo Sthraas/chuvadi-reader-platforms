@@ -25,9 +25,9 @@ with sync_playwright() as p:
 
     # 1. open through the left bar
     page.goto(base + "/")
-    page.wait_for_selector("nav.leftbar >> text=Open", timeout=30000)
+    page.wait_for_selector("nav.leftbar >> text=Upload", timeout=30000)
     with page.expect_file_chooser(timeout=15000) as fc:
-        page.click("nav.leftbar >> text=Open")
+        page.click("nav.leftbar >> text=Upload")
     fc.value.set_files(pdf)
     page.wait_for_url("**/reader**", timeout=30000)
     page.wait_for_selector(".page svg, svg text", timeout=30000)

@@ -7,7 +7,8 @@ Blazor Server portal for Chuvadi Reader: the unchanged `ChuvadiReader.Ui` render
 - Sangam sign-in built (our own OpenID Connect client, `src/ChuvadiReader.Web/Auth/`): tested in CI against a fake Sangam (our test code) and end to end against a real Sangam run locally (read-only, test only), including sign-out and back-channel logout ending open tabs.
 - Based on `platform/foundation` (Group A applied); services through `AddChuvadiReader(AppStateLifetime.PerConnection)` with the portal's own `IPlatformInfo`, `IAppPaths`, `IAccount`, `IFileWriteBack`, `IClipboard`.
 - Own ACME client (Let's Encrypt) built and tested against a strict fake ACME server (our test code).
-- Next: session expiry (D-30), per-person workers behind our gateway (D-24), load and browser tests, then the E2E runbook. Rebase onto chuvadi-pdf 3.31.2 when the Foundation packs it.
+- Based on `platform/foundation` @ `63af90f`: chuvadi-pdf 3.31.2 (D-54; Pdf A/B cleared, D-55) and the combined hooks (D-26), so the portal shows the 12b account menu, the server status dot and the signed-in person; the host supplies `PortalLinks` and `IAccount.Unit`.
+- Next: session expiry (D-30), per-person workers behind our gateway (D-24), load and browser tests, then the E2E runbook.
 
 ## Build and test
 Requires the .NET 10 SDK (10.0.403 or later). Packages come from the committed `ci/packages` feed.
@@ -32,7 +33,10 @@ Session files go to `src/ChuvadiReader.Web/.portal-data` (git-ignored) and are d
 | `DataRoot` | Folder for session files (production: RAM-backed or encrypted volume, see W-09) |
 | `MaxUploadBytes`, `MaxFilesPerPick`, `UploadChunkBytes` | Upload limits (200 MB, 50 files, 4 MB chunks) |
 | `PickTimeout`, `DownloadLinkLifetime`, `SaveWaitLimit` | 30 min, 10 min, 30 min |
-| `AllowCertificateUpload` | Off (W-08) |
+| `AllowCertificateUpload` | Off (D-27) |
+| `DesktopAppUrl` | "Get the desktop app" in the account menu (D-35); placeholder `https://chuvadi.in/download` |
+| `AccountSettingsUrl` | "Account settings" → Sangam's self-service site (D-35); empty hides the item until its address is known |
+| `ForgotPasswordUrl` | "Forgot?" on the 12a form; empty hides it (no password field on our page, D-34) |
 | `Tls:CertificatePath`, `Tls:KeyPath`, `Tls:ReloadCheck` | PEM pair served by Kestrel (with ACME off: re-read every 5 min when changed; with ACME on: where issued certificates are stored) |
 | `Tls:Acme:Enabled` | Our own ACME client orders and renews Let's Encrypt certificates and swaps them in without restart |
 | `Tls:Acme:DirectoryUrl` | Default Let's Encrypt **staging**; set `https://acme-v02.api.letsencrypt.org/directory` for production |
@@ -52,7 +56,7 @@ Without `Sangam:Authority` and `Sangam:ClientId` the portal uses the Development
 | `ClientId` | The portal's client id registered with Sangam |
 | `PrivateKeyPath`, `PrivateKeyId` | ES256 key (PEM) and its registered key id for `private_key_jwt` (preferred) |
 | `ClientSecret` | Otherwise a client secret (`client_secret_basic`); set it as an environment variable, never in a file in the repo |
-| `Scope`, `UiLocales` | `openid profile email`; optional `en`, `hi` or `ml` |
+| `Scope`, `UiLocales` | `openid profile email`; optional `en`, `hi` or `ml`. Add `org.current` to show the unit after the Sangam ID (12b; open question) |
 | `CallbackPath`, `SignedOutCallbackPath`, `BackChannelLogoutPath` | `/signin-sangam`, `/signout-sangam`, `/backchannel-logout` — register these three addresses with Sangam |
 | `ClockSkew`, `SignInTimeLimit`, `AbsoluteSessionLifetime` | 2 min, 10 min to finish signing in, 8 h per sign-in (D-30) |
 
@@ -76,7 +80,6 @@ Package, install and production deployment (E2E runbook) sections will follow.
 ## Blockers
 | # | Blocker | Owner | Effect on Web |
 |---|---|---|---|
-| B1 | Pdf A and Pdf B fixed in chuvadi-pdf 3.31.2 (D-54) | Foundation packs 3.31.2 into `ci/packages` | Production waits for the rebase onto 3.31.2 |
 | B3 | Layout family unreleased; `Layout.Pdf` pins chuvadi-pdf [3.30.2] vs 3.31.1 | Library chats | Word/Excel exact-layout view, their printing and Save as PDF unavailable on the web, as on desktop. |
 | B4 | Docs 2.0.0 not released (Core still on Docs 1.1.0) | Reader chat / Arun | The web uses whatever Core uses. |
 | B5 | Portal domain not bought | Arun | Sangam client registration (redirect addresses) and TLS certificate wait for it. |

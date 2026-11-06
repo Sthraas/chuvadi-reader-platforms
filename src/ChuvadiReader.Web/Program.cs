@@ -208,6 +208,12 @@ public static class Program
         s.AddScoped<WebPlatformInfo>();
         s.AddScoped<IPlatformInfo>(sp => sp.GetRequiredService<WebPlatformInfo>());
         s.AddScoped<ViewportReporter>();
+        s.AddSingleton(sp =>
+        {
+            var o = sp.GetRequiredService<IOptions<PortalOptions>>().Value;
+            return new ChuvadiReader.Ui.Components.Platform.Portal.PortalLinks(
+                o.DesktopAppUrl, NullIfEmpty(o.AccountSettingsUrl), NullIfEmpty(o.ForgotPasswordUrl));
+        });
         s.AddScoped<WebAccount>();
         s.AddScoped<IAccount>(sp => sp.GetRequiredService<WebAccount>());
         s.AddScoped<IAppPaths, SessionAppPaths>();
@@ -222,4 +228,6 @@ public static class Program
         s.AddScoped<IUiScale, NoopUiScale>();
         s.AddScoped<IWindowControls, NoopWindowControls>();
     }
+
+    private static string? NullIfEmpty(string? s) => string.IsNullOrWhiteSpace(s) ? null : s;
 }

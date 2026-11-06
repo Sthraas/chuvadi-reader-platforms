@@ -82,6 +82,30 @@ public static class SangamSignIn
         return Results.Redirect(Microsoft.AspNetCore.WebUtilities.QueryHelpers.AddQueryString(authorize, query.Where(kv => !string.IsNullOrEmpty(kv.Value))!));
     }
 
+    /// <summary>Cookie claim for the organisation unit shown after the Sangam ID (12b, D-35).</summary>
+    public const string UnitClaim = "chvd_unit";
+
+    /// <summary>The <c>name</c> of Sangam's <c>sangam_org</c> claim (the organisation this sign-in is for;
+    /// sent with the <c>org.current</c> scope) — a JSON object, or the same as a string. Null otherwise.</summary>
+    internal static string? OrganisationName(System.Text.Json.Nodes.JsonNode? org)
+    {
+        try
+        {
+            if (org is System.Text.Json.Nodes.JsonValue v && v.TryGetValue<string>(out var text))
+            {
+                org = System.Text.Json.Nodes.JsonNode.Parse(text);
+            }
+
+            return org is System.Text.Json.Nodes.JsonObject o && o["name"] is System.Text.Json.Nodes.JsonValue n && n.TryGetValue<string>(out var name)
+                ? name.Trim() is { Length: > 0 and <= 120 } trimmed ? trimmed : null
+                : null;
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return null;
+        }
+    }
+
     // ── 2. back from Sangam ─────────────────────────────────────────────────────────
 
     private static async Task<IResult> CallbackAsync(HttpContext http, SangamMetadata metadata, JwtVerifier verifier, IOptions<SangamOptions> options,
@@ -187,6 +211,11 @@ public static class SangamSignIn
             {
                 claims.Add(new Claim(name, v));
             }
+        }
+
+        if (OrganisationName(id.Payload["sangam_org"]) is { Length: > 0 } unit)
+        {
+            claims.Add(new Claim(UnitClaim, unit));
         }
 
         if (id.NumericClaim("auth_time") is long authTime)

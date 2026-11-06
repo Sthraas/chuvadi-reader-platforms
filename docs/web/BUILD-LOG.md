@@ -127,3 +127,10 @@ dotnet test tests/ChuvadiReader.Web.Tests -c Release   # 93 passed, 0 warnings, 
 python3 tests/web-e2e/sangam_signin.py …               # real local Sangam: all checks pass, 4 runs in a row
 ```
 Findings for Sangam's team are in `SANGAM-INTEGRATION.md` (`login_hint` unsupported, back-channel address set only from the operator console, Development logout-token issuer).
+
+### 15. Rebased onto chuvadi-pdf 3.31.2 and the combined hooks (6 Nov, evening)
+- `platform/foundation` @ `63af90f` has chuvadi-pdf 3.31.2 in `ci/packages` (D-54) and the combined hook patch (D-26). Rebased the seven Web commits (new files only, no conflicts); Core resolves `Chuvadi.Pdf.*` 3.31.2. Pdf A/B are no longer blockers (D-55).
+- The patch's `AccountMenu` (12b) injects `PortalLinks`, so the host now registers it from `Portal:DesktopAppUrl` (default `https://chuvadi.in/download`, D-35), `Portal:AccountSettingsUrl` and `Portal:ForgotPasswordUrl` (empty hides them).
+- `IAccount.Unit` (D-35): the name in Sangam's `sangam_org` claim (sent with the `org.current` scope), kept in the portal cookie; malformed claims give no unit.
+- Browser flows updated for the portal's "Upload" label; the Sangam e2e now signs out from the account menu and checks it shows the person's name and Sangam ID.
+- Checks: build 0/0; 100/100 tests; browser flows all pass; real local Sangam e2e passes 3 runs in a row.

@@ -109,8 +109,12 @@ with sync_playwright() as p:
         tab2.goto(portal + "/library")
         tab2.wait_for_selector("nav.leftbar", timeout=30000)
 
-        # Sign out: portal -> Sangam end-session -> signed-out page.
-        page.goto(portal + "/signout")
+        # The account menu (12b) shows the person; sign out from it: portal -> Sangam end-session -> signed-out page.
+        page.click("button.acct-chip")
+        menu = page.wait_for_selector(".acct-pop", timeout=10000)
+        check("the account menu shows the person's name and Sangam ID", "Chuvadi Tester" in menu.inner_text() and email in menu.inner_text())
+        page.click(".acct-pop >> text=Sign out")
+        page.wait_for_url(lambda u: u.startswith(sangam) or u.startswith(portal + "/signed-out"), timeout=30000)
         page.wait_for_load_state("networkidle")
         for label in ["Sign out", "Yes", "Continue"]:
             btn = page.query_selector(f"button:has-text('{label}')")
