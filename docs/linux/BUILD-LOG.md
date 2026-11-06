@@ -345,3 +345,8 @@ the outcome was only "no move". To make a late move safe, `chvd_begin_move` now 
 state and skips the move when the button is already released (otherwise the window manager could start a
 move with no release to end it). Checked: drags at two speeds 8/8 move; quick clicks on the top bar 5/5 leave
 the window where it was, and it does not follow the pointer afterwards.
+
+### 28. Green on both architectures with the fix
+Run 42274653421 (commit `7634036`): x64 and ARM64 each 106/106 in the full UI pass, both `.deb` packages built,
+installed and launched (self-contained 36.7 MB x64 / 33.0 MB ARM64; framework-dependent 10.7 / 10.2 MB);
+shared `platforms` workflow green. Local full pass on the same build: 106/106.
