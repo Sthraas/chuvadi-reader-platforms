@@ -1,0 +1,23 @@
+@* The portal's interactive root: starts the per-connection browser bridge (viewport reports for the
+   form factor) and renders the unchanged Ui. Portal chrome from the Web portal UI chat lands in the Ui's
+   own platform components (Foundation), so nothing else is added here. *@
+@using ChuvadiReader.Web.Platform
+@inject ViewportReporter Viewport
+
+<ChuvadiReader.Ui.App />
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                await Viewport.StartAsync();
+            }
+            catch (Microsoft.JSInterop.JSDisconnectedException)
+            {
+            }
+        }
+    }
+}

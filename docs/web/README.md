@@ -5,7 +5,9 @@ Blazor Server portal for Chuvadi Reader: the unchanged `ChuvadiReader.Ui` render
 ## Status (6 Nov 2026)
 - Server host built: the unchanged Ui under Blazor Server; uploads, downloads, browser printing, session folders deleted at session end; pluggable TLS certificate; security headers; 47 tests; web CI.
 - Sign-in is Development-only until the Sangam client (our own code) lands — next step.
-- Open decisions: isolation (W-02, `ISOLATION-DECISION.md`), existing-file hooks (W-05, `proposals/`), W-08 to W-11 in `DECISIONS-PENDING.md`.
+- Based on `platform/foundation` (Group A applied); services through `AddChuvadiReader(AppStateLifetime.PerConnection)` with the portal's own `IPlatformInfo`, `IAppPaths`, `IAccount`, `IFileWriteBack`, `IClipboard`.
+- Next: own ACME (Let's Encrypt) client; Sangam client tested against a local Sangam.
+- Open decisions: isolation (W-02, `ISOLATION-DECISION.md`), gaps G1–G4 (`WEB-GAPS-AFTER-FOUNDATION.md`), W-08 to W-11 in `DECISIONS-PENDING.md`.
 
 ## Build and test
 Requires the .NET 10 SDK (10.0.403 or later). Packages come from the committed `ci/packages` feed.
@@ -26,7 +28,7 @@ Session files go to `src/ChuvadiReader.Web/.portal-data` (git-ignored) and are d
 ## Configuration (`Portal` section, or `Portal__…` environment variables)
 | Key | Meaning |
 |---|---|
-| `PublicOrigin` | The portal's https address (the domain is a config value; required outside Development) |
+| `PublicOrigin` | The portal's https address, e.g. `https://chuvadi.in` (config value; required outside Development) |
 | `DataRoot` | Folder for session files (production: RAM-backed or encrypted volume, see W-09) |
 | `MaxUploadBytes`, `MaxFilesPerPick`, `UploadChunkBytes` | Upload limits (200 MB, 50 files, 4 MB chunks) |
 | `PickTimeout`, `DownloadLinkLifetime`, `SaveWaitLimit` | 30 min, 10 min, 30 min |

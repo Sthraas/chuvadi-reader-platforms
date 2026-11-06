@@ -5,7 +5,8 @@ Drives a running portal with Playwright and the machine's Chrome. Test tooling o
 ```
 pip install playwright            # uses the installed Google Chrome (channel "chrome")
 cd src/ChuvadiReader.Web
-ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS=http://127.0.0.1:5090 dotnet run > /tmp/portal.log 2>&1 &
+env ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS=http://127.0.0.1:5090 \
+    "Logging__LogLevel__Microsoft.AspNetCore=Information" dotnet run > /tmp/portal.log 2>&1 &   # request log = print witness
 python3 tests/web-e2e/flows.py http://127.0.0.1:5090 <some.pdf> <output folder> /tmp/portal.log
 ```
 

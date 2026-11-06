@@ -36,6 +36,10 @@ public sealed class BrowserBridge
         return _js.InvokeAsync<bool>("chvdPortal.copyImage", ct, stream);
     }
 
+    /// <summary>Puts text on the clipboard. Returns false when the browser refused.</summary>
+    public ValueTask<bool> CopyTextAsync(string text, CancellationToken ct)
+        => _js.InvokeAsync<bool>("chvdPortal.copyText", ct, text);
+
     /// <summary>Opens a link in a new browser tab, without giving it a handle back to the portal.</summary>
     public ValueTask<bool> OpenLinkAsync(string url) => _js.InvokeAsync<bool>("chvdPortal.openLink", url);
 }

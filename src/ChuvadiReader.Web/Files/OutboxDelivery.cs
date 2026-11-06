@@ -1,3 +1,4 @@
+using ChuvadiReader.Platform;
 using ChuvadiReader.Web.Hosting;
 using ChuvadiReader.Web.Platform;
 using Microsoft.Extensions.Options;
@@ -5,12 +6,18 @@ using Microsoft.Extensions.Options;
 namespace ChuvadiReader.Web.Files;
 
 /// <summary>
-/// Turns "the Reader wrote a file" into "the browser downloads it". The desktop Reader saves to a
-/// path the person chose; on the portal that path is a folder in the session's outbox, and every file
-/// the Reader finishes writing there is offered to the browser once. It stays until the session ends,
-/// because the Reader may keep using a file it saved (e.g. open it in a new tab).
-/// A file counts as finished when its size has stopped changing and no writer still holds it open.
-/// Polling (no inotify) so many sessions don't exhaust the kernel's watch limits. Scoped: one per circuit.
+/// Turns "the Reader wrote a file" into "the browser downloads it" (Foundation F-1: Save and Save as
+/// deliver a download). Two ways in:
+/// <list type="bullet">
+/// <item><see cref="DeliverAsync"/> — the Reader's write-back call after a save (Foundation Group B).</item>
+/// <item>Watching the outbox folders the pickers hand out — needed until Group B's write-back calls are
+/// in the Ui, and kept as a safety net for any save site without one. A file counts as finished when its
+/// size has stopped changing and no writer still holds it open. Polling, not inotify, so many sessions
+/// don't exhaust the kernel's watch limits.</item>
+/// </list>
+/// Each version of a file (path, size, time written) is delivered once, whichever way it arrives first.
+/// Files stay until the session ends, because the Reader may keep using a file it saved.
+/// Scoped: one per browser connection.
 /// </summary>
 public sealed class OutboxDelivery : IAsyncDisposable
 {
@@ -40,7 +47,7 @@ public sealed class OutboxDelivery : IAsyncDisposable
         _log = log;
     }
 
-    /// <summary>Files handed to the browser so far (for tests and the build log).</summary>
+    /// <summary>File versions handed to the browser so far.</summary>
     public int DeliveredCount
     {
         get
@@ -67,7 +74,7 @@ public sealed class OutboxDelivery : IAsyncDisposable
     {
         if (!SpaceLayout.IsInside(_space.Outbox, Path.Combine(folder, "x")))
         {
-            throw new ArgumentException("Only outbox folders are delivered.", nameof(folder));
+            throw new ArgumentException("Only outbox folders are watched.", nameof(folder));
         }
 
         lock (_lock)
@@ -80,6 +87,48 @@ public sealed class OutboxDelivery : IAsyncDisposable
 
             _loop ??= Task.Run(() => RunAsync(_stop.Token));
         }
+    }
+
+    /// <summary>Delivers a file, or every file in a folder, now (the write-back call). A version
+    /// already delivered is not sent again.</summary>
+    public async Task<WriteBackResult> DeliverAsync(string path, CancellationToken ct = default)
+    {
+        var files = Directory.Exists(path)
+            ? Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories).ToList()
+            : File.Exists(path) ? [path] : [];
+        if (files.Count == 0)
+        {
+            return new WriteBackResult(WriteBackOutcome.Failed, "There was nothing to download.");
+        }
+
+        foreach (var file in files)
+        {
+            var key = VersionKey(file);
+            if (key is null)
+            {
+                continue;
+            }
+
+            lock (_lock)
+            {
+                if (!_delivered.Add(key))
+                {
+                    continue;
+                }
+            }
+
+            if (!await SendAsync(file, ct).ConfigureAwait(false))
+            {
+                lock (_lock)
+                {
+                    _delivered.Remove(key);
+                }
+
+                return new WriteBackResult(WriteBackOutcome.Failed, "The browser didn't take the download.");
+            }
+        }
+
+        return new WriteBackResult(WriteBackOutcome.Done);
     }
 
     private async Task RunAsync(CancellationToken ct)
@@ -117,14 +166,15 @@ public sealed class OutboxDelivery : IAsyncDisposable
             foreach (var file in Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories))
             {
                 ct.ThrowIfCancellationRequested();
-                if (!IsFinished(file))
+                var key = FinishedVersion(file);
+                if (key is null)
                 {
                     continue;
                 }
 
                 lock (_lock)
                 {
-                    if (!_delivered.Add(file))
+                    if (!_delivered.Add(key))
                     {
                         continue;
                     }
@@ -135,60 +185,78 @@ public sealed class OutboxDelivery : IAsyncDisposable
                     }
                 }
 
-                var name = Path.GetFileName(file);
-                var ticket = _registry.CreateDownload(_space.UserKey, _space.SessionId, file, name, _options.DownloadLinkLifetime, deleteAfter: false);
-                try
-                {
-                    await _browser.DownloadAsync($"{FileEndpoints.Prefix}/download/{ticket.Id}", name, ct).ConfigureAwait(false);
-                }
-                catch (Exception ex) when (ex is Microsoft.JSInterop.JSException or Microsoft.JSInterop.JSDisconnectedException or TaskCanceledException)
-                {
-                    _log.LogInformation("Could not hand {File} to the browser: {Message}", name, ex.Message);
-                }
+                await SendAsync(file, ct).ConfigureAwait(false);
             }
         }
     }
 
-    /// <summary>Finished = present, non-empty, same size as on the previous pass, and openable exclusively.</summary>
-    private bool IsFinished(string file)
+    private async Task<bool> SendAsync(string file, CancellationToken ct)
     {
-        long size;
+        var name = Path.GetFileName(file);
+        var ticket = _registry.CreateDownload(_space.UserKey, _space.SessionId, file, name, _options.DownloadLinkLifetime, deleteAfter: false);
         try
         {
-            size = new FileInfo(file).Length;
+            await _browser.DownloadAsync($"{FileEndpoints.Prefix}/download/{ticket.Id}", name, ct).ConfigureAwait(false);
+            return true;
         }
-        catch (IOException)
+        catch (Exception ex) when (ex is Microsoft.JSInterop.JSException or Microsoft.JSInterop.JSDisconnectedException or TaskCanceledException)
         {
+            _log.LogInformation("Could not hand {File} to the browser: {Message}", name, ex.Message);
             return false;
         }
+    }
 
+    /// <summary>The version key of a file that has finished being written, or null: present, non-empty,
+    /// the same size as on the previous pass, and openable exclusively.</summary>
+    private string? FinishedVersion(string file)
+    {
+        var key = VersionKey(file);
+        if (key is null)
+        {
+            return null;
+        }
+
+        long size = new FileInfo(file).Length;
         lock (_lock)
         {
-            if (_delivered.Contains(file))
+            if (_delivered.Contains(key))
             {
-                return false;
+                return null;
             }
 
             var stable = _lastSize.TryGetValue(file, out var before) && before == size && size > 0;
             _lastSize[file] = size;
             if (!stable)
             {
-                return false;
+                return null;
             }
         }
 
         try
         {
             using var probe = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.None);
-            return true;
+            return key;
         }
         catch (IOException)
         {
-            return false;
+            return null;
         }
         catch (UnauthorizedAccessException)
         {
-            return false;
+            return null;
+        }
+    }
+
+    private static string? VersionKey(string file)
+    {
+        try
+        {
+            var info = new FileInfo(file);
+            return info.Exists ? $"{info.FullName}|{info.Length}|{info.LastWriteTimeUtc.Ticks}" : null;
+        }
+        catch (IOException)
+        {
+            return null;
         }
     }
 

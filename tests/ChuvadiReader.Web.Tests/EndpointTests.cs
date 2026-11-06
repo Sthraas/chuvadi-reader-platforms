@@ -182,7 +182,7 @@ public class EndpointTests : IClassFixture<PortalFixture>
     public async Task The_ui_assets_are_served()
     {
         using var c = _portal.Client("alice");
-        foreach (var path in new[] { "/_content/ChuvadiReader.Ui/css/shell.css", "/js/portal.js", "/theme.js", "/_framework/blazor.web.js" })
+        foreach (var path in new[] { "/_content/ChuvadiReader.Ui/css/shell.css", "/js/portal.js", "/_content/ChuvadiReader.Ui/js/theme.js", "/_framework/blazor.web.js" })
         {
             Assert.Equal(HttpStatusCode.OK, (await c.GetAsync(path)).StatusCode);
         }
