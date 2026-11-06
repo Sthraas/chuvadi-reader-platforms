@@ -387,3 +387,39 @@ Run 42283536949 (commit `833cea3`): x64 and ARM64 each **107/107** in the full U
 `/usr/share/doc/chuvadi-reader/`; shared `platforms` workflow green. Local: 107/107. (One earlier local run
 failed the print step only because the sandbox's CUPS scheduler had exited — no service manager here; CI's
 runs under systemd.)
+
+## 2026-11-07 — Session 3 (end): holder, Print card proposal, local run of the whole workflow
+
+### 32. Copyright holder and the Print card fix
+- `copyright`: `Copyright: 2026 Sthraas Intelligence Pvt Ltd` (Arun's decision for all products). AppStream
+  already names Sthraas Intelligence Pvt Ltd as developer.
+- Print card errors in the error style: approved; diff in `PROPOSAL-print-card-errors.md` for the Foundation's
+  combined patch (one existing file, `PrintCard.razor`; not committed here). Checked with the diff applied:
+  the refusal shows the error toast, a successful print keeps the success toast.
+
+### 33. The whole Linux workflow, run locally — green
+GitHub Actions on Sthraas is stopped (billing), so every step of `.github/workflows/linux.yml` was run locally on
+commit `5d742dd` (x64, Ubuntu 24.04 sandbox, 2 CPUs, no GPU), in order:
+
+| Step | Result |
+|---|---|
+| Package feed, build (warnings are errors) | pass |
+| Reader tests / host-kit tests | 161 / 161, 28 / 28 |
+| ReadyToRun publish, UI-test publish | pass |
+| Launch test (3 launches, real pixels) | pass; first render 0.97–1.07 s |
+| `.deb` self-contained / framework-dependent | 36.7 MB / 10.7 MB |
+| Install the `.deb` (status, AppArmor profile, `desktop-file-validate`, Sthraas in the copyright file) | pass |
+| Launch the installed app (2 launches) | pass; first render 0.95–1.12 s |
+| CUPS PDF queue | pass |
+| Full UI pass | **107 / 107** |
+
+ARM64 can't run in this sandbox: its last run is CI 42283536949 (commit `833cea3`, 107 / 107); since then only
+the copyright holder line and documents changed.
+
+### Linux build: complete
+Everything asked of the Linux build is done and green locally. Open only because they wait on others:
+1. Delete `LinuxAppPaths`' save-folder fallback and the Linux copies of the Print packages in `ci/packages`
+   — when the Foundation's second patch lands (rebase).
+2. Single instance — when the Foundation's kit contract lands (D-Bus or Unix socket; options then).
+3. The Print card fix — arrives with the Foundation's combined patch.
+4. ARM64 re-run in CI when Actions is back.
