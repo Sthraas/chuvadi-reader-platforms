@@ -247,7 +247,7 @@ Bundle 155.8 MB / download 42 MB with `SdkOnly`; 519 MB with no trimming.
 | 2 | Drop unused Chuvadi packages (F4, done by Foundation) | Zero risk | Already taken (166 → 156) |
 | 3 | Full trimming (`MtouchLink=Full`) | Largest further cut | Unsafe until the libraries declare trim safety (decision 4); Sheets' typed import/export loses data when trimmed |
 | 4 | Separate Intel and Apple Silicon downloads | Each roughly half | Two downloads and a choice for the person; universal approved and the Mac norm |
-| 5 | Interpreter instead of AOT | Smaller native code | Slower start and run — measured below |
+| 5 | Interpreter instead of AOT | Bundle 155 → 44 MB (measured) | First render +17 % (1.80 → 2.10 s, §26) and slower document work |
 
 Recommendation: 1 now (in place), 3 after the libraries are trim-annotated; not 4 or 5.
 
@@ -270,3 +270,18 @@ rounds (A B C, A B C…) — results in §26.
 Each job warned that `actions/checkout@v4`, `setup-dotnet@v4`, `upload-artifact@v4` target the deprecated
 Node.js 20. Mac workflows moved to `checkout@v7`, `setup-dotnet@v6`, `upload-artifact@v7` (Node 24; same
 inputs). Foundation's `ci.yml` / `platform-build.yml` still use v4 — reported, not changed (not my files).
+
+### 26. Startup — fair comparison (run 42272891752: one runner, 12 interleaved rounds)
+| Variant | bundle | first render, median of rounds 2–12 | min–max | WebView ready (median) |
+|---|---|---|---|---|
+| **AOT (default, in use)** | 155 MB | **1799 ms** | 1756–2297 | 243 ms |
+| AOT + LLVM | 188 MB | 1812 ms | 1726–2069 | 257 ms |
+| interpreter | 44 MB | 2103 ms (+17 %) | 1999–2425 | 374 ms |
+
+- LLVM: no startup gain, +33 MB → not used.
+- Interpreter: −111 MB bundle for ~0.3 s slower start (and slower document work, unmeasured) → a size/speed
+  trade-off for the coordinator (startup is the stated priority, so AOT stays meanwhile).
+- In every variant ~1.5 s of the time is between WebView ready and Blazor's first render — the next
+  startup target (shared Ui/Blazor start, not Mac-specific).
+- Round-1 numbers include first-launch system work (Gatekeeper/LaunchServices registration) and are not a
+  fair compare.
