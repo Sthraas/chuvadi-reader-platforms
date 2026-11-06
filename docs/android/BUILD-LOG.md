@@ -147,3 +147,20 @@ tablet — Ui rendered without its component styles**. Causes found:
    any WebView console error.
 The phone's blank screen has no error in logcat; whether fixes 1–2 cure it is what the next run
 shows (no KVM in the sandbox, so emulators run only in CI).
+
+### 17. First honest emulator run (42133970009) — what it showed
+- **The Ui renders on phone and tablet with its full styling** (fix 16.1 + 16.2 worked). No crashes,
+  no WebView console errors.
+- All four jobs still failed, for test reasons: phone API 36 installed before Android finished
+  booting (package manager "Broken pipe") — the script now waits for `sys.boot_completed` and retries
+  the install; the other three looked for the text "Read", but the mode buttons read "Read 1",
+  "Mark 2"… (label + key) — markers corrected and checked against the real UI dumps.
+- **Real issue found: the system bars overlapped the app** (clock over the wordmark, gesture handle
+  over the status line). Android 15 is always edge-to-edge and the WebView ignores CSS safe-area
+  insets. Fixed natively in `SystemBars.cs`: the root view is padded by the system-bar, cut-out and
+  keyboard insets, the margin takes the saved theme's page colour (Windows host's mapping), and the
+  bar icons switch light/dark. The CSS padding and `viewport-fit=cover` were removed.
+- Seen, not Android's to fix: window buttons still drawn (until the Ui reads
+  `ShellChrome.Buttons = None`, A-03); the phone shows the desktop shell squeezed (Mobile app UI
+  chat); "Good morning, U0_a209" (A-10); Home lists sample recent/pinned/watched entries
+  (`patient_chart.pdf`, "8 documents found") on a fresh install — reported to the coordinator.

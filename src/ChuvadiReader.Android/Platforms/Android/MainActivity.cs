@@ -41,6 +41,7 @@ public sealed class MainActivity : MauiAppCompatActivity
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
+        SystemBars.Apply(this);
 
         // Back gesture: the Ui gets the first chance (close a sheet, card or drawer); otherwise
         // Android's default (leave the app). Registered after MAUI's own, so it runs first.

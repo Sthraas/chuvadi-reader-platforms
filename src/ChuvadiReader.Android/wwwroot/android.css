@@ -1,11 +1,7 @@
 /*
   Android host stylesheet. It styles only the page frame, never Ui markup: platform differences in
   the Ui (window buttons, tablet sizing, phone shell) come from IPlatformInfo inside the Ui
-  (decision A-03), so nothing here can drift when Ui class names change.
-
-  The window is edge-to-edge: keep the app clear of the status and gesture bars.
+  (decision A-03). System bars, cut-outs and the keyboard are kept clear natively (SystemBars.cs):
+  the Android WebView does not apply CSS safe-area insets.
 */
-body {
-    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-    box-sizing: border-box;
-}
+html, body { height: 100%; }

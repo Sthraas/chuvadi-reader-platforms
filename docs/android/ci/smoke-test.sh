@@ -13,7 +13,7 @@ set -uo pipefail
 APK="$1"
 OUT="$2"
 PKG="in.chuvadi.reader"
-MARKERS='(text|content-desc)="(Read|Mark|Arrange|Protect|Recent|Pinned)"'
+MARKERS='text="(Read|Mark|Arrange|Protect)( [0-9])?"|text="Settings"'
 mkdir -p "$OUT"
 fail=0
 
