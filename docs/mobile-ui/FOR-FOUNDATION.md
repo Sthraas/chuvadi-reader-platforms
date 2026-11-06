@@ -14,7 +14,7 @@ Four new hooks. They are **not** applied on this branch; `tools/mobile-ui/previe
 | `proposal/H5-mainlayout-tabs-sheet.patch` | `Ui/Layout/MainLayout.razor` | D-43 | +2 / −1 |
 | `proposal/H6-settings-phone-push.patch` | `Ui/Pages/Settings.razor` | D-45 Settings A | +15 / −2 |
 | `proposal/H7-redact-phone-fit-width.patch` | `Ui/Pages/Redact.razor` | Coordinator, 7 Nov | +16 / −0 |
-| `proposal/H8-reader-rerender-bugfix.patch` | `Ui/Pages/Reader.Shell.cs`, `Reader.razor` | **Bug fix**, found from Android run 42276742988 | +12 / −4 |
+| `proposal/H8-reader-rerender-bugfix.patch` | `Ui/Pages/Reader.Shell.cs`, `Reader.razor` | **Bug fix**, found from Android run 42276742988; coordinator: combined patch (D-26) | +14 / −6 |
 | `proposal/mobile-ui-hooks-3.patch` | all four, concatenated | — | — |
 
 ## H-5: pass SwitchTab and CloseTab to the phone shell (MainLayout)
@@ -57,27 +57,36 @@ that fits the first page's width less a 16 px gutter each side, then uses it. Zo
   - CSS `!important` on `--rpage-zoom`: no hook, but it breaks zoom in / out. Not recommended.
 
 ## H-8: bug fix: commands that don't re-render the Reader (all platforms, Windows included)
+Coordinator, 7 Nov: goes into the combined patch (D-26), using the Reader's own re-render helper.
 Found while checking the Android run's phone failures, then confirmed on unchanged 63af90f on desktop:
-1. **Document › Print, Export pages as images and Reduce file size do nothing.** These commands set
-   Reader state from MainLayout's menu click (or the phone ⋮ sheet), which re-renders only the layout,
-   so the card never appears. Ctrl P works (`r.print` re-renders). Fix: `StateHasChanged()` in those
-   three lambdas, as `T(...)` already does for the Read commands.
-2. **← / → page, but the counter can lag.** reader.js calls `NavPage` over JS interop, which doesn't
-   re-render. The desktop usually hides this, because the page-visibility observer fires again
-   afterwards; on a phone (one snapped page) it often doesn't, so the counter stays on 1 until the
-   next tap. Fix: `NavPage` re-renders after `GoTo`.
-- **For:** fixes visible bugs on every platform; four one-line changes; nothing else changes on screen.
-- **Against:** Reader is the Reader chat's file. It may prefer to route these through its own `T(...)`
-  helper (same effect).
-- Desktop at rest is pixel-identical (below). Headless: Document › Print fails on 63af90f and opens the
-  card with H-8, on desktop, tablet and phone.
+1. **Document › Print, Export pages as images and Reduce file size do nothing.**
+   - Why: these commands set Reader state from MainLayout's menu click (or the phone ⋮ sheet), which
+     re-renders only the layout, so the card never appears. Ctrl P works, because `r.print` goes
+     through the Reader's `T(...)` helper, which re-renders.
+   - Fix: `T(...)` moves from a local function inside `ReaderCommands` to a private method of Reader
+     (same body), and the three Document commands use it: `T(DocExport)`, `T(DocPress)`,
+     `T(() => OpenCard("print"))`. One helper, no second code path; the Read commands are unchanged.
+2. **← / → page, but the counter can lag.**
+   - Why: reader.js calls `NavPage` over JS interop, which doesn't re-render. The desktop usually hides
+     this, because the page-visibility observer fires again afterwards. On a phone (one snapped page)
+     it often doesn't, so the counter stays on 1 until the next tap.
+   - Fix: `NavPage` re-renders after `GoTo`. `T(...)` takes a synchronous action and `GoTo` is async,
+     so this is one `StateHasChanged()` after the await.
+- **For:** fixes visible bugs on every platform; small diff (+14 / −6); nothing else changes on screen.
+- **Against:** Reader is the Reader chat's file; it sees the change in the combined-patch PR.
+- Possibly the same bug, **not changed and not checked**: view-only files (.docx, .xlsx) have `v.view`
+  and `v.find`, which also change Reader state without re-rendering. For the Reader chat to check.
+- Desktop at rest: only the clock differs (below). Headless: Document › Print fails on 63af90f and
+  opens the card with H-8, on desktop, tablet and phone; → moves the counter on all three.
 
 ## Evidence (63af90f + this branch + hooks-3, in a scratch copy)
 - Programme solution: **0 warnings, 0 errors**; tests **161 + 28 + 14 + 4 = 207 pass** (H-5 to H-8 applied).
 - **Desktop pixel-identical:** before (63af90f) and after (H-5 to H-8) were run at the same time
   (`screens/2026-11-07/desktop-compare.txt`).
-  - Read 1440×900 and Mark: identical.
-  - Read 990×700, Arrange, Home, Library, Settings 1440×900 and 700×800: only the clock differs.
+  - Read 1440×900 and 990×700, Arrange, Mark, Home, Library, Settings 1440×900 and 700×800: only the
+    clock differs.
+  - A run with four preview servers at once showed differences on Read, Arrange and Home from pages
+    still rendering under the load. Re-run with the two servers alone: clean.
   - An earlier run showed 1-colour-level anti-aliasing noise on 5–6 Home / Library pixels; the same
     noise appears in A/A runs of 63af90f against itself.
 - Headless checks (`tools/mobile-ui/checks.py`, `screens/2026-11-07/*/checks-*.txt`): → paging,

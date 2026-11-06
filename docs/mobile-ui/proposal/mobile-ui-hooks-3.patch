@@ -89,25 +89,40 @@ index 01cacc9..a6944c1 100644
      [JSInvokable]
      public Task RenderPage(int n)
 diff --git a/src/ChuvadiReader.Ui/Pages/Reader.Shell.cs b/src/ChuvadiReader.Ui/Pages/Reader.Shell.cs
-index 4b29bf9..4b59491 100644
+index 4b29bf9..9f6f978 100644
 --- a/src/ChuvadiReader.Ui/Pages/Reader.Shell.cs
 +++ b/src/ChuvadiReader.Ui/Pages/Reader.Shell.cs
-@@ -406,10 +406,12 @@ public partial class Reader
+@@ -402,14 +402,18 @@ public partial class Reader
+ 
+     private static ShellCommand Sep(string id) => new("sep." + id, "", "", "", null, () => Task.CompletedTask);
+ 
++    // A command that changes the Reader's own state re-renders it: commands run from MainLayout's Document
++    // menu, the command bar or the phone ⋮ sheet, whose click re-renders only the layout.
++    private Func<Task> T(Action a) => () => { a(); StateHasChanged(); return Task.CompletedTask; };
++
+     private IEnumerable<ShellCommand> DocumentMenuItems(ReaderTab tab)
      {
          var isPdf = !tab.Format.IsViewOnly();
          var notPdf = isPdf ? null : "Convert to PDF first";
-+        // These run from MainLayout's Document menu (or the phone ⋮ sheet), whose click re-renders only
-+        // the layout: a command that opens a card must re-render the Reader itself.
          yield return new("doc.props", "Properties", "Document", "info", null, DocProperties, notPdf);
 -        yield return new("doc.export", "Export pages as images", "Document", "download", null, () => { DocExport(); return Task.CompletedTask; }, notPdf);
 -        yield return new("doc.press", "Reduce file size (Press)", "Document", "compress", null, () => { DocPress(); return Task.CompletedTask; }, notPdf, "compress");
 -        yield return new("doc.print", "Print", "Document", "print", "Ctrl P", () => { OpenCard("print"); return Task.CompletedTask; }, notPdf);
-+        yield return new("doc.export", "Export pages as images", "Document", "download", null, () => { DocExport(); StateHasChanged(); return Task.CompletedTask; }, notPdf);
-+        yield return new("doc.press", "Reduce file size (Press)", "Document", "compress", null, () => { DocPress(); StateHasChanged(); return Task.CompletedTask; }, notPdf, "compress");
-+        yield return new("doc.print", "Print", "Document", "print", "Ctrl P", () => { OpenCard("print"); StateHasChanged(); return Task.CompletedTask; }, notPdf);
++        yield return new("doc.export", "Export pages as images", "Document", "download", null, T(DocExport), notPdf);
++        yield return new("doc.press", "Reduce file size (Press)", "Document", "compress", null, T(DocPress), notPdf, "compress");
++        yield return new("doc.print", "Print", "Document", "print", "Ctrl P", T(() => OpenCard("print")), notPdf);
          yield return Sep("1");
          yield return new("doc.flatten", "Flatten forms & marks", "Document", "compress", null, DocFlatten, notPdf ?? (_flattening ? "Flattening…" : null));
          yield return new("doc.password", "Password-protect a copy", "Document", "doc-lock", null, () => { OpenProtectCard("password"); return Task.CompletedTask; }, notPdf);
+@@ -451,8 +455,6 @@ public partial class Reader
+             yield break;
+         }
+ 
+-        Func<Task> T(Action a) => () => { a(); StateHasChanged(); return Task.CompletedTask; };
+-
+         // Read
+         yield return new("r.pages", "Pages & outline", "Read", "page-single", null, T(TogglePagesDrawer), Keywords: "thumbnails bookmarks");
+         yield return new("r.bookmark", "Add bookmark", "Read", "bookmark", "Ctrl B", T(AddBookmarkHere));
 diff --git a/src/ChuvadiReader.Ui/Pages/Reader.razor b/src/ChuvadiReader.Ui/Pages/Reader.razor
 index 41cd124..ff0eb05 100644
 --- a/src/ChuvadiReader.Ui/Pages/Reader.razor

@@ -189,3 +189,12 @@ Evidence:
 - checks.py: PASS on phone portrait and landscape, tablet and desktop. On 63af90f, Print fails
   (phone and desktop) and Redact overflows 381 px.
 - Desktop before/after run side by side: Read 1440 and Mark identical, the rest clock only.
+
+### H-8 revised (coordinator, 7 Nov: combined patch, reuse the Reader's helper)
+- The Reader's `T(...)` re-render helper moves from a local function in `ReaderCommands` to a private
+  method; Document › Export / Press / Print use it. `NavPage` keeps one `StateHasChanged()` after its
+  await (`T` is synchronous).
+- Results: 0 warnings, 207 tests, hooks-3 applies to 63af90f; checks.py passes on phone (portrait and
+  landscape), tablet and desktop; desktop before/after shows only the clock on all eight screens.
+- Lesson: run at most two preview servers at once for pixel comparisons. Four at once gave false
+  differences, with pages still rendering.
