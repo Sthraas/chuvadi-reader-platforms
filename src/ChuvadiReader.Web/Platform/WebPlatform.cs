@@ -141,6 +141,7 @@ public sealed class WebAccount : IAccount
     private readonly Microsoft.AspNetCore.Components.NavigationManager _nav;
     private string _name = string.Empty;
     private string? _email;
+    private string? _unit;
     private bool _signedIn;
 
     public WebAccount(AuthenticationStateProvider auth, Microsoft.AspNetCore.Components.NavigationManager nav)
@@ -155,6 +156,9 @@ public sealed class WebAccount : IAccount
 
     public string? Email => _email;
 
+    /// <summary>The organisation unit of this sign-in (Sangam's <c>sangam_org</c>), shown after the Sangam ID.</summary>
+    public string? Unit => _unit;
+
     public event Action? Changed;
 
     /// <summary>Reads the person from the connection's sign-in. Called once when the session starts.</summary>
@@ -164,6 +168,7 @@ public sealed class WebAccount : IAccount
         _signedIn = user.Identity?.IsAuthenticated == true;
         _name = user.FindFirst("name")?.Value ?? string.Empty;
         _email = user.FindFirst("email")?.Value;
+        _unit = user.FindFirst(ChuvadiReader.Web.Auth.SangamSignIn.UnitClaim)?.Value;
         Changed?.Invoke();
     }
 

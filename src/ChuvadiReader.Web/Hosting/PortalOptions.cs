@@ -35,4 +35,13 @@ public sealed class PortalOptions
 
     /// <summary>Signing certificates (.pfx/.p12) carry a private key. Off until Arun decides (W-08).</summary>
     public bool AllowCertificateUpload { get; set; }
+
+    /// <summary>"Download the desktop app" / "Get the desktop app" (12a, 12b; D-35).</summary>
+    public string DesktopAppUrl { get; set; } = "https://chuvadi.in/download";
+
+    /// <summary>"Account settings" in the account menu: Sangam's own self-service page (D-35). Empty hides the item.</summary>
+    public string? AccountSettingsUrl { get; set; }
+
+    /// <summary>"Forgot?" beside the sign-in form's password field (12a). Empty hides the link.</summary>
+    public string? ForgotPasswordUrl { get; set; }
 }
