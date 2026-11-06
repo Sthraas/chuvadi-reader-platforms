@@ -1,0 +1,98 @@
+@namespace ChuvadiReader.Ui.Components.Platform.Portal
+@inject PortalLinks Links
+
+@*
+    Web portal sign-in page (design: Portal & Android 12a). The whole page below the browser's own
+    chrome. It holds no sign-in logic: the Web host renders it for signed-out visitors and wires the
+    two actions to its Sangam client —
+      * OnContinueWithSangam: "Continue with Sangam" (redirect to Sangam).
+      * OnSubmit:             the Sangam ID + password form.
+    Busy disables both while a sign-in is in flight; Error shows the host's message under the form.
+*@
+<div class="psi">
+    <section class="psi-hero">
+        <span class="psi-water" aria-hidden="true">ச</span>
+        <span class="psi-mark"><BrandMark Size="30" /> <span class="psi-tag">portal</span></span>
+        <div class="psi-pitch">
+            <h1 class="psi-h1">Your documents, from any browser.</h1>
+            <p class="psi-body">@Pitch</p>
+        </div>
+        <ul class="psi-promises">
+            @foreach (var (icon, text) in Promises)
+            {
+                <li><span class="psi-pr-ic"><Icon Name="@icon" Size="16" /></span>@text</li>
+            }
+        </ul>
+    </section>
+
+    <section class="psi-side">
+        <form class="psi-card" @onsubmit="Submit" aria-labelledby="psi-title">
+            <span class="psi-title" id="psi-title">Sign in</span>
+            <button type="button" class="psi-sangam" @onclick="ContinueWithSangam" disabled="@Busy">
+                <span class="psi-s" aria-hidden="true">S</span>Continue with Sangam
+            </button>
+            <div class="psi-or"><span></span>or with your Sangam ID<span></span></div>
+            <label class="psi-field">
+                <span class="psi-label">Sangam ID</span>
+                <input class="psi-input" type="text" name="username" autocomplete="username" spellcheck="false"
+                       autocapitalize="off" @bind="_id" @bind:event="oninput" disabled="@Busy" required />
+            </label>
+            <label class="psi-field">
+                <span class="psi-label">Password
+                    @if (Links.ForgotPasswordUrl is { } forgot)
+                    {
+                        <a href="@forgot" target="_blank" rel="noopener">Forgot?</a>
+                    }
+                </span>
+                <input class="psi-input psi-pw" type="password" name="password" autocomplete="current-password"
+                       @bind="_password" @bind:event="oninput" disabled="@Busy" required />
+            </label>
+            @if (!string.IsNullOrEmpty(Error))
+            {
+                <span class="psi-err" role="alert"><Icon Name="warning" Size="14" />@Error</span>
+            }
+            <button type="submit" class="psi-submit" disabled="@(Busy || !CanSubmit)">Sign in</button>
+            <span class="psi-foot">Prefer to keep files on your computer? <a href="@Links.DesktopAppUrl" target="_blank" rel="noopener">Download the desktop app</a> — no sign-in needed to read.</span>
+        </form>
+    </section>
+</div>
+
+@code {
+    /// <summary>"Continue with Sangam" was pressed.</summary>
+    [Parameter] public EventCallback OnContinueWithSangam { get; set; }
+
+    /// <summary>The Sangam ID form was submitted. The component forgets the password once this returns.</summary>
+    [Parameter] public EventCallback<PortalCredentials> OnSubmit { get; set; }
+
+    /// <summary>True while a sign-in is in flight: both buttons and the fields are disabled.</summary>
+    [Parameter] public bool Busy { get; set; }
+
+    /// <summary>Short, user-facing reason the last sign-in failed, or null.</summary>
+    [Parameter] public string? Error { get; set; }
+
+    // Design text, verbatim from the handout (12a). The storage lines are
+    // pending the coordinator's wording decision (docs/web-ui/OPTIONS-FOR-COORDINATOR.md, U-1).
+    private const string Pitch = "The same Read, Mark, Arrange and Protect as the desktop app. On the portal, files are processed on our server, encrypted at rest, and visible only to you.";
+
+    private static readonly (string Icon, string Text)[] Promises =
+    [
+        ("lock", "Encrypted at rest, per-user storage"),
+        ("user", "Only your Sangam identity can open your files"),
+        ("trash", "Delete a file and it is gone from the server"),
+    ];
+
+    private string _id = string.Empty;
+    private string _password = string.Empty;
+
+    private bool CanSubmit => !string.IsNullOrWhiteSpace(_id) && _password.Length > 0;
+
+    private Task ContinueWithSangam() => OnContinueWithSangam.InvokeAsync();
+
+    private async Task Submit()
+    {
+        if (Busy || !CanSubmit) return;
+        var credentials = new PortalCredentials(_id, _password);
+        _password = string.Empty;
+        await OnSubmit.InvokeAsync(credentials);
+    }
+}

@@ -7,6 +7,8 @@ For every platform chat (Mac, Linux, Android, Web) and the UI chats (Mobile app 
 - `src/ChuvadiReader.Hosting` — `services.AddChuvadiReader(lifetime)`: every Core service, plus defaults for every seam; `ShellAppCommands` (menu-bar commands from the shell registry); desktop defaults (`DesktopAppPaths`, `LocalAccount`, `CtrlKeyLabels` / `MacKeyLabels`, `FixedPlatformInfo`).
 - Groups A, B and C applied: MainLayout publishes `<html data-shell data-platform data-form-factor data-input>` on non-Windows hosts and re-renders on form-factor changes; window buttons, status text and key labels follow the platform; every save delivers through `IFileWriteBack`; host folders, account, gating; Windows registers through the kit.
 - Startup: `STARTUP.md` (measured before/after; the branch adds no ReadyToRun startup cost).
+- Combined hooks (D-26) applied: phone shell, touch support, portal account menu, server wording and paths, D-35/37/39/42/46/48/52 — `COMBINED-HOOKS.md` (what each chat must update is at its end).
+- Windows publishes ReadyToRun (D-50); see §2a for your host.
 
 ## 2. Writing a host
 ```csharp
@@ -21,6 +23,27 @@ services.AddSingleton<IClipboard>(…);                          // required (te
 // IAppLifecycle, IFileManager, IShare
 ```
 A registration after `AddChuvadiReader` wins.
+
+### 2a. Publish for startup speed (D-50)
+Startup speed is a priority: publish precompiled so the app doesn't JIT-compile at launch. Measured on the shared code: ReadyToRun cuts Core/Ui startup work by about a third (JIT-compiled methods 1,415 → 357); app DLLs grow about 2.5× (Windows publish 43 → 52 MB).
+
+| Host | How | Status |
+|---|---|---|
+| Windows | `<PublishReadyToRun>` in `ChuvadiReader.Windows.csproj`, only when publishing; `dotnet publish` defaults to win-x64, `-r win-arm64` for Arm | done |
+| Linux | the same block in your host csproj with `linux-x64` (and `-r linux-arm64`) | Linux chat |
+| Web (server) | the same block with `linux-x64` for the server publish | Web chat |
+| Mac | check what the .NET for macOS / Mac Catalyst SDK offers for Release (ReadyToRun or AOT) and measure launch with and without | Mac chat — report the numbers |
+| Android | ReadyToRun does not apply; keep the Release default (profiled AOT) and measure launch | Android chat |
+
+The block to copy:
+```xml
+<PropertyGroup Condition="'$(_IsPublishing)' == 'true'">
+  <PublishReadyToRun>true</PublishReadyToRun>
+  <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">linux-x64</RuntimeIdentifier>
+  <SelfContained Condition="'$(SelfContained)' == ''">false</SelfContained>
+</PropertyGroup>
+```
+Check a published DLL is precompiled: its CLI header has a ManagedNativeHeader (non-zero). Measure with `tools/StartupProbe` (shared part) plus your own window-shown time.
 
 ### What each host must provide
 
@@ -41,7 +64,7 @@ A registration after `AddChuvadiReader` wins.
 
 Files arriving from outside (drop, Open with, share intent, macOS open-file, upload): `BenchDropService.Drop(paths)` when `IsBenchActive`, else `OpenDocumentService.Request(path)` — working paths per F-1. Accept the same types as the Open dialog (Group C fixes the Windows list to match).
 
-Host page: copy the Windows `wwwroot/index.html` shape; load `_content/ChuvadiReader.Ui/js/theme.js` before the Blazor script; disable page zoom/pinch in the web view (the Reader zooms the canvas itself). **Put your initial `data-shell`, `data-platform`, `data-form-factor` and `data-input` on `<html>` in the host page** (Web: computed from the request / a tiny inline script; Android: from the device) so the first paint already has the right layout; MainLayout keeps them in sync afterwards with one `chuvadiTheme.setPlatform` call. Windows sets none (absent = Windows desktop) and makes no call — zero startup cost.
+Host page: copy the Windows `wwwroot/index.html` shape; load `_content/ChuvadiReader.Ui/js/theme.js` before the Blazor script; disable page zoom/pinch in the web view (the Reader zooms the canvas itself). **Put your initial `data-shell`, `data-platform`, `data-form-factor` and `data-input` on `<html>` in the host page** (Web: computed from the request / a tiny inline script; Android: from the device) so the first paint already has the right layout; MainLayout keeps them in sync afterwards with one `chuvadiTheme.setPlatform` call. Windows sets none (absent = Windows desktop) and makes no call — zero startup cost. **Tablet and phone hosts (Android; Web when it serves small screens) also link `_content/ChuvadiReader.Ui/css/mobile.css`**; desktop hosts must not (every rule in it is keyed on `data-shell`, but it is one more file to load).
 
 ## 3. macOS menu bar — `IAppCommands` (decided: filled host-side from `ShellService`, no Ui hook)
 - `Commands`: everything the Ctrl K bar can run now (global + the mounted page's) — `Id`, `Label`, `Group` (File, Tabs, Document, Read, Mark, Arrange, Protect, View…), canonical `Keys`, `IsEnabled`, `DisabledReason`.
@@ -76,7 +99,8 @@ Packages come from chuvadi-reader's committed `ci/packages` (byte-identical to t
 4. Reader: Ctrl W, Ctrl Shift W, Ctrl Alt W, Ctrl Tab, Ctrl 1-9, Ctrl + / − / 0, Ctrl F, Ctrl Z; Ctrl K command bar shows "Ctrl …" keys.
 5. Document ▾ › Copy file path, then paste somewhere.
 6. Status bar still says "offline · on this device".
-(Groups B/C add their own checks to this list when applied.)
+7. Combined hooks (D-26): the status-bar clock ticks every second; Home, Library and Settings › About still show the folder paths and the Watched folder card; reopen the app with two tabs open — each file appears once.
+8. ReadyToRun (D-50): `dotnet publish src/ChuvadiReader.Windows -c Release` → output in `bin/Release/net10.0-windows10.0.19041.0/win-x64/publish`; the published app starts and works; `pwsh scripts/measure-startup.ps1` vs `-ReadyToRun` to see the gain.
 
 ## 7. Blockers (library — Arun's decisions)
 - Layout not released; `Layout.Pdf` pins chuvadi-pdf [3.30.2] — Word/Excel exact view, Save as PDF and their printing.

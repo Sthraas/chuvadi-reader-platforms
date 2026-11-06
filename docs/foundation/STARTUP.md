@@ -28,10 +28,22 @@ Rule (Arun, 6 Nov): the app should load in milliseconds; Foundation edits may no
 ## Startup wins seen (proposals — not made)
 | # | Win | Measured / expected | For | Against |
 |---|---|---|---|---|
-| S1 | **Publish the Windows app ReadyToRun** (`-r win-x64 -p:PublishReadyToRun=true`, or `<PublishReadyToRun>` in the Windows csproj) | −80 ms (−31 %) of Core/Ui startup here; JIT methods 1,415 → 357 | biggest single win; no code change; also erases every platform-layer JIT cost | app DLLs ~2–3× larger on disk; publish must name the runtime (win-x64 / win-arm64); slightly longer publish |
+| S1 | **Done (D-50)** — Windows publish is ReadyToRun. **Publish the Windows app ReadyToRun** (`-r win-x64 -p:PublishReadyToRun=true`, or `<PublishReadyToRun>` in the Windows csproj) | −80 ms (−31 %) of Core/Ui startup here; JIT methods 1,415 → 357 | biggest single win; no code change; also erases every platform-layer JIT cost | app DLLs ~2–3× larger on disk; publish must name the runtime (win-x64 / win-arm64); slightly longer publish |
 | S2 | ReadyToRun **composite** or partial **TieredPGO-friendly** settings (`TieredCompilation` quick-JIT for loops) | not measured | can shave more after S1 | bigger output; measure first |
 | S3 | Find what the remaining ~124 ms first render spends (R2R build) — the whole Home page renders before first paint | to profile | likely large: Home, Library preview and recents all render up front | needs a profiler run on Windows |
-| S4 | MainLayout's 1-second clock timer re-renders the whole shell every second | runtime cost, not startup | rendering only the clock span would cut steady CPU | small Ui edit |
+| S4 | **Done (D-52)** — `StatusClock` re-renders only its span. MainLayout's 1-second clock timer re-renders the whole shell every second | runtime cost, not startup | rendering only the clock span would cut steady CPU | small Ui edit |
 | S5 | Keep the splash off by default (already) and WebView2 profile reuse (already) | — | already in place | — |
 
-Recommendation: S1 now (publish setting), then S3 on Arun's machine with `scripts/measure-startup.ps1 -ReadyToRun`.
+Recommendation: S1 and S4 are done; next S3 on Arun's machine with `scripts/measure-startup.ps1 -ReadyToRun`.
+
+## Re-check after the combined hooks (D-26, 6 Nov evening)
+Same probe, 25 interleaved runs, before `be4498a` vs after `3358b00` (this sandbox runs slower than in the morning, so compare these rows with each other):
+
+| Build | Total (median) | Methods JIT-compiled |
+|---|---|---|
+| before, ReadyToRun | 209.9 ms | 357 |
+| after, ReadyToRun | 211.1 ms | 358 |
+| before, JIT | 317.8 ms | 1,415 |
+| after, JIT | 305.1 ms | 1,427 |
+
+ReadyToRun (what Windows now ships): +1 method, +1.2 ms, inside the ≈7 ms noise floor. The phone, tablet and portal components are never rendered on Windows.
