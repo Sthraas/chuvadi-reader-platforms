@@ -250,3 +250,25 @@ Bundle 155.8 MB / download 42 MB with `SdkOnly`; 519 MB with no trimming.
 | 5 | Interpreter instead of AOT | Smaller native code | Slower start and run — measured below |
 
 Recommendation: 1 now (in place), 3 after the libraries are trim-annotated; not 4 or 5.
+
+### 24. Startup — the Mac Catalyst equivalent of ReadyToRun (D-50)
+ReadyToRun is a CoreCLR image format; .NET for Mac Catalyst runs on **Mono**, so it does not apply. The SDK's
+own levers are how managed code is compiled: AOT (default in Release on arm64), LLVM-optimised AOT, or the
+interpreter. Workflow `mac-startup.yml` builds each, launches six times through LaunchServices on the CI
+Apple Silicon runner (run 42270911133), ms since process start:
+
+| Variant | first render, launch 1 (cold) | launches 2–6 (warm) | median warm |
+|---|---|---|---|
+| **default — AOT on arm64** (in use) | 2020 | 919 · 774 · 728 · 717 · 755 | **755** |
+| AOT + LLVM (`MtouchUseLlvm=true`) | 2711 | 2111 · 1915 · 1892 · 1878 · 1820 | 1892 |
+| interpreter (`UseInterpreter=true`) | 2697 | 2165 · 2089 · 2068 · 2055 · 2259 | 2089 |
+
+Window by ~0.25 s and WebView ready by ~0.3 s in every warm launch; the rest is Blazor's first render.
+**Keep the default.** The default is ~2.5× faster to first render than either alternative. On Intel Macs
+(x64) the default uses JIT; no Intel runner is available to measure it — added to REAL-MAC-CHECKS (Intel Mac,
+if available).
+
+### 25. CI warnings
+Each job warned that `actions/checkout@v4`, `setup-dotnet@v4`, `upload-artifact@v4` target the deprecated
+Node.js 20. Mac workflows moved to `checkout@v7`, `setup-dotnet@v6`, `upload-artifact@v7` (Node 24; same
+inputs). Foundation's `ci.yml` / `platform-build.yml` still use v4 — reported, not changed (not my files).

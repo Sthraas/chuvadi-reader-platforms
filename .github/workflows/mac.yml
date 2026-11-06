@@ -23,10 +23,10 @@ jobs:
       DOTNET_NOLOGO: '1'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup .NET 10
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           # SDK band 10.0.4xx, matching the pinned workload set below.
           dotnet-version: '10.0.4xx'
@@ -122,14 +122,14 @@ jobs:
           shasum -a 256 out/Chuvadi-mac-universal-unsigned.zip | tee out/SHA256.txt
 
       - name: Upload app
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Chuvadi-mac-universal-unsigned
           path: out/
 
       - name: Upload test results and smoke log
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: mac-test-results
           path: |

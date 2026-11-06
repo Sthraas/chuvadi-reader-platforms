@@ -10,6 +10,7 @@ version and the Mac model, and attach a screenshot where it says so.
 - [ ] Install the unsigned build exactly as in `README.md` → "Installing the unsigned test build". Note
       which route worked (Open Anyway / Control-click → Open / `xattr`).
 - [ ] The window opens with no white flash and no native title bar; the page reaches the top edge.
+- [ ] On an **Intel** Mac too, if one is available (x64 uses JIT; CI only has Apple Silicon): note first-render.
 - [ ] `~/Library/Logs/Chuvadi/startup.log` exists. Copy the first-launch and a second-launch line here:
       `__________________________________________`
 - [ ] Quit (⌘Q) and reopen: settings (theme, interface size) are kept.
