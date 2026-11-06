@@ -127,5 +127,25 @@ public static string CommandTip(IPlatformInfo platform) =>
 - **O-2 (Foundation, `PlatformText`):** Web gets "computer" everywhere (`DeviceNoun` is "computer" for every non-Android kind): a phone browser shows "Follow the computer's light / dark setting" — on the portal it follows the browser's setting; and `PreferredNameHint` says "Leave blank to use your computer's name. Stored locally, never sent anywhere." — on the portal the name comes from Sangam and the setting is in browser storage (D-29). Suggest: Web → "Follow the browser's light / dark setting"; hint → "Leave blank to use your Sangam name. Stored in this browser."
 - **O-3 (Mobile UI / Foundation):** phone Home tip "Tip: Ctrl K finds any file or action" (`Dashboard.razor:62`) on a touch phone with no keyboard — on Web phone and Android phone.
 
+## U-15 Terms of use and Privacy from the account menu (coordinator 7 Nov 04:55: "propose one if the handout has no place")
+**12a (sign-in): built.** "Terms of use · Privacy" on one line under the desktop-app line (`PortalLinks.TermsUrl`, new optional `PortalLinks.PrivacyUrl`; each hidden when null). The Web host passes `"/terms"` and `"/privacy"` (the Foundation's `Licence` page, served before sign-in).
+
+**12b (account menu): the handout has no place for them.** The card holds the person, the storage meter (out of scope), My files / Shared with me (out of scope), Get the desktop app, Account settings, Sign out. Options:
+- **(a) A small footer line at the bottom of the card, under Sign out: "Terms of use · Privacy"** (12 px, muted, same style as the 12a line). Same line at the foot of the phone account block (`PortalPhoneAccount`). Pros: one click from anywhere while signed in; matches 12a; adds no menu row, so the actions keep their weight; keeps the DPDP notice "readily accessible". Cons: a small departure from the 12b frame.
+- **(b) Two menu rows ("Terms of use", "Privacy") between "Account settings" and "Sign out".** Pros: same look as the other items; bigger touch targets on phones. Cons: legal links compete with the real actions; the card grows by two rows (on a phone the ⋮ sheet is already long on document views).
+- **(c) Nothing in the menu; rely on Settings › About › Licences**, which already shows the licence agreement and (on the portal) the terms and privacy texts. Pros: no change. Cons: three taps deep; a person looking for "privacy" will not think of "Licences".
+
+Recommendation: **(a)**. Not built until decided (it touches `AccountMenu`, which the Foundation edited for Unit — I would send the change as a small diff on its current copy).
+
+## D-89 Home drop overlay on the portal — what I will check when the Foundation's overlay lands
+Handout references: **Walkthrough "Drop to open"** (drag-over state) and **States & Feedback 8b** ("Home with nothing yet").
+1. Drag-over overlay: full window, **inset 24 px**, **2 px dashed** border in the binding colour (`#8a3a1c` in Cream), **radius 14 px**, background `rgba(251,247,236,.55)` (theme-tinted in the other themes), upload icon in the binding colour, **"Drop to open"** in Instrument Serif 28 px.
+2. **Heads-up:** the handout's second line ("scan-lab-0931.pdf · 1 page · from the scanner folder", IBM Plex Mono 12 px) **cannot be shown before the drop in a browser** — `DataTransfer` exposes no file names or contents during `dragover` (only after `drop`; Chromium gives types at most). Suggest: no second line during drag on the portal, or a type-only line ("1 file") where the browser gives a count; the file name can show in the upload progress after the drop.
+3. 8b on the portal: icon, "Drop your first document here", sub-line, and the buttons — with the portal's Upload wording (W-1 / D-89 C) rather than "Open a file…" / "Choose a library folder" (no folders on the portal).
+4. The overlay must not appear for drags that are not files (text, links) and must clear on `dragleave` out of the window and on Escape.
+5. Dropping several files opens each in its own tab (D-83); a non-supported type shows the 8e-style "Can't open" message, not a silent no-op.
+6. Phone and touch tablet: no drag-over state (no drag source); the 8b zone acts as the Upload button.
+7. Desktop (Windows profile) pixel-identical; Android keeps option B wording.
+
 ## D-54 (chuvadi-pdf 3.31.2)
 Landed on `platform/foundation` (be4498a) during this session; `platform/web-ui` is rebased onto it and re-checked (BUILD-LOG session 2 §7).
