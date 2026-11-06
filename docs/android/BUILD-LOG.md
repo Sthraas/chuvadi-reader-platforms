@@ -256,3 +256,13 @@ and recorded as a failed check, the remaining checks still run, the device's inp
 saved, and the push no longer relies on adb's "dir/." handling. Dry-run against a fake emulator adb:
 swipe 10 frames (0.37 s), double-tap 4 frames (0.32 s), pinch 15 frames with two slots, long-press drag
 17 frames (0.8 s hold).
+
+### 29. Gesture run 42204251084 — touch writes denied; one real layout issue
+- Touch tool error now visible: `can't create /dev/input/event2: Permission denied`. The shell user is in the
+  `input` group but SELinux denies it on these images. Fix: `adb root` (allowed on google_apis images) before
+  the gestures.
+- **Phone shell works on the emulator**: app bar (back · file name · "1 / 6" · ⋮), Read · Mark · Arrange · Protect
+  bottom bar, Open with lands in the Reader.
+- **Found, for the Mobile UI chat: on the phone, Fit page leaves the page ~54 CSS px wider than the view**
+  (right edge clipped, sideways scrollbar; `.rdesk` scrollWidth − clientWidth = 54). Besides the look, it
+  blocks swipe paging, which only acts when the page has no sideways overflow.

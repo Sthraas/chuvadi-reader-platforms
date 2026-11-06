@@ -142,6 +142,17 @@ def wait_for(pred, seconds, what):
     return last
 
 
+# The emulator's SELinux policy denies the shell user writes to /dev/input even though it is in the
+# input group, so touch.py needs a root adbd. google_apis emulator images allow `adb root`; the app
+# keeps running while adbd restarts.
+print(adb("root", check=False).strip())
+adb("wait-for-device")
+for _ in range(20):
+    if adb("shell", "id -u", check=False).strip() == "0":
+        break
+    time.sleep(1)
+print("adbd uid:", adb("shell", "id -u", check=False).strip())
+
 # Input-device facts, kept as evidence for the touch tool.
 with open(os.path.join(OUT, "input-devices.txt"), "w") as f:
     f.write(adb("shell", "id", check=False) + "\n" + adb("shell", "ls -l /dev/input", check=False) + "\n"
