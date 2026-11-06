@@ -18,7 +18,7 @@ builder.Services.AddScoped<IImageClipboard>(sp => sp.GetRequiredService<NoClipbo
 builder.Services.AddScoped<IClipboard>(sp => sp.GetRequiredService<NoClipboard>());
 builder.Services.AddScoped<IAccount, FakeSangamAccount>();
 builder.Services.AddSingleton(PreviewPlatforms.From(platformName, Environment.GetEnvironmentVariable("PREVIEW_FORMFACTOR")));
-builder.Services.AddSingleton(new PortalLinks(PortalLinks.PlaceholderDesktopAppUrl, "https://sangam.example/account", "/terms"));
+builder.Services.AddSingleton(new PortalLinks(PortalLinks.PlaceholderDesktopAppUrl, "https://sangam.example/account", "/terms", "/privacy"));
 
 var app = builder.Build();
 app.UseStaticFiles();

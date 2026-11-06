@@ -25,7 +25,8 @@ services.AddScoped<IAccount, YourSangamAccount>();   // ChuvadiReader.Platform.I
 services.AddSingleton(new PortalLinks(
     DesktopAppUrl: configuration["Portal:DesktopAppUrl"] ?? PortalLinks.PlaceholderDesktopAppUrl,   // two arguments: no ForgotPasswordUrl (D-34, OPTIONS U-12)
     AccountSettingsUrl: "<Sangam's account page, or null to hide the item>",
-    TermsUrl: "<where you serve the Foundation's EULA, e.g. /terms — optional; null hides the line>"));
+    TermsUrl: "/terms",      // optional; the Foundation's Licence page, served before sign-in (D-86)
+    PrivacyUrl: "/privacy"));  // optional; same page; null hides the link
 ```
 Sign-in page (your route, for signed-out visitors — the Ui router is never shown before sign-in):
 ```razor
@@ -41,7 +42,7 @@ Host page: link, after the Ui's `tokens.css`, `app.css`, `shell.css`, `prefs.css
 Several files uploaded at once: one `OpenDocumentService.Request` per file is fine since the Foundation's F-3 fix (second combined patch, D-66).
 
 ## Build and test
-Requires .NET SDK 10.0.403+. Based on `platform/foundation` (2fafb60 — second combined patch — at session 4).
+Requires .NET SDK 10.0.403+. Based on `platform/foundation` (fa9d120 — fourth combined patch — at session 7).
 ```bash
 dotnet restore ChuvadiReader.Platforms.slnx --configfile ci/nuget.config
 dotnet build   ChuvadiReader.Platforms.slnx -c Release --no-restore -warnaserror

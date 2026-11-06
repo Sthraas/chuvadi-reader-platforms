@@ -54,6 +54,14 @@ public class SignInTextTests
     }
 
     [Fact]
+    public void Privacy_link_is_optional_and_earlier_calls_still_work()
+    {
+        var three = new PortalLinks(PortalLinks.PlaceholderDesktopAppUrl, null, "/terms");
+        Assert.Null(three.PrivacyUrl);
+        Assert.Equal("/privacy", new PortalLinks(PortalLinks.PlaceholderDesktopAppUrl, null, "/terms", "/privacy").PrivacyUrl);
+    }
+
+    [Fact]
     public void Desktop_app_placeholder_is_D35()
         => Assert.Equal("https://chuvadi.in/download", PortalLinks.PlaceholderDesktopAppUrl);
 }

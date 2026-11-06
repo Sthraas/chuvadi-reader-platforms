@@ -163,3 +163,24 @@ Exact wording and suggested `PlatformText` code in OPTIONS. Checked: portal sett
 
 ### 5. Build (CI stopped — local only)
 Committed state (hooks reverted), .NET SDK 10.0.403: build `-warnaserror` 0 warnings; tests Hosting 33 + MobileUi 11 + WebUi 19 + Reader 171 = **234 pass**. `web-ui-hooks-3-phone.patch` and `web-ui-hooks-4-account.patch` both `git apply --check` clean on 615afde. GitHub Actions not used (billing).
+
+## 2026-11-07 — session 7 (coordinator 7 Nov 04:55: H6 status, legal links, drop overlay; no CI runs)
+
+### 1. Checked all branches
+`platform/foundation` fa9d120 (fourth combined patch: W-1 to W-4 applied; `Licence` page serves `/licence`, `/terms`, `/privacy`), `platform/web` 9425984, `platform/mobile-ui` 74c3fd6 (**PhoneShell slot present since 1a27cd6**), `main` 3dcb84c (D-82 to D-92). H5 and H6 are not on foundation.
+
+### 2. Rebase
+Onto fa9d120: clean. My Portal files equal the Foundation's copies except `PortalAccountRows` (H6), which only this branch has.
+
+### 3. Legal links
+- 12a: "Terms of use · Privacy" under the desktop-app line; new optional `PortalLinks.PrivacyUrl` (fourth argument, default null — the Web chat's earlier calls still compile). Link text "Privacy" matches the `/privacy` page heading. Test added.
+- Account menu (12b has no place): options as U-15; not built.
+
+### 4. H6 resent and re-verified on fa9d120
+`web-ui-hooks-4-account.patch` applies cleanly; with it applied: build 0 warnings; portal Settings › Account in Chromium/Firefox/WebKit × desktop/tablet/phone shows the real account, no "Not signed in", no console errors; Windows `/settings?section=account` full-page screenshots pixel-identical (3 browsers × 1280×720, 1024×768). H5 also applies cleanly to fa9d120.
+
+### 5. D-89 check list
+Written in OPTIONS (handout Walkthrough "Drop to open" + States 8b), including the browser limit: file names are not available during drag.
+
+### 6. Build (no CI: commit carries [skip ci])
+Build `-warnaserror` 0 warnings; tests Mobile UI 15 + Hosting 48 + Web UI 32 + Reader 171 = **266 pass**.
