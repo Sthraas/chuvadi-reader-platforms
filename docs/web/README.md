@@ -12,7 +12,7 @@ Blazor Server portal for Chuvadi Reader: the unchanged `ChuvadiReader.Ui` render
 - Based on `platform/foundation` (Group A applied); services through `AddChuvadiReader(AppStateLifetime.PerConnection)` with the portal's own `IPlatformInfo`, `IAppPaths`, `IAccount`, `IFileWriteBack`, `IClipboard`.
 - Own ACME client (Let's Encrypt) built and tested against a strict fake ACME server (our test code).
 - Based on `platform/foundation` @ `63af90f`: chuvadi-pdf 3.31.2 (D-54; Pdf A/B cleared, D-55) and the combined hooks (D-26), so the portal shows the 12b account menu, the server status dot and the signed-in person; the host supplies `PortalLinks` and `IAccount.Unit`.
-- Rebased on `platform/foundation` @ `2fafb60` (second combined patch). Integrated the Web portal UI chat's `0c99e19`: the 12a sign-in page ("Continue with Sangam" only, U-9 a) at `/signin`, and the two-argument `PortalLinks`. Browser printing refuses files whose permissions forbid it (L-8). Planned restarts are announced with a banner in every open tab.
+- Rebased on `platform/foundation` @ `a4acc56` (third combined patch, part 1: the Web portal UI's decided portal files; licence and EULA). The 12a sign-in page ("Continue with Sangam" only, U-9 a) is served at `/signin`; `PortalLinks` takes two arguments. Browser printing refuses files whose permissions forbid it (L-8). Planned restarts are announced with a banner in every open tab.
 - Next: the terms link (the Foundation's EULA, not landed yet); deployment waits for B5/B6.
 
 ## Build and test

@@ -319,3 +319,55 @@ public sealed class SangamSignInTests : IAsyncLifetime
         return await c.PostAsync("/backchannel-logout", new FormUrlEncodedContent(new Dictionary<string, string> { ["logout_token"] = token }));
     }
 }
+
+/// <summary>When Sangam is down, the portal says so instead of failing.</summary>
+public class SangamUnreachableTests : IAsyncLifetime
+{
+    private WebApplication _portal = default!;
+    private Uri _base = default!;
+
+    public async Task InitializeAsync()
+    {
+        // A port nothing listens on: bind one, note it, let it go.
+        var probe = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
+        probe.Start();
+        var deadPort = ((System.Net.IPEndPoint)probe.LocalEndpoint).Port;
+        probe.Stop();
+
+        _portal = Program.Build(
+        [
+            "--environment", "Testing",
+            "--urls", "http://127.0.0.1:0",
+            "--Portal:DataRoot", SpaceLayoutTests.NewTempDir(),
+            "--Sangam:Authority", $"http://127.0.0.1:{deadPort}/",
+            "--Sangam:ClientId", FakeSangam.ClientId,
+            "--Sangam:ClientSecret", FakeSangam.ClientSecret,
+            "--Logging:LogLevel:Default", "Error",
+        ]);
+        await _portal.StartAsync();
+        _base = new Uri(_portal.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.First());
+    }
+
+    public async Task DisposeAsync() => await _portal.DisposeAsync();
+
+    [Fact]
+    public async Task Continue_with_sangam_says_sangam_cannot_be_reached()
+    {
+        using var c = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { BaseAddress = _base };
+        var r = await c.GetAsync("/signin/sangam");
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, r.StatusCode);
+        var html = await r.Content.ReadAsStringAsync();
+        Assert.Contains("be reached right now", html);
+        Assert.Contains("psi-err", html);
+        Assert.Contains("Continue with Sangam", html); // the sign-in page, ready to try again
+    }
+
+    [Fact]
+    public async Task Signing_out_still_ends_on_the_signed_out_page()
+    {
+        using var c = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { BaseAddress = _base };
+        var r = await c.GetAsync("/signout");
+        Assert.Equal(HttpStatusCode.Redirect, r.StatusCode);
+        Assert.Equal("/signed-out", r.Headers.Location!.OriginalString);
+    }
+}
