@@ -185,3 +185,14 @@ Phone API 35 rendered (20 s) and rotated correctly, then failed on "FATAL EXCEPT
 The crash check now counts only the app's own managed crashes, native crashes and ANRs; other
 processes' crashes are saved as evidence. Checked against that logcat (0 hits) and against sample
 lines of each real crash format (3 of 3 caught, the tool's line ignored).
+
+### 21. Run 42140626310 (b47218f) — all green, with evidence
+| Job | Ui on screen | Rotation (screenshot size) | Notes |
+|---|---|---|---|
+| build | — | — | Release .aab + .apk, Debug x86_64 .apk |
+| phone, API 35 | 20 s | 1080x2400 → 2400x1080 | |
+| phone, API 36 | 10 s | 1080x2400 → 2400x1080 | emulator System UI ANR dismissed |
+| tablet, API 35 | 20 s | 2560x1600 → 1600x2560 | |
+| tablet, API 36 | 15 s | 2560x1600 → 1600x2560 | emulator System UI ANR dismissed |
+Same process before and after rotation, Ui still present, no crash or ANR of the app, no WebView
+console errors. Local Release publish: `.aab` 53.9 MB, `.apk` 54.3 MB, 0 warnings.
