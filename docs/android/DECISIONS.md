@@ -9,8 +9,10 @@ Status key: **OPEN** · **DECIDED** (date, by) · **FINAL CHECK** (Arun, before 
 ---
 
 ## A-01 Play Store application id — FINAL CHECK
-Placeholder `in.chuvadi.reader` stays (coordinator, 6 Nov). It is permanent once published and
-depends on which domain and Play developer account Arun owns. Nothing is published before his check.
+Placeholder `in.chuvadi.reader` stays (coordinator, 6 Nov). Arun (6 Nov): the publisher will be
+**Sthraas Intelligence Pvt Ltd**; the Play developer account follows the company registration; the
+final id is set before release from the final domain (likely `chuvadi.in`). Nothing is published
+before then.
 
 ## A-02 How Android files reach the path-based Core — DECIDED (coordinator, 6 Nov)
 Working copy + write-back = Foundation F-1 option C. Built in the host:
@@ -51,7 +53,10 @@ tag v3.31.1 only as a check.
 ## A-09 App icon — DRAFT DONE, FINAL CHECK
 Drafted from `Brand Assets.dc.html` in `docs/android/branding/`: path-only SVG master, Play
 Store 512 px icon, adaptive background / foreground / monochrome layers, the generator script and
-a side-by-side with the handout. The app now uses the adaptive layers. Arun to approve the draft.
+a side-by-side with the handout. The app now uses the adaptive layers. Review sheet
+`branding/icon-review.png` sent to the coordinator (6 Nov) for approval; Arun may change it before
+the final release. Not drafted: the handout's Night / High-contrast variants and the small "no leaf"
+sizes (≤ 32 px) — Android launchers don't use them.
 
 ## A-10 Name shown on Home — OPEN (new)
 Home greets the person by name: Core's `UserProfileService.Name` uses the name set in Settings,

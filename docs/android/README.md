@@ -79,8 +79,8 @@ keytool -genkeypair -v -keystore chuvadi-upload.jks -alias chuvadi-upload \
   secrets** with required reviewers — only after Arun decides to.
 
 ## Play Store listing checklist
-- [ ] Application id decided (DECISIONS A-01) — permanent.
-- [ ] Developer account (Sthraas or imagiQa) and developer name.
+- [ ] Application id from the final domain (likely `chuvadi.in`) — permanent; placeholder `in.chuvadi.reader` until then (A-01).
+- [ ] Developer account: Sthraas Intelligence Pvt Ltd (after the company registration).
 - [ ] Upload key created and stored (above); Play App Signing enrolled.
 - [ ] Target API: .NET 10's API 36 meets Play's current target-level rule; recheck before each release.
 - [ ] Store icon 512 × 512 and adaptive icon: drafts in `docs/android/branding/` (A-09) — Arun's final check.
