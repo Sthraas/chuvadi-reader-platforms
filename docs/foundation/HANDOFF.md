@@ -8,6 +8,7 @@ For every platform chat (Mac, Linux, Android, Web) and the UI chats (Mobile app 
 - Groups A, B and C applied: MainLayout publishes `<html data-shell data-platform data-form-factor data-input>` on non-Windows hosts and re-renders on form-factor changes; window buttons, status text and key labels follow the platform; every save delivers through `IFileWriteBack`; host folders, account, gating; Windows registers through the kit.
 - Startup: `STARTUP.md` (measured before/after; the branch adds no ReadyToRun startup cost).
 - Combined hooks (D-26) applied: phone shell, touch support, portal account menu, server wording and paths, D-35/37/39/42/46/48/52 — `COMBINED-HOOKS.md` (what each chat must update is at its end).
+- Second combined patch applied: Web and Android wording, greeting full stop (F-2), open-request queue (F-3), "no printing" respected everywhere (L-8), save-folder fallback in the kit, Chuvadi.Print / .Ipp 1.0.0-rc.2 in the shared feed — `COMBINED-HOOKS-2.md` (per-chat notes at its end).
 - Windows publishes ReadyToRun (D-50); see §2a for your host.
 
 ## 2. Writing a host
@@ -64,7 +65,7 @@ Check a published DLL is precompiled: its CLI header has a ManagedNativeHeader (
 
 Files arriving from outside (drop, Open with, share intent, macOS open-file, upload): `BenchDropService.Drop(paths)` when `IsBenchActive`, else `OpenDocumentService.Request(path)` — working paths per F-1. Accept the same types as the Open dialog (Group C fixes the Windows list to match).
 
-Host page: copy the Windows `wwwroot/index.html` shape; load `_content/ChuvadiReader.Ui/js/theme.js` before the Blazor script; disable page zoom/pinch in the web view (the Reader zooms the canvas itself). **Put your initial `data-shell`, `data-platform`, `data-form-factor` and `data-input` on `<html>` in the host page** (Web: computed from the request / a tiny inline script; Android: from the device) so the first paint already has the right layout; MainLayout keeps them in sync afterwards with one `chuvadiTheme.setPlatform` call. Windows sets none (absent = Windows desktop) and makes no call — zero startup cost. **Tablet and phone hosts (Android; Web when it serves small screens) also link `_content/ChuvadiReader.Ui/css/mobile.css`**; desktop hosts must not (every rule in it is keyed on `data-shell`, but it is one more file to load).
+Host page: copy the Windows `wwwroot/index.html` shape; load `_content/ChuvadiReader.Ui/js/theme.js` before the Blazor script; disable page zoom/pinch in the web view (the Reader zooms the canvas itself). **Put your initial `data-shell`, `data-platform`, `data-form-factor` and `data-input` on `<html>` in the host page** (Web: computed from the request / a tiny inline script; Android: from the device) so the first paint already has the right layout; MainLayout keeps them in sync afterwards with one `chuvadiTheme.setPlatform` call. Windows sets none (absent = Windows desktop) and makes no call — zero startup cost. **Print services:** refuse a document when `PrintPermission.Allows(doc)` is false, with `PrintPermission.Refused` as the message (the Print card already locks it; this is the second guard). **Web:** register `PortalLinks` (the portal's account menu and sign-in need it). **Tablet and phone hosts (Android; Web when it serves small screens) also link `_content/ChuvadiReader.Ui/css/mobile.css`**; desktop hosts must not (every rule in it is keyed on `data-shell`, but it is one more file to load).
 
 ## 3. macOS menu bar — `IAppCommands` (decided: filled host-side from `ShellService`, no Ui hook)
 - `Commands`: everything the Ctrl K bar can run now (global + the mounted page's) — `Id`, `Label`, `Group` (File, Tabs, Document, Read, Mark, Arrange, Protect, View…), canonical `Keys`, `IsEnabled`, `DisabledReason`.
@@ -101,6 +102,9 @@ Packages come from chuvadi-reader's committed `ci/packages` (byte-identical to t
 6. Status bar still says "offline · on this device".
 7. Combined hooks (D-26): the status-bar clock ticks every second; Home, Library and Settings › About still show the folder paths and the Watched folder card; reopen the app with two tabs open — each file appears once.
 8. ReadyToRun (D-50): `dotnet publish src/ChuvadiReader.Windows -c Release` → output in `bin/Release/net10.0-windows10.0.19041.0/win-x64/publish`; the published app starts and works; `pwsh scripts/measure-startup.ps1` vs `-ReadyToRun` to see the gain.
+9. Second patch: Home and Settings text unchanged ("nothing leaves this device.", "click to open", "Follow the computer's…", "Leave blank to use your computer's name…").
+10. F-2: Settings › Language › Preferred name "Arun S." → Home says "Good morning, Arun S." (one full stop).
+11. L-8: open a PDF whose permissions forbid printing (e.g. saved from Acrobat with Printing: Not allowed) → the Print card is greyed with "This file's permissions don't allow printing."; an ordinary PDF still prints.
 
 ## 7. Blockers (library — Arun's decisions)
 - Layout not released; `Layout.Pdf` pins chuvadi-pdf [3.30.2] — Word/Excel exact view, Save as PDF and their printing.

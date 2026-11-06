@@ -8,7 +8,7 @@ Three commits: code (`src`, `tests`, `ChuvadiReader.Platforms.slnx`), dev tools 
 **New projects**
 - `ChuvadiReader.Platform` — the contract every host implements: platform kind, form factor, input, window chrome, capabilities, key labels, `ShellLayout` (desktop / tablet / phone / portal), file write-back, app folders, account, clipboard, file manager, share, lifecycle, menu-bar commands.
 - `ChuvadiReader.Hosting` — `AddChuvadiReader(lifetime)` registers every Core service once for all hosts (per-connection for Web); defaults for each seam; menu-bar commands from `ShellService`; desktop defaults (folders, account, Ctrl/⌘ labels, settings file storage).
-- `tests/ChuvadiReader.Hosting.Tests` — 28 tests (service graph, per-connection isolation, Windows registration drift guard, key labels, command bridge, every save delivers, openable types vs the Open dialog, settings write, host folders, tab restore).
+- `tests/ChuvadiReader.Hosting.Tests` — 28 tests (service graph, per-connection isolation, Windows registration drift guard, key labels, command bridge, every save delivers, openable types vs the Open dialog, settings write, host folders, save-folder fallback, tab restore).
 - `tests/ChuvadiReader.MobileUi.Tests` (3) and `tests/ChuvadiReader.WebUi.Tests` (14); `tests/ChuvadiReader.MobileUi.Preview` — a testing-only browser preview of the real Ui (never shipped).
 
 **Ui / Core (Windows looks and behaves the same, except where marked)**
@@ -32,6 +32,12 @@ Three commits: code (`src`, `tests`, `ChuvadiReader.Platforms.slnx`), dev tools 
 - Pen draws / finger pans on the markup layer when a pen is present; tablet desk counter on the Bench.
 - **Bug fix:** reopening the app could show the same file in two tabs (tab restore now skips duplicates; test added).
 - Mac Catalyst treated like macOS for signing-key storage and the temp-path guard.
+- **Bug fix:** a PDF whose permissions forbid printing no longer prints — the Print card says why (tests added).
+- **Bug fix:** the Home greeting no longer adds a second full stop after a name ending in "." (the name is shown as typed).
+- **Bug fix:** open requests queue instead of overwriting each other (only reachable with several at once, e.g. a multi-file upload).
+- Web and Android wording for the Home summary, the drop zone, Appearance and the Preferred-name hint (Windows text unchanged).
+- Shared kit: the default save folder no longer falls back to the temp folder when Documents doesn't exist yet (Linux).
+- `ci/packages`: Chuvadi.Print and Chuvadi.Print.Ipp 1.0.0-rc.2 (used by the Linux host; nothing in this PR references them).
 
 **Windows host:** registers through `AddChuvadiReader`; adds `WpfClipboard`, `WpfFileManager`; `FileAppStorage` moves to the shared kit. **`dotnet publish` is now ReadyToRun** (win-x64 default, `-r win-arm64` for Arm); build, F5 and tests are unchanged.
 
@@ -53,7 +59,8 @@ Core/Ui startup measured with `tools/StartupProbe` (services + first render of t
 
 ## Verified
 - `ChuvadiReader.Platforms.slnx` and `ChuvadiReader.Windows` build with `-warnaserror`: 0 warnings, 0 errors.
-- Tests: 206/206 (161 existing + 45 new).
+- Tests: 229/229 (161 existing + 68 new).
+- Second round of screenshots (9 screens incl. the Print card and two Settings sections, 100/125/150 %): identical (`docs/foundation/COMBINED-HOOKS-2.md`).
 - Working-repo CI (Sthraas/chuvadi-reader-platforms, `platform/foundation`): shared code on Ubuntu x64/arm64, macOS, Windows; the Windows app on windows-latest; package check.
 
 ## Windows checks for Arun before merging
@@ -75,6 +82,8 @@ Also for this PR's other changes:
 13. Status-bar clock ticks; Home, Library and Settings › About still show folder paths and the Watched folder card.
 14. Open two files, close the app, reopen: each file appears once.
 15. `dotnet publish src/ChuvadiReader.Windows -c Release`: the published app starts and works.
+16. Settings › Language › Preferred name "Arun S." → Home: "Good morning, Arun S." (one full stop).
+17. A PDF whose permissions forbid printing: the Print card is greyed with "This file's permissions don't allow printing."; an ordinary PDF still prints.
 
 ## Known gaps (not changed here)
 - Windows printing is raster (`WpfPrintService`); move to Chuvadi.Print's vector XPS route when rc.3 is released.

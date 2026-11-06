@@ -49,3 +49,17 @@ until Arun's own 3.31.2 copies land in chuvadi-reader's `ci/packages`; then thos
 | Chuvadi.Pdf.Watermark.3.31.2.nupkg | `4c9693a7daa3585fdb1d82fda715efeda9389705cb8375dfb18fd37ea5c0411f` |
 | Chuvadi.Pdf.Xfa.3.31.2.nupkg | `14c98d1e243097865a50d8783a39aa26251b8721c9e2f3b0d4e4fa2f03eca4d7` |
 | Chuvadi.Cryptography.3.31.2.nupkg | `f2de68810fa20e27ed0a2ba59cd0d3d0c1d49090c3a8f6bdc4cc6b1fed2ca2f8` |
+
+## Chuvadi.Print and Chuvadi.Print.Ipp 1.0.0-rc.2 (adopted centrally, 7 Nov 2026)
+Taken byte-for-byte from `platform/linux`'s `ci/packages` (the Linux chat downloaded them from the
+`print-v1.0.0-rc.2` release of `arunshivab/chuvadi`; no checksum file is published there). Checked here
+against the Linux chat's BUILD-LOG §18 — both match:
+
+| Package | SHA-256 |
+|---|---|
+| `Chuvadi.Print.1.0.0-rc.2.nupkg` | `252b6d10204d37069a35040ea89d58e1662a452c4e05fd90a0d8b90cd1049cbf` |
+| `Chuvadi.Print.Ipp.1.0.0-rc.2.nupkg` | `82304b782ce23ac5dcb3895e1fee31898abf3c22222f9f9c65c423fba68aa562` |
+
+Both target net10.0, MIT, source commit `0ffaa4b` of `arunshivab/chuvadi`; `Chuvadi.Print.Ipp` depends only
+on `Chuvadi.Print` 1.0.0-rc.2, so the feed is complete. Only feed packages: no shared project references
+them; the Linux host does (and any other host that prints over IPP).
