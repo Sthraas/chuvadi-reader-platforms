@@ -47,8 +47,8 @@ The whole shared solution must pass before any push: `dotnet build ChuvadiReader
 | F-18 | Phone and tablet sizes | Form factor follows the browser (D-07); phone layout from the Mobile UI chat | M (Chrome device mode, real phone) |
 | F-19 | Mac keyboard | ⌘ labels and shortcuts on macOS browsers (D-07) | M |
 | F-20 | Planned restart banner | Operator file → banner in every tab, including later arrivals; gone when the time passes or the file is removed | U `MaintenanceTests`, `GatewayMaintenanceTests`; M (runbook §8.9) |
-| F-21 | Drop a file anywhere on the portal (D-89, now) | Nothing happens: the "not allowed" cursor while dragging; the browser does **not** open the file or leave Chuvadi. An image dropped onto a page in the Reader still adds it (the Reader's own drop) | E `flows.py` (drop cancelled; control: a page without the portal script doesn't cancel); M with a real file from the desktop on each browser in §5 |
-| F-22 | Drop files on Home (D-89, next) | Each dropped file streams to the session's encrypted working copy as upload does, and opens in its own tab | **P**: the Foundation's `IDroppedFiles` seam; then the upload checks S-7 apply to drops too |
+| F-21 | Drop a file anywhere on the portal (D-89) | The browser never opens the file or leaves Chuvadi: documents go to the drop catcher (F-22); a drop that misses it is cancelled. An image dropped onto a page in the Reader still adds it (the Reader's own drop) | E `flows.py` (a stray drop is cancelled); M with a real file from the desktop on each browser in §5 |
+| F-22 | Drop documents on the portal (D-89 A) | Each dropped file streams to the session's working copy (tmpfs, D-28) through the upload's own checks (S-7: types, content matches the extension, size, owner-only folder) and opens in its own tab (or on the Bench shelf when it's open). A refused file gives one short message and leaves nothing behind. Several files at once, up to 64 | U `DroppedFilesTests`; E `flows.py` (a fake PDF refused with its message; a real PDF opens in the Reader, through a worker); M: drag one and several real files from the desktop, an image onto a Reader page, and a 300 MB file (refused) on each browser in §5 |
 | F-23 | Privacy link on the sign-in page (D-86 "link them from 12a") | 12a shows "Terms of use"; Privacy is one switch away on that page. A separate Privacy link needs the Web portal UI's sign-in component | **P**: question to the coordinator |
 
 ## 2. Security checks
@@ -188,7 +188,12 @@ Found and fixed while running this plan:
 - Legal pages in Chrome: `/terms`, `/privacy`, cookies and notices; the switch moves between the four addresses; DRAFT shown; no page errors.
 - Real-Sangam e2e through the gateway: pass (back-channel 1.3 s).
 
+**7 Nov, mid-morning (on `platform/foundation` @ `4819d66`, IDroppedFiles seam):**
+- Shared solution `-warnaserror`, 0 warnings; tests Reader 171, Hosting 48, Mobile UI 15, Web UI 31.
+- Web 142/142 (new: `DroppedFilesTests`).
+- `flows.py` with the D-89 A drop checks, gateway mode: Chrome, Firefox, WebKit and Chromium 9/9.
+
 ## 8. Known gaps
 - The legal texts are drafts and say not to publish until counsel has reviewed them: V-7 blocks go-live until the DRAFT lines are gone.
-- F-22 (dropped files opening) waits for the Foundation's `IDroppedFiles`; F-23 (a Privacy link on 12a) waits for a decision.
+- F-23 (a Privacy link on 12a) waits for a decision. A real drag from the desktop (F-21, F-22) can only be run by hand: browser automation can't carry an OS file drag.
 - Manual runs M-1 to M-4 (§5a) need real devices; staging runs V-1 to V-7 (§5b) need the VM, which comes last by Arun's decision. G-12 needs a Sangam test person in two organisations.

@@ -359,6 +359,7 @@ public static class Program
         s.AddScoped<IAppPaths, SessionAppPaths>();
         s.AddScoped<IAppStorage, SessionAppStorage>();
         s.AddScoped<IFilePicker, WebFilePicker>();
+        s.AddScoped<IDroppedFiles, WebDroppedFiles>(); // D-89 A: files dropped on the portal window
         s.AddScoped<IFileWriteBack, WebFileWriteBack>();
         s.AddScoped<IPrintService, WebPrintService>();
         s.AddScoped<WebClipboard>();

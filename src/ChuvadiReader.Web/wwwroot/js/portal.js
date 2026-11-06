@@ -369,22 +369,26 @@
         report();
     }
 
-    // D-89: dropping files isn't supported on the portal yet (DropFiles = false). A browser opens a file
-    // dropped on a page that doesn't take it, which would leave Chuvadi with the file in the tab. So a
-    // file drop nothing in the page handled is cancelled, with the "not allowed" cursor while dragging.
-    // The Reader's own drops (an image onto a page, handled first) are left alone.
+    // D-89: a browser opens a file dropped on a page that doesn't take it, which would leave Chuvadi with
+    // the file in the tab. The Ui's drop catcher (D-89 A) takes document drops; the Reader takes an image
+    // dropped on a page. Anything neither handled (e.g. before the catcher has loaded) is cancelled here,
+    // with the "not allowed" cursor while dragging. A drop onto a file input is the browser delivering
+    // it to that input (the catcher's), so it is left alone.
     function hasFiles(e) {
         var types = e.dataTransfer && e.dataTransfer.types;
         return !!types && Array.prototype.indexOf.call(types, 'Files') >= 0;
     }
+    function isFileInput(t) {
+        return !!t && t.tagName === 'INPUT' && t.type === 'file';
+    }
     document.addEventListener('dragover', function (e) {
-        if (hasFiles(e) && !e.defaultPrevented) {
+        if (hasFiles(e) && !e.defaultPrevented && !isFileInput(e.target)) {
             e.preventDefault();
             e.dataTransfer.dropEffect = 'none';
         }
     });
     document.addEventListener('drop', function (e) {
-        if (hasFiles(e) && !e.defaultPrevented) e.preventDefault();
+        if (hasFiles(e) && !e.defaultPrevented && !isFileInput(e.target)) e.preventDefault();
     });
 
     window.chvdPortal = { pick: pick, download: download, print: print, copyImage: copyImage, copyText: copyText, openLink: openLink, watchViewport: watchViewport, leave: leave, trackActivity: trackActivity, stillHere: stillHere };
