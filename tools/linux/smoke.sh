@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Launch test for a published Linux build, under Xvfb + mutter (both test-only tools).
-# Passes when Blazor reports its first render within the time limit and no error is logged.
-# Leaves startup timings and a screenshot in the output folder.
+# Passes when Blazor reports its first render within the time limit, the screen then shows the page
+# (not a flat colour), and no error is logged. Leaves timings and one screenshot per run.
 #
 #   tools/linux/smoke.sh <publish-dir> <out-dir> [runs]
 set -euo pipefail
@@ -44,9 +44,20 @@ for i in $(seq 1 "$runs"); do
         sleep 0.1
     done
 
-    if [ "$rendered" = 1 ] && [ "$i" = 1 ]; then
-        sleep 2 # let the page settle for the screenshot
-        import -window root "$out/home.png"
+    # Blazor's first-render event proves .NET ran, not that pixels reached the screen.
+    # Require a real picture: up to 10 s for the screen to show more than a flat colour.
+    painted=0
+    if [ "$rendered" = 1 ]; then
+        for _ in $(seq 1 20); do
+            sleep 0.5
+            import -window root "$out/run-$i.png"
+            colours=$(convert "$out/run-$i.png" -format %k info:)
+            if [ "$colours" -gt 200 ]; then
+                painted=1
+                break
+            fi
+        done
+        echo "run $i: screen shows $colours colours"
     fi
 
     kill "$pid" 2>/dev/null || true
@@ -54,6 +65,11 @@ for i in $(seq 1 "$runs"); do
 
     if [ "$rendered" != 1 ]; then
         echo "run $i: no first render within 30 s" >&2
+        status=1
+    fi
+
+    if [ "$rendered" = 1 ] && [ "$painted" != 1 ]; then
+        echo "run $i: the window stayed blank (page never painted)" >&2
         status=1
     fi
 

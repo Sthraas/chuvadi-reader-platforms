@@ -82,3 +82,21 @@ Next: profile page load (WebKit web-process start, CSS/fonts) and Blazor boot.
 ### 11. Repo
 New files only on `platform/linux`. `tools/linux/prepare-tree.sh` overlays them on chuvadi-reader at
 `c7b9e44` and fails if any existing file differs. CI: `.github/workflows/linux.yml` (x64 + arm64).
+
+### 12. CI — first runs
+- Build, all 161 Reader tests and ReadyToRun publish pass on **x64 and ARM64** runners.
+- Launch failed on both: `bwrap: setting up uid map: Permission denied`. Ubuntu 24.04+ sets
+  `kernel.apparmor_restrict_unprivileged_userns = 1` (confirmed on the runner); WebKitGTK's bubblewrap
+  sandbox needs a user namespace. **Real Ubuntu 24.04/26.04 desktops have the same restriction**, so
+  this is a packaging requirement. My sandbox runs as root without AppArmor, which hid it.
+  Fix (new file): `packaging/apparmor/chuvadi-reader` — adds only `userns` for our binary, as Ubuntu
+  does for its own browsers; WebKit's sandbox stays on. The `.deb` will install it; CI loads it now.
+- An x64 run hung 20 min inside `apt-get install` (mirror). Added apt retries/timeouts and job timeouts.
+- With the profile: both architectures launch. x64 shows the dashboard. **ARM64 shows only the theme
+  colour** — .NET reports first render, but no page pixels reach the screen. Under investigation.
+- The launch test only checked the .NET first-render event, so it passed a blank window. Fixed: it
+  now requires a real picture on screen (more than 200 colours) within 10 s of first render.
+
+CI startup (ms since process start, 3 runs): x64 window 297–817, dashboard 1071–1961;
+ARM64 window 528–996, first render 1533–2565. First launch on a fresh runner pays a one-time
+font-cache cost (`gtk init` 2.1 s once, ~80 ms after).
