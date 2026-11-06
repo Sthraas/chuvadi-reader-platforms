@@ -6,11 +6,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using ChuvadiReader.Core.Storage;
 
-namespace ChuvadiReader.Windows.Platform;
+namespace ChuvadiReader.Hosting.Desktop;
 
 /// <summary>
-/// Stores app state as a single JSON file under %AppData%\Chuvadi. No network,
-/// no registry — just a file the user owns. Pure BCL (System.Text.Json).
+/// Stores app state as a single JSON file (settings.json) in the host's app-data folder
+/// (Windows: %AppData%\Chuvadi). No network, no registry — just a file the user owns.
+/// Pure BCL (System.Text.Json). Shared by the desktop and Android hosts.
+/// Writes go to a temporary file beside it that then replaces settings.json, so a crash or
+/// power cut mid-write leaves the previous settings intact instead of a truncated file.
 /// </summary>
 public sealed class FileAppStorage : IAppStorage
 {
@@ -73,7 +76,9 @@ public sealed class FileAppStorage : IAppStorage
         {
             _cache[key] = value;
             var json = JsonSerializer.Serialize(_cache);
-            await File.WriteAllTextAsync(_file, json, ct).ConfigureAwait(false);
+            var temp = _file + ".tmp";
+            await File.WriteAllTextAsync(temp, json, ct).ConfigureAwait(false);
+            File.Move(temp, _file, overwrite: true);
         }
         finally
         {
