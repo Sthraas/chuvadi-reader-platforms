@@ -123,3 +123,22 @@ Each decided on the chat's own pros and cons. Delivered to the chats at the next
 - Six Windows checks after Foundation Group A (in `docs/foundation/HANDOFF.md`).
 - Pdf 3.31.2 released 6 Nov: the server fixes A and B are in; Web clears that blocker once on 3.31.2.
 - Library coordinator asks (Arun's files): the 8 MB CAD PDF for PDF-09; any file still showing corrupted uncropped pages after Scrub on 3.31.2.
+
+## 6 Nov 2026 23:55 — coordinator (delivered to all chats)
+| # | Item | Decision |
+|---|---|---|
+| D-61 | MU-8 phone screens | Off-document bar = 4a (Home · Library · Tabs · Settings); Home B; Library both views, opens per Default view; Settings A (section list) |
+| D-62 | Android-found Mobile UI bugs | Fix swipe pointercancel, phone Fit page width, long-press pan; switch H-1/TouchSupport to IPlatformInfo (F-4) |
+| D-63 | U-9 sign-in page | Only "Continue with Sangam" + desktop-app line (Sangam ignores login_hint); Sangam pre-fill = ask for Arun |
+| D-64 | U-10 / U-11 | Account block at the foot; Web wording for Home lines in Foundation's second patch |
+| D-65 | Web account unit | Request org.current scope |
+| D-66 | Bug fixes F-2 (greeting full stop), F-3 (OpenDocumentService queue), L-8 (respect "no printing" everywhere) | Approved; Foundation second patch |
+| D-67 | Linux L-5/L-6/L-7 | PDF as-is to CUPS; GTK dialog then Chuvadi.Print.Ipp; no single instance now (programme item for Arun) |
+| D-68 | Kit fallback save folder; Chuvadi.Print/.Ipp rc.2 in ci/packages | Foundation adopts centrally |
+
+## For Arun (new)
+- Library asks to pass on: Mac L-1 (embed missing fonts, subset, ToUnicode) and L-2 (flatten using each annotation's Print flag) in `docs/mac/LIBRARY-ASKS.md`; Linux: release Chuvadi.Print.Pdf.Raster, a font inspector for the print router, IppJobTicket "printer default".
+- Sangam ask (your call, Sangam rule): pre-fill the sign-in Identifier from login_hint.
+- Single-instance app (open file as a new tab in the running app) — programme-wide behaviour change incl. Windows.
+- Licence for the Linux package metadata (repo has no licence file).
+- Delete branch `platform/linux-probe` (finished temporary branch; deletion blocked for the coordinator).
