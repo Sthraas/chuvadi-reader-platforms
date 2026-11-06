@@ -258,6 +258,24 @@ public class GatewayTests(GatewayFixture gateway) : IClassFixture<GatewayFixture
     }
 
     [Fact]
+    public async Task The_licences_page_is_readable_before_sign_in_and_starts_no_worker()
+    {
+        using var anonymous = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { BaseAddress = gateway.Base };
+        var eula = await anonymous.GetAsync("/licence");
+        Assert.Equal(HttpStatusCode.OK, eula.StatusCode);
+        var html = await eula.Content.ReadAsStringAsync();
+        Assert.Contains("END USER LICENCE AGREEMENT", html);
+        Assert.Contains("js/legal.js", html);
+        Assert.DoesNotContain("blazor.web.js", html);
+
+        var notices = await (await anonymous.GetAsync("/licence?part=notices")).Content.ReadAsStringAsync();
+        Assert.Contains(System.Net.WebUtility.HtmlEncode(ChuvadiReader.Ui.Components.Legal.LegalTexts.Notices[..60]), notices);
+        var unknown = await (await anonymous.GetAsync("/licence?part=<script>")).Content.ReadAsStringAsync();
+        Assert.Contains("END USER LICENCE AGREEMENT", unknown); // anything else: the agreement
+        Assert.Empty(gateway.Pool.Running);
+    }
+
+    [Fact]
     public async Task Static_files_come_from_the_gateway_without_starting_a_worker()
     {
         using var c = gateway.Client("gw-static");

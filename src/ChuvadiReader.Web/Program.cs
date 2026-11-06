@@ -54,7 +54,7 @@ public static class Program
         builder.Services.AddSingleton(sp =>
         {
             var o = sp.GetRequiredService<IOptions<PortalOptions>>().Value;
-            return new ChuvadiReader.Ui.Components.Platform.Portal.PortalLinks(o.DesktopAppUrl, NullIfEmpty(o.AccountSettingsUrl));
+            return new ChuvadiReader.Ui.Components.Platform.Portal.PortalLinks(o.DesktopAppUrl, NullIfEmpty(o.AccountSettingsUrl), NullIfEmpty(o.TermsUrl));
         });
 
         // D-28: outside Development, working copies must be in RAM and never paged to disk in the clear.
@@ -135,6 +135,12 @@ public static class Program
 
         app.MapStaticAssets().AllowAnonymous();
         app.MapGet("/healthz", () => Results.Text("ok")).AllowAnonymous(); // for the host's monitoring; says nothing else
+
+        // The licences page, readable before sign-in (the sign-in page's "Terms of use"). In single mode it
+        // takes precedence over the Ui's own /licence route on full page loads only; in-app navigation stays
+        // in the circuit.
+        app.MapGet(StaticPages.LicencePath, (Delegate)(Func<HttpContext, Task<IResult>>)StaticPages.LicenceAsync)
+            .AllowAnonymous().WithOrder(-1);
 
         // Where UseExceptionHandler sends an unexpected failure (anonymous, so it can never loop through sign-in).
         app.Map("/error", () => Results.Content(SangamSignIn.Page("Something went wrong", "Please try again in a moment.", "/", "Back to the portal"),

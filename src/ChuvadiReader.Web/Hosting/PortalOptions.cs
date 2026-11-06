@@ -56,6 +56,10 @@ public sealed class PortalOptions
     /// <summary>"Download the desktop app" / "Get the desktop app" (12a, 12b; D-35).</summary>
     public string DesktopAppUrl { get; set; } = ChuvadiReader.Ui.Components.Platform.Portal.PortalLinks.PlaceholderDesktopAppUrl;
 
+    /// <summary>"Terms of use" under the sign-in card: the licences page every host has (Foundation,
+    /// third combined patch). Empty hides the line.</summary>
+    public string? TermsUrl { get; set; } = "/licence";
+
     /// <summary>"Account settings" in the account menu: Sangam's own self-service page (D-35). Empty hides the item.</summary>
     public string? AccountSettingsUrl { get; set; }
 

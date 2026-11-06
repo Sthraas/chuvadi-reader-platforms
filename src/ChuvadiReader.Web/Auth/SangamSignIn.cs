@@ -16,7 +16,7 @@ namespace ChuvadiReader.Web.Auth;
 /// The portal as a Sangam client: OpenID Connect Authorization Code flow with PKCE (S256), our own
 /// code on the framework's cookie authentication and Data Protection (no OpenID Connect package).
 /// <list type="number">
-/// <item><c>GET /signin</c> → the sign-in page (12a, <see cref="SignInPage"/>); "Continue with Sangam" →
+/// <item><c>GET /signin</c> → the sign-in page (12a, <see cref="StaticPages"/>); "Continue with Sangam" →
 /// <c>GET /signin/sangam</c> → Sangam's authorize endpoint (state, nonce, PKCE, kept in an encrypted, short-lived cookie).</item>
 /// <item><c>GET /signin-sangam</c> → checks state and <c>iss</c> (RFC 9207), redeems the code with client
 /// authentication, verifies the ID token, signs the person in to the portal cookie.</item>
@@ -39,8 +39,8 @@ public static class SangamSignIn
     {
         var o = app.ServiceProvider.GetRequiredService<IOptions<SangamOptions>>().Value;
 
-        app.MapGet("/signin", (Delegate)(Func<HttpContext, Task<IResult>>)(http => SignInPage.RenderAsync(http))).AllowAnonymous();
-        app.MapGet(SignInPage.StartPath, (Delegate)SignInAsync).AllowAnonymous().AddEndpointFilter(WhenSangamIsUnreachable(signingOut: false));
+        app.MapGet("/signin", (Delegate)(Func<HttpContext, Task<IResult>>)(http => StaticPages.SignInAsync(http))).AllowAnonymous();
+        app.MapGet(StaticPages.SignInStartPath, (Delegate)SignInAsync).AllowAnonymous().AddEndpointFilter(WhenSangamIsUnreachable(signingOut: false));
         app.MapGet(o.CallbackPath, (Delegate)CallbackAsync).AllowAnonymous().AddEndpointFilter(WhenSangamIsUnreachable(signingOut: false));
         app.MapGet("/signout", (Delegate)SignOutAsync).AllowAnonymous().AddEndpointFilter(WhenSangamIsUnreachable(signingOut: true));
         app.MapGet(o.SignedOutCallbackPath, (Delegate)SignedOutCallbackAsync).AllowAnonymous();
@@ -397,7 +397,7 @@ public static class SangamSignIn
 
     /// <summary>A sign-in that didn't complete: the sign-in page again, with the reason under the button.</summary>
     private static Task<IResult> Fail(HttpContext http, string message, int status = StatusCodes.Status400BadRequest)
-        => SignInPage.RenderAsync(http, message, status);
+        => StaticPages.SignInAsync(http, message, status);
 
     public const string SangamUnreachable = "Sangam can't be reached right now. Please try again in a moment.";
 
