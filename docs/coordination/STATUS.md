@@ -1,6 +1,6 @@
 # Programme status
 
-_Last updated: 7 Nov 2026, 02:05 IST._
+_Last updated: 7 Nov 2026, 02:35 IST (repo and CI only: two Chrome browsers are connected and none is selected, so the chats could not be read)._
 
 **BLOCKER:** GitHub Actions on Sthraas stopped since ~01:40 IST (billing/spending limit). All chats building locally; Mac and Android cannot build/test without it.
 
