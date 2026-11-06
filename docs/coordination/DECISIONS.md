@@ -104,9 +104,22 @@ Each decided on the chat's own pros and cons. Delivered to the chats at the next
 ## Blocked on Arun
 - **PR to arunshivab/chuvadi-reader:** the Foundation branch `platform/foundation-pr` (PR text in `docs/foundation/PR-DESCRIPTION.md`) is ready in the private repo, but neither the chat nor the coordinator can push to your public repo (access blocked). You push it and open the PR, then merge after the six Windows checks.
 
+
+## 6 Nov 2026 15:40 — coordinator (delivered to all seven chats)
+| # | Item | Decision |
+|---|---|---|
+| D-54 | chuvadi-pdf 3.31.2 released (fixes Pdf A and Pdf B, signing, named-destination links, non-zero MediaBox rendering) | Every platform moves to 3.31.2. Foundation packs it from the unchanged tag v3.31.2 into ci/packages with SHA-256s, until Arun's own copies are in chuvadi-reader. Fonts stays 1.0.0 unless pros/cons say otherwise |
+| D-55 | Pdf A / Pdf B web blockers | Cleared once Web runs on 3.31.2 |
+| D-56 | Combined hook patch (D-26) scope | Also includes Mac Catalyst fixes (CertificateSignService.cs:117, PasswordService.cs:185 check IsMacCatalyst) and adding the Mobile UI / Web UI test projects to Platforms.slnx |
+| D-57 | Mac print fidelity | Flatten forms/annotations before handing the PDF to the OS print panel (still vector); font-embedding library ask via coordinator |
+| D-58 | Mac bundle size (519 MB) | Size breakdown + options with pros and cons first |
+| D-59 | Android A-10 home greeting showing the Android user id | Show no name until the person sets one (prefer IAccount on Android, no Core edit) |
+| D-60 | Web branch rebase push | --force-with-lease on platform/web approved (own branch) |
+
 ## Waiting for Arun's final check
 - Mac bundle ID (provisional `in.sthraas.chuvadi.reader`) and Android application ID (placeholder `in.chuvadi.reader`): both permanent once released; depend on the domain and Play/Apple accounts Arun owns.
 - Which Play developer account publishes (Sthraas or imagiQa).
 - App icon master (draft to be reviewed).
 - Six Windows checks after Foundation Group A (in `docs/foundation/HANDOFF.md`).
-- Library decisions already taken by Arun: Pdf 3.31.2 (server fixes A and B) — the Web portal goes to production only after it.
+- Pdf 3.31.2 released 6 Nov: the server fixes A and B are in; Web clears that blocker once on 3.31.2.
+- Library coordinator asks (Arun's files): the 8 MB CAD PDF for PDF-09; any file still showing corrupted uncropped pages after Scrub on 3.31.2.

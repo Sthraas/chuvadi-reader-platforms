@@ -1,6 +1,6 @@
 # Programme status
 
-_Last updated: 6 Nov 2026, 09:30 IST (coordinator check-in, from the repo and CI; no browser tool available to reach the chats at 06:00–09:30; no commits on any branch since 06:40 IST — all chats paused waiting for decisions)._
+_Last updated: 6 Nov 2026, 15:40 IST — browser link back; all seven chats received D-24 to D-60 and restarted. Earlier:  (coordinator check-in, from the repo and CI; no browser tool available to reach the chats at 06:00–09:30; no commits on any branch since 06:40 IST — all chats paused waiting for decisions)._
 
 | Chat | Branch | Last commit (UTC) | CI | State |
 |---|---|---|---|---|
