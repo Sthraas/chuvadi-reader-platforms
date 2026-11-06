@@ -31,7 +31,7 @@ window.chuvadiTheme = {
         else root.removeAttribute('data-reduce-motion');
     },
 
-    // Platform attributes (PlatformRoot.razor): data-shell desktop|tablet|phone|portal, data-platform,
+    // Platform attributes (MainLayout.razor, first render and on form-factor change): data-shell desktop|tablet|phone|portal, data-platform,
     // data-form-factor, data-input. Absent = Windows desktop (the Windows host never calls this, so
     // it costs nothing at its startup). Other hosts should also put their initial values on <html>
     // in their host page so the first paint already has the right layout.

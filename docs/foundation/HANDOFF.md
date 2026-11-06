@@ -5,8 +5,8 @@ For every platform chat (Mac, Linux, Android, Web) and the UI chats (Mobile app 
 ## 1. What is in place
 - `src/ChuvadiReader.Platform` — the contract (no dependencies, trim/AOT clean).
 - `src/ChuvadiReader.Hosting` — `services.AddChuvadiReader(lifetime)`: every Core service, plus defaults for every seam; `ShellAppCommands` (menu-bar commands from the shell registry); desktop defaults (`DesktopAppPaths`, `LocalAccount`, `CtrlKeyLabels` / `MacKeyLabels`, `FixedPlatformInfo`).
-- Group A applied: `PlatformRoot` publishes `<html data-shell data-platform data-form-factor data-input>` and cascades `PlatformState`; window buttons, status text and key labels follow the platform; Windows registers through the kit.
-- Groups B/C (write-back at every save site, host folders, account name, packages) are with the coordinator — see `EDITS-FOR-APPROVAL.md`.
+- Groups A, B and C applied: MainLayout publishes `<html data-shell data-platform data-form-factor data-input>` on non-Windows hosts and re-renders on form-factor changes; window buttons, status text and key labels follow the platform; every save delivers through `IFileWriteBack`; host folders, account, gating; Windows registers through the kit.
+- Startup: `STARTUP.md` (measured before/after; the branch adds no ReadyToRun startup cost).
 
 ## 2. Writing a host
 ```csharp
@@ -41,7 +41,7 @@ A registration after `AddChuvadiReader` wins.
 
 Files arriving from outside (drop, Open with, share intent, macOS open-file, upload): `BenchDropService.Drop(paths)` when `IsBenchActive`, else `OpenDocumentService.Request(path)` — working paths per F-1. Accept the same types as the Open dialog (Group C fixes the Windows list to match).
 
-Host page: copy the Windows `wwwroot/index.html` shape; load `_content/ChuvadiReader.Ui/js/theme.js` before the Blazor script; disable page zoom/pinch in the web view (the Reader zooms the canvas itself). **Put your initial `data-shell`, `data-platform`, `data-form-factor` and `data-input` on `<html>` in the host page** (Web: computed from the request / a tiny inline script; Android: from the device) so the first paint already has the right layout; `PlatformRoot` keeps them in sync afterwards with one `chuvadiTheme.setPlatform` call. Windows sets none (absent = Windows desktop) and makes no call — zero startup cost.
+Host page: copy the Windows `wwwroot/index.html` shape; load `_content/ChuvadiReader.Ui/js/theme.js` before the Blazor script; disable page zoom/pinch in the web view (the Reader zooms the canvas itself). **Put your initial `data-shell`, `data-platform`, `data-form-factor` and `data-input` on `<html>` in the host page** (Web: computed from the request / a tiny inline script; Android: from the device) so the first paint already has the right layout; MainLayout keeps them in sync afterwards with one `chuvadiTheme.setPlatform` call. Windows sets none (absent = Windows desktop) and makes no call — zero startup cost.
 
 ## 3. macOS menu bar — `IAppCommands` (decided: filled host-side from `ShellService`, no Ui hook)
 - `Commands`: everything the Ctrl K bar can run now (global + the mounted page's) — `Id`, `Label`, `Group` (File, Tabs, Document, Read, Mark, Arrange, Protect, View…), canonical `Keys`, `IsEnabled`, `DisabledReason`.

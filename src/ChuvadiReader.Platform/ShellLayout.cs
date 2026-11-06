@@ -50,6 +50,33 @@ public static class ShellLayouts
         _ => "desktop",
     };
 
+    /// <summary>Value for <c>&lt;html data-platform="…"&gt;</c>.</summary>
+    public static string PlatformKey(PlatformKind kind) => kind switch
+    {
+        PlatformKind.Windows => "windows",
+        PlatformKind.MacOS => "macos",
+        PlatformKind.Linux => "linux",
+        PlatformKind.Android => "android",
+        _ => "web",
+    };
+
+    /// <summary>Value for <c>&lt;html data-form-factor="…"&gt;</c>.</summary>
+    public static string FormFactorKey(FormFactor formFactor) => formFactor switch
+    {
+        FormFactor.Tablet => "tablet",
+        FormFactor.Phone => "phone",
+        _ => "desktop",
+    };
+
+    /// <summary>Value for <c>&lt;html data-input="…"&gt;</c>, e.g. "touch pen".</summary>
+    public static string InputKey(InputKinds input) => string.Join(' ', new[]
+    {
+        input.HasFlag(InputKinds.Mouse) ? "mouse" : null,
+        input.HasFlag(InputKinds.Touch) ? "touch" : null,
+        input.HasFlag(InputKinds.Pen) ? "pen" : null,
+        input.HasFlag(InputKinds.Keyboard) ? "keyboard" : null,
+    }.Where(s => s is not null));
+
     /// <summary>Shorthand for <c>From(info.Kind, info.FormFactor)</c>.</summary>
     public static ShellLayout Shell(this IPlatformInfo info) => From(info.Kind, info.FormFactor);
 }

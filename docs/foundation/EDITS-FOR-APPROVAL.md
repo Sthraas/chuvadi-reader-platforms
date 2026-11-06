@@ -1,6 +1,6 @@
 # Foundation — existing-file edits for Arun's approval
 
-**Group A is applied** (aeeac43, approved 6 Nov). **Groups B and C below are not applied yet.** Approver: the coordinator (delegated by Arun, 6 Nov); nothing reaches `arunshivab/chuvadi-reader` before Arun's final check. Group A is one patch with exact diffs: `docs/foundation/proposal/foundation-edits-1.patch` (apply with `git apply`). It assumes the recommended answers to decisions F-2 (a), F-3 (switch) and F-6 (keep both); if you choose differently I regenerate it.
+**Groups A, B and C are applied** (approved 6 Nov). Startup refinements after approval (same behaviour, less startup work): `App.razor` is back to the original — no `PlatformRoot`/cascade; MainLayout sets the `<html>` platform attributes only on non-Windows hosts; right-hand window buttons and the status text are inline in MainLayout again (original Windows markup); no `platform.js` module. See `STARTUP.md`. Approver: the coordinator (delegated by Arun, 6 Nov); nothing reaches `arunshivab/chuvadi-reader` before Arun's final check. Group A is one patch with exact diffs: `docs/foundation/proposal/foundation-edits-1.patch` (apply with `git apply`). It assumes the recommended answers to decisions F-2 (a), F-3 (switch) and F-6 (keep both); if you choose differently I regenerate it.
 Groups B and C depend on decision F-1 (file model) and are listed by site; their diffs are written after you decide, so nothing is built for an option you don't pick.
 
 ## How Group A was verified

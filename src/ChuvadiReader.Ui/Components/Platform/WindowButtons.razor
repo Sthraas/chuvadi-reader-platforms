@@ -4,22 +4,13 @@
 @inject IWindowControls Win
 
 @*
-    Window buttons drawn by the Ui. Placed twice in the top bar (Side="Left" at the start,
-    Side="Right" at the end); only the one matching IPlatformInfo.Chrome.Buttons renders.
-    Right = Windows / Linux default, markup identical to the pre-platform top bar.
-    Left  = macOS order (close · minimise · zoom) and Linux desktops whose button layout is on the left.
-    None  = Android and Web: nothing (Web shows the account menu instead).
+    Left-hand window buttons: macOS order (close · minimise · zoom), and Linux desktops whose button
+    layout is on the left. MainLayout instantiates this only when Chrome.Buttons is Left; right-hand
+    buttons (Windows, Linux default) stay inline in MainLayout so the Windows markup and startup are
+    exactly as before. Android and Web: none (Web shows the account menu instead).
 *@
 
-@if (Platform.Chrome.Buttons == Side && Side == ChuvadiReader.Platform.WindowButtons.Right)
-{
-    <div class="traffic">
-        <button class="tl tl-min" @onclick="() => Win.Minimize()" aria-label="Minimize"><Icon Name="minus" Size="10" /></button>
-        <button class="tl tl-max" @onclick="() => Win.ToggleMaximize()" aria-label="@(Win.IsMaximized ? "Restore" : "Maximize")"><Icon Name="@(Win.IsMaximized ? "restore" : "square")" Size="9" /></button>
-        <button class="tl tl-close" @onclick="() => Win.Close()" aria-label="Close"><Icon Name="x" Size="10" /></button>
-    </div>
-}
-else if (Platform.Chrome.Buttons == Side && Side == ChuvadiReader.Platform.WindowButtons.Left)
+@if (Platform.Chrome.Buttons == Side)
 {
     <div class="traffic traffic-left" @onmousedown:stopPropagation="true" @ondblclick:stopPropagation="true">
         <button class="tl tl-close" @onclick="() => Win.Close()" aria-label="Close"><Icon Name="x" Size="10" /></button>

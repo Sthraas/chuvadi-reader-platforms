@@ -31,74 +31,76 @@ public static class ChuvadiReaderServices
     /// </summary>
     public static IServiceCollection AddChuvadiReader(this IServiceCollection services, AppStateLifetime lifetime)
     {
-        void Add<TService, TImpl>()
-            where TService : class
-            where TImpl : class, TService
+        // Non-generic descriptors on purpose: no generic instantiations to JIT at startup.
+        var life = lifetime == AppStateLifetime.Process ? ServiceLifetime.Singleton : ServiceLifetime.Scoped;
+
+        // Same set as the Windows host registered on chuvadi-reader main c7b9e44 (App.xaml.cs).
+        foreach (var (service, impl) in CoreServices)
         {
-            if (lifetime == AppStateLifetime.Process) services.AddSingleton<TService, TImpl>();
-            else services.AddScoped<TService, TImpl>();
+            services.Add(new ServiceDescriptor(service, impl, life));
         }
 
-        void Self<T>()
-            where T : class => Add<T, T>();
-
-        // Same order and set as App.xaml.cs. Keep in step with it until Windows switches to this method.
-        Self<SaveFolderService>();
-        Self<CategoryService>();
-        Self<ThemeService>();
-        Self<UserProfileService>();
-        Self<RecentFilesService>();
-        Self<PinnedService>();
-        Self<WatchedFolderService>();
-        Self<LibraryService>();
-        Self<TagService>();
-        Self<FolderSearchService>();
-        Self<DocumentPropertiesService>();
-        Self<ExportService>();
-        Self<RedactService>();
-        Self<StampService>();
-        Self<DocxViewService>();
-        Self<XlsxViewService>();
-        Self<FlattenService>();
-        Self<RecoveryService>();
-        Self<PressService>();
-        Add<IPdfReader, ChuvadiPdfReader>();
-        Self<TabsService>();
-        Self<PdfToolsService>();
-        Self<BenchComposer>();
-        Self<BenchService>();
-        Self<SessionService>();
-        Self<OpenDocumentService>();
-        Self<BenchDropService>();
-        Self<RedactRequestService>();
-        Self<ShellService>();
-        Self<PreferencesService>();
-        Self<TextViewService>();
-        Self<MeasureService>();
-        Self<SignatureCheckService>();
-        Self<PasswordService>();
-        Self<CertificateSignService>();
-        Add<IEntitlements, DefaultEntitlements>();
-        Add<IAppReadySignal, AppReadySignal>();
-        Add<IAppCommands, ShellAppCommands>();
-
         // Platform seams: harmless defaults. Each host replaces the ones it supports.
-        services.TryAdd(Describe<IUiScale, NoopUiScale>(lifetime));
-        services.TryAdd(Describe<IExternalLinks, NoExternalLinks>(lifetime));
-        services.TryAdd(Describe<IWindowControls, NoopWindowControls>(lifetime));
-        services.TryAdd(Describe<IPrintService, NoopPrintService>(lifetime));
-        services.TryAdd(Describe<IFileWriteBack, NoFileWriteBack>(lifetime));
-        services.TryAdd(Describe<IAppPaths, Desktop.DesktopAppPaths>(lifetime));
-        services.TryAdd(Describe<IAccount, LocalAccount>(lifetime));
-        services.TryAdd(Describe<IAppLifecycle, NoAppLifecycle>(lifetime));
-        services.TryAdd(Describe<IFileManager, NoFileManager>(lifetime));
+        foreach (var (service, impl) in SeamDefaults)
+        {
+            services.TryAdd(new ServiceDescriptor(service, impl, life));
+        }
+
         return services;
     }
 
-    private static ServiceDescriptor Describe<TService, TImpl>(AppStateLifetime lifetime)
-        where TService : class
-        where TImpl : class, TService =>
-        lifetime == AppStateLifetime.Process
-            ? ServiceDescriptor.Singleton<TService, TImpl>()
-            : ServiceDescriptor.Scoped<TService, TImpl>();
+    private static readonly (Type Service, Type Impl)[] CoreServices =
+    {
+        (typeof(SaveFolderService), typeof(SaveFolderService)),
+        (typeof(CategoryService), typeof(CategoryService)),
+        (typeof(ThemeService), typeof(ThemeService)),
+        (typeof(UserProfileService), typeof(UserProfileService)),
+        (typeof(RecentFilesService), typeof(RecentFilesService)),
+        (typeof(PinnedService), typeof(PinnedService)),
+        (typeof(WatchedFolderService), typeof(WatchedFolderService)),
+        (typeof(LibraryService), typeof(LibraryService)),
+        (typeof(TagService), typeof(TagService)),
+        (typeof(FolderSearchService), typeof(FolderSearchService)),
+        (typeof(DocumentPropertiesService), typeof(DocumentPropertiesService)),
+        (typeof(ExportService), typeof(ExportService)),
+        (typeof(RedactService), typeof(RedactService)),
+        (typeof(StampService), typeof(StampService)),
+        (typeof(DocxViewService), typeof(DocxViewService)),
+        (typeof(XlsxViewService), typeof(XlsxViewService)),
+        (typeof(FlattenService), typeof(FlattenService)),
+        (typeof(RecoveryService), typeof(RecoveryService)),
+        (typeof(PressService), typeof(PressService)),
+        (typeof(IPdfReader), typeof(ChuvadiPdfReader)),
+        (typeof(TabsService), typeof(TabsService)),
+        (typeof(PdfToolsService), typeof(PdfToolsService)),
+        (typeof(BenchComposer), typeof(BenchComposer)),
+        (typeof(BenchService), typeof(BenchService)),
+        (typeof(SessionService), typeof(SessionService)),
+        (typeof(OpenDocumentService), typeof(OpenDocumentService)),
+        (typeof(BenchDropService), typeof(BenchDropService)),
+        (typeof(RedactRequestService), typeof(RedactRequestService)),
+        (typeof(ShellService), typeof(ShellService)),
+        (typeof(PreferencesService), typeof(PreferencesService)),
+        (typeof(TextViewService), typeof(TextViewService)),
+        (typeof(MeasureService), typeof(MeasureService)),
+        (typeof(SignatureCheckService), typeof(SignatureCheckService)),
+        (typeof(PasswordService), typeof(PasswordService)),
+        (typeof(CertificateSignService), typeof(CertificateSignService)),
+        (typeof(IEntitlements), typeof(DefaultEntitlements)),
+        (typeof(IAppReadySignal), typeof(AppReadySignal)),
+        (typeof(IAppCommands), typeof(ShellAppCommands)),
+    };
+
+    private static readonly (Type Service, Type Impl)[] SeamDefaults =
+    {
+        (typeof(IUiScale), typeof(NoopUiScale)),
+        (typeof(IExternalLinks), typeof(NoExternalLinks)),
+        (typeof(IWindowControls), typeof(NoopWindowControls)),
+        (typeof(IPrintService), typeof(NoopPrintService)),
+        (typeof(IFileWriteBack), typeof(NoFileWriteBack)),
+        (typeof(IAppPaths), typeof(Desktop.DesktopAppPaths)),
+        (typeof(IAccount), typeof(LocalAccount)),
+        (typeof(IAppLifecycle), typeof(NoAppLifecycle)),
+        (typeof(IFileManager), typeof(NoFileManager)),
+    };
 }

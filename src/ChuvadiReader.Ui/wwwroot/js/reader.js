@@ -5,7 +5,7 @@
 // keyboard shortcuts. During a toolbar-driven scroll the indicator tracking is
 // suppressed so it does not flicker through the pages it passes.
 
-// The primary shortcut modifier: ⌘ on macOS (data-platform set by PlatformRoot), Ctrl everywhere else.
+// The primary shortcut modifier: ⌘ on macOS (data-platform set by MainLayout), Ctrl everywhere else.
 function isPrimary(e) {
     return document.documentElement.getAttribute('data-platform') === 'macos'
         ? (e.metaKey === true && e.ctrlKey !== true)

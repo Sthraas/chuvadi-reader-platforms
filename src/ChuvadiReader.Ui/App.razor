@@ -2,7 +2,6 @@
     Root component. Lives in the shared UI library so every host (WPF now,
     MAUI later) embeds the exact same <App /> with no changes.
 *@
-<PlatformRoot>
 <Router AppAssembly="@typeof(App).Assembly">
     <Found Context="routeData">
         <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
@@ -16,4 +15,3 @@
         </LayoutView>
     </NotFound>
 </Router>
-</PlatformRoot>
