@@ -36,6 +36,13 @@ public sealed class BrowserBridge
         return _js.InvokeAsync<bool>("chvdPortal.copyImage", ct, stream);
     }
 
+    /// <summary>Sends the browser to another address of the portal (sign-out, expiry).</summary>
+    public async Task LeaveAsync(string path, TimeSpan timeout)
+    {
+        using var cts = new CancellationTokenSource(timeout);
+        await _js.InvokeVoidAsync("chvdPortal.leave", cts.Token, path).ConfigureAwait(false);
+    }
+
     /// <summary>Puts text on the clipboard. Returns false when the browser refused.</summary>
     public ValueTask<bool> CopyTextAsync(string text, CancellationToken ct)
         => _js.InvokeAsync<bool>("chvdPortal.copyText", ct, text);

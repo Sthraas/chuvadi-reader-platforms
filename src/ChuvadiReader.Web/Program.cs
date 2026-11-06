@@ -8,7 +8,10 @@ using ChuvadiReader.Web.Files;
 using ChuvadiReader.Web.Hosting;
 using ChuvadiReader.Web.Hosting.Acme;
 using ChuvadiReader.Web.Platform;
+using ChuvadiReader.Web.Auth;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.AspNetCore.Components.Server.Circuits;
 using Microsoft.Extensions.Options;
 
@@ -69,7 +72,7 @@ public static class Program
         if (tls is { CertificatePath.Length: > 0 } && acme.Enabled)
         {
             // Let's Encrypt through our own ACME client: ordered, renewed and hot-swapped in the background.
-            builder.Services.AddSingleton<IHttpClientFactoryLite, DefaultHttpClientFactoryLite>();
+            builder.Services.TryAddSingleton<IHttpClientFactoryLite, DefaultHttpClientFactoryLite>();
             builder.Services.AddSingleton(sp => new AcmeCertificateManager(tls, acme, sp.GetRequiredService<TimeProvider>(),
                 sp.GetRequiredService<ILogger<AcmeCertificateManager>>()));
             builder.Services.AddSingleton<ICertificateSource>(sp => sp.GetRequiredService<AcmeCertificateManager>());
@@ -84,16 +87,55 @@ public static class Program
         }
 
         // ── sign-in ─────────────────────────────────────────────────────────────────────
-        if (devSignIn)
+        builder.Services.AddOptions<SangamOptions>().Bind(builder.Configuration.GetSection(SangamOptions.Section));
+        var sangam = builder.Configuration.GetSection(SangamOptions.Section).Get<SangamOptions>() ?? new();
+        builder.Services.TryAddSingleton<IHttpClientFactoryLite, DefaultHttpClientFactoryLite>();
+        if (sangam.IsConfigured)
+        {
+            // Sangam sign-in: our own OpenID Connect client (Auth/), the framework's cookie for the portal session.
+            builder.Services.AddSingleton<SangamMetadata>();
+            builder.Services.AddSingleton<JwtVerifier>();
+            builder.Services.AddSingleton<ClientAuthentication>();
+            builder.Services.AddSingleton<PortalSessions>();
+            builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+                .AddCookie(o =>
+                {
+                    var https = Uri.TryCreate(builder.Configuration["Portal:PublicOrigin"], UriKind.Absolute, out var origin) && origin.Scheme == Uri.UriSchemeHttps;
+                    o.Cookie.Name = https ? "__Host-chvd" : "chvd.session";
+                    o.Cookie.HttpOnly = true;
+                    o.Cookie.SameSite = SameSiteMode.Lax;
+                    o.Cookie.SecurePolicy = https ? CookieSecurePolicy.Always : CookieSecurePolicy.SameAsRequest;
+                    o.Cookie.Path = "/";
+                    o.SlidingExpiration = false;
+                    o.ExpireTimeSpan = sangam.AbsoluteSessionLifetime;
+                    o.LoginPath = "/signin";
+                    o.ReturnUrlParameter = "returnUrl";
+                    o.Events.OnValidatePrincipal = SangamSignIn.ValidatePrincipalAsync;
+                    o.Events.OnRedirectToLogin = context =>
+                    {
+                        // Pages go to Sangam; file and circuit requests just get 401.
+                        var path = context.Request.Path;
+                        if (path.StartsWithSegments("/portal") || path.StartsWithSegments("/_blazor"))
+                        {
+                            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                        }
+                        else
+                        {
+                            context.Response.Redirect(context.RedirectUri);
+                        }
+
+                        return Task.CompletedTask;
+                    };
+                });
+        }
+        else if (devSignIn)
         {
             builder.Services.AddAuthentication(DevelopmentSignInHandler.SchemeName)
                 .AddScheme<AuthenticationSchemeOptions, DevelopmentSignInHandler>(DevelopmentSignInHandler.SchemeName, null);
         }
         else
         {
-            // The Sangam client (our own OpenID Connect code) is the next step; until it exists the
-            // portal must not run anywhere but Development or Testing.
-            throw new InvalidOperationException("Sangam sign-in is not wired yet; run with ASPNETCORE_ENVIRONMENT=Development.");
+            throw new InvalidOperationException("Sangam:Authority and Sangam:ClientId are required outside Development.");
         }
 
         builder.Services.AddAuthorization(o => o.FallbackPolicy = o.DefaultPolicy);
@@ -143,6 +185,10 @@ public static class Program
 
         app.MapStaticAssets().AllowAnonymous();
         app.MapPortalFiles();
+        if (sangam.IsConfigured)
+        {
+            app.MapSangamSignIn();
+        }
         app.MapRazorComponents<HostPage>()
             .AddInteractiveServerRenderMode()
             .AddAdditionalAssemblies(typeof(ChuvadiReader.Ui.App).Assembly);

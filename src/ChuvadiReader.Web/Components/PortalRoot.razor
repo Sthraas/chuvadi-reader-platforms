@@ -1,12 +1,55 @@
 @* The portal's interactive root: starts the per-connection browser bridge (viewport reports for the
-   form factor) and renders the unchanged Ui. Portal chrome from the Web portal UI chat lands in the Ui's
-   own platform components (Foundation), so nothing else is added here. *@
+   form factor), registers this tab with the sign-in it belongs to (so a sign-out anywhere ends it), and
+   renders the unchanged Ui. Portal chrome from the Web portal UI chat lands in the Ui's own platform
+   components (Foundation), so nothing else is added here. *@
+@using ChuvadiReader.Web.Auth
+@using ChuvadiReader.Web.Files
 @using ChuvadiReader.Web.Platform
+@implements IDisposable
 @inject ViewportReporter Viewport
+@inject IServiceProvider Services
+@inject SessionSpace Space
+@inject BrowserBridge Browser
+@inject ILogger<PortalRoot> Log
 
 <ChuvadiReader.Ui.App />
 
 @code {
+    [CascadingParameter] private Task<Microsoft.AspNetCore.Components.Authorization.AuthenticationState>? Auth { get; set; }
+
+    private IDisposable? _registration;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Present only with Sangam sign-in (not with the Development sign-in).
+        if (Services.GetService(typeof(PortalSessions)) is PortalSessions sessions && Auth is not null)
+        {
+            var user = (await Auth).User;
+            var sub = user.FindFirst("sub")?.Value;
+            if (sub is not null)
+            {
+                _registration = sessions.Open(sub, user.FindFirst("sid")?.Value, EndAsync);
+            }
+        }
+    }
+
+    /// <summary>Called when this tab's sign-in ends elsewhere: files go now, the browser to the signed-out page.</summary>
+    private async Task EndAsync()
+    {
+        Space.Delete();
+        // Our own one-way call (not NavigationManager, whose awaited navigation can be cancelled in a
+        // background tab and then fault the whole circuit). If the browser is gone, nothing is lost:
+        // the files are already deleted and the cookie no longer works.
+        try
+        {
+            await Browser.LeaveAsync(SangamSignIn.SignedOutPath, TimeSpan.FromSeconds(10));
+        }
+        catch (Exception ex) when (ex is Microsoft.JSInterop.JSException or Microsoft.JSInterop.JSDisconnectedException or TaskCanceledException or OperationCanceledException)
+        {
+            Log.LogDebug("Couldn't send the ended tab to the signed-out page: {Message}", ex.Message);
+        }
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -20,4 +63,6 @@
             }
         }
     }
+
+    public void Dispose() => _registration?.Dispose();
 }
