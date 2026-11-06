@@ -40,6 +40,20 @@ with sync_playwright() as p:
     # 1. open through the left bar
     page.goto(base + "/")
     page.wait_for_selector("nav.leftbar >> text=Upload", timeout=30000)
+    # D-89: dropping files isn't supported on the portal yet; a dropped file must be cancelled (a drop
+    # nobody cancels makes the browser open the file and leave Chuvadi). Synthetic events can't navigate,
+    # so the witness is that the drop was cancelled.
+    cancelled = page.evaluate("""() => {
+        const dt = new DataTransfer();
+        dt.items.add(new File(['%PDF-1.4'], 'dropped.pdf', { type: 'application/pdf' }));
+        const target = document.querySelector('.drop-title') || document.body;
+        const over = new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: dt });
+        target.dispatchEvent(over);
+        const drop = new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt });
+        return { over: over.defaultPrevented, drop: !target.dispatchEvent(drop), effect: dt.dropEffect };
+    }""")
+    check("a dropped file is refused and doesn't leave Chuvadi", cancelled["over"] and cancelled["drop"] and cancelled["effect"] == "none", str(cancelled))
+
     with page.expect_file_chooser(timeout=15000) as fc:
         page.click("nav.leftbar >> text=Upload")
     fc.value.set_files(pdf)

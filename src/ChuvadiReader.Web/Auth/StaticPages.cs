@@ -12,14 +12,29 @@ namespace ChuvadiReader.Web.Auth;
 /// ours wires its one interaction.
 /// <list type="bullet">
 /// <item><c>/signin</c>: the sign-in page (12a, <see cref="PortalSignIn"/>).</item>
-/// <item><c>/licence</c>: the licence agreement, the licence and the third-party notices (the Foundation's
-/// <see cref="LicencesSection"/>; the sign-in page's "Terms of use" links here).</item>
+/// <item><c>/terms</c>, <c>/privacy</c>, <c>/licence</c>: the portal's legal documents (the Foundation's
+/// <see cref="LicencesSection"/>: terms of use, privacy, cookies, third-party notices; drafts, marked so).
+/// The sign-in page's "Terms of use" opens <c>/terms</c>; <c>/privacy</c> is the address a privacy policy
+/// link needs; <c>/licence?part=cookies|notices</c> opens the others (D-86).</item>
 /// </list>
 /// </summary>
 public static class StaticPages
 {
     public const string SignInStartPath = "/signin/sangam";
     public const string LicencePath = "/licence";
+    public const string TermsPath = "/terms";
+    public const string PrivacyPath = "/privacy";
+
+    /// <summary>The legal pages' addresses, readable before sign-in.</summary>
+    public static readonly string[] LegalPaths = [TermsPath, PrivacyPath, LicencePath];
+
+    /// <summary>Where each portal document lives (the page's switch becomes links to these).</summary>
+    private static string AddressOf(string id) => id switch
+    {
+        "terms" => TermsPath,
+        "privacy" => PrivacyPath,
+        _ => LicencePath + "?part=" + Uri.EscapeDataString(id),
+    };
 
     /// <summary>The sign-in page, with an optional reason the last attempt failed.</summary>
     public static async Task<IResult> SignInAsync(HttpContext http, string? error = null, int status = StatusCodes.Status200OK)
@@ -34,17 +49,32 @@ public static class StaticPages
         return Page(http, "Sign in · Chuvadi", card, "js/signin.js", ("data-chvd-signin", start), status);
     }
 
-    /// <summary>The licences page; <c>?part=eula|licence|notices</c> picks the text.</summary>
-    public static async Task<IResult> LicenceAsync(HttpContext http)
+    /// <summary>A legal page: <c>/terms</c>, <c>/privacy</c>, or <c>/licence?part=</c> one of the portal's documents.</summary>
+    public static async Task<IResult> LegalAsync(HttpContext http)
     {
-        string? part = http.Request.Query["part"];
-        part = part is "eula" or "licence" or "notices" ? part : "eula";
+        var docs = LegalTexts.PortalDocs;
+        var route = http.Request.Path.Value?.TrimEnd('/') ?? LicencePath;
+        string? asked = http.Request.Query["part"];
+        var part = route switch
+        {
+            TermsPath => "terms",
+            PrivacyPath => "privacy",
+            _ => docs.Any(d => d.Id == asked) ? asked! : docs[0].Id,
+        };
+        var title = route switch
+        {
+            TermsPath => "Terms of use",
+            PrivacyPath => "Privacy",
+            _ => "Licences",
+        };
         var section = await RenderAsync<LicencesSection>(http, new Dictionary<string, object?>
         {
             [nameof(LicencesSection.Part)] = part,
+            [nameof(LicencesSection.Title)] = title,
         }).ConfigureAwait(false);
-        return Page(http, "Licences · Chuvadi", "<div class=\"licence-page chvd-static-licence\">" + section + "</div>", "js/legal.js",
-            ("data-chvd-licence", LicencePath), StatusCodes.Status200OK);
+        var links = string.Join(" ", docs.Select(d => AddressOf(d.Id)));
+        return Page(http, title + " · Chuvadi", "<div class=\"licence-page chvd-static-licence\">" + section + "</div>", "js/legal.js",
+            ("data-chvd-docs", links), StatusCodes.Status200OK);
     }
 
     /// <summary>Renders a Ui component with its own small set of services: the request's own would
@@ -53,7 +83,10 @@ public static class StaticPages
         where TComponent : IComponent
     {
         var links = http.RequestServices.GetRequiredService<PortalLinks>();
-        await using var services = new ServiceCollection().AddSingleton(links).BuildServiceProvider();
+        await using var services = new ServiceCollection()
+            .AddSingleton(links)
+            .AddSingleton<ChuvadiReader.Platform.IPlatformInfo>(new ChuvadiReader.Web.Platform.WebPlatformInfo()) // the portal's documents
+            .BuildServiceProvider();
         await using var renderer = new HtmlRenderer(services, http.RequestServices.GetRequiredService<ILoggerFactory>());
         return await renderer.Dispatcher.InvokeAsync(async () =>
         {

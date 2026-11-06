@@ -369,5 +369,23 @@
         report();
     }
 
+    // D-89: dropping files isn't supported on the portal yet (DropFiles = false). A browser opens a file
+    // dropped on a page that doesn't take it, which would leave Chuvadi with the file in the tab. So a
+    // file drop nothing in the page handled is cancelled, with the "not allowed" cursor while dragging.
+    // The Reader's own drops (an image onto a page, handled first) are left alone.
+    function hasFiles(e) {
+        var types = e.dataTransfer && e.dataTransfer.types;
+        return !!types && Array.prototype.indexOf.call(types, 'Files') >= 0;
+    }
+    document.addEventListener('dragover', function (e) {
+        if (hasFiles(e) && !e.defaultPrevented) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'none';
+        }
+    });
+    document.addEventListener('drop', function (e) {
+        if (hasFiles(e) && !e.defaultPrevented) e.preventDefault();
+    });
+
     window.chvdPortal = { pick: pick, download: download, print: print, copyImage: copyImage, copyText: copyText, openLink: openLink, watchViewport: watchViewport, leave: leave, trackActivity: trackActivity, stillHere: stillHere };
 })();

@@ -41,20 +41,21 @@ The whole shared solution must pass before any push: `dotnet build ChuvadiReader
 | F-12 | External links (desktop app, account settings) | Open in a new tab with no handle back to the portal | M |
 | F-13 | Account menu → Sign out | Sangam end-session → signed-out page; every other tab of that sign-in also goes to the signed-out page | E `sangam_signin.py` |
 | F-14 | Sign out on Sangam itself | Back-channel: the open portal tab goes to the signed-out page within seconds | E `sangam_signin.py` |
-| F-15 | Terms of use | `/licence` readable before sign-in; switch between agreement, licence and notices | U `GatewayTests`, `LicencePageTests`; M |
+| F-15 | Legal pages (D-86) | `/terms`, `/privacy`, `/licence?part=cookies|notices` readable before sign-in, with no worker started. The portal's four documents (terms of use, privacy, cookies, third-party notices), not the apps' EULA. Each shows its DRAFT line and the copyright line. The switch moves between the four addresses. The 12a "Terms of use" opens `/terms` | U `GatewayTests` (legal pages), `LicencePageTests`, `EndpointAuthTests`; E browser check (switch, 4 addresses); M on each browser in §5 |
 | F-16 | Two tabs, one person | Both work; signing out in one ends the other | E `sangam_signin.py` |
 | F-17 | Two people at once | Separate workers; nothing of one visible to the other | U `GatewayTests`; E `load.py` |
 | F-18 | Phone and tablet sizes | Form factor follows the browser (D-07); phone layout from the Mobile UI chat | M (Chrome device mode, real phone) |
 | F-19 | Mac keyboard | ⌘ labels and shortcuts on macOS browsers (D-07) | M |
 | F-20 | Planned restart banner | Operator file → banner in every tab, including later arrivals; gone when the time passes or the file is removed | U `MaintenanceTests`, `GatewayMaintenanceTests`; M (runbook §8.9) |
-| P-1 | Portal Terms of Use and Privacy Notice at `/terms`, `/privacy`, readable before sign-in | Served like `/licence`; "Terms of use" points to `/terms` | **P**: the Foundation's legal drafts |
-| P-2 | Drop a file on Home | Foundation item (drop-zone options) | **P** |
+| F-21 | Drop a file anywhere on the portal (D-89, now) | Nothing happens: the "not allowed" cursor while dragging; the browser does **not** open the file or leave Chuvadi. An image dropped onto a page in the Reader still adds it (the Reader's own drop) | E `flows.py` (drop cancelled; control: a page without the portal script doesn't cancel); M with a real file from the desktop on each browser in §5 |
+| F-22 | Drop files on Home (D-89, next) | Each dropped file streams to the session's encrypted working copy as upload does, and opens in its own tab | **P**: the Foundation's `IDroppedFiles` seam; then the upload checks S-7 apply to drops too |
+| F-23 | Privacy link on the sign-in page (D-86 "link them from 12a") | 12a shows "Terms of use"; Privacy is one switch away on that page. A separate Privacy link needs the Web portal UI's sign-in component | **P**: question to the coordinator |
 
 ## 2. Security checks
 
 | ID | Check | Must happen | Coverage |
 |---|---|---|---|
-| S-1 | Sign-in on every endpoint | Only these are anonymous: `/signin`, `/signin/sangam`, `/signin-sangam`, `/signout`, `/signout-sangam`, `/signed-out`, `/backchannel-logout`, `/licence`, `/healthz`, `/error`, static files. Every other route (Reader pages, circuit, uploads, downloads, print, activity, the gateway relay) needs a signed-in person. Pages without sign-in redirect to `/signin`; `/portal/*` and `/_blazor` answer 401 | U `EndpointAuthTests` (lists every route in single and gateway mode), `Anonymous_pages_go_to_sign_in…` |
+| S-1 | Sign-in on every endpoint | Only these are anonymous: `/signin`, `/signin/sangam`, `/signin-sangam`, `/signout`, `/signout-sangam`, `/signed-out`, `/backchannel-logout`, `/terms`, `/privacy`, `/licence`, `/healthz`, `/error`, static files. Every other route (Reader pages, circuit, uploads, downloads, print, activity, the gateway relay) needs a signed-in person. Pages without sign-in redirect to `/signin`; `/portal/*` and `/_blazor` answer 401 | U `EndpointAuthTests` (lists every route in single and gateway mode), `Anonymous_pages_go_to_sign_in…` |
 | S-2 | Cookie | `__Host-chvd` on https (Secure, HttpOnly, SameSite=Lax, path /), `chvd.session` on local http; 8 h absolute, not sliding; no sign-in flow cookie left behind | U; E (`--insecure` on the rehearsal) |
 | S-3 | Sign-in protocol | PKCE S256, state, nonce, RFC 9207 `iss`; ID token signature, `alg` allow-list (no `none`, no HS*), `iss`, `aud`, `azp`, expiry, nonce, unknown `kid`; flow cookie bound to the browser, 10 min | U `SangamSignInTests` (refusal cases) |
 | S-4 | Open redirect | `returnUrl` only local (`//evil`, `/\\evil`, absolute URLs, CR/LF refused) — on `/signin`, the page's link and the callback | U |
@@ -67,7 +68,7 @@ The whole shared solution must pass before any push: `dotnet build ChuvadiReader
 | S-11 | Expiry (D-30) | 30 min idle, 8 h absolute; warning 5 min before in every open tab; "I'm still here", any input or a page load takes the idle warning down; only real activity counts (not the circuit's keep-alive, not static files); at the end the cookie stops working and files go | U `SessionClockTests`; E `expiry.py` (short limits) |
 | S-12 | Working copies at rest (D-28) | Outside Development, start-up refused unless `DataRoot` is on tmpfs and swap is off, dm-crypt or zram; Data Protection keys never on disk | U `StorageCheckTests`; M (rehearsal: refusal on a disk data root) |
 | S-13 | Transport and headers | HTTPS redirect (307 to the public port), HSTS, CSP (`script-src 'self'`, `frame-ancestors 'self'`), `nosniff`, frame and referrer policy, no `Server` header; TLS 1.2/1.3 only | U `Every_response_carries_the_security_headers`; M (rehearsal, `curl -vk`) |
-| S-14 | Certificates | Let's Encrypt via our ACME client: order, renew in window, keep working certificate on failure, hot swap without restart | U `Acme*Tests`, `CertificateSourceTests`; **P** staging run on the real domain |
+| S-14 | Certificates | Let's Encrypt via our ACME client: order, renew in window, keep working certificate on failure, hot swap without restart | U `Acme*Tests`, `CertificateSourceTests`; **V-2** on staging |
 | S-15 | Error handling | Unexpected failures show `/error` (anonymous; never loops through sign-in); no stack traces outside Development | U `The_error_page_needs_no_sign_in…`; M |
 | S-16 | Logs | No document content, tokens, passwords or cookies in logs; worker log lines carry a key hash, not the person's id | M (`journalctl` review during staging) |
 | S-17 | Untrusted input on public pages | `/licence?part=` anything → the agreement, nothing echoed; sign-in error text encoded | U `GatewayTests` licences page |
@@ -99,8 +100,8 @@ The whole shared solution must pass before any push: `dotnet build ChuvadiReader
 | L-3 | `MaxWorkers` reached | Newcomers see "The portal is busy"; people already in are unaffected | U |
 | L-4 | Worker crash under load | Only that person is affected; their next request gets a fresh worker; files cleaned | U (crash); M (kill a worker during `load.py`) |
 | L-5 | Everyone leaves | All workers stop within reconnect window + `IdleStop` + check interval (~6 min); data root empty | E (`load.py` then watch `workers/`) |
-| L-6 | Soak: 40 people for 2 hours on staging | No memory growth in the gateway; worker memory returns when people leave; no file left behind | **P** staging VM |
-| L-7 | Large documents (300-page scan, 200 MB upload limit) | Upload in chunks completes; rendering within the worker cap | M on staging |
+| L-6 | Soak: 40 people for 2 hours | No memory growth in the gateway; worker memory returns when people leave; no file left behind | **V-1** on staging |
+| L-7 | Large documents | Upload in chunks completes; rendering stays within the worker's cap; others unaffected | **V-3** on staging |
 | L-8 | Restart under load (planned, with the banner) | Banner shown in advance; restart ends sessions cleanly; people sign in again | M (runbook §9) |
 
 ## 5. Browser matrix
@@ -116,6 +117,46 @@ The whole shared solution must pass before any push: `dotnet build ChuvadiReader
 | A browser with no PDF viewer | Playwright Chromium | F-9 passes (link after 20 s) | — |
 
 Run the engines here: `python3 tests/web-e2e/flows.py <base> <pdf> <out> <log> --browser chrome|firefox|webkit|chromium` (same flag on `sangam_signin.py` and `expiry.py`).
+
+### 5a. Manual browser runs (the Web Test chat, on real devices)
+
+Every run uses the same sequence, against the local gateway with real Sangam (or staging once it exists). Note the browser and OS versions, and put a ✓, or a description of what went wrong, against each step.
+
+| # | Step | Expect |
+|---|---|---|
+| 1 | Open the portal | 12a sign-in page; "Terms of use" opens `/terms` in a new tab and the switch reaches Privacy, Cookies, Third-party notices |
+| 2 | Continue with Sangam, sign in | Back in the Reader; name and Sangam ID in the account menu |
+| 3 | Drag a PDF from the desktop onto Home, then onto the Reader | "Not allowed" cursor; nothing opens; the browser stays on Chuvadi |
+| 4 | Upload (left bar) one PDF, one DOCX, one XLSX | Each opens; a file renamed to the wrong extension is refused |
+| 5 | Page, zoom, find a word | As on the desktop |
+| 6 | Add a highlight and a note; Save as new PDF | A download; it opens in the OS viewer with the marks |
+| 7 | Print the current page, then pages 2–3 | Chrome, Edge, Firefox: the browser's print dialog shows only those pages. Safari: "Open the PDF to print" → PDF tab → print from there |
+| 8 | Print a no-print PDF | The print card refuses |
+| 9 | Merge two PDFs | `merged.pdf` downloads |
+| 10 | Copy text; copy a page image | The clipboard has them (image: the browser may ask permission) |
+| 11 | Open a second tab of the portal; sign out from the first | Both tabs end on the signed-out page |
+| 12 | Sign in, leave the tab untouched (with a short idle limit on the test server) | Warning, "I'm still here" works; later the session ends on the signed-out page |
+
+Per browser, on top of the sequence:
+
+| Run | Device | Also check |
+|---|---|---|
+| M-1 Edge | Windows 11, current Edge | Edge's own PDF viewer prints the right pages; Ctrl labels; the downloads bar |
+| M-2 Safari on Mac | macOS 15 or later, current Safari | ⌘ labels and shortcuts (⌘P, ⌘F); the print link opens a PDF tab and ⌘P prints it; image copy asks permission; the 12a page in light and dark |
+| M-3 Safari on iPhone and iPad | iOS/iPadOS 18 or later | Upload from Files and from Photos; phone layout on iPhone, tablet layout on iPad (both orientations); print via the PDF tab's share sheet; downloads land in Files; touch selection and marks; no page zoom on double-tap |
+| M-4 Chrome on Android | Android 14 or later, current Chrome | Upload from the device and from Drive; phone layout; print via the PDF tab; downloads; the back button doesn't lose the session |
+
+### 5b. Staging-VM runs (before go-live; the VM sized as production, runbook §2)
+
+| ID | Run | How | Pass when |
+|---|---|---|---|
+| V-1 | **Two-hour soak** | From a separate machine with the Development sign-in **on the staging VM only**: `load.py` with 40 people, repeated back to back for 2 hours (`for i in $(seq 1 30); do python3 load.py … 40; done`). Every 5 min, sample: gateway RSS, number of workers, total worker RSS, `du -s /srv/chuvadi/data`, open file handles of the gateway (`ls /proc/<pid>/fd | wc -l`) | No failures; gateway RSS and handles flat (±10 %) after the first round; workers return to 0 and `data/workers` empties within ~6 min of each round; no errors in `journalctl` |
+| V-2 | **Real Let's Encrypt** | Runbook §8.3: staging directory first, then production. Then force a renewal by setting `Portal__Tls__Acme__RenewBeforeDays=89` and restarting; watch `journalctl` | Staging certificate issued and served; production certificate trusted by the browsers in §5a; the forced renewal installs a new certificate with no restart and no dropped connections; a failed renewal (DNS pointed away briefly) keeps the old certificate and retries |
+| V-3 | **Large documents** | Upload, read, mark, save, print and merge: a 300-page scanned PDF (~150 MB), a PDF at the 200 MB upload limit, one just over it, a 500-page text PDF, a 50 MB DOCX, an XLSX with 100,000 rows. Run two people at once doing this, and one person doing it while 20 others run `load.py` | Within-limit files work; over-limit refused with the size message; no worker exceeds its `MemoryLimitMB` without a clean refusal; the other people's timings stay within 2× of the V-1 medians |
+| V-4 | Hostile documents (S-18) | A fuzz corpus of malformed PDFs, zip bombs as DOCX/XLSX, deeply nested objects | Only that person's worker is affected (refusal, or a worker restart); the gateway and others continue |
+| V-5 | Logs (S-16) | After V-1 to V-4, read `journalctl -u chuvadi-portal` | No document text, tokens, passwords, cookies or Sangam ids in the logs |
+| V-6 | Restart with the banner (L-8, F-20) | Runbook §9 during a V-1 round | Banner in every tab ahead of time; the restart ends sessions cleanly; people sign in again |
+| V-7 | Drafts before go-live | `curl -s https://<domain>/terms /privacy` | **No "DRAFT" line**: the legal texts are the counsel-reviewed versions (the drafts say not to publish) |
 
 ## 6. Deployment checks
 
@@ -140,7 +181,14 @@ Found and fixed while running this plan:
 - A browser that downloads PDFs waited 60 s and then failed; it now gets the link after 20 s.
 - The print message now says which of the two happened.
 
+**7 Nov, morning (on `platform/foundation` @ `e5802e6`, fourth combined patch):**
+- Shared solution `-warnaserror`, 0 warnings; tests Reader 171, Hosting 48, Mobile UI 15, Web UI 31.
+- Web 140/140.
+- `flows.py` including the D-89 drop check: Chrome, Firefox, WebKit and Chromium 7/7. The control check confirms a page without the portal script doesn't cancel the drop.
+- Legal pages in Chrome: `/terms`, `/privacy`, cookies and notices; the switch moves between the four addresses; DRAFT shown; no page errors.
+- Real-Sangam e2e through the gateway: pass (back-channel 1.3 s).
+
 ## 8. Known gaps
-- **P-1:** `/terms` and `/privacy` wait for the Foundation's portal Terms of Use and Privacy Notice. Until then, "Terms of use" opens the desktop EULA, which itself refers to portal terms that don't exist yet.
-- Real Edge, real Safari (macOS and iOS) and Android Chrome need manual runs.
-- Staging-only items: L-6, L-7, S-14, S-16, S-18, G-12.
+- The legal texts are drafts and say not to publish until counsel has reviewed them: V-7 blocks go-live until the DRAFT lines are gone.
+- F-22 (dropped files opening) waits for the Foundation's `IDroppedFiles`; F-23 (a Privacy link on 12a) waits for a decision.
+- Manual runs M-1 to M-4 (§5a) need real devices; staging runs V-1 to V-7 (§5b) need the VM, which comes last by Arun's decision. G-12 needs a Sangam test person in two organisations.

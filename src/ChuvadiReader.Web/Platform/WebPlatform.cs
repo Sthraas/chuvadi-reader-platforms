@@ -27,7 +27,7 @@ public sealed class WebPlatformInfo : IPlatformInfo
         SavesAsDownload = true,
         WatchFolders = false,
         RevealInFolder = false,
-        DropFiles = true,
+        DropFiles = false, // D-89: not until the Foundation's IDroppedFiles seam; portal.js cancels file drops meanwhile
         Share = false,
         MultipleWindows = true,
         ServerSide = true,

@@ -258,20 +258,33 @@ public class GatewayTests(GatewayFixture gateway) : IClassFixture<GatewayFixture
     }
 
     [Fact]
-    public async Task The_licences_page_is_readable_before_sign_in_and_starts_no_worker()
+    public async Task The_legal_pages_are_readable_before_sign_in_marked_draft_and_start_no_worker()
     {
         using var anonymous = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { BaseAddress = gateway.Base };
-        var eula = await anonymous.GetAsync("/licence");
-        Assert.Equal(HttpStatusCode.OK, eula.StatusCode);
-        var html = await eula.Content.ReadAsStringAsync();
-        Assert.Contains("END USER LICENCE AGREEMENT", html);
-        Assert.Contains("js/legal.js", html);
-        Assert.DoesNotContain("blazor.web.js", html);
+        async Task<string> Page(string path)
+        {
+            var resp = await anonymous.GetAsync(path);
+            Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+            return await resp.Content.ReadAsStringAsync();
+        }
 
-        var notices = await (await anonymous.GetAsync("/licence?part=notices")).Content.ReadAsStringAsync();
-        Assert.Contains(System.Net.WebUtility.HtmlEncode(ChuvadiReader.Ui.Components.Legal.LegalTexts.Notices[..60]), notices);
-        var unknown = await (await anonymous.GetAsync("/licence?part=<script>")).Content.ReadAsStringAsync();
-        Assert.Contains("END USER LICENCE AGREEMENT", unknown); // anything else: the agreement
+        var terms = await Page("/terms");
+        Assert.Contains("CHUVADI WEB PORTAL - TERMS OF USE", terms);
+        Assert.Contains("DRAFT, to be reviewed by counsel", terms); // D-86: kept marked DRAFT
+        Assert.Contains("<title>Terms of use &#183; Chuvadi</title>", terms);
+        Assert.Contains("data-chvd-docs=\"/terms /privacy /licence?part=cookies /licence?part=notices\"", terms);
+        Assert.Contains("js/legal.js", terms);
+        Assert.DoesNotContain("blazor.web.js", terms);
+
+        var privacy = await Page("/privacy");
+        Assert.Contains("CHUVADI - PRIVACY NOTICE", privacy);
+        Assert.Contains("DRAFT, to be reviewed by counsel", privacy);
+        Assert.Contains("COOKIE AND BROWSER STORAGE NOTICE", await Page("/licence?part=cookies"));
+        Assert.Contains("Third-party notices", await Page("/licence?part=notices"));
+
+        // The portal shows its own documents, not the apps' licence agreement; anything unknown opens the terms.
+        Assert.DoesNotContain("END USER LICENCE AGREEMENT", await Page("/licence"));
+        Assert.Contains("TERMS OF USE", await Page("/licence?part=<script>"));
         Assert.Empty(gateway.Pool.Running);
     }
 

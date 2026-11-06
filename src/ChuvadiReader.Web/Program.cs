@@ -136,11 +136,13 @@ public static class Program
         app.MapStaticAssets().AllowAnonymous();
         app.MapGet("/healthz", () => Results.Text("ok")).AllowAnonymous(); // for the host's monitoring; says nothing else
 
-        // The licences page, readable before sign-in (the sign-in page's "Terms of use"). In single mode it
-        // takes precedence over the Ui's own /licence route on full page loads only; in-app navigation stays
-        // in the circuit.
-        app.MapGet(StaticPages.LicencePath, (Delegate)(Func<HttpContext, Task<IResult>>)StaticPages.LicenceAsync)
-            .AllowAnonymous().WithOrder(-1);
+        // The legal pages, readable before sign-in (D-86): /terms (the sign-in page's "Terms of use"),
+        // /privacy, /licence. In single mode they take precedence over the Ui's own routes on full page loads
+        // only; in-app navigation stays in the circuit.
+        foreach (var path in StaticPages.LegalPaths)
+        {
+            app.MapGet(path, (Delegate)(Func<HttpContext, Task<IResult>>)StaticPages.LegalAsync).AllowAnonymous().WithOrder(-1);
+        }
 
         // Where UseExceptionHandler sends an unexpected failure (anonymous, so it can never loop through sign-in).
         app.Map("/error", () => Results.Content(SangamSignIn.Page("Something went wrong", "Please try again in a moment.", "/", "Back to the portal"),
