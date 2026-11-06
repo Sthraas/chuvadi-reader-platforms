@@ -42,6 +42,11 @@
 .acct-out, .acct-out:hover { color: var(--chvd-danger); }
 .acct-item:disabled { opacity: .5; cursor: default; }
 
+/* Tablet-sized touch browsers (D-32): 40 px chip like the other top-bar controls (mobile.css), 48 px rows. */
+html[data-shell="tablet"] .acct-chip { height: 40px; border-radius: 20px; padding: 0 10px 0 5px; font-size: 13.5px; }
+html[data-shell="tablet"] .acct-av { width: 28px; height: 28px; font-size: 10.5px; }
+html[data-shell="tablet"] .acct-item { height: 48px; font-size: 14px; }
+
 /* Narrow browsers: the chip keeps only the avatar. */
 @media (max-width: 720px) {
     .acct-first { display: none; }
