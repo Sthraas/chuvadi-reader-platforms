@@ -47,7 +47,7 @@ Needed for a normal double-click install with no warning:
   (`UseHardenedRuntime=true`). .NET needs the `com.apple.security.cs.allow-jit` entitlement under the
   hardened runtime.
 - **Notarise**: `xcrun notarytool submit Chuvadi.zip --apple-id … --team-id … --password <app-specific>`
-  (or an App Store Connect API key) `--wait`, then `xcrun stapler staple ChuvadiReader.Mac.app`.
+  (or an App Store Connect API key) `--wait`, then `xcrun stapler staple Chuvadi.app`.
 - Usually shipped as a signed, notarised **.dmg** (`hdiutil create`), itself signed and notarised.
 - **Mac App Store** instead: different certificate (Apple Distribution + installer), App Sandbox
   required, provisioning profile, App Store review. The sandbox would require security-scoped bookmarks
