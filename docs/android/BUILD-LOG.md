@@ -372,3 +372,15 @@ Screenshots: `gestures-phone.png`, `gestures-tablet.png` (sent to the coordinato
   - Double-tap follows the new contract (Mobile UI session 3): zoom in, a second double-tap returns.
 - Round 1 already proved on all four emulators: rotation, split screen in and out (WMShell),
   relaunch, PrintManager dialog, back closes the phone ⋮ sheet (key and edge gesture), no crash.
+
+### 37. Run 42281134585 (round 2) — causes found; coordinator's six items
+| Item | Cause (evidence) | Fix |
+|---|---|---|
+| .docx / .xlsx / Share don't open | **Test.** `ActivityTaskManager: START … from uid 0`: gestures.py leaves adbd as root, and root's `am` grant doesn't reach the app. The app logged `nothing imported from content://media/external/downloads/19` and showed "Chuvadi couldn't open that file." (the new host message working). The no-print PDF sent as uid 2000 opened in a new tab: Open with while running works. | intents now sent as uid 2000 (`su 2000 am …`), like a real sending app |
+| Save as PDF finds nothing | **Test.** `find /sdcard …`: `/sdcard` is a symlink and `find` doesn't follow it. The picker showed SAVE with "chuvadi-test.pdf". | search `/storage/emulated/0/` |
+| Typed text garbled ("tte", "te", "t") | Gboard took the test touchscreen for a stylus and opened "Try out your stylus" over the app (screenshot p6), swallowing keys. | stylus handwriting off (Android setting); typing one key at a time with the field read after each key; **control field** (plain `<input>`, no Blazor) typed the same way to separate input path vs page |
+| Soft keyboard / Find | Round 2 had Gboard's stylus toolbar, not the keyboard; host pads for IME insets (SystemBars). | evidence now records the IME window top and the WebView's bottom before/after |
+| Back on the tablet doesn't close the Print card | **Ui gap.** Only PhoneShell listens to `IAppLifecycle.BackRequested` (its sheets). Cards on the tablet don't, so back goes to the WebView history. | proposal to the coordinator (Reader closes the open card on BackRequested) |
+| Swipe never pages | **Test.** Mobile UI's fix works on the device: no more pointercancel (pointerdown → 8 moves → pointerup). My swipe took 1.15 s (every step is a process start), over mobile.js's 600 ms. | one pause after touch-down, then the moves and the lift in one write (~0.4 s) |
+| Double-tap on API 35 | Same clean double tap as API 36 (taps 18–75 ms apart), but reader.js doesn't zoom on API 35. | re-check after this run; page-side if it stays |
+| Relaunch "tab" empty | Back had walked to Home (`/`); relaunch correctly returns there. | check compares the screen it left from |

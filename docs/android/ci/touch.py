@@ -148,10 +148,13 @@ def main():
     elif cmd == "swipe":
         x1, y1, x2, y2 = args[:4]
         ms = args[4] if len(args) > 4 else 250
+        # Each pause costs a process start (~120 ms) on the CI emulator, so a step-by-step swipe took
+        # over a second — slower than any real swipe. One pause after touch-down, then the moves and
+        # the lift in one write (the page still sees every move, with real coordinates).
         n = 8
-        g.emit(g.press(0, x1, y1), ms / 1000 / n)
+        g.emit(g.press(0, x1, y1), ms / 1000 / 2)
         for x, y in zip(steps_between(x1, x2, n), steps_between(y1, y2, n)):
-            g.emit(g.move(0, x, y), ms / 1000 / n)
+            g.emit(g.move(0, x, y), 0)
         g.emit(g.release(0), 0)
     elif cmd == "pinch":
         cx, cy, d0, d1 = args[:4]

@@ -247,6 +247,14 @@ def key(*codes):
     time.sleep(1.2)
 
 
+def am_as_shell(*args):
+    """`am` as the shell user (uid 2000). gestures.py leaves adbd running as root, and a URI grant
+    made by root's `am` doesn't reach the app; a real sending app is an ordinary user too."""
+    root = adb("shell", "id -u").strip() == "0"
+    cmd = (["su", "2000"] if root else []) + ["am", *args]
+    return adb("shell", *cmd)
+
+
 def media_uri(name):
     for attempt in range(15):
         for coll in ("downloads", "file"):
@@ -290,6 +298,34 @@ def go_read():
     return wait_for(lambda s: s.get("desk") is not None, 20, "Read mode")
 
 
+# Gboard treats the test touchscreen as a stylus and shows "Try out your stylus" over the app,
+# which swallows typing. Android setting, not the app's: turn stylus handwriting off.
+adb("shell", "settings", "put", "secure", "stylus_handwriting_enabled", "0")
+
+
+def dismiss_ime_dialogs():
+    xml = dump()
+    if re.search(r'text="Try out your stylus"', xml):
+        tap_node(r'text="(Cancel|CANCEL|Skip|SKIP)"', "the stylus tutorial's Cancel")
+        time.sleep(1)
+
+
+TYPE_JS = "(() => { const e = document.activeElement; return e && 'value' in e ? e.value : null; })()"
+
+
+def type_slowly(text):
+    """One key at a time, through the on-screen keyboard (IME), reading the field after each key."""
+    seen = []
+    for ch in text:
+        adb("shell", "input", "text", ch)
+        time.sleep(0.5)
+        try:
+            seen.append(cdp.evaluate(TYPE_JS))
+        except SystemExit:
+            seen.append(None)
+    return seen
+
+
 # ── 0. Read mode ─────────────────────────────────────────────────────────────
 # gestures.py ends in Arrange, where a file opened from another app goes onto the Shelf (by design,
 # like a desktop drop: PLATFORM-INTERFACE §4). Open with / Share are tested from Read.
@@ -309,8 +345,8 @@ for name, mime, marker, shotname in (
         (XLSX, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", office.XLSX_MARKER, "p2-xlsx")):
     uri = media_uri(name)
     before, pid_before, acts_before = safe_state(), pid(), activity_records()
-    out = adb("shell", "am", "start", "-W", "-a", "android.intent.action.VIEW", "-d", str(uri), "-t", mime,
-              "-p", PKG, "--grant-read-uri-permission").strip()
+    out = am_as_shell("start", "-W", "-a", "android.intent.action.VIEW", "-d", str(uri), "-t", mime,
+                      "-p", PKG, "--grant-read-uri-permission").strip()
     print(out)
     st = wait_for(lambda s: marker in (s.get("text") or ""), 60, f"{name} to show")
     acts = activity_records()
@@ -326,8 +362,8 @@ save_log("log-open-with.txt")
 # The URI goes in both EXTRA_STREAM (what a sharing app sets) and the data field, because `am`
 # grants --grant-read-uri-permission on the data URI; DocumentImport reads EXTRA_STREAM.
 uri = media_uri(SHARE_PDF)
-print(adb("shell", "am", "start", "-a", "android.intent.action.SEND", "-t", "application/pdf", "-d", str(uri),
-          "--eu", "android.intent.extra.STREAM", str(uri), "-p", PKG, "--grant-read-uri-permission").strip())
+print(am_as_shell("start", "-a", "android.intent.action.SEND", "-t", "application/pdf", "-d", str(uri),
+                  "--eu", "android.intent.extra.STREAM", str(uri), "-p", PKG, "--grant-read-uri-permission").strip())
 tabs_before = safe_state().get("tabs") or 0
 st = wait_for(lambda s: SHARE_PDF.split(".")[0] in (s.get("tab") or "") and s.get("pages", 0) >= 1 and counter_total(s) == 4,
               60, "the shared PDF to open")
@@ -395,15 +431,32 @@ check("keyboard Ctrl = zooms in", (k2.get("pageW") or 0) > (k1.get("pageW") or 0
 key("KEYCODE_CTRL_LEFT", "KEYCODE_0")
 key("KEYCODE_CTRL_LEFT", "KEYCODE_F")
 kf = wait_for(lambda s: s.get("find") is not None, 6, "Ctrl F to open find")
-for ch in "test":   # one key at a time: a burst drops characters on the emulator
-    adb("shell", "input", "text", ch)
-    time.sleep(0.25)
+dismiss_ime_dialogs()
+typed_find = type_slowly("test")
 adb("shell", "input", "keyevent", "KEYCODE_ENTER")
 kf = wait_for(lambda s: (s.get("find") or {}).get("value") == "test" and re.search(r"[1-9]", s.get("findCount") or ""), 10, "find results")
 shot("p5-find")
 check("keyboard Ctrl F opens find; typed text finds matches",
       (kf.get("find") or {}).get("value") == "test" and bool(re.search(r"[1-9]", kf.get("findCount") or "")),
-      {"find": kf.get("find"), "count": kf.get("findCount")})
+      {"find": kf.get("find"), "count": kf.get("findCount"), "afterEachKey": typed_find})
+
+# Control for typing: the same keys into a plain <input> with no Blazor binding (test-only, added
+# through DevTools and removed after). Garbled here too → the input path (IME/WebView/host);
+# clean here but garbled in Find → the page's own field handling.
+key("KEYCODE_ESCAPE")
+cdp.evaluate("""(() => { const i = document.createElement('input'); i.id = 'chvd-probe';
+  i.style.cssText = 'position:fixed;top:120px;left:20px;width:240px;height:40px;z-index:99999;font-size:18px';
+  document.body.appendChild(i); return true; })()""")
+tap_el("#chvd-probe")
+time.sleep(1.5)
+dismiss_ime_dialogs()
+typed_probe = type_slowly("test")
+probe_value = cdp.evaluate("document.getElementById('chvd-probe').value")
+check("typing control: the same keys into a plain field arrive exactly",
+      probe_value == "test", {"value": probe_value, "afterEachKey": typed_probe})
+cdp.evaluate("document.getElementById('chvd-probe').remove()")
+adb("shell", "input", "keyevent", "KEYCODE_BACK") if "imeVisible=true" in adb("shell", "dumpsys", "window", "InputMethod") else None
+time.sleep(1)
 
 # ── 5. Soft keyboard ─────────────────────────────────────────────────────────
 # The emulator may report a hardware keyboard; ask Android to show the on-screen one anyway.
@@ -412,19 +465,26 @@ key("KEYCODE_ESCAPE")  # close find from step 4
 h_pre = safe_state()  # window height with no keyboard
 key("KEYCODE_CTRL_LEFT", "KEYCODE_F")
 h0 = wait_for(lambda s: s.get("find") is not None, 6, "find to open")
+wv_before = re.search(r'class="android\.webkit\.WebView"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', dump())
 tap_el(".rfind-box")
 time.sleep(2.5)
+dismiss_ime_dialogs()
 ime = adb("shell", "dumpsys", "input_method")
 win_ime = adb("shell", "dumpsys", "window", "InputMethod")
 save("ime.txt", ime + "\n\n" + win_ime)
 shown = bool(re.search(r"(mInputShown|mIsInputViewShown|isInputViewShown)\S*=true", ime)) or "imeVisible=true" in win_ime
 h1 = safe_state()
 shot("p6-soft-keyboard")
+wv_after = re.search(r'class="android\.webkit\.WebView"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', dump())
+ime_win = re.search(r"Window\{[^}]*InputMethod\}.*?(?:mFrame|frame)=\[(\d+),(\d+)\]\[(\d+),(\d+)\]", win_ime, re.S)
+ime_top = int(ime_win.group(2)) if ime_win else None
 f = (h1.get("find") or {}).get("rect") or {}
 visible = f and f.get("y", -1) >= 0 and f.get("y", 0) + f.get("h", 0) <= (h1.get("vvH") or 0) + 1
 check("soft keyboard opens for the find box and the box stays visible above it",
       shown and (h1.get("find") or {}).get("focused") and visible and (h1.get("innerH") or 0) < (h_pre.get("innerH") or 0),
-      {"imeShown": shown, "focused": (h1.get("find") or {}).get("focused"), "findRect": f,
+      {"imeShown": shown, "imeTopPx": ime_top,
+       "webViewBottomPx": [int(wv_before.group(4)) if wv_before else None, int(wv_after.group(4)) if wv_after else None],
+       "focused": (h1.get("find") or {}).get("focused"), "findRect": f,
        "innerH": [h_pre.get("innerH"), h1.get("innerH")], "visualViewportH": h1.get("vvH")})
 key("KEYCODE_BACK")   # hides the keyboard (Android's own first back)
 key("KEYCODE_ESCAPE")  # closes find
@@ -488,14 +548,6 @@ def print_and_save(tag):
     xml = dump()
     shot(f"p8-save-{tag}")
     ev["pickerTexts"] = texts(xml)[:40]
-    # A unique name, so the picker never asks to replace an existing file.
-    target = f"chvd-printed-{tag}-{int(time.time())}.pdf"
-    if tap_node(r'class="android\.widget\.EditText"', "the file name"):
-        adb("shell", "input", "keycombination", "KEYCODE_CTRL_LEFT", "KEYCODE_A")
-        adb("shell", "input", "keyevent", "KEYCODE_DEL")
-        adb("shell", "input", "text", target)
-        time.sleep(1)
-        adb("shell", "input", "keyevent", "KEYCODE_BACK") if "imeVisible=true" in adb("shell", "dumpsys", "window", "InputMethod") else None
     tap_node(r'(text="(SAVE|Save)"|resource-id="android:id/button1")', "Save")
     time.sleep(2)
     xml = dump()
@@ -504,12 +556,12 @@ def print_and_save(tag):
     path = None
     for _ in range(15):
         time.sleep(2)
-        found = adb("shell", "find", "/sdcard", "-name", "'chvd-printed-*.pdf'", "-newer", "/data/local/tmp/chvd-print-mark").split()
-        found = found or adb("shell", "find", "/sdcard", "-name", "'*.pdf'", "-newer", "/data/local/tmp/chvd-print-mark").split()
+        # /storage/emulated/0, not /sdcard: `find` doesn't follow the /sdcard symlink.
+        found = adb("shell", "find", "/storage/emulated/0/", "-name", "'*.pdf'", "-newer", "/data/local/tmp/chvd-print-mark").split()
         if found:
             path = found[0]
             break
-    ev["name"] = target
+    ev["savedAs"] = path
     leave_spooler()
     if path:
         local = os.path.join(OUT, f"printed-{tag}.pdf")
@@ -549,9 +601,8 @@ if pc.get("printCard"):
 # L-8: a PDF whose own permissions forbid printing — the Print card is locked with the reason.
 leave_spooler()
 if noprint_uri:
-    # The grant needs the shell user's `am` (see step 2); adbd is root now, so use `run-as`-free `su 2000`.
-    adb("shell", "su", "2000", "am", "start", "-a", "android.intent.action.VIEW", "-d", noprint_uri, "-t", "application/pdf",
-        "-p", PKG, "--grant-read-uri-permission")
+        am_as_shell("start", "-a", "android.intent.action.VIEW", "-d", noprint_uri, "-t", "application/pdf",
+                "-p", PKG, "--grant-read-uri-permission")
 npst = wait_for(lambda s: "no-print" in (s.get("tab") or "") and (s.get("pages") or 0) >= 1, 40, "the no-print PDF")
 npc = open_print_card()
 shot("p8-no-print-card")
@@ -615,10 +666,12 @@ check("back steps back through the app's screens, then leaves the app; the proce
       left not in (PKG, None) and pid() == pid0 and not dead,
       {"steps": steps, "pid": [pid0, pid()], "deadPresses": len(dead)})
 adb("shell", "monkey", "-p", PKG, "-c", "android.intent.category.LAUNCHER", "1")
-r1 = wait_for(lambda s: s.get("tab"), 20, "the app to come back")
+r1 = wait_for(lambda s: s.get("route"), 20, "the app to come back")
 shot("p10-relaunched")
-check("relaunch returns to the same process and tab", pid() == pid0 and r1.get("tab") == r0.get("tab") and resumed() == PKG,
-      {"pid": [pid0, pid()], "tab": [r0.get("tab"), r1.get("tab")]})
+last_route = steps[-1]["from"] if steps else None
+r1 = wait_for(lambda s: s.get("route") == last_route, 10, "the screen it left from")
+check("relaunch returns to the same process and the screen it left from", pid() == pid0 and r1.get("route") == last_route and resumed() == PKG,
+      {"pid": [pid0, pid()], "route": [last_route, r1.get("route")]})
 
 
 # ── 8. Split screen ──────────────────────────────────────────────────────────
