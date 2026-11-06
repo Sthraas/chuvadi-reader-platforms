@@ -187,5 +187,16 @@ Each decided on the chat's own pros and cons. Delivered to the chats at the next
 | D-85 | Android Back closes card (P-06) | Into Foundation's combined patch |
 | D-86 | Web next steps | /terms and /privacy before sign-in; apply web-12a-ready after Foundation; write TEST-PLAN.md |
 
+## 7 Nov 2026 04:30 — Sheets 2.0.2 (relayed by Arun from the library coordinator)
+Released: tag sheets-v2.0.2. Fixes: relationship targets with ./ or .. now open (as Excel does); a missing workbook or sheet part throws XlsxFormatException (was FileNotFoundException); a text cell with a missing or out-of-range shared-string index marks the file damaged (XlsxFormatException) instead of showing the index as text. Supersedes 2.0.1 as the Reader's target (package report section 3B); the 1.1.2 → 2.0.x breaking changes in that report still apply. Package list and SHA-256 are in the Sheets chat's project.
+
+Options considered:
+- (a) Platforms stay on what chuvadi-reader main pins (1.1.2 today) and pick up 2.0.2 when the Reader chat moves main and the Foundation rebases. Pros: no edit to an existing file (Core.csproj is Reader-owned); no second copy of the namespace and API migration; no merge clash with the Reader chat. Cons: platform Excel viewing keeps the 1.1.2 behaviour until then.
+- (b) Foundation bumps Chuvadi.Sheets in Core.csproj inside its combined patch. Pros: platforms get the fixes now. Cons: edits a Reader-owned existing file; the 2.0 namespace change (Chuvadi.Sheets.Excel → Model) and Zip obsoletion need code changes in Core the Reader chat is also making; certain merge conflict.
+
+| # | Item | Decision |
+|---|---|---|
+| D-87 | Sheets 2.0.2 | (a). The Reader chat should target **2.0.2, not 2.0.1** (Arun relays). Platforms follow chuvadi-reader main; the Foundation adds the 2.0.2 .nupkg and its SHA-256 to ci/packages when it rebases on that change. Linux, Mac and Web carry Core's pin today; Android has no separate pin. |
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move.
