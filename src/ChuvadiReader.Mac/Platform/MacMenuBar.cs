@@ -1,4 +1,4 @@
-using ChuvadiReader.Core.Reader;
+using ChuvadiReader.Platform;
 using Foundation;
 using ObjCRuntime;
 using UIKit;
@@ -6,19 +6,21 @@ using UIKit;
 namespace ChuvadiReader.Mac.Platform;
 
 /// <summary>
-/// The macOS menu bar (handout › Platforms: File, Edit, View, Document, Window, Help, with ⌘
-/// shortcuts). Built natively with UIKit's main-menu builder, entirely from the commands the Ui
-/// already publishes into Core's <see cref="ShellService"/> (ids, groups, labels, shortcuts,
-/// actions, disabled reasons) — no Ui code is changed and no command logic is duplicated.
-/// Edit and Window stay the standard macOS menus.
+/// The macOS menu bar (handout › Platforms: File, Edit, View, Document, Window, Help, ⌘ shortcuts),
+/// built natively with UIKit's main-menu builder from <see cref="IAppCommands"/> — the Ui's own
+/// command list, filled host-side by the Foundation kit. Nothing is duplicated: every item runs
+/// through <see cref="IAppCommands.InvokeAsync"/>. Edit and Window stay the standard macOS menus.
 /// </summary>
 internal static class MacMenuBar
 {
     /// <summary>Selector every Chuvadi menu item sends; AppDelegate handles it.</summary>
     public const string ActionSelector = "chvdMenuCommand:";
 
-    /// <summary>Pseudo-id for the ⌘K command bar (ShellService.OpenCommandBar).</summary>
+    /// <summary>Pseudo-id for "Find or do anything…" (the ⌘K command bar).</summary>
     public const string CommandBarId = "chvd.commandbar";
+
+    /// <summary>Immersive full screen: macOS's own full-screen shortcut, ⌃⌘F (decision 6 Nov).</summary>
+    private const string ImmersiveId = "r.immersive";
 
     // Ids that live under File on a Mac rather than in the Document menu.
     private static readonly string[] FileIds =
@@ -35,13 +37,13 @@ internal static class MacMenuBar
 
     private static string _signature = string.Empty;
 
-    /// <summary>Rebuilds the menu bar when the published command set changes. Enabled state is
-    /// not part of the signature — it is checked each time a menu opens (ValidateCommand).</summary>
-    public static void Watch(ShellService shell)
+    /// <summary>Rebuilds the menu bar when the set of commands changes. Enabled state is not part of
+    /// the signature — it is checked each time a menu opens (AppDelegate.ValidateCommand).</summary>
+    public static void Watch(IAppCommands commands)
     {
-        shell.Changed += () =>
+        commands.Changed += () =>
         {
-            var sig = Signature(shell);
+            var sig = Signature(commands);
             if (sig == _signature)
             {
                 return;
@@ -52,15 +54,16 @@ internal static class MacMenuBar
         };
     }
 
-    private static string Signature(ShellService shell)
-        => string.Join('|', shell.DocumentMenu.Select(c => c.Id + ':' + c.Label))
-           + '#' + string.Join('|', shell.Commands.Select(c => c.Id + ':' + c.Label).Order(StringComparer.Ordinal));
+    private static string Signature(IAppCommands commands)
+        => string.Join('|', commands.DocumentMenu.Select(c => c.IsSeparator ? "-" : c.Id + ':' + c.Label))
+           + '#' + string.Join('|', commands.Commands.Select(c => c.Id + ':' + c.Label).Order(StringComparer.Ordinal));
 
-    /// <summary>Finds a command by id at the moment it is used, so its action is current.</summary>
-    public static ShellCommand? Find(ShellService shell, string id)
-        => shell.DocumentMenu.FirstOrDefault(c => c.Id == id) ?? shell.Commands.FirstOrDefault(c => c.Id == id);
+    /// <summary>Finds a command by id now, so its enabled state is current.</summary>
+    public static AppCommandInfo? Find(IAppCommands commands, string id)
+        => commands.DocumentMenu.FirstOrDefault(c => !c.IsSeparator && c.Id == id)
+           ?? commands.Commands.FirstOrDefault(c => c.Id == id);
 
-    public static void Build(IUIMenuBuilder builder, ShellService shell)
+    public static void Build(IUIMenuBuilder builder, IAppCommands source)
     {
         // Menus that don't fit Chuvadi: Format, and Edit's text tools. Edit › Find is removed so
         // ⌘F reaches Chuvadi's own Find, as Ctrl F does on Windows.
@@ -68,38 +71,53 @@ internal static class MacMenuBar
                  {
                      UIMenuIdentifier.Format, UIMenuIdentifier.Find, UIMenuIdentifier.Spelling,
                      UIMenuIdentifier.Substitutions, UIMenuIdentifier.Transformations,
+                     UIMenuIdentifier.Fullscreen, // its ⌃⌘F goes to Immersive
                  })
         {
             builder.RemoveMenu(id.GetConstant()!);
         }
 
-        var commands = shell.Commands;
-        var docMenu = shell.DocumentMenu;
+        var commands = source.Commands;
+        var docMenu = source.DocumentMenu;
         var keys = new HashSet<string>(StringComparer.Ordinal);
 
         // File — open, close, save, print, file actions.
         var file = new List<UIMenuElement>();
-        AddSection(file, FileIds.Select(id => Find(shell, id)).OfType<ShellCommand>(), keys);
+        AddSection(file, FileIds.Select(id => Find(source, id)).OfType<AppCommandInfo>(), keys);
         builder.ReplaceChildrenOfMenu(UIMenuIdentifier.File.GetConstant()!, _ => file.ToArray());
 
-        // View — modes (1–4), view options, reading panels, places, ⌘K. The system's
-        // Enter Full Screen item is kept.
+        // View — modes (1–4), view options, reading panels, places, ⌘K. The system's Enter Full
+        // Screen item is replaced by Chuvadi's Immersive, which takes its ⌃⌘F (decision 6 Nov).
         var view = new List<UIMenuElement>();
         AddSection(view, commands.Where(c => c.Group == "Modes"), keys);
         AddSection(view, commands.Where(c => c.Group == "View"), keys);
         AddSection(view, commands.Where(c => c.Group == "Read" && !FileIds.Contains(c.Id)), keys);
         AddSection(view, commands.Where(c => c.Group == "Go to"), keys);
-        view.Add(Inline(new[] { Item(CommandBarId, "Find or do anything…", "Ctrl K", isEnabled: true, keys) }));
-        builder.ReplaceChildrenOfMenu(UIMenuIdentifier.View.GetConstant()!, old =>
-            view.Concat(old.Where(IsFullscreen)).ToArray());
+        view.Add(Inline(new UIMenuElement[] { Item(CommandBarId, "Find or do anything…", "Ctrl K", isEnabled: true, keys) }));
+        builder.ReplaceChildrenOfMenu(UIMenuIdentifier.View.GetConstant()!, _ => view.ToArray());
 
-        // Document — the Document ▾ menu the active page publishes, then the current mode's
-        // tools and the general tools as submenus.
+        // Document — the active page's Document ▾ menu in its own order (separators become
+        // sections), then the current mode's tools and the general tools as submenus.
         var doc = new List<UIMenuElement>();
-        AddSection(doc, docMenu.Where(c => !c.Id.StartsWith("sep", StringComparison.Ordinal) && !FileIds.Contains(c.Id)), keys);
+        var section = new List<AppCommandInfo>();
+        foreach (var c in docMenu.Append(new AppCommandInfo("sep.end", string.Empty, string.Empty, null, true, IsSeparator: true)))
+        {
+            if (c.IsSeparator)
+            {
+                AddSection(doc, section, keys);
+                section = new List<AppCommandInfo>();
+            }
+            else if (!FileIds.Contains(c.Id))
+            {
+                section.Add(c);
+            }
+        }
+
         foreach (var group in new[] { "Mark", "Protect", "Arrange", "Tools" })
         {
-            var items = commands.Where(c => c.Group == group && !FileIds.Contains(c.Id) && docMenu.All(d => d.Id != c.Id)).ToList();
+            var items = commands
+                .Where(c => c.Group == group && !FileIds.Contains(c.Id) && docMenu.All(d => d.Id != c.Id))
+                .ToList();
             if (items.Count > 0)
             {
                 doc.Add(UIMenu.Create(group, null, UIMenuIdentifier.None, (UIMenuOptions)0,
@@ -114,10 +132,7 @@ internal static class MacMenuBar
         builder.ReplaceChildrenOfMenu(UIMenuIdentifier.Help.GetConstant()!, _ => Array.Empty<UIMenuElement>());
     }
 
-    private static bool IsFullscreen(UIMenuElement e)
-        => e is UIMenu m && m.Identifier == UIMenuIdentifier.Fullscreen;
-
-    private static void AddSection(List<UIMenuElement> target, IEnumerable<ShellCommand> commands, HashSet<string> keys)
+    private static void AddSection(List<UIMenuElement> target, IEnumerable<AppCommandInfo> commands, HashSet<string> keys)
     {
         var seen = new HashSet<string>(StringComparer.Ordinal);
         var items = commands
@@ -133,8 +148,8 @@ internal static class MacMenuBar
     private static UIMenu Inline(UIMenuElement[] items)
         => UIMenu.Create(string.Empty, null, UIMenuIdentifier.None, UIMenuOptions.DisplayInline, items);
 
-    private static UICommand Item(ShellCommand c, HashSet<string> keys)
-        => Item(c.Id, c.Label, c.Keys, c.IsEnabled, keys);
+    private static UICommand Item(AppCommandInfo c, HashSet<string> keys)
+        => Item(c.Id, c.Label, c.Id == ImmersiveId ? "Ctrl Control F" : c.Keys, c.IsEnabled, keys);
 
     private static UICommand Item(string id, string label, string? shortcut, bool isEnabled, HashSet<string> keys)
     {
@@ -158,8 +173,8 @@ internal static class MacMenuBar
         return command;
     }
 
-    /// <summary>"Ctrl P" → ⌘P, "Ctrl Shift S" → ⇧⌘S, "Ctrl ]" → ⌘]. Shortcuts without Ctrl
-    /// (single keys like R or 1–4) stay with the page, so typing is never captured.</summary>
+    /// <summary>"Ctrl P" → ⌘P, "Ctrl Shift S" → ⇧⌘S, "Ctrl ]" → ⌘]; "Control" adds ⌃. Shortcuts
+    /// without Ctrl (single keys like R or 1–4) stay with the page, so typing is never captured.</summary>
     public static bool TryMacKey(string? keys, out string input, out UIKeyModifierFlags flags)
     {
         input = string.Empty;
@@ -184,6 +199,11 @@ internal static class MacMenuBar
         if (parts.Contains("Alt"))
         {
             flags |= UIKeyModifierFlags.Alternate;
+        }
+
+        if (parts.Contains("Control"))
+        {
+            flags |= UIKeyModifierFlags.Control;
         }
 
         var key = parts[^1];

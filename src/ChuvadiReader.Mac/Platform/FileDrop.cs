@@ -12,8 +12,8 @@ namespace ChuvadiReader.Mac.Platform;
 /// </summary>
 internal sealed class FileDrop : NSObject, IUIDropInteractionDelegate
 {
-    // Same list as the Windows host's DropExtensions (see the note on it in docs/mac/BUILD-LOG.md).
-    private static readonly string[] DropExtensions = { ".pdf", ".docx", ".doc", ".xlsx", ".xls" };
+    // The same types as the Open panel (HANDOFF §2; fixes finding F1 for the Mac).
+    private static readonly string[] DropExtensions = MacFilePicker.DocumentTypes.Select(e => "." + e).ToArray();
 
     private readonly IServiceProvider _services;
 

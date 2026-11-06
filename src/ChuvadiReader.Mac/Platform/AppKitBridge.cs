@@ -230,37 +230,33 @@ internal static class AppKitBridge
         }
     }
 
-    [DllImport(LibObjC, EntryPoint = "objc_msgSend")]
-    private static extern CoreGraphics.CGRect SendRect(IntPtr receiver, IntPtr selector);
-
-    // x64 returns structs larger than 16 bytes through objc_msgSend_stret.
-    [DllImport(LibObjC, EntryPoint = "objc_msgSend_stret")]
-    private static extern void SendRectStret(out CoreGraphics.CGRect result, IntPtr receiver, IntPtr selector);
-
-    [DllImport(LibObjC, EntryPoint = "objc_msgSend")]
-    private static extern void SendVoidRect(IntPtr receiver, IntPtr selector, CoreGraphics.CGRect arg);
-
-    [DllImport(LibObjC, EntryPoint = "objc_msgSend")]
-    private static extern void SendVoidPoint(IntPtr receiver, IntPtr selector, CoreGraphics.CGPoint arg);
-
-    private static CoreGraphics.CGRect Frame(IntPtr view)
+    /// <summary>Opens a Finder window with the item selected ([NSWorkspace activateFileViewerSelectingURLs:]).</summary>
+    public static bool RevealInFinder(string path)
     {
-        if (RuntimeInformation.ProcessArchitecture == Architecture.X64)
+        var cls = Class.GetHandle("NSWorkspace");
+        if (cls == IntPtr.Zero)
         {
-            SendRectStret(out var r, view, Sel("frame"));
-            return r;
+            return false;
         }
 
-        return SendRect(view, Sel("frame"));
+        var workspace = SendIntPtr(cls, Sel("sharedWorkspace"));
+        if (workspace == IntPtr.Zero)
+        {
+            return false;
+        }
+
+        using var url = Foundation.NSUrl.CreateFileUrl(path, Directory.Exists(path), null);
+        using var urls = Foundation.NSArray.FromNSObjects(url);
+        SendVoidIntPtr(workspace, Sel("activateFileViewerSelectingURLs:"), urls.Handle);
+        return true;
     }
 
     /// <summary>
-    /// Places the native traffic lights inside the Ui's own top bar: first button at
-    /// <paramref name="left"/>, one every <paramref name="pitch"/> points, vertically centred in a
-    /// bar <paramref name="barHeight"/> tall (handout › Shell layout: Mac traffic lights come first
-    /// in the title bar). AppKit resets the layout on resize, so this is re-applied then.
+    /// Hides the native title bar completely — its buttons and the (otherwise invisible) strip that
+    /// would sit over the top of the page and take its clicks. The Ui draws the traffic lights and
+    /// moves the window itself (IWindowControls.BeginDrag).
     /// </summary>
-    public static void PositionStandardButtons(IntPtr window, double left, double pitch, double barHeight)
+    public static void HideTitlebar(IntPtr window)
     {
         if (window == IntPtr.Zero)
         {
@@ -268,44 +264,11 @@ internal static class AppKitBridge
         }
 
         var close = SendIntPtrLong(window, Sel("standardWindowButton:"), CloseButton);
-        if (close == IntPtr.Zero)
-        {
-            return;
-        }
-
-        var titlebarView = SendIntPtr(close, Sel("superview"));
+        var titlebarView = close == IntPtr.Zero ? IntPtr.Zero : SendIntPtr(close, Sel("superview"));
         var container = titlebarView == IntPtr.Zero ? IntPtr.Zero : SendIntPtr(titlebarView, Sel("superview"));
-        if (container == IntPtr.Zero)
+        if (container != IntPtr.Zero)
         {
-            return;
-        }
-
-        // Grow the titlebar container to the bar's height, pinned to the top of the window.
-        var win = Frame(window);
-        SendVoidRect(container, Sel("setFrame:"), new CoreGraphics.CGRect(0, win.Height - barHeight, win.Width, barHeight));
-        SendVoidRect(titlebarView, Sel("setFrame:"), new CoreGraphics.CGRect(0, 0, win.Width, barHeight));
-
-        var i = 0;
-        foreach (var kind in new[] { CloseButton, MiniaturizeButton, ZoomButton })
-        {
-            var button = SendIntPtrLong(window, Sel("standardWindowButton:"), kind);
-            if (button != IntPtr.Zero)
-            {
-                var size = Frame(button);
-                SendVoidPoint(button, Sel("setFrameOrigin:"),
-                    new CoreGraphics.CGPoint(left + (i * pitch), (barHeight - size.Height) / 2));
-            }
-
-            i++;
-        }
-    }
-
-    /// <summary>Shows or hides the native close / minimise / zoom buttons of a window.</summary>
-    public static void SetStandardButtonsHidden(IntPtr window, bool hidden)
-    {
-        if (window == IntPtr.Zero)
-        {
-            return;
+            SendVoidBool(container, Sel("setHidden:"), true);
         }
 
         foreach (var kind in new[] { CloseButton, MiniaturizeButton, ZoomButton })
@@ -313,7 +276,7 @@ internal static class AppKitBridge
             var button = SendIntPtrLong(window, Sel("standardWindowButton:"), kind);
             if (button != IntPtr.Zero)
             {
-                SendVoidBool(button, Sel("setHidden:"), hidden);
+                SendVoidBool(button, Sel("setHidden:"), true);
             }
         }
     }

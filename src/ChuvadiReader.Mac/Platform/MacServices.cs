@@ -1,45 +1,63 @@
 using System.Diagnostics;
 using ChuvadiReader.Core.Reader;
 using ChuvadiReader.Core.Window;
+using ChuvadiReader.Platform;
 using Foundation;
 using UIKit;
 using WebKit;
 
 namespace ChuvadiReader.Mac.Platform;
 
-/// <summary>macOS locations the host owns.</summary>
-internal static class MacPaths
+/// <summary>macOS folders (IAppPaths), asked of the OS. The kit's desktop default uses
+/// OperatingSystem.IsMacOS(), which is false under Mac Catalyst, so the Mac host provides its own.</summary>
+public sealed class MacAppPaths : IAppPaths
 {
-    /// <summary>~/Library/Application Support/Chuvadi, asked of the OS (NSFileManager).</summary>
-    public static string AppSupportDirectory
+    public MacAppPaths()
     {
-        get
-        {
-            var urls = NSFileManager.DefaultManager.GetUrls(NSSearchPathDirectory.ApplicationSupportDirectory, NSSearchPathDomain.User);
-            var root = urls.Length > 0 && !string.IsNullOrEmpty(urls[0].Path)
-                ? urls[0].Path!
-                : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Application Support");
-            var dir = Path.Combine(root, "Chuvadi");
-            Directory.CreateDirectory(dir);
-            return dir;
-        }
+        AppDataFolder = Path.Combine(SystemFolder(NSSearchPathDirectory.ApplicationSupportDirectory, "Library/Application Support"), "Chuvadi");
+        Directory.CreateDirectory(AppDataFolder);
+        WorkingFolder = Path.GetTempPath();
+        DefaultSaveFolder = SystemFolder(NSSearchPathDirectory.DocumentDirectory, "Documents");
     }
 
-    /// <summary>~/Library/Logs/Chuvadi — where the startup error log and timings go.</summary>
+    /// <summary>~/Library/Application Support/Chuvadi.</summary>
+    public string AppDataFolder { get; }
+
+    public string WorkingFolder { get; }
+
+    /// <summary>~/Documents.</summary>
+    public string? DefaultSaveFolder { get; }
+
+    /// <summary>~/Library/Logs/Chuvadi — the startup timings.</summary>
     public static string LogDirectory
     {
         get
         {
-            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Logs", "Chuvadi");
+            var dir = Path.Combine(SystemFolder(NSSearchPathDirectory.LibraryDirectory, "Library"), "Logs", "Chuvadi");
             Directory.CreateDirectory(dir);
             return dir;
         }
     }
+
+    private static string SystemFolder(NSSearchPathDirectory kind, string fallbackUnderHome)
+    {
+        var urls = NSFileManager.DefaultManager.GetUrls(kind, NSSearchPathDomain.User);
+        return urls.Length > 0 && !string.IsNullOrEmpty(urls[0].Path)
+            ? urls[0].Path!
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), fallbackUnderHome);
+    }
 }
 
-/// <summary>Puts a PNG on the macOS pasteboard (as image data, like the Windows clipboard).</summary>
-public sealed class MacImageClipboard : IImageClipboard
+/// <summary>The macOS pasteboard: text, and PNG images as image data (as the Windows clipboard does).</summary>
+public sealed class MacClipboard : IClipboard, IImageClipboard
 {
+    public bool CanCopyText => true;
+
+    public bool CanCopyImage => true;
+
+    public Task SetTextAsync(string text, CancellationToken ct = default)
+        => OnMain(() => UIPasteboard.General.String = text ?? string.Empty);
+
     public Task SetImageAsync(byte[] pngBytes, CancellationToken ct = default)
     {
         if (pngBytes is null || pngBytes.Length == 0)
@@ -47,21 +65,48 @@ public sealed class MacImageClipboard : IImageClipboard
             return Task.CompletedTask;
         }
 
-        UIApplication.SharedApplication.InvokeOnMainThread(() =>
+        // Raw PNG bytes under public.png keep the image lossless and exact.
+        return OnMain(() =>
+        {
+            using var data = NSData.FromArray(pngBytes);
+            UIPasteboard.General.SetData(data, UniformTypeIdentifiers.UTTypes.Png.Identifier);
+        });
+    }
+
+    private static Task OnMain(Action action)
+    {
+        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        UIApplication.SharedApplication.BeginInvokeOnMainThread(() =>
         {
             try
             {
-                using var data = NSData.FromArray(pngBytes);
-                // Raw PNG bytes under public.png keep the image lossless and exact.
-                UIPasteboard.General.SetData(data, UniformTypeIdentifiers.UTTypes.Png.Identifier);
+                action();
+                tcs.SetResult();
             }
-            catch
+            catch (Exception ex)
             {
-                // Matches the Windows host: a failed copy is ignored, never fatal.
+                tcs.SetException(ex);
             }
         });
+        return tcs.Task;
+    }
+}
 
-        return Task.CompletedTask;
+/// <summary>"Show in folder": reveals and selects the file in Finder.</summary>
+public sealed class MacFileManager : IFileManager
+{
+    public bool IsAvailable => true;
+
+    public Task<bool> RevealAsync(string localPath, CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(localPath) || !(File.Exists(localPath) || Directory.Exists(localPath)))
+        {
+            return Task.FromResult(false);
+        }
+
+        var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        UIApplication.SharedApplication.BeginInvokeOnMainThread(() => tcs.TrySetResult(AppKitBridge.RevealInFinder(localPath)));
+        return tcs.Task;
     }
 }
 
@@ -104,11 +149,8 @@ public sealed class MacExternalLinks : IExternalLinks
 /// WebView2 ZoomFactor. The person's own pinch zoom of the page stays off.</summary>
 public sealed class MacUiScale : IUiScale
 {
-    private readonly MacWindowControls _window;
     private WKWebView? _view;
     private double _factor = 1.0;
-
-    public MacUiScale(MacWindowControls window) => _window = window;
 
     public bool IsSupported => true;
 
@@ -127,7 +169,6 @@ public sealed class MacUiScale : IUiScale
             150 => 1.5,
             _ => 1.0,
         };
-        _window.SetScale(_factor);
         Apply();
     }
 
@@ -198,7 +239,7 @@ internal static class StartupTimeline
                     + Environment.NewLine;
             }
 
-            File.AppendAllText(Path.Combine(MacPaths.LogDirectory, "startup.log"), text + Environment.NewLine);
+            File.AppendAllText(Path.Combine(MacAppPaths.LogDirectory, "startup.log"), text + Environment.NewLine);
         }
         catch
         {
