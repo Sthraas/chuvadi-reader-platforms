@@ -391,3 +391,22 @@ started because recent account payments have failed or your spending limit needs
 check the 'Billing & plans' section in your settings." Round 3 (the fixes in step 37) is unverified until
 Actions runs again on Sthraas/chuvadi-reader-platforms. The sandbox has no KVM, so emulators run only in CI.
 Usage note: each full run is 1 build plus 4 emulator jobs of about 30 minutes each.
+
+### 39. Coordinator decisions (7 Nov): P-06 Back closes cards; over-wide probe; copyright
+- **P-06** (decision (a)): `docs/android/proposal/P-06-back-closes-card.patch`, for Foundation's combined patch.
+  The Reader subscribes to `IAppLifecycle.BackRequested` and closes the open card (measure included) as
+  Escape does; with nothing open it declines, so the host's default runs. Applies to 2fafb60 and 615afde.
+  The composition now applies Android's pending proposals too, so the emulators test it (platform.py:
+  "back closes an open card and stays on the same screen").
+- **Over-wide element probe** (Mobile UI's question): right after the PDF opens, gestures.py lists every
+  element past the desk's visible right edge, the outermost ones with their chain from the desk, and for
+  each: tag, classes, rect, how far over, and the computed width, min/max-width, box-sizing, margins,
+  paddings, borders, transform and inline style. Saved as `gestures/overwide.json` and printed in the
+  log. Checked in headless Chromium against a page with a known over-wide `.rpage` (found it, 38 px over).
+  Runs on the next CI run on phone and tablet.
+- **Copyright:** Foundation's `Directory.Build.props` (615afde) now sets Company, Authors, Product and
+  Copyright (Sthraas Intelligence Pvt Ltd) for every project, the Android host included; no copy in the
+  host's csproj. README carries the copyright line.
+- **Composition:** Foundation 615afde + Mobile UI 745ef8e (merges cleanly) + mobile-ui-hooks-3 + P-06 +
+  host: Android 0 warnings; Platforms solution `-warnaserror` 0 warnings; tests 171 + 33 + 12 + 19 pass.
+- Still blocked: GitHub Actions on Sthraas (billing / spending limit), so no emulator evidence this step.

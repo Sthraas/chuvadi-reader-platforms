@@ -4,8 +4,9 @@ One proposal for Arun to approve in one go (rule 4). Each change: exact diff, wh
 cons, and how it was verified. **Nothing here has been applied to chuvadi-reader.** Diffs are
 against `c7b9e44`. Items are added as they are confirmed; approval can be per item.
 
-Status (6 Nov): P-01 approved and applied centrally by Foundation. P-02 waits on the Reader chat.
-P-03 moved to the Mobile app UI chat. P-04 covered by Foundation's host kit. **P-05 new, for decision.**
+Status (7 Nov): P-01 applied centrally by Foundation. P-02 waits on the Reader chat. P-03 moved to the
+Mobile app UI chat. P-04 covered by Foundation's host kit. P-05 withdrawn. **P-06 decided (a) by the
+coordinator, for Foundation's combined patch.**
 
 ---
 
@@ -85,3 +86,24 @@ Move `theme.js` into `ChuvadiReader.Ui/wwwroot/js/` and the host service registr
 
 ## P-05 — withdrawn (6 Nov)
 A-10 is solved host-side through `IAccount` (Foundation's `UserProfileService` reads it first); no Core edit.
+
+## P-06 Back closes the open card — for Foundation's combined patch (coordinator decision (a), 7 Nov)
+Patch: [`proposal/P-06-back-closes-card.patch`](proposal/P-06-back-closes-card.patch), against
+platform/foundation **2fafb60**; applies cleanly to 2fafb60 and to **615afde** (third combined patch). Files: `Ui/Pages/Reader.razor` (+3 lines:
+inject `IAppLifecycle`, subscribe, unsubscribe) and `Ui/Pages/Reader.Shell.cs` (+28: `OnBackRequested`).
+
+What it does: on the system Back gesture, if a card is open (measure included), the Reader closes it
+exactly as Escape does and consumes the gesture; otherwise it returns false and the host does its
+default (previous screen, then leave the app). Sheets come first on the phone: PhoneShell subscribes
+before the page does (the layout initialises before its body), and the host stops at the first handler
+that consumes.
+
+- **Why:** on the tablet the Print card stayed open on Back (emulator run 42281134585, both tablets);
+  only PhoneShell's sheets listened.
+- **Windows unchanged:** the kit's `NoAppLifecycle` never raises `BackRequested`; the subscription is one
+  delegate added at page start (no JIT of the handler unless raised).
+- **Verified (sandbox):** on 615afde + Mobile UI 745ef8e + this patch: Platforms solution with `-warnaserror`
+  0 warnings, 0 errors; tests 171 + 33 + 12 + 19 pass; Android host 0 warnings. On device: `platform.py` "back closes an open card (Print) and stays on the same screen" (same
+  route, same tab) — will run when GitHub Actions runs again.
+- **Not included (say if wanted):** Back closing the pages drawer or the find bar (Escape closes both on
+  the desktop). Same pattern, a few lines each.

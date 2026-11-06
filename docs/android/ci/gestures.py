@@ -228,6 +228,51 @@ shot("g1-opened")
 check("Open with (ACTION_VIEW content://) opens the PDF in the Reader",
       st0.get("pages", 0) >= 1 and counter_number(st0) == 1, {k: st0.get(k) for k in ("shell", "pages", "counter", "fit")})
 
+# ── 1b. What is wider than the desk? (phone Fit page overflow, for the Mobile UI chat) ──────────
+OVERWIDE_JS = r"""
+(() => {
+  const vis = e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
+  const desk = [...document.querySelectorAll('.rdesk')].find(vis);
+  if (!desk) return { desk: null };
+  const dr = desk.getBoundingClientRect();
+  const limit = dr.left + desk.clientWidth;          // the desk's visible right edge (inside its scrollbar)
+  const cs = e => getComputedStyle(e);
+  const describe = e => {
+    const c = cs(e), r = e.getBoundingClientRect();
+    return { tag: e.tagName.toLowerCase(), id: e.id || null, classes: String(e.className && e.className.baseVal !== undefined ? e.className.baseVal : e.className || ''),
+             left: +r.left.toFixed(2), right: +r.right.toFixed(2), width: +r.width.toFixed(2), overBy: +(r.right - limit).toFixed(2),
+             computed: { width: c.width, minWidth: c.minWidth, maxWidth: c.maxWidth, boxSizing: c.boxSizing,
+                         marginLeft: c.marginLeft, marginRight: c.marginRight, paddingLeft: c.paddingLeft, paddingRight: c.paddingRight,
+                         borderLeft: c.borderLeftWidth, borderRight: c.borderRightWidth, transform: c.transform, position: c.position },
+             inlineStyle: e.getAttribute('style') };
+  };
+  const over = [...desk.querySelectorAll('*')].filter(e => vis(e) && e.getBoundingClientRect().right > limit + 0.5);
+  // The outermost over-wide elements (whose parent is not itself over-wide) are where it starts.
+  const roots = over.filter(e => !over.includes(e.parentElement));
+  const chain = e => { const out = []; for (let x = e; x && x !== desk; x = x.parentElement) out.unshift(describe(x)); return out; };
+  return {
+    fit: [...document.querySelectorAll('[title^="Fit page"]')].some(e => e.classList.contains('on')) ? 'page'
+       : [...document.querySelectorAll('[title^="Fit width"]')].some(e => e.classList.contains('on')) ? 'width' : 'custom',
+    viewport: { innerWidth, dpr: devicePixelRatio },
+    desk: { ...describe(desk), clientWidth: desk.clientWidth, scrollWidth: desk.scrollWidth, overflowX: desk.scrollWidth - desk.clientWidth },
+    overWideCount: over.length,
+    starts: roots.slice(0, 5).map(chain),
+  };
+})()
+"""
+try:
+    ow = cdp.evaluate(OVERWIDE_JS)
+except SystemExit as e:
+    ow = {"error": str(e)}
+with open(os.path.join(OUT, "overwide.json"), "w") as f:
+    json.dump(ow, f, indent=1)
+if ow.get("desk"):
+    print(f"desk overflowX {ow['desk'].get('overflowX')} px (fit {ow.get('fit')}), {ow.get('overWideCount')} element(s) past the desk's right edge")
+    for ch in ow.get("starts") or []:
+        top = ch[0] if ch else {}
+        print(f"  starts at <{top.get('tag')} class=\"{top.get('classes')}\"> width {top.get('width')} px, over by {top.get('overBy')} px, "
+              f"computed width {top.get('computed', {}).get('width')}, margins {top.get('computed', {}).get('marginLeft')}/{top.get('computed', {}).get('marginRight')}")
+
 # Now the gestures. The emulator's SELinux policy denies the shell user writes to /dev/input even though it is in the
 # input group, so touch.py needs a root adbd. google_apis emulator images allow `adb root`; the app
 # keeps running while adbd restarts. (Open with stays as the shell user above: a file pushed and an

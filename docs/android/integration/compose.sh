@@ -5,7 +5,8 @@
 #        an earlier Foundation; the merge brings its phone components, mobile.css and mobile.js.
 #   3. + the Mobile UI chat's pending hook patch (docs/mobile-ui/proposal/mobile-ui-hooks-*.patch, the
 #        highest number). PENDING Foundation's next combined patch; skipped when already applied.
-#   4. + this branch's src/ChuvadiReader.Android
+#   4. + Android's pending proposals (docs/android/proposal/*.patch), PENDING Foundation's combined patch
+#   5. + this branch's src/ChuvadiReader.Android
 #
 #   compose.sh <foundation-checkout (full history)> <mobile-ui-ref> <android-branch-checkout>
 set -euo pipefail
@@ -31,6 +32,20 @@ if [ -n "$PATCH" ]; then
         echo "$(basename "$PATCH") does not apply"; exit 1
     fi
 fi
+
+# 4. Android's own pending proposals for Foundation's combined patch (docs/android/proposal/*.patch),
+#    so the emulators test them; skipped once Foundation has applied them.
+for P in "$ANDROID"/docs/android/proposal/*.patch; do
+    [ -e "$P" ] || continue
+    if "${G[@]}" apply --check --whitespace=nowarn "$P" 2>/dev/null; then
+        echo "Android proposal: $(basename "$P")"
+        "${G[@]}" apply --whitespace=nowarn "$P"
+    elif "${G[@]}" apply --check --reverse --whitespace=nowarn "$P" 2>/dev/null; then
+        echo "Android proposal already in Foundation: $(basename "$P")"
+    else
+        echo "$(basename "$P") does not apply"; exit 1
+    fi
+done
 
 echo "Android host"
 rm -rf "$READER/src/ChuvadiReader.Android"

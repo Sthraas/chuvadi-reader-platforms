@@ -18,10 +18,10 @@ on:
   workflow_dispatch:
 
 env:
-  # platform/foundation: second combined patch (print permission L-8, open queue F-3), chuvadi-pdf 3.31.2.
-  FOUNDATION_REF: 2fafb608132dd75bc5421a841664a8e4a12685cd
-  # platform/mobile-ui: session 3 (swipe from touch events, reader.js zoom, long-press, MU-8).
-  MOBILEUI_REF: 26739e8738234cccca5d446bd7c389e502ab47d9
+  # platform/foundation: third combined patch (licence, Licences page), L-8, F-3; chuvadi-pdf 3.31.2.
+  FOUNDATION_REF: 615afde9826e2e1e4e11ee485e9860dad201ea5b
+  # platform/mobile-ui: swipe on a slow drag, non-page overflow ignored (after Android round 2).
+  MOBILEUI_REF: 745ef8e1f6aae5bd59e62a9fb06e7d1a445cb2ae
   DOTNET_NOLOGO: '1'
   DOTNET_CLI_TELEMETRY_OPTOUT: '1'
 

@@ -1,0 +1,67 @@
+diff --git a/src/ChuvadiReader.Ui/Pages/Reader.Shell.cs b/src/ChuvadiReader.Ui/Pages/Reader.Shell.cs
+index 4b29bf9..d788179 100644
+--- a/src/ChuvadiReader.Ui/Pages/Reader.Shell.cs
++++ b/src/ChuvadiReader.Ui/Pages/Reader.Shell.cs
+@@ -632,6 +632,34 @@ public partial class Reader
+         _card = null;
+     }
+ 
++    /// <summary>
++    /// The system Back gesture (Android; hosts without one never raise it): closes the open card
++    /// (measure included) exactly as Escape does, and consumes the gesture. With no card open it
++    /// returns false, so the host does its default (the previous screen, then leave the app).
++    /// </summary>
++    private bool OnBackRequested()
++    {
++        if (!_measureOn && _card is null)
++        {
++            return false;
++        }
++
++        _ = InvokeAsync(() =>
++        {
++            if (_measureOn)
++            {
++                CloseMeasure();
++            }
++            else
++            {
++                CloseCard();
++            }
++
++            StateHasChanged();
++        });
++        return true;
++    }
++
+     private void OpenProtectCard(string what)
+     {
+         if (LocalMode != DocMode.Protect)
+diff --git a/src/ChuvadiReader.Ui/Pages/Reader.razor b/src/ChuvadiReader.Ui/Pages/Reader.razor
+index 25e234d..4578716 100644
+--- a/src/ChuvadiReader.Ui/Pages/Reader.razor
++++ b/src/ChuvadiReader.Ui/Pages/Reader.razor
+@@ -24,6 +24,7 @@
+ @inject ChuvadiReader.Platform.IFileWriteBack WriteBack
+ @inject ChuvadiReader.Platform.IAppPaths Paths
+ @inject ChuvadiReader.Platform.IFileManager FileManager
++@inject ChuvadiReader.Platform.IAppLifecycle Lifecycle
+ @using ChuvadiReader.Core.Documents
+ 
+ <PageTitle>Chuvadi · Reader</PageTitle>
+@@ -3191,6 +3192,7 @@
+     {
+         Tabs.Changed += OnTabsChanged;
+         OpenDoc.Requested += OnOpenRequestedLive;
++        Lifecycle.BackRequested += OnBackRequested;
+ 
+         ShellInit();
+ 
+@@ -3995,6 +3997,7 @@
+         ShellDispose();
+         Tabs.Changed -= OnTabsChanged;
+         OpenDoc.Requested -= OnOpenRequestedLive;
++        Lifecycle.BackRequested -= OnBackRequested;
+ 
+         try
+         {

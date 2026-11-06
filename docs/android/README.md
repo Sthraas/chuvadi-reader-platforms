@@ -100,3 +100,6 @@ keytool -genkeypair -v -keystore chuvadi-upload.jks -alias chuvadi-upload \
 - [ ] Permissions declared: none (files arrive through the system picker and Open-with/Share grants).
 - [ ] App access: no sign-in needed (Sangam gating applies only to signing/sync — none on Android v1).
 - [ ] Internal testing track first, then closed testing, then production.
+
+---
+Copyright © 2026 Sthraas Intelligence Pvt Ltd. All rights reserved. Proprietary; free for everyone, not open source.
