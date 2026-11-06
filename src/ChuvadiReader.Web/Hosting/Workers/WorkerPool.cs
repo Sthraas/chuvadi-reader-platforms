@@ -449,37 +449,38 @@ public sealed class WorkerPool : ITabControl, IAsyncDisposable
         _log.LogInformation("Worker {Key} stopped", key[..8]);
     }
 
-    /// <summary>One supervision pass: stop workers nobody uses, kill ones that stopped answering.</summary>
-    public async Task SuperviseAsync(CancellationToken ct)
+    /// <summary>One supervision pass: stop workers nobody uses, end ones that stopped answering. Workers
+    /// are checked and stopped in parallel, so many people leaving at once are cleaned up together.</summary>
+    public Task SuperviseAsync(CancellationToken ct)
+        => Task.WhenAll(Running.Select(w => SuperviseOneAsync(w, ct)));
+
+    private async Task SuperviseOneAsync(WorkerProcess worker, CancellationToken ct)
     {
-        foreach (var worker in Running)
+        Health? health;
+        try
         {
-            Health? health = null;
-            try
+            using var req = new HttpRequestMessage(HttpMethod.Get, WorkerHost.ControlPrefix + "/health");
+            worker.Sign(req, null);
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeout.CancelAfter(TimeSpan.FromSeconds(10));
+            using var resp = await worker.Client.SendAsync(req, timeout.Token).ConfigureAwait(false);
+            health = await resp.Content.ReadFromJsonAsync<Health>(timeout.Token).ConfigureAwait(false);
+            worker.FailedChecks = 0;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or System.Text.Json.JsonException && !ct.IsCancellationRequested)
+        {
+            if (++worker.FailedChecks >= 3)
             {
-                using var req = new HttpRequestMessage(HttpMethod.Get, WorkerHost.ControlPrefix + "/health");
-                worker.Sign(req, null);
-                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                timeout.CancelAfter(TimeSpan.FromSeconds(10));
-                using var resp = await worker.Client.SendAsync(req, timeout.Token).ConfigureAwait(false);
-                health = await resp.Content.ReadFromJsonAsync<Health>(timeout.Token).ConfigureAwait(false);
-                worker.FailedChecks = 0;
-            }
-            catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or System.Text.Json.JsonException && !ct.IsCancellationRequested)
-            {
-                if (++worker.FailedChecks >= 3)
-                {
-                    _log.LogWarning("Worker {Key} stopped answering; ending it", worker.Key[..8]);
-                    await StopAsync(worker.Key).ConfigureAwait(false);
-                }
-
-                continue;
-            }
-
-            if (health is { Circuits: 0 } && DateTimeOffset.UtcNow - worker.LastUsed > _options.IdleStop)
-            {
+                _log.LogWarning("Worker {Key} stopped answering; ending it", worker.Key[..8]);
                 await StopAsync(worker.Key).ConfigureAwait(false);
             }
+
+            return;
+        }
+
+        if (health is { Circuits: 0 } && DateTimeOffset.UtcNow - worker.LastUsed > _options.IdleStop)
+        {
+            await StopAsync(worker.Key).ConfigureAwait(false);
         }
     }
 
