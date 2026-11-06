@@ -16,8 +16,14 @@ Verified (session 5) with foundation a4acc56 + Mobile UI's Phone files from 1a27
 
 Order: Mobile UI's slot must be on `platform/foundation` before H5 (H5 does not compile without it).
 
-## Proposed, waiting for a decision
-- U-14 (a): `PortalAccountCard` in Settings › Account on the portal (OPTIONS U-14). Not built until decided.
+## Still to apply — Settings › Account on the portal: H6 (U-14 a, approved 7 Nov)
+**`proposal/web-ui-hooks-4-account.patch`** — `Components/Settings/AccountSection.razor`, +10/−0, against `platform/foundation` 615afde: `@inject IPlatformInfo Platform`; inside the "Signed in" card, `@if (Platform.Chrome.AccountMenu) { <PortalAccountRows /> } else { …the two existing rows… }`. Role, Sign-in method, Lock after idle, Roles and Audit trail are untouched.
+
+`PortalAccountRows` (mine, new): name with "Sangam ID · Unit" as the hint and a "Sangam" chip; "Account settings" → Sangam's page in a **new tab** (a link styled like `RowButton`: leaving the portal tab would end the session and its working copies, and a script-opened tab after a server round trip is popup-blocked); "Sign out" (hint "Your working copies are removed from the server") → `IAccount.SignOutAsync`.
+
+Verified (local, Web profile): Chromium / Firefox / WebKit × portal desktop 1280×800, tablet 1280×800 (touch), phone 390×844 (touch): no "Not signed in", shows "arun.s@smh.sangam · Records", Sign out present and signs out; no console errors. Windows profile, `/settings?section=account`: **pixel-identical** full-page screenshots in all three browsers at 1280×720 and 1024×768. (Rendered markup differs by one whitespace text node between two block-level rows — Razor trims it beside the `@if`; it does not render.) Windows cost: one `bool` read; `PortalAccountRows` is never created on desktop. Screenshots: `screenshots/chromium-desktop-settings-account.png`, `webkit-phone-settings-account.png`.
+
+With H6, the phone Home avatar (Mobile UI, → `/settings?section=account`) lands on a page with the real account and Sign out — no Mobile UI change needed.
 
 ## Later hooks (not proposed yet)
 - `SangamGate` on "Sign with certificate" (desktop) — D-33: deferred until a desktop Sangam client exists.
