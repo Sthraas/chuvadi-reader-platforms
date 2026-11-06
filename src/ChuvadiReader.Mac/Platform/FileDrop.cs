@@ -7,18 +7,18 @@ namespace ChuvadiReader.Mac.Platform;
 /// <summary>
 /// Files dropped from Finder anywhere on the window. They are resolved to their real paths (in place,
 /// not copies, so saving and Recent files refer to the real document) and handed to
-/// <see cref="MacIncomingFiles"/>, which sends them to the Bench or the Reader as HANDOFF §2 says.
+/// the kit's IncomingFiles (via <see cref="MacFileArrivals"/>), which sends them to the Bench or the Reader.
 /// </summary>
 internal sealed class FileDrop : NSObject, IUIDropInteractionDelegate
 {
-    private readonly MacIncomingFiles _incoming;
+    private readonly IServiceProvider _services;
 
-    private FileDrop(MacIncomingFiles incoming) => _incoming = incoming;
+    private FileDrop(IServiceProvider services) => _services = services;
 
-    public static void Attach(UIView view, MacIncomingFiles incoming)
+    public static void Attach(UIView view, IServiceProvider services)
     {
         // Added to the WKWebView itself so it is consulted before the page's own drop handling.
-        view.AddInteraction(new UIDropInteraction(new FileDrop(incoming)));
+        view.AddInteraction(new UIDropInteraction(new FileDrop(services)));
     }
 
     [Export("dropInteraction:canHandleSession:")]
@@ -52,7 +52,7 @@ internal sealed class FileDrop : NSObject, IUIDropInteractionDelegate
 
                     if (--pending == 0)
                     {
-                        _incoming.Receive(resolved.OfType<string>());
+                        MacFileArrivals.Route(_services, resolved.OfType<string>());
                     }
                 }
             });

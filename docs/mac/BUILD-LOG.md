@@ -307,3 +307,39 @@ Chuvadi.Print 1.0.0-rc.2 in the feed. Core 178/178, Hosting 33/33 on Linux with 
   `A_file_whose_permissions_forbid_printing_is_refused_before_any_work`.
 - **Licence (proprietary, free):** waiting for Foundation's LICENSE and EULA; then the bundle gets
   `NSHumanReadableCopyright` and both files in `Contents/Resources`.
+
+---
+
+## 2026-11-07 (morning) — Session 5: legal texts, kit file router; CI on hold
+
+**CI on hold (coordinator, 04:55 IST):** no Mac runs and no pushes until confirmed — macOS minutes cost 10× Linux.
+Everything below is built and checked locally; one manual run of the Mac workflow verifies it.
+
+### 29. Rebased on `platform/foundation` at fa9d120
+Third and fourth combined patches: legal documents (LICENSE, `legal/`), Licences page, host notices (D-84),
+single instance in the kit (`IncomingFiles`, `IAppInstance`, D-83), Back closes card, portal wording.
+Core 178/178, Hosting 48/48 on Linux with warnings as errors.
+
+### 30. Legal texts in the bundle (D-82, D-84; HANDOFF "Mac" row)
+- `Info.plist` `NSHumanReadableCopyright` = the shared Copyright value.
+- `BundleResource` items put `LICENSE`, `legal/EULA.txt`, `legal/THIRD-PARTY-NOTICES.txt` unchanged in
+  `Contents/Resources/legal/` (still DRAFT).
+- Target `ChuvadiDotnetNotices`, hooked through `CollectBundleResourcesDependsOn` (the extension point the
+  .NET for Mac Catalyst SDK documents in Xamarin.Shared.targets; checked in the pinned 26.5.10318 pack),
+  copies the Mono runtime pack's `THIRD-PARTY-NOTICES.TXT` and the Mac Catalyst runtime pack's `LICENSE` from
+  `@(ResolvedRuntimePack)` — the exact packs the build uses — and fails the build if either is missing.
+  The item lookup and first-pack selection were run against a real self-contained build here (linux-x64
+  runtime pack 10.0.14) — first-entry selection fixed after a probe showed property batching picks the last.
+- `MacHostNotices` (`IHostNotices`, title ".NET runtime") reads both texts on demand, each under its own
+  heading, files untouched.
+- Mac workflow step **Verify bundle layout**: all five files present, the three repo texts byte-identical
+  (`cmp`), DRAFT lines kept, the copyright value exact.
+
+### 31. Kit file router
+`MacIncomingFiles` removed; the Mac host now routes Finder drop, Open With, Dock drop and launch files to
+the kit's `IncomingFiles` (same behaviour on every platform; it also handles "already ready", so no eager
+construction). `MacFileArrivals` only hops onto the Blazor dispatcher once the WebView exists.
+
+### 32. Workflows
+`mac.yml` and `mac-startup.yml` are now **manual only** (`workflow_dispatch`), as D-90 proposes for Mac jobs.
+Foundation's `platforms` workflow still runs on push (including a macOS job), so pushes stay on hold.

@@ -4,13 +4,8 @@ name: Mac
 # launches the app once as a smoke test (records startup timings), and uploads the unsigned
 # (ad-hoc signed) .app as a zip for manual testing. No Apple Developer account is used.
 
+# Manual only (D-90: macOS minutes cost 10× Linux; Mac runs only when the coordinator confirms).
 on:
-  push:
-    branches: [platform/mac]
-  pull_request:
-    paths:
-      - 'src/ChuvadiReader.Mac/**'
-      - '.github/workflows/mac.yml'
   workflow_dispatch:
 
 jobs:
@@ -84,6 +79,33 @@ jobs:
           du -sh "$APP"
           # Size breakdown: biggest items in the bundle.
           du -ak "$APP/Contents" | sort -n | tail -25 | awk '{printf "%8.1f MB  %s\n", $1/1024, $2}'
+
+      # Bundle layout (D-82, D-84): legal texts and the copyright line, exactly as the repo / packs carry them.
+      - name: Verify bundle layout
+        run: |
+          set -e
+          R="$APP/Contents/Resources/legal"
+          ls -la "$R"
+          for f in LICENSE.txt EULA.txt THIRD-PARTY-NOTICES.txt DOTNET-RUNTIME-THIRD-PARTY-NOTICES.txt DOTNET-MACCATALYST-LICENSE.txt; do
+            [ -s "$R/$f" ] || { echo "missing: legal/$f"; exit 1; }
+          done
+          cmp LICENSE "$R/LICENSE.txt"
+          cmp legal/EULA.txt "$R/EULA.txt"
+          cmp legal/THIRD-PARTY-NOTICES.txt "$R/THIRD-PARTY-NOTICES.txt"
+          head -1 "$R/LICENSE.txt" | grep -q '^DRAFT' || { echo "LICENSE lost its DRAFT line"; exit 1; }
+          head -1 "$R/EULA.txt" | grep -q '^DRAFT' || { echo "EULA lost its DRAFT line"; exit 1; }
+          grep -q '^.NET Runtime uses third-party libraries' "$R/DOTNET-RUNTIME-THIRD-PARTY-NOTICES.txt"
+          head -1 "$R/DOTNET-MACCATALYST-LICENSE.txt"
+          C=$(/usr/libexec/PlistBuddy -c 'Print :NSHumanReadableCopyright' "$APP/Contents/Info.plist")
+          echo "NSHumanReadableCopyright: $C"
+          [ "$C" = "Copyright © 2026 Sthraas Intelligence Pvt Ltd. All rights reserved." ]
+          {
+            echo "### Bundle layout"
+            echo '```'
+            (cd "$APP/Contents/Resources" && ls -l legal | tail -n +2)
+            echo "NSHumanReadableCopyright: $C"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Verify both architectures
         run: |

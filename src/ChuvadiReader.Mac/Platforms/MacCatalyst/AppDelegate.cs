@@ -18,8 +18,6 @@ public sealed class AppDelegate : MauiUIApplicationDelegate
         var app = MauiProgram.CreateMauiApp();
         _commands = app.Services.GetRequiredService<IAppCommands>();
         _shell = app.Services.GetRequiredService<ShellService>();
-        // Created now, before the first render, so it sees the one-time ready signal.
-        app.Services.GetRequiredService<MacIncomingFiles>();
         MacMenuBar.Watch(_commands);
         return app;
     }

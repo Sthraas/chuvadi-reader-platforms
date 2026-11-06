@@ -17,6 +17,9 @@ public sealed class MainPage : ContentPage
 
     /// <summary>Runs <paramref name="action"/> on the Blazor renderer's dispatcher — used by the
     /// native menu bar so a menu item behaves exactly like the same click inside the Ui.</summary>
+    /// <summary>True once the BlazorWebView exists, so <see cref="Dispatch"/> can run work.</summary>
+    public static bool CanDispatch => _web is not null;
+
     public static void Dispatch(Func<Task> action)
     {
         var web = _web;
@@ -71,7 +74,7 @@ public sealed class MainPage : ContentPage
         view.BackgroundColor = UIKit.UIColor.Clear;
 
         _services.GetService<MacUiScale>()?.Attach(view);
-        FileDrop.Attach(view, _services.GetRequiredService<MacIncomingFiles>());
+        FileDrop.Attach(view, _services);
         _services.GetService<MacWindowControls>()?.ApplyChrome();
     }
 }

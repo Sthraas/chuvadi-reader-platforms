@@ -17,8 +17,9 @@ Run: `open src/ChuvadiReader.Mac/bin/Release/net10.0-maccatalyst/Chuvadi.app` (a
 
 CI pins: workload set `10.0.401` (Mac Catalyst 26.5.10318) and `/Applications/Xcode_26.6.app`. Move both forward together when the runner image carries the Xcode a newer workload needs.
 
-Without a Mac: push to `platform/mac`; the **Mac** workflow builds, tests, smoke-launches and uploads
-`Chuvadi-mac-universal-unsigned.zip`.
+Without a Mac: run the **Mac** workflow by hand (Actions → Mac → Run workflow, branch `platform/mac`) — it
+builds, tests, verifies the bundle layout, smoke-launches and uploads `Chuvadi-mac-universal-unsigned.zip`.
+Both Mac workflows are manual only (D-90: macOS minutes cost 10× Linux).
 
 ## Installing the unsigned test build on a Mac
 The app is ad-hoc signed, not signed by an Apple Developer ID, so macOS blocks it on first open.
@@ -35,6 +36,21 @@ The app is ad-hoc signed, not signed by an Apple Developer ID, so macOS blocks i
 
 Only the first launch needs this. App state: `~/Library/Application Support/Chuvadi`; logs and
 startup timings: `~/Library/Logs/Chuvadi`.
+
+## What is in the bundle (legal)
+`Chuvadi.app/Contents/Info.plist` → `NSHumanReadableCopyright` = `Copyright © 2026 Sthraas Intelligence Pvt Ltd. All rights reserved.`
+`Chuvadi.app/Contents/Resources/legal/`:
+
+| File | From | Notes |
+|---|---|---|
+| `LICENSE.txt` | repo `LICENSE` | DRAFT |
+| `EULA.txt` | `legal/EULA.txt` | DRAFT; shown on the DMG licence page once there is a DMG |
+| `THIRD-PARTY-NOTICES.txt` | `legal/THIRD-PARTY-NOTICES.txt` | DRAFT |
+| `DOTNET-RUNTIME-THIRD-PARTY-NOTICES.txt` | `THIRD-PARTY-NOTICES.TXT` of the Mono runtime pack the build resolved | taken at build time |
+| `DOTNET-MACCATALYST-LICENSE.txt` | `LICENSE` of the .NET for Mac Catalyst runtime pack the build resolved | taken at build time |
+
+The last two form the **.NET runtime** tab on Settings › About › Licences (`MacHostNotices`, D-84). The build
+fails if either can't be found in the resolved packs.
 
 ## Signing and notarisation (later — not done)
 Needed for a normal double-click install with no warning:

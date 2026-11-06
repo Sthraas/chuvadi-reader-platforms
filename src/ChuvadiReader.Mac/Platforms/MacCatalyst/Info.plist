@@ -2,6 +2,9 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- D-82 / HANDOFF: the shared Copyright value (Directory.Build.props). -->
+	<key>NSHumanReadableCopyright</key>
+	<string>Copyright © 2026 Sthraas Intelligence Pvt Ltd. All rights reserved.</string>
 	<!-- 6 = Mac idiom ("Optimize Interface for Mac"): the UI renders at 100 %, not scaled to 77 %
 	     as iPad-idiom Catalyst apps are, so fonts and layout match the Windows app exactly. -->
 	<key>UIDeviceFamily</key>

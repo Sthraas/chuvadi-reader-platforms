@@ -38,6 +38,43 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
+  <!-- Legal texts in the bundle, unchanged (HANDOFF: "notices in Contents/Resources"; D-82, D-84).
+       Contents/Resources/legal/: LICENSE.txt, EULA.txt, THIRD-PARTY-NOTICES.txt from the repo, plus the two
+       .NET texts below. All of the repo's texts are DRAFTs until counsel removes the DRAFT line. -->
+  <ItemGroup>
+    <BundleResource Include="..\..\LICENSE" LogicalName="legal/LICENSE.txt" />
+    <BundleResource Include="..\..\legal\EULA.txt" LogicalName="legal/EULA.txt" />
+    <BundleResource Include="..\..\legal\THIRD-PARTY-NOTICES.txt" LogicalName="legal/THIRD-PARTY-NOTICES.txt" />
+  </ItemGroup>
+
+  <!-- The self-contained .NET's own notices, from the exact runtime packs this build resolved (never a
+       copy kept in the repo, so they always match what ships). Fails the build if either is missing.
+       Hooked in the way the .NET for Mac Catalyst SDK documents (Xamarin.Shared.targets). In a universal build
+       the first resolved pack is used (arm64 and x64 packs carry the same texts). -->
+  <PropertyGroup>
+    <CollectBundleResourcesDependsOn>$(CollectBundleResourcesDependsOn);ChuvadiDotnetNotices</CollectBundleResourcesDependsOn>
+  </PropertyGroup>
+  <Target Name="ChuvadiDotnetNotices" DependsOnTargets="ResolveFrameworkReferences">
+    <ItemGroup>
+      <_ChvdMonoPack Include="@(ResolvedRuntimePack)" Condition="'%(ResolvedRuntimePack.FrameworkName)' == 'Microsoft.NETCore.App'" />
+      <_ChvdApplePack Include="@(ResolvedRuntimePack)" Condition="'%(ResolvedRuntimePack.FrameworkName)' == 'Microsoft.MacCatalyst'" />
+    </ItemGroup>
+    <PropertyGroup>
+      <_ChvdMonoNotices>@(_ChvdMonoPack->'%(PackageDirectory)')</_ChvdMonoNotices>
+      <_ChvdMonoNotices>$(_ChvdMonoNotices.Split(';').GetValue(0))</_ChvdMonoNotices>
+      <_ChvdMonoNotices Condition="'$(_ChvdMonoNotices)' != ''">$([System.IO.Path]::Combine('$(_ChvdMonoNotices)', 'THIRD-PARTY-NOTICES.TXT'))</_ChvdMonoNotices>
+      <_ChvdAppleLicense>@(_ChvdApplePack->'%(PackageDirectory)')</_ChvdAppleLicense>
+      <_ChvdAppleLicense>$(_ChvdAppleLicense.Split(';').GetValue(0))</_ChvdAppleLicense>
+      <_ChvdAppleLicense Condition="'$(_ChvdAppleLicense)' != ''">$([System.IO.Path]::Combine('$(_ChvdAppleLicense)', 'LICENSE'))</_ChvdAppleLicense>
+    </PropertyGroup>
+    <Error Condition="'$(_ChvdMonoNotices)' == '' or !Exists('$(_ChvdMonoNotices)')" Text="Chuvadi: .NET runtime notices not found in the resolved runtime pack ('$(_ChvdMonoNotices)')." />
+    <Error Condition="'$(_ChvdAppleLicense)' == '' or !Exists('$(_ChvdAppleLicense)')" Text="Chuvadi: .NET for Mac Catalyst licence not found in the resolved runtime pack ('$(_ChvdAppleLicense)')." />
+    <ItemGroup>
+      <BundleResource Include="$(_ChvdMonoNotices)" LogicalName="legal/DOTNET-RUNTIME-THIRD-PARTY-NOTICES.txt" />
+      <BundleResource Include="$(_ChvdAppleLicense)" LogicalName="legal/DOTNET-MACCATALYST-LICENSE.txt" />
+    </ItemGroup>
+  </Target>
+
   <ItemGroup>
     <MauiIcon Include="Resources\AppIcon\appicon.png" />
   </ItemGroup>
