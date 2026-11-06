@@ -184,3 +184,6 @@ Written in OPTIONS (handout Walkthrough "Drop to open" + States 8b), including t
 
 ### 6. Build (no CI: commit carries [skip ci])
 Build `-warnaserror` 0 warnings; tests Mobile UI 15 + Hosting 48 + Web UI 32 + Reader 171 = **266 pass**.
+
+## 2026-11-07 — session 8 (D-93: CI back, repo public)
+Rebased onto `platform/foundation` 4819d66 (new CI rules: docs-only pushes run nothing, newer push cancels older). Local: 0 warnings, 266 tests pass. CI `platforms` run 42314281411 (dispatched, head 5c37e62): **success** — shared on ubuntu x64, ubuntu ARM64, macOS, Windows; windows-app; pack-check.
