@@ -43,7 +43,14 @@
         {
             <div class="drop first">
                 <span class="drop-ic"><Icon Name="upload" Size="34" /></span>
+                @if (CanDrop)
+                {
                 <span class="drop-title">Drop your first document here</span>
+                }
+                else
+                {
+                    <span class="drop-title">@(IsPortal ? "Upload your first document" : "Open your first document")</span>
+                }
                 <span class="drop-sub">PDF, Word or Excel — even password-protected ones.</span>
                 @if (IsPortal)
                 {
@@ -70,15 +77,19 @@
         }
         else
         {
-            <button type="button" class="drop" @onclick="OpenFile" title="Drop a file anywhere on the window, or click to choose one">
+            <button type="button" class="drop" @onclick="OpenFile" title="@(CanDrop ? "Drop a file anywhere on the window, or click to choose one" : IsPortal ? "Choose a document to upload" : "Choose a document to open")">
                 <span class="drop-ic"><Icon Name="upload" Size="28" /></span>
                 @if (IsPortal)
                 {
-                    <span class="drop-title">Drop a document, or click to upload</span>
+                    <span class="drop-title">@(CanDrop ? "Drop a document, or click to upload" : "Click to upload a document")</span>
+                }
+                else if (CanDrop)
+                {
+                <span class="drop-title">Drop a document, or click to open</span>
                 }
                 else
                 {
-                <span class="drop-title">Drop a document, or click to open</span>
+                    <span class="drop-title">Open a document</span>
                 }
                 <span class="chips">
                     <span class="chip on">pdf</span>
@@ -286,6 +297,10 @@
 
     // The Web portal (H3 "Upload", U-11): uploads, not local files.
     private bool IsPortal => Platform.Kind == ChuvadiReader.Platform.PlatformKind.Web;
+
+    // D-89 B: no "Drop" wording where the platform can't take a drop (Android; the portal until its
+    // drop catcher is on). Desktop: always true, original text.
+    private bool CanDrop => Platform.Capabilities.DropFiles;
 
     private static string DayLine => DateTime.Now.ToString("dddd d MMM yyyy · HH:mm");
 

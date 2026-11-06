@@ -1,4 +1,4 @@
-# Home drop zone on the portal and on mobile — options (coordinator, 7 Nov)
+# Home drop zone on the portal and on mobile — **decided C (D-89); built: `COMBINED-HOOKS-5.md`**
 
 ## What happens today
 | Host | `Capabilities.DropFiles` | Click on the zone | Drop on the zone |

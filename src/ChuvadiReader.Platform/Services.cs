@@ -209,3 +209,37 @@ public sealed class NoHostNotices : IHostNotices
 
     public string ReadText() => string.Empty;
 }
+
+/// <summary>One file dropped on the portal window (D-89 A). <paramref name="OpenRead"/> streams it from the
+/// browser; read it within <see cref="IDroppedFiles.ReceiveAsync"/> (it can't be reopened later).</summary>
+public sealed record DroppedFile(string Name, long Size, Func<CancellationToken, Stream> OpenRead);
+
+/// <summary>
+/// Files dropped on the web portal's window (D-89 option A). The Ui catches the drop and hands the
+/// files here; the Web host stores each as the session's working copy (as its upload does) and opens
+/// it through the kit's <c>IncomingFiles</c> router (Bench shelf or one tab each). Other hosts keep the
+/// default: their windows take drops natively.
+/// </summary>
+public interface IDroppedFiles
+{
+    /// <summary>False: the Ui doesn't catch drops (default; desktop and Android).</summary>
+    bool IsAvailable { get; }
+
+    /// <summary>Largest file the host accepts, in bytes.</summary>
+    long MaxFileBytes { get; }
+
+    /// <summary>Stores and opens <paramref name="files"/>. Returns one short, user-facing message per
+    /// file that couldn't be taken (e.g. "report.xlsx is larger than 50 MB"); empty when all were.</summary>
+    Task<IReadOnlyList<string>> ReceiveAsync(IReadOnlyList<DroppedFile> files, CancellationToken ct = default);
+}
+
+/// <summary>Default: no Ui drop catcher.</summary>
+public sealed class NoDroppedFiles : IDroppedFiles
+{
+    public bool IsAvailable => false;
+
+    public long MaxFileBytes => 0;
+
+    public Task<IReadOnlyList<string>> ReceiveAsync(IReadOnlyList<DroppedFile> files, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<string>>([]);
+}
