@@ -24,12 +24,12 @@
 | MU-8 open point 3, Library Default view | Coordinator, 7 Nov: approved (leave it to the Reader chat's setting) | Nothing to build here |
 
 ### MU-8 open points (need a decision)
-1. **Decided (D-88): H-10 written.** ~~Home search pill sits above the greeting**, not below the count line as in 4a. Dashboard has no
+1. **Decided (D-88): H-10 written.** Was: Home search pill sits above the greeting, not below the count line as in 4a. Dashboard has no
    slot there; PhoneShell puts it above the page content.
    (a) Keep it as is: no hook, and search is the first thing under the thumb.
    (b) A Dashboard hook (≈3 lines, phone only) to render it exactly where 4a has it. Matches the handout.
    **Recommend (b)** (Arun's rule: follow the handout), but it's an existing-file edit.
-2. **Decided (D-88): H-11 written.** ~~Settings list rows have no one-line summary** (the mock had one under each section name).
+2. **Decided (D-88): H-11 written.** Was: Settings list rows have no one-line summary (the mock had one under each section name).
    (a) Leave them out: no hook.
    (b) A `Summary` per entry in Settings' `Sections` table (Settings hook, ~10 lines of text).
    Recommend (b) if Arun wants the mock exactly; (a) is clean and usable.
