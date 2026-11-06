@@ -46,6 +46,14 @@ public class SignInTextTests
     public void Sangam_id_field_is_off_by_default_U9a() => Assert.False(PortalSignIn.ShowSangamIdDefault);
 
     [Fact]
+    public void Terms_link_is_optional_and_two_argument_construction_still_works()
+    {
+        var links = new PortalLinks(PortalLinks.PlaceholderDesktopAppUrl, null);
+        Assert.Null(links.TermsUrl);
+        Assert.Equal("/terms", (links with { TermsUrl = "/terms" }).TermsUrl);
+    }
+
+    [Fact]
     public void Desktop_app_placeholder_is_D35()
         => Assert.Equal("https://chuvadi.in/download", PortalLinks.PlaceholderDesktopAppUrl);
 }

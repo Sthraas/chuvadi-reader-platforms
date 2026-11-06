@@ -26,7 +26,7 @@ builder.Services.AddSingleton<IPlatformInfo>(new PreviewPlatform(ff, web));
 if (web)
 {
     // The Web host registers these from its configuration; the preview uses the placeholders.
-    builder.Services.AddSingleton(new ChuvadiReader.Ui.Components.Platform.Portal.PortalLinks(ChuvadiReader.Ui.Components.Platform.Portal.PortalLinks.PlaceholderDesktopAppUrl, null));
+    builder.Services.AddSingleton(new ChuvadiReader.Ui.Components.Platform.Portal.PortalLinks(ChuvadiReader.Ui.Components.Platform.Portal.PortalLinks.PlaceholderDesktopAppUrl, null, TermsUrl: "/licence"));
 }
 
 var app = builder.Build();

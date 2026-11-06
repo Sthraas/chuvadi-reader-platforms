@@ -1,0 +1,53 @@
+@namespace ChuvadiReader.Ui.Components.Legal
+@using ChuvadiReader.Ui.Components.Settings
+
+@*
+    Licences (About › Help › Licences, and the /licence page): the licence agreement, the software
+    licence and the third-party notices, as shipped. Every host shows the same page; no host code.
+*@
+<SettingsSection Title="Licences" Sub="Chuvadi Reader is free to use. It is proprietary software, not open source.">
+    <Lead>
+        <div class="lic-bar">
+            @if (OnBack.HasDelegate)
+            {
+                <RowButton IconName="chevron-left" OnClick="() => OnBack.InvokeAsync()">About</RowButton>
+            }
+            <Segmented Options="Parts" Value="@_part" ValueChanged="v => _part = v" AriaLabel="Licence text" />
+        </div>
+        <pre class="lic-text" tabindex="0" aria-label="@PartLabel">@PartText</pre>
+    </Lead>
+</SettingsSection>
+
+@code {
+    /// <summary>When set, a "‹ About" button returns to Settings › About.</summary>
+    [Parameter] public EventCallback OnBack { get; set; }
+
+    /// <summary>Which text opens first: "eula" (default), "licence" or "notices".</summary>
+    [Parameter] public string? Part { get; set; }
+
+    private static readonly IReadOnlyList<SegOption> Parts = new[]
+    {
+        new SegOption("eula", "Licence agreement"),
+        new SegOption("licence", "Licence"),
+        new SegOption("notices", "Third-party notices"),
+    };
+
+    private string _part = "eula";
+
+    protected override void OnParametersSet()
+    {
+        if (Part is "eula" or "licence" or "notices")
+        {
+            _part = Part;
+        }
+    }
+
+    private string PartLabel => Parts.First(p => p.Value == _part).Label;
+
+    private string PartText => _part switch
+    {
+        "licence" => LegalTexts.Licence,
+        "notices" => LegalTexts.Notices,
+        _ => LegalTexts.Eula,
+    };
+}

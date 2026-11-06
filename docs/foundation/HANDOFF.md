@@ -78,7 +78,7 @@ Repository root `LICENSE`, `legal/EULA.txt` (installer EULA), `legal/THIRD-PARTY
 | Android | notices and licence reachable in the app (Settings › About) and the store listing's licence/terms link; self-contained .NET → also ship .NET's `ThirdPartyNotices.txt` |
 | Web | the EULA does not fit a hosted service: the portal needs Terms of Use + a privacy notice (separate legal drafts — flagged to the coordinator) |
 
-Self-contained hosts (Linux, Mac, Android) must also ship the bundled .NET runtime's own `ThirdPartyNotices.txt`.
+The texts are also in the app: Settings › About › Licences, and the `/licence` page (no host code). Self-contained hosts (Linux, Mac, Android) must also ship the bundled .NET runtime's own `ThirdPartyNotices.txt`.
 
 ## 3. macOS menu bar — `IAppCommands` (decided: filled host-side from `ShellService`, no Ui hook)
 - `Commands`: everything the Ctrl K bar can run now (global + the mounted page's) — `Id`, `Label`, `Group` (File, Tabs, Document, Read, Mark, Arrange, Protect, View…), canonical `Keys`, `IsEnabled`, `DisabledReason`.

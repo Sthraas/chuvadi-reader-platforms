@@ -1,0 +1,16 @@
+@page "/licence"
+
+@*
+    The licence agreement and notices on their own address, for links from outside the app shell
+    (e.g. the portal sign-in's "Terms of use": PortalLinks.TermsUrl = "/licence"). /licence?part=notices
+    opens the notices.
+*@
+<PageTitle>Chuvadi · Licences</PageTitle>
+<div class="licence-page">
+    <ChuvadiReader.Ui.Components.Legal.LicencesSection Part="@PartQuery" />
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "part")]
+    public string? PartQuery { get; set; }
+}

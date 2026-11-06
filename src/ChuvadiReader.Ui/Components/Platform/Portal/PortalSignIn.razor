@@ -53,6 +53,11 @@
                 <button type="submit" class="psi-submit" disabled="@(Busy || !CanSubmit)">Sign in</button>
             }
             <span class="psi-foot">Prefer to keep files on your computer? <a href="@Links.DesktopAppUrl" target="_blank" rel="noopener">Download the desktop app</a> — no sign-in needed to read.</span>
+            @if (Links.TermsUrl is { } terms)
+            {
+                @* Licence terms (coordinator, 7 Nov): proprietary, free for everyone; the EULA is the Foundation's. *@
+                <span class="psi-foot psi-terms"><a href="@terms" target="_blank" rel="noopener">Terms of use</a></span>
+            }
         </form>
     </section>
 </div>
