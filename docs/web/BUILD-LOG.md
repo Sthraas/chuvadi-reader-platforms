@@ -182,10 +182,14 @@ Findings for Sangam's team are in `SANGAM-INTEGRATION.md` (`login_hint` unsuppor
 dotnet test tests/ChuvadiReader.Web.Tests -c Release   # 123 passed, 0 warnings
 ```
 
-### 21. Second combined patch, the 12a sign-in page, L-8, restart banner — 7 Nov
+### 21. Second and third combined patches, the 12a sign-in page, L-8, restart banner — 7 Nov
 - Rebased the Web commits onto `platform/foundation` @ `2fafb60` (second combined patch, `COMBINED-HOOKS-2.md`) without conflicts.
+- History of the 12a integration:
+  - I first took the Web portal UI chat's portal files straight from `0c99e19`. That broke the shared CI: the Foundation's Mobile UI preview and Web UI test copies still used the old types. I held it back, and the coordinator decided (a): the Foundation carries the files.
+  - It did, in `5aaa271` (third combined patch, part 1). `platform/web` is rebuilt on `a4acc56` with the Web commits only; my take-and-hold commits are gone.
+  - From now on, every push builds the whole shared solution with `-warnaserror` and runs all its tests first.
 - **PortalLinks:** already registered by the host. It now takes two arguments (`DesktopAppUrl`, `AccountSettingsUrl`) from the Web portal UI chat's `0c99e19`. `Portal:ForgotPasswordUrl` is removed (no password field, D-34), and the desktop-app default is the Ui's own `PlaceholderDesktopAppUrl`. `PortalLinks` is registered in every mode, because the gateway renders the sign-in page.
-- **12a sign-in page** (U-9 a, integrated from `0c99e19`; its `src/ChuvadiReader.Ui/Components/Platform/Portal/` files are taken as they are):
+- **12a sign-in page** (U-9 a; the portal files as the Foundation carries them in `5aaa271`):
   - `GET /signin` renders `PortalSignIn` to plain HTML on the server with its own tiny service set. No circuit is needed, so there's no worker before sign-in.
   - `js/signin.js` sends "Continue with Sangam" to `GET /signin/sangam` (the old redirect), with a safe return address. Sign-in failures show their reason on the same page.
   - The Sangam ID field stays off until Sangam pre-fills `login_hint`.
@@ -197,4 +201,6 @@ dotnet test tests/ChuvadiReader.Web.Tests -c Release   # 123 passed, 0 warnings
   - `ITabControl.AnnounceAsync`; the gateway passes the notice to every worker, and to workers started later.
   - `MaintenanceBanner` shows bottom-left in every tab until the time passes or the file is removed.
   - 6 tests, plus a browser check.
-- Checks: build 0/0; 134/134 tests; the real-Sangam e2e through the gateway, now starting at 12a, passes.
+- Checks: the whole shared solution builds with `-warnaserror`; its tests pass (Reader 171, Hosting 33, Mobile UI 11, Web UI 16); Web 136/136; the real-Sangam e2e through the gateway, now starting at 12a, passes.
+- **Sangam unreachable:** "Continue with Sangam" and the callback show "Sangam can't be reached right now…" on the sign-in page (503), instead of an error page. Signing out still ends on the signed-out page, since the portal session is already over. 2 tests. Found when the local Sangam stopped during the e2e.
+- Still to come from the Foundation, and needing no Web code: the optional `PortalLinks.TermsUrl`, with a "Terms of use" line under the sign-in card, is on the Web portal UI branch. The EULA's About page is coming too (coordinator: terms via About, through the Foundation). The portal drop zone is now a Foundation item.

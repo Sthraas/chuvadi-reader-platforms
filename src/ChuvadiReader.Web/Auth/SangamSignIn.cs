@@ -40,9 +40,9 @@ public static class SangamSignIn
         var o = app.ServiceProvider.GetRequiredService<IOptions<SangamOptions>>().Value;
 
         app.MapGet("/signin", (Delegate)(Func<HttpContext, Task<IResult>>)(http => SignInPage.RenderAsync(http))).AllowAnonymous();
-        app.MapGet(SignInPage.StartPath, (Delegate)SignInAsync).AllowAnonymous();
-        app.MapGet(o.CallbackPath, (Delegate)CallbackAsync).AllowAnonymous();
-        app.MapGet("/signout", (Delegate)SignOutAsync).AllowAnonymous();
+        app.MapGet(SignInPage.StartPath, (Delegate)SignInAsync).AllowAnonymous().AddEndpointFilter(WhenSangamIsUnreachable(signingOut: false));
+        app.MapGet(o.CallbackPath, (Delegate)CallbackAsync).AllowAnonymous().AddEndpointFilter(WhenSangamIsUnreachable(signingOut: false));
+        app.MapGet("/signout", (Delegate)SignOutAsync).AllowAnonymous().AddEndpointFilter(WhenSangamIsUnreachable(signingOut: true));
         app.MapGet(o.SignedOutCallbackPath, (Delegate)SignedOutCallbackAsync).AllowAnonymous();
         app.MapPost(o.BackChannelLogoutPath, (Delegate)BackChannelLogoutAsync).AllowAnonymous().DisableAntiforgery();
         return app;
@@ -396,7 +396,31 @@ public static class SangamSignIn
     private static string Random(int bytes) => AcmeJws.Base64Url(RandomNumberGenerator.GetBytes(bytes));
 
     /// <summary>A sign-in that didn't complete: the sign-in page again, with the reason under the button.</summary>
-    private static Task<IResult> Fail(HttpContext http, string message) => SignInPage.RenderAsync(http, message, StatusCodes.Status400BadRequest);
+    private static Task<IResult> Fail(HttpContext http, string message, int status = StatusCodes.Status400BadRequest)
+        => SignInPage.RenderAsync(http, message, status);
+
+    public const string SangamUnreachable = "Sangam can't be reached right now. Please try again in a moment.";
+
+    /// <summary>Sangam down or not answering: signing in says so on the sign-in page (503); signing out has
+    /// already ended the portal session, so it finishes on the signed-out page.</summary>
+    private static Func<EndpointFilterInvocationContext, EndpointFilterDelegate, ValueTask<object?>> WhenSangamIsUnreachable(bool signingOut)
+        => async (context, next) =>
+        {
+            var http = context.HttpContext;
+            try
+            {
+                return await next(context).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is HttpRequestException or JsonException or SecurityTokenException
+                                       || ex is TaskCanceledException && !http.RequestAborted.IsCancellationRequested)
+            {
+                http.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("ChuvadiReader.Web.Auth.SangamSignIn")
+                    .LogWarning("Sangam unreachable: {Message}", ex.Message);
+                return signingOut
+                    ? Results.Redirect(SignedOutPath)
+                    : await Fail(http, SangamUnreachable, StatusCodes.Status503ServiceUnavailable).ConfigureAwait(false);
+            }
+        };
 
     internal static readonly string SignedOutPage = Page("Signed out", "Your files were removed from the server.", "/signin", "Sign in again");
 
