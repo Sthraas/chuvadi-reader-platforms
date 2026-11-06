@@ -565,13 +565,29 @@ check("split screen: the app re-lays out to the half window (same process, no si
       {"size": [[full.get("innerW"), full.get("innerH")], [split.get("innerW"), split.get("innerH")]],
        "formFactor": [full.get("formFactor"), split.get("formFactor")], "shell": [full.get("shell"), split.get("shell")],
        "overflowPage": split.get("overflowPage"), "pid": [pid0, pid()], "command": out.strip()[:200]})
-wmshell("splitscreen", "removeFromSideStage", str(tid))
-adb("shell", "am", "start", "--windowingMode", "1", "-n", adb("shell", "cmd", "package", "resolve-activity", "--brief", PKG).split()[-1])
-back = wait_for(lambda s: abs(s["innerW"] - full["innerW"]) <= 2 and abs(s["innerH"] - full["innerH"]) <= 60, 20, "full screen")
+component = adb("shell", "cmd", "package", "resolve-activity", "--brief", PKG).split()[-1]
+full_again = lambda s: abs(s["innerW"] - full["innerW"]) <= 2 and abs(s["innerH"] - full["innerH"]) <= 60
+# Ways out of split screen, tried in turn until the window is full size again (WMShell's command set
+# differs between Android versions); the one that worked is recorded.
+exits = [
+    ("WMShell exitSplitScreen", lambda: wmshell("splitscreen", "exitSplitScreen", str(tid))),
+    ("WMShell removeFromSideStage", lambda: wmshell("splitscreen", "removeFromSideStage", str(tid))),
+    ("am start --windowingMode 1", lambda: adb("shell", "am", "start", "--windowingMode", "1", "-n", component)),
+    ("home, then am start --windowingMode 1", lambda: (adb("shell", "input", "keyevent", "KEYCODE_HOME"), time.sleep(2),
+                                                       adb("shell", "am", "start", "--windowingMode", "1", "-n", component))),
+]
+how, back = None, {}
+for name, run in exits:
+    run()
+    back = wait_for(full_again, 10, f"full screen ({name})")
+    if back and "error" not in back and full_again(back):
+        how = name
+        break
 shot("p12-full-again")
 check("leaving split screen returns to the full window (same process)",
-      abs((back.get("innerW") or 0) - (full.get("innerW") or 0)) <= 2 and pid() == pid0,
-      {"size": [back.get("innerW"), back.get("innerH")], "formFactor": back.get("formFactor"), "pid": pid()})
+      how is not None and pid() == pid0,
+      {"size": [back.get("innerW"), back.get("innerH")], "full": [full.get("innerW"), full.get("innerH")],
+       "formFactor": back.get("formFactor"), "pid": pid(), "how": how})
 
 # ── No crash in our process during all of this ──────────────────────────────
 log = adb("logcat", "-d")
