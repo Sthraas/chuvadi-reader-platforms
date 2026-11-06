@@ -2,7 +2,7 @@
 
 Lands the Foundation edits in chuvadi-reader first (Arun's merge plan (a)), so the Reader chat builds on them. **Do not merge before the Windows checks below.**
 
-Three commits: code (`src`, `tests`, `ChuvadiReader.Platforms.slnx`), dev tools (never shipped), docs (`docs/foundation`).
+Four commits: code (`src`, `tests`, `ChuvadiReader.Platforms.slnx`, `Directory.Build.props`, `LICENSE`, `legal/`, `.github/workflows/ci.yml`), packages (`ci/packages`: chuvadi-pdf 3.31.2 and Chuvadi.Print 1.0.0-rc.2), dev tools (never shipped), docs (`docs/foundation`).
 
 ## What changes
 **New projects**
