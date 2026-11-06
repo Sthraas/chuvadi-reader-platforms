@@ -160,3 +160,20 @@ Each decided on the chat's own pros and cons. Delivered to the chats at the next
 | D-73 | Mac size option 2 (−111 MB, +0.3 s startup) | Rejected — startup priority; do option 1 now, option 3 when libraries are trim-annotated |
 | D-74 | Phone Redact fit-width hook; Shelf landscape peek | Approved; keep |
 | D-75 | Web UI phone account block; Portal status-bar spans; PortalLinks 2 args; CI Node 24 actions | Approved; Foundation's next combined patch / Web host |
+
+## 7 Nov 2026 01:35 check-in — coordinator
+| # | Item | Decision |
+|---|---|---|
+| D-76 | Web sign-in page + 2-arg PortalLinks route | (a) Foundation carries them in its next combined patch (updating its preview/test copies); Web applies web-12a-ready after |
+| D-77 | EULA in the app | Foundation adds the EULA as a Ui page; About › Licences row links it |
+| D-78 | Home drop zone does nothing on portal/mobile | Foundation brings options (Ui drop → upload via platform layer vs hide/reword) |
+| D-79 | U-13 portal terms wording | (a) plain "Terms of use" link; click-through/tick-box are Arun's legal call; /terms readable before sign-in |
+| D-80 | Mobile UI H-8 (Reader re-render) | Into Foundation's combined patch, reusing the Reader's re-render helper |
+| D-81 | Android host failures seen by Mobile UI | Android chat checks/fixes: .docx/.xlsx open (library-blocked if Layout), Share, Save as PDF, back on API 35 tablet, keyboard over Find, garbled typing |
+
+## For Arun — legal (from the Foundation's LICENSE/EULA draft)
+1. Copyright holder: packaging lists Dr. Arun Shiva B; for Sthraas to license Chuvadi it should own the code (an assignment from you to Sthraas).
+2. LiPicons icons are © imagiQa with no licence: Sthraas needs written permission from imagiQa to ship them.
+3. Governing-law city and legal contact for the EULA.
+4. Keep the "not a medical device" clause in the EULA?
+5. Web portal needs its own Terms of Use and a privacy notice (DPDP Act) — and whether sign-in implies acceptance (click-through/tick-box) or just a link.
