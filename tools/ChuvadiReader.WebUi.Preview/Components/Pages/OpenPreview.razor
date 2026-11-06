@@ -1,0 +1,13 @@
+@page "/_preview/open"
+@inject ChuvadiReader.Core.Reader.OpenDocumentService OpenDoc
+@*
+    Opens ?path=/abs/file.pdf through the same service a host's drop uses. One file per request keeps the
+    screenshots deterministic (the F-3 queue fix makes several requests safe, D-66).
+*@
+@code {
+    [SupplyParameterFromQuery(Name = "path")] public string? Path { get; set; }
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender && !string.IsNullOrEmpty(Path)) OpenDoc.Request(Path);
+    }
+}

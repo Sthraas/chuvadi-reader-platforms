@@ -1,0 +1,12 @@
+@page "/_preview/sign-in"
+@layout BareLayout
+<PortalSignIn OnContinueWithSangam="Continue" OnSubmitId="Submit" Busy="BusyQ" Error="@ErrorQ" ShowSangamId="IdQ" />
+<span id="note" hidden>@_note</span>
+@code {
+    [SupplyParameterFromQuery(Name = "error")] public string? ErrorQ { get; set; }
+    [SupplyParameterFromQuery(Name = "busy")] public bool BusyQ { get; set; }
+    [SupplyParameterFromQuery(Name = "id")] public bool IdQ { get; set; } = PortalSignIn.ShowSangamIdDefault;
+    private string? _note;
+    private void Continue() => _note = "continue";
+    private void Submit(string id) => _note = "submit:" + id;
+}
