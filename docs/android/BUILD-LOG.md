@@ -384,3 +384,10 @@ Screenshots: `gestures-phone.png`, `gestures-tablet.png` (sent to the coordinato
 | Swipe never pages | **Test.** Mobile UI's fix works on the device: no more pointercancel (pointerdown → 8 moves → pointerup). My swipe took 1.15 s (every step is a process start), over mobile.js's 600 ms. | one pause after touch-down, then the moves and the lift in one write (~0.4 s) |
 | Double-tap on API 35 | Same clean double tap as API 36 (taps 18–75 ms apart), but reader.js doesn't zoom on API 35. | re-check after this run; page-side if it stays |
 | Relaunch "tab" empty | Back had walked to Home (`/`); relaunch correctly returns there. | check compares the screen it left from |
+
+### 38. CI blocked — GitHub billing (7 Nov)
+Run 42285556510 (commit 53d7ab3), attempts 1 and 2: no job started. GitHub's annotation: "The job was not
+started because recent account payments have failed or your spending limit needs to be increased. Please
+check the 'Billing & plans' section in your settings." Round 3 (the fixes in step 37) is unverified until
+Actions runs again on Sthraas/chuvadi-reader-platforms. The sandbox has no KVM, so emulators run only in CI.
+Usage note: each full run is 1 build plus 4 emulator jobs of about 30 minutes each.
