@@ -673,6 +673,18 @@ r1 = wait_for(lambda s: s.get("route") == last_route, 10, "the screen it left fr
 check("relaunch returns to the same process and the screen it left from", pid() == pid0 and r1.get("route") == last_route and resumed() == PKG,
       {"pid": [pid0, pid()], "route": [last_route, r1.get("route")]})
 
+# D-89 B: Android can't take drops (DropFiles false), so Home says "open", never "drop".
+if r1.get("route") != "/":
+    adb("shell", "monkey", "-p", PKG, "-c", "android.intent.category.LAUNCHER", "1")
+home = wait_for(lambda s: s.get("route") == "/", 10, "Home")
+home_text = home.get("text") or ""
+drop_words = sorted(set(re.findall(r"[^\n]*\b[Dd]rop(?:ped|ping|s)?\b[^\n]*", home_text)))
+shot("p10b-home-wording")
+check("Home wording says open, not drop (D-89 B, DropFiles false)",
+      home.get("route") == "/" and not drop_words and bool(re.search(r"Open (your first document|a document)", home_text)),
+      {"route": home.get("route"), "dropLines": drop_words[:5],
+       "openLines": re.findall(r"[^\n]*Open (?:your first document|a document)[^\n]*", home_text)[:5]})
+
 
 # ── 8. Split screen ──────────────────────────────────────────────────────────
 def task_id():

@@ -434,3 +434,15 @@ Usage note: each full run is 1 build plus 4 emulator jobs of about 30 minutes ea
 - Round 3 is on hold until the coordinator confirms. Its checklist adds D-89 option C: where
   `DropFiles` is false (Android), the first-run box says "open" rather than "drop" (Foundation's
   wording change; check on the emulator).
+
+### 42. Round 3 set-up (D-93: CI back; one run by hand)
+- **Composition:** Foundation `a73a898` (fourth combined patch with P-06, single instance, host notices,
+  D-89) + Mobile UI `ac8e84c` merged (clean) + `mobile-ui-hooks-3.patch` (H-5 to H-11, incl. H-9: the
+  first fit measured on the placeholder, Mobile UI's fix for the phone over-wide page). P-06 is detected
+  as already in Foundation. Android 0 warnings; Platforms solution `-warnaserror` 0 warnings; tests
+  171 + 48 + 31 + 16 pass.
+- **Host, per HANDOFF:** `IHostNotices` → `AndroidHostNotices` (".NET runtime" tab: the two bundled
+  notices). Files from other apps now go through the kit's `IncomingFiles.Receive` (one route for
+  every host: Bench shelf or a new tab, after the first render); our import errors stay as they were.
+  Single instance on Android = `LaunchMode.SingleTask` + `OnNewIntent` (already; tested in platform.py).
+- **New check:** D-89 B, Home says "Open…", never "drop", on Android (`DropFiles` false).

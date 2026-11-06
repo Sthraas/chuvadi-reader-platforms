@@ -1,4 +1,5 @@
 using ChuvadiReader.Core.Reader;
+using ChuvadiReader.Hosting;
 using global::Android.Content;
 using AUri = global::Android.Net.Uri;
 
@@ -6,22 +7,21 @@ namespace ChuvadiReader.Android.Platform;
 
 /// <summary>
 /// Documents arriving from other apps — "Open with" (ACTION_VIEW) and "Share" (ACTION_SEND).
-/// Each is imported as a working copy (<see cref="DocumentLinks.Import"/>) and then routed exactly
-/// like a desktop drop (PLATFORM-INTERFACE §4): onto the Bench when it is open, otherwise opened
-/// in the Reader under the document's real name. The original is never modified here.
+/// Each is imported as a working copy (<see cref="DocumentLinks.Import"/>) and handed to the kit's
+/// <see cref="IncomingFiles"/> router (HANDOFF §2), the one route every host uses: onto the Bench
+/// shelf when it is open, otherwise a new Reader tab, after the first render. The original is never
+/// modified here.
 /// </summary>
 public sealed class DocumentImport
 {
     private readonly DocumentLinks _links;
-    private readonly OpenDocumentService _open;
-    private readonly BenchDropService _bench;
+    private readonly IncomingFiles _incoming;
     private readonly ShellService _shell;
 
-    public DocumentImport(DocumentLinks links, OpenDocumentService open, BenchDropService bench, ShellService shell)
+    public DocumentImport(DocumentLinks links, IncomingFiles incoming, ShellService shell)
     {
         _links = links;
-        _open = open;
-        _bench = bench;
+        _incoming = incoming;
         _shell = shell;
     }
 
@@ -70,13 +70,10 @@ public sealed class DocumentImport
             global::Android.Util.Log.Info("Chuvadi", $"Opened from another app: {Path.GetFileName(local)}");
             MainThread.BeginInvokeOnMainThread(() =>
             {
-                if (_bench.IsBenchActive)
+                if (_incoming.Receive([local]) == 0)
                 {
-                    _bench.Drop(new[] { local });
-                }
-                else
-                {
-                    _open.Request(local, Path.GetFileName(local));
+                    global::Android.Util.Log.Warn("Chuvadi", $"Open from another app: not an openable type: {Path.GetFileName(local)}");
+                    Tell("Chuvadi couldn't open that file.");
                 }
             });
         });

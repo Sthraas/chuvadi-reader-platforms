@@ -2,9 +2,9 @@ namespace ChuvadiReader.Android.Platform;
 
 /// <summary>
 /// The third-party notices of the .NET runtime and .NET for Android that this app bundles, packed as
-/// assets from the exact runtime packs of the build (see the ChuvadiRuntimeNotices target). Supplied
-/// to the Licences page through Foundation's host-notices contract once it lands (coordinator
-/// decision (a), 7 Nov). Read on demand only — never at startup.
+/// assets from the exact runtime packs of the build (see the ChuvadiRuntimeNotices target). Shown on
+/// the Licences page through <see cref="AndroidHostNotices"/> (coordinator decision (a), 7 Nov).
+/// Read on demand only — never at startup.
 /// </summary>
 public static class RuntimeNotices
 {
@@ -45,4 +45,12 @@ public static class RuntimeNotices
 
         return text.ToString();
     }
+}
+
+/// <summary>The Licences page's extra tab: the bundled .NET runtime's own notices (IHostNotices).</summary>
+public sealed class AndroidHostNotices : ChuvadiReader.Platform.IHostNotices
+{
+    public string? Title => ".NET runtime";
+
+    public string ReadText() => RuntimeNotices.Read();
 }

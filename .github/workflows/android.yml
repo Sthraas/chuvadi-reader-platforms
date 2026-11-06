@@ -20,10 +20,10 @@ on:
         default: all
 
 env:
-  # platform/foundation: third combined patch (licence, Licences page), L-8, F-3; chuvadi-pdf 3.31.2.
-  FOUNDATION_REF: 615afde9826e2e1e4e11ee485e9860dad201ea5b
-  # platform/mobile-ui: swipe on a slow drag, non-page overflow ignored (after Android round 2).
-  MOBILEUI_REF: 745ef8e1f6aae5bd59e62a9fb06e7d1a445cb2ae
+  # platform/foundation: fourth combined patch (P-06), single instance, host notices, D-89 seam and wording.
+  FOUNDATION_REF: a73a898ecd2cd563045818c0f2a55e4a00702a55
+  # platform/mobile-ui: hooks-3 (H-5 to H-11, H-9 first-fit fix for the phone over-wide page), D-88.
+  MOBILEUI_REF: ac8e84c6153d9d617fa28ca973e5af482061a294
   DOTNET_NOLOGO: '1'
   DOTNET_CLI_TELEMETRY_OPTOUT: '1'
 

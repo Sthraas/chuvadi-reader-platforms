@@ -48,6 +48,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IShare, AndroidShare>();
         builder.Services.AddSingleton<IExternalLinks, AndroidExternalLinks>();
         builder.Services.AddSingleton<IPrintService, AndroidPrintService>();
+        builder.Services.AddSingleton<ChuvadiReader.Platform.IHostNotices, AndroidHostNotices>();
 
         return builder.Build();
     }
