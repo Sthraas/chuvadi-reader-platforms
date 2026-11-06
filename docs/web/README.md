@@ -16,7 +16,8 @@ Blazor Server portal for Chuvadi Reader: the unchanged `ChuvadiReader.Ui` render
 - On `platform/foundation` @ `e5802e6` (fourth combined patch). D-86: `/terms`, `/privacy` and `/licence?part=cookies|notices` serve the Foundation's portal documents before sign-in, kept marked DRAFT; "Terms of use" on the sign-in page opens `/terms`. D-89: `DropFiles = false`, and a dropped file is refused instead of the browser opening it and leaving Chuvadi.
 - Printing works in Safari and in browsers without a PDF viewer (an "Open the PDF to print" link the person clicks). The browser flows, sign-in and expiry e2e run in Chrome, Firefox and WebKit.
 - Test plan for the Web Test chat: `TEST-PLAN.md`.
-- Next: the host side of the Foundation's `IDroppedFiles` when it lands (D-89 C: each dropped file streams to the session's working copy as upload does). Domain and E2E stay last (Arun). No CI runs until Actions billing is confirmed.
+- On `platform/foundation` @ `4819d66`. D-89 A: documents dropped on the portal stream into the session's working copy through the upload's own checks and open in the Reader (`WebDroppedFiles`, `DropFiles = true`).
+- Next: domain and E2E stay last (Arun). CI runs again (D-93).
 
 ## Build and test
 Requires the .NET 10 SDK (10.0.403 or later). Packages come from the committed `ci/packages` feed.

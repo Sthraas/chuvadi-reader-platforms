@@ -40,9 +40,12 @@ with sync_playwright() as p:
     # 1. open through the left bar
     page.goto(base + "/")
     page.wait_for_selector("nav.leftbar >> text=Upload", timeout=30000)
-    # D-89: dropping files isn't supported on the portal yet; a dropped file must be cancelled (a drop
-    # nobody cancels makes the browser open the file and leave Chuvadi). Synthetic events can't navigate,
-    # so the witness is that the drop was cancelled.
+    # D-89 A: files dropped on the window go to the Ui's drop catcher (a full-window file input), then the
+    # host's IDroppedFiles stores them like an upload and opens them. A drop that misses the input must still
+    # be cancelled (a drop nobody cancels makes the browser open the file and leave Chuvadi). Synthetic
+    # events can't carry files into an input, so the witnesses are: the stray drop was cancelled, and files
+    # handed to the catcher's input open (or are refused with a message).
+    page.wait_for_selector(".pdrop input[type=file]", state="attached", timeout=15000)
     cancelled = page.evaluate("""() => {
         const dt = new DataTransfer();
         dt.items.add(new File(['%PDF-1.4'], 'dropped.pdf', { type: 'application/pdf' }));
@@ -52,7 +55,22 @@ with sync_playwright() as p:
         const drop = new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt });
         return { over: over.defaultPrevented, drop: !target.dispatchEvent(drop), effect: dt.dropEffect };
     }""")
-    check("a dropped file is refused and doesn't leave Chuvadi", cancelled["over"] and cancelled["drop"] and cancelled["effect"] == "none", str(cancelled))
+    check("a drop that misses the catcher is cancelled and doesn't leave Chuvadi", cancelled["over"] and cancelled["drop"], str(cancelled))
+    page.set_input_files(".pdrop input[type=file]", files=[{"name": "fake.pdf", "mimeType": "application/pdf", "buffer": b"just text"}])
+    try:
+        page.wait_for_selector("text=fake.pdf isn't a valid PDF", timeout=15000)
+        check("a dropped file that isn't what it says is refused with a message", "/reader" not in page.url)
+    except Exception as ex:
+        check("a dropped file that isn't what it says is refused with a message", False, str(ex))
+    page.set_input_files(".pdrop input[type=file]", pdf)
+    try:
+        page.wait_for_url("**/reader**", timeout=30000)
+        page.wait_for_selector(".page svg, svg text", timeout=30000)
+        check("a dropped PDF opens in the Reader", True)
+    except Exception as ex:
+        check("a dropped PDF opens in the Reader", False, str(ex))
+    page.goto(base + "/")
+    page.wait_for_selector("nav.leftbar >> text=Upload", timeout=30000)
 
     with page.expect_file_chooser(timeout=15000) as fc:
         page.click("nav.leftbar >> text=Upload")

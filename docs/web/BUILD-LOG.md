@@ -243,3 +243,15 @@ dotnet test tests/ChuvadiReader.Web.Tests -c Release   # 123 passed, 0 warnings
   - flows in 4 engines, 7/7 each;
   - legal pages in Chrome;
   - real-Sangam e2e through the gateway.
+
+### 24. Drag and drop on the portal (D-89 A) — 7 Nov, mid-morning
+- Rebased onto `platform/foundation` @ `4819d66`: the `IDroppedFiles` seam and the Ui's `PortalDropCatcher` (a full-window file input switched on while documents are dragged), and the CI changes (D-90).
+- **`WebDroppedFiles`** (scoped, per session), as COMBINED-HOOKS-5 asks:
+  - each dropped file is read once, inside the call, and streamed into the session's uploads folder through the same `UploadTicket` the upload endpoint uses. So drops get exactly the upload's checks and messages: allowed document types, `MaxUploadBytes`, content matching the extension, unique names, owner-only files;
+  - each refusal is one short message ("fake.pdf isn't a valid PDF", "short.pdf didn't arrive completely", "… couldn't be uploaded" for a broken stream); half-written files are removed;
+  - accepted files go to `IncomingFiles.Receive`, so they open one tab each, or land on the Bench shelf when it's open;
+  - `MaxFileBytes` is `MaxUploadBytes`, so the browser stream stops at the same limit.
+- `WebCapabilities.DropFiles = true`.
+- `portal.js`: the stray-drop guard from step 23 stays (a drop before the catcher loads, or one that misses it, is still cancelled), but now leaves drops onto a file input alone, since that is the browser delivering the file to the catcher.
+- Tests: `DroppedFilesTests` (two PDFs with the same name stored apart, owner-only, opened; an .exe, a fake PDF, an oversize file, an empty file and a short stream each refused with nothing left behind; folders stripped from a name). `flows.py`: a stray drop is cancelled, a fake PDF given to the catcher is refused with its message, a real PDF opens in the Reader.
+- Checks: shared solution `-warnaserror` 0/0 and its tests (Reader 171, Hosting 48, Mobile UI 15, Web UI 31); Web 142/142; flows in 4 engines through workers, 9/9 each.
