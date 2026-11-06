@@ -21,7 +21,7 @@ chuvadi-reader (apphost, .NET 10, ReadyToRun)
 | Files | GTK file dialogs (`GtkFileDialog`) — real paths; window drop; `chuvadi-reader file.pdf` and the desktop entry's `%F` |
 | Clipboard | GDK clipboard, text and PNG |
 | Show in folder | the file manager over D-Bus (`org.freedesktop.FileManager1.ShowItems`), else the folder with `xdg-open` |
-| Printing | Print card → GTK print dialog → the PDF as-is to the CUPS queue over IPP (`Chuvadi.Print.Ipp`); no rendering to images |
+| Printing | Print card → GTK print dialog → the PDF as-is to the CUPS queue over IPP (`Chuvadi.Print.Ipp`); no rendering to images. A file whose permissions forbid printing is refused before the dialog |
 | Folders | settings in `~/.config/Chuvadi` (XDG), saves under `~/Documents/Chuvadi Documents` |
 
 No third-party code: only .NET, GTK, GLib, WebKitGTK and CUPS (OS components) and Arun's Chuvadi libraries.
@@ -70,7 +70,10 @@ sudo apt install ./out/chuvadi-reader_1.0.0~preview_amd64.deb
 
 The package installs the app in `/usr/lib/chuvadi-reader`, `chuvadi-reader` on the PATH, the menu entry
 with PDF / Word / Excel associations, the icons (taken byte for byte from the Windows app's `chuvadi.ico`),
-AppStream metadata and the AppArmor profile. Remove with `sudo apt remove chuvadi-reader`.
+AppStream metadata, the AppArmor profile, and in `/usr/share/doc/chuvadi-reader/` the copyright file
+(Chuvadi Reader: proprietary, free for everyone, not open source — the repository's `LICENSE` text when it
+exists, and its EULA) with Microsoft's MIT licence and third-party notices for the .NET parts the build
+contains. Remove with `sudo apt remove chuvadi-reader`.
 
 ## Test
 
@@ -83,8 +86,8 @@ tools/linux/compare-design.py uitest-build <out dir>    # Linux vs Chromium (Web
 ```
 
 The UI test build adds `UiTestDriver` (commands on stdin); the shipped build never contains it. The full
-pass needs Xvfb, mutter, xdotool, xclip, ImageMagick, poppler-utils and a default CUPS queue that writes
-PDFs (cups-pdf); the comparison also needs Python Playwright with Chromium — all test tools. CI
+pass needs Xvfb, mutter, xdotool, xclip, ImageMagick, poppler-utils, qpdf (makes the no-printing fixture) and
+a default CUPS queue that writes PDFs (cups-pdf); the comparison also needs Python Playwright with Chromium — all test tools. CI
 (`.github/workflows/linux.yml`) runs, on x64 and ARM64: build, tests, publish, the launch test, both
 `.deb` packages, install + launch of the installed app, and the full UI pass.
 

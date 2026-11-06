@@ -55,7 +55,39 @@ ln -s "../lib/$pkg/chuvadi-reader" "$stage/usr/bin/chuvadi-reader"
 # 2. Desktop integration.
 install -m 644 "$project/packaging/desktop/$appid.desktop" "$stage/usr/share/applications/"
 install -m 644 "$project/packaging/desktop/$appid.metainfo.xml" "$stage/usr/share/metainfo/"
-install -m 644 "$here/copyright" "$stage/usr/share/doc/$pkg/copyright"
+
+# Licence (Arun, 7 Nov: proprietary, free for everyone, not open source). The repository's LICENSE goes into
+# the copyright file and an EULA next to it, when they exist; until then the decision's own words.
+# Microsoft's MIT parts: the licence text is in the copyright file; their third-party notices are installed
+# from the exact packages this build contains (read from the published app's deps.json).
+python3 -I - "$here/copyright" "$root" "$lib/chuvadi-reader.deps.json" "$(dotnet nuget locals global-packages --list | sed 's/^global-packages: //')" "$stage/usr/share/doc/$pkg" <<'PY'
+import glob, hashlib, json, os, shutil, sys
+template, root, deps, nuget, doc = sys.argv[1:6]
+lic = os.path.join(root, "LICENSE")
+if os.path.exists(lic):
+    text = open(lic, encoding="utf-8").read().strip("\n").splitlines()
+else:
+    text = ["Proprietary software. Free of charge for everyone; not open source."]
+body = "\n".join(" " + l if l.strip() else " ." for l in text)
+open(os.path.join(doc, "copyright"), "w", encoding="utf-8").write(open(template, encoding="utf-8").read().replace("@CHUVADI_LICENSE@", body))
+for eula in sorted(glob.glob(os.path.join(root, "EULA*"))):
+    shutil.copy(eula, os.path.join(doc, os.path.basename(eula)))
+seen = {}
+for key in json.load(open(deps))["libraries"]:
+    name, ver = key.split("/", 1)
+    if not name.lower().startswith(("microsoft.", "runtimepack.microsoft.")):
+        continue
+    folder = os.path.join(nuget, name.lower().removeprefix("runtimepack."), ver)
+    for notice in glob.glob(os.path.join(folder, "THIRD-PARTY-NOTICES*")):
+        digest = hashlib.sha256(open(notice, "rb").read()).hexdigest()
+        seen.setdefault(digest, name.lower().removeprefix("runtimepack."))
+for digest, name in seen.items():
+    src = glob.glob(os.path.join(nuget, name, "*", "THIRD-PARTY-NOTICES*"))
+    src = next(p for p in src if hashlib.sha256(open(p, "rb").read()).hexdigest() == digest)
+    shutil.copy(src, os.path.join(doc, f"THIRD-PARTY-NOTICES.{name}.txt"))
+print("licence:", "LICENSE file" if os.path.exists(lic) else "decision text (no LICENSE file yet)",
+      "| notices:", ", ".join(sorted(seen.values())) or "none")
+PY
 
 # Icons: the PNG images inside the Windows app's icon, copied byte for byte (no re-encoding).
 python3 -I - "$root/src/ChuvadiReader.Windows/chuvadi.ico" "$stage/usr/share/icons/hicolor" "$appid" <<'PY'

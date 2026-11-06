@@ -47,13 +47,20 @@ public sealed class CupsPrintService : IPrintService
     {
         byte[] pdf;
         int pageCount;
+        bool allowPrint;
         try
         {
-            (pdf, pageCount) = await Task.Run(() => Load(pdfPath, request.Password), ct);
+            (pdf, pageCount, allowPrint) = await Task.Run(() => Load(pdfPath, request.Password), ct);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or FormatException)
         {
             return new CorePrintResult(PrintOutcome.Failed, 0, "Couldn't read the document: " + ex.Message);
+        }
+
+        // The file's own permissions say "no printing" (D-66, L-8): refuse before any dialog opens.
+        if (!allowPrint)
+        {
+            return new CorePrintResult(PrintOutcome.Failed, 0, NotAllowedMessage);
         }
 
         if (!PageRangeParser.TryParse(request.PageRange, pageCount, request.CurrentPage, out var pages, out var rangeError))
@@ -71,20 +78,35 @@ public sealed class CupsPrintService : IPrintService
         return await Task.Run(() => Submit(pdf, pageCount, title, request, answer, ct), ct);
     }
 
-    /// <summary>The PDF bytes to send and the page count. A file with an open password is sent
-    /// decrypted (CUPS can't open it), made in memory with the same library calls Core uses.</summary>
-    private static (byte[] Pdf, int PageCount) Load(string path, string? password)
+    /// <summary>Shown when a file's permissions forbid printing.</summary>
+    internal const string NotAllowedMessage = "This file's permissions don't allow printing.";
+
+    /// <summary>The PDF bytes to send, the page count, and whether the file's permissions allow
+    /// printing (a file without encryption always does). A file with an open password is sent
+    /// decrypted (CUPS can't open it), made in memory with the same library calls Core uses; nothing
+    /// is decrypted when printing isn't allowed.</summary>
+    private static (byte[] Pdf, int PageCount, bool AllowPrint) Load(string path, string? password)
     {
         if (string.IsNullOrEmpty(password))
         {
             using var doc = PdfDocument.Open(path);
-            return (File.ReadAllBytes(path), doc.PageCount);
+            if (doc.Encryption is { AllowPrint: false })
+            {
+                return ([], doc.PageCount, false);
+            }
+
+            return (File.ReadAllBytes(path), doc.PageCount, true);
         }
 
         using var protectedDoc = PdfDocument.Open(path, password);
+        if (protectedDoc.Encryption is { AllowPrint: false })
+        {
+            return ([], protectedDoc.PageCount, false);
+        }
+
         using var ms = new MemoryStream();
         protectedDoc.Save(ms, null);
-        return (ms.ToArray(), protectedDoc.PageCount);
+        return (ms.ToArray(), protectedDoc.PageCount, true);
     }
 
     private static Task<Dictionary<string, string>?> ShowDialog(

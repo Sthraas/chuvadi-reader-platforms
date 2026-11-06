@@ -350,3 +350,33 @@ the window where it was, and it does not follow the pointer afterwards.
 Run 42274653421 (commit `7634036`): x64 and ARM64 each 106/106 in the full UI pass, both `.deb` packages built,
 installed and launched (self-contained 36.7 MB x64 / 33.0 MB ARM64; framework-dependent 10.7 / 10.2 MB);
 shared `platforms` workflow green. Local full pass on the same build: 106/106.
+
+## 2026-11-07 — Session 3 (cont.): Arun's decisions on licence, single instance, no-printing files
+
+### 29. "No printing" files refused before the dialog (D-66, L-8)
+`CupsPrintService` reads the file's permissions while loading it (chuvadi-pdf `PdfDocument.Encryption.AllowPrint`)
+and, when printing isn't allowed, returns "This file's permissions don't allow printing." without opening the
+GTK dialog, decrypting the file or contacting CUPS. A file without encryption always prints.
+- The library doesn't say which password opened a file, so a file opened with its permissions (owner)
+  password is refused too; question to the coordinator.
+- New fixture `no-print.pdf` (five-pages.pdf, AES-256, permissions password only, printing not allowed) made
+  with qpdf (test tool, CI installs it); new UI step `31-print-not-allowed`: message shown, no dialog, nothing
+  in CUPS.
+- The Ui's Print card shows every result message in the same toast (with a tick), failures included — on
+  Windows too; noted for the coordinator, not a Linux change.
+
+### 30. Licence in the package (Arun: proprietary, free for everyone, not open source)
+- `copyright` (DEP-5): `Files: *` → `Copyright: 2026 Dr. Arun Shiva B` (year of the Reader's first commit),
+  `License: Chuvadi-Proprietary`. Its text is the repository's `LICENSE` when the Foundation adds it
+  (`build-deb.sh` embeds it); until then the decision's own words. An `EULA*` file at the repository root is
+  installed next to it.
+- Microsoft's parts corrected: Blazor and Microsoft.Extensions ship in **both** variants (the file said
+  self-contained only); the .NET runtime only in self-contained. Full MIT text included; their
+  `THIRD-PARTY-NOTICES` are installed from the exact packages in the build's `deps.json` (self-contained: 4
+  files, framework-dependent: 3).
+- AppStream `project_license`: `LicenseRef-proprietary` (`appstreamcli validate` passes). Lintian: no copyright
+  warnings.
+
+### Single instance (approved programme-wide)
+Waits for the Foundation's kit contract; the Linux side will be D-Bus (the session bus the app already uses
+for Show in folder) or a Unix socket — options with pros and cons when the contract lands.

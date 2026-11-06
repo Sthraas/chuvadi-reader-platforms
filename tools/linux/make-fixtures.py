@@ -5,9 +5,11 @@ Writes into the given folder:
   five-pages.pdf  — 5 pages (page 4 landscape), "Page N" in Helvetica (a standard, non-embedded font)
   sample.docx     — a minimal Word document (one heading, one paragraph)
   sample.xlsx     — a minimal workbook (one sheet, a few cells)
-Everything is written by hand with the standard library, so no tool or library is involved.
+  no-print.pdf    — five-pages.pdf whose permissions forbid printing (AES-256, permissions password only,
+                    so it opens without a password); made with qpdf, a test tool
+Everything else is written by hand with the standard library.
 """
-import sys, os, zipfile
+import sys, os, subprocess, zipfile
 
 def pdf(path):
     objs = []
@@ -62,4 +64,7 @@ if __name__ == "__main__":
     pdf(os.path.join(folder, "five-pages.pdf"))
     docx(os.path.join(folder, "sample.docx"))
     xlsx(os.path.join(folder, "sample.xlsx"))
+    subprocess.run(["qpdf", "--encrypt", "--user-password=", "--owner-password=chuvadi-owner", "--bits=256",
+                    "--print=none", "--", os.path.join(folder, "five-pages.pdf"), os.path.join(folder, "no-print.pdf")],
+                   check=True)
     print("fixtures in", folder)
