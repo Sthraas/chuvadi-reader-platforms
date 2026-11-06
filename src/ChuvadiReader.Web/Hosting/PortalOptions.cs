@@ -71,6 +71,9 @@ public sealed class PortalOptions
     /// <summary>How often expiry is checked.</summary>
     public TimeSpan ExpiryCheckInterval { get; set; } = TimeSpan.FromSeconds(15);
 
+    /// <summary>Where working copies may live (D-28).</summary>
+    public StorageOptions Storage { get; set; } = new();
+
     /// <summary>Per-person worker processes (gateway mode).</summary>
     public WorkerOptions Workers { get; set; } = new();
 
