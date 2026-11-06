@@ -204,3 +204,17 @@ dotnet test tests/ChuvadiReader.Web.Tests -c Release   # 123 passed, 0 warnings
 - Checks: the whole shared solution builds with `-warnaserror`; its tests pass (Reader 171, Hosting 33, Mobile UI 11, Web UI 16); Web 136/136; the real-Sangam e2e through the gateway, now starting at 12a, passes.
 - **Sangam unreachable:** "Continue with Sangam" and the callback show "Sangam can't be reached right now…" on the sign-in page (503), instead of an error page. Signing out still ends on the signed-out page, since the portal session is already over. 2 tests. Found when the local Sangam stopped during the e2e.
 - Still to come from the Foundation, and needing no Web code: the optional `PortalLinks.TermsUrl`, with a "Terms of use" line under the sign-in card, is on the Web portal UI branch. The EULA's About page is coming too (coordinator: terms via About, through the Foundation). The portal drop zone is now a Foundation item.
+
+### 22. Licences page, four-browser runs, Safari printing, test plan — 7 Nov
+- Rebased onto `platform/foundation` @ `615afde` (third combined patch, part 2).
+- **Licences page:** `PortalLinks` gets `TermsUrl` = `Portal:TermsUrl` (default `/licence`, also passed to workers), and the sign-in page shows "Terms of use".
+  - `/licence` is the Foundation's `LicencesSection`, rendered to plain HTML (`StaticPages`, shared with the sign-in page), so it is readable before sign-in with no worker. `js/legal.js` turns its three-way switch into links (`?part=eula|licence|notices`; anything else shows the agreement).
+  - In single mode it takes precedence over the Ui's own `/licence` only on full page loads.
+- **S-1, sign-in on every endpoint:** `EndpointAuthTests` lists every route in single and gateway mode and fails on any anonymous route outside a fixed list. It also checks that the known protected routes really are protected.
+- **Browser matrix:** `flows.py`, `sangam_signin.py` and `expiry.py` take `--browser chrome|chromium|firefox|webkit` (Playwright's own engines, test only). Fixes found by it:
+  - **Safari printing:** Safari blocks a tab that the page opens after a server round trip, and can't print a PDF in a frame. The portal now shows "Open the PDF to print", a link the person clicks (their click is the gesture Safari needs).
+  - **No PDF viewer in the page** (the person set PDFs to download): the hidden frame never loads. After 20 s the same link is offered, instead of failing after 60 s.
+  - The browser now says which happened (`dialog`, `tab`, `failed`), and the Reader's message is true for both: "Sent 1 page to the browser's print dialog" or "Ready: open the PDF (1 page) from the link, then print it from its tab".
+  - Test witnesses: the print check counts only its own request in the server log (it used to read the last line, which an earlier run could satisfy). Firefox's own messages on leaving a page aren't counted as portal errors.
+- **`TEST-PLAN.md`** for the Web Test chat: 20 flows, 18 security checks, 12 Sangam failure cases, 8 load checks, the browser matrix, deployment checks, a run log and known gaps.
+- Checks: the whole shared solution `-warnaserror` (0/0) and its tests; Web 140/140; flows in 4 engines; real-Sangam e2e and expiry e2e in Chrome, Firefox and WebKit; `load.py` 10/10.

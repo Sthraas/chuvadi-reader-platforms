@@ -5,11 +5,23 @@ portal -> Sangam sign-in -> consent -> back to the portal signed in -> the Reade
 person's name -> sign out -> Sangam end-session -> signed-out page -> the portal asks to sign in again.
 Also checks that a back-channel logout from Sangam ends an open tab (optional, see --backchannel).
 
-Usage: python3 sangam_signin.py <portal base> <sangam base> <out folder> [--insecure]
+Usage: python3 sangam_signin.py <portal base> <sangam base> <out folder> [--insecure] [--browser chrome|chromium|firefox|webkit]
 (--insecure accepts a self-signed test certificate, for rehearsing the production setup locally.)
 """
 import re, sys, time, os, random, string
 from playwright.sync_api import sync_playwright
+
+
+def launch(p):
+    """--browser chrome (the machine's Chrome, default) | chromium | firefox | webkit (Safari's engine)."""
+    name = sys.argv[sys.argv.index("--browser") + 1] if "--browser" in sys.argv else "chrome"
+    if name == "chrome":
+        return p.chromium.launch(channel="chrome", args=["--no-sandbox"])
+    if name == "chromium":
+        return p.chromium.launch(args=["--no-sandbox"])
+    if name == "firefox":
+        return p.firefox.launch(firefox_user_prefs={"pdfjs.disabled": False})  # as real Firefox ships
+    return p.webkit.launch()
 
 portal, sangam, out = sys.argv[1].rstrip('/'), sys.argv[2].rstrip('/'), sys.argv[3]
 results = []
@@ -46,7 +58,7 @@ mobile = "9" + "".join(random.choice(string.digits) for _ in range(9))
 password = "Chuvadi-e2e-" + tag + "-Pass!"
 
 with sync_playwright() as p:
-    b = p.chromium.launch(channel="chrome", args=["--no-sandbox"])
+    b = launch(p)
     ctx = b.new_context(viewport={"width": 1440, "height": 900}, ignore_https_errors="--insecure" in sys.argv)
     page = ctx.new_page()
 

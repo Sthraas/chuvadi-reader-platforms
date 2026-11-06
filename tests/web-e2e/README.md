@@ -6,7 +6,7 @@ Each script works against both modes:
 - **single**: the default, one process;
 - **gateway**: `Portal__Mode=Gateway`, with per-person worker processes (D-24), as in production.
 
-Each exits 0 when every check passes.
+Each exits 0 when every check passes. Every script takes `--browser chrome|chromium|firefox|webkit`. The default is the machine's Chrome. Firefox runs with its own PDF viewer on, as it ships. WebKit is Safari's engine. Playwright's Chromium has no PDF viewer, so it stands in for "PDFs set to download". Install the extra engines with `python3 -m playwright install firefox webkit`.
 
 ```
 cd src/ChuvadiReader.Web
