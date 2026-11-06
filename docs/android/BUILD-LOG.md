@@ -292,3 +292,11 @@ value was missing.
 | Arrange | tap on the bottom bar's Arrange | "1 desk · 0 pages", Shelf as a peek | works as designed; the test now opens the Shelf (tap on its header) and long-press-drags a Shelf page onto Desk 1 |
 Also confirmed again on the phone: Fit page leaves the page ~54 CSS px wider than the view (screenshot:
 edge cut, sideways scrollbar) — Mobile UI chat.
+
+### 33. Run 42210920888 — tablet API 35: 6 of 8
+PASS: Open with, pinch zooms in (desk `zoomed` false → true), Arrange shows the 6 pages on the Shelf,
+**long-press drag puts a Shelf page on Desk 1** (desk pages 0 → 1). FAIL: swipe (pointercancel — Mobile UI bug,
+step 32), double-tap: the two taps still reached the page 421 ms apart — each process start (`cat`, `sleep`)
+costs ~170 ms on the CI emulator. Now both taps leave in one `cat` (one write per frame, microseconds
+apart): real kernel touch events, faster than a person; the check covers the app's double-tap handling
+(mobile.js's < 300 ms window), not human timing.

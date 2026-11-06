@@ -101,10 +101,16 @@ class Gesture:
     def run(self):
         with tempfile.TemporaryDirectory() as tmp:
             script = ["#!/system/bin/sh", "D=/data/local/tmp/chvd-touch"]
+            # Steps with no pause after them go out in ONE `cat` (one write per file, microseconds apart):
+            # each process start costs ~170 ms on the CI emulator, too slow for a double-tap.
+            batch = []
             for i, (data, sleep_s) in enumerate(self.steps):
                 with open(os.path.join(tmp, f"{i:03d}"), "wb") as f:
                     f.write(data)
-                script.append(f"cat $D/{i:03d} > {DEV}")
+                batch.append(f"$D/{i:03d}")
+                if sleep_s > 0 or i == len(self.steps) - 1:
+                    script.append(f"cat {' '.join(batch)} > {DEV}")
+                    batch = []
                 if sleep_s > 0:
                     script.append(f"sleep {sleep_s:.3f}")
             with open(os.path.join(tmp, "run.sh"), "w") as f:
@@ -137,7 +143,7 @@ def main():
         tap(g, *args[:2])
     elif cmd == "doubletap":
         x, y = args[:2]
-        tap(g, x, y, sleep_after=0.08)
+        tap(g, x, y)   # no pause: both taps leave in one process (see run())
         tap(g, x, y)
     elif cmd == "swipe":
         x1, y1, x2, y2 = args[:4]
