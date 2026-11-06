@@ -1,0 +1,6 @@
+@* Mirrors ChuvadiReader.Ui's App.razor, plus this project's /_preview pages. *@
+<Router AppAssembly="@typeof(ChuvadiReader.Ui.Layout.MainLayout).Assembly" AdditionalAssemblies="new[] { typeof(Routes).Assembly }">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(ChuvadiReader.Ui.Layout.MainLayout)" />
+    </Found>
+</Router>
