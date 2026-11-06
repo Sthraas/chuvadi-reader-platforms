@@ -1,4 +1,4 @@
-# Single instance (tabbed) — design with options (approved in principle by Arun, 7 Nov)
+# Single instance (tabbed) — decided W-A + L-A + F-1 (coordinator, 7 Nov); Windows side and kit built
 
 **Goal:** opening a file while Chuvadi runs hands it to the running copy as a new tab, on every desktop platform. **Rule:** the hand-off must not slow the first launch.
 
@@ -73,3 +73,53 @@ Tested on Linux with a deliberately frozen primary: the hand-off normally comple
 1. Windows opens the file it was started with (today it ignores it). A bug fix.
 2. A second launch hands its file to the running copy as a new tab (the approved feature).
 3. Dropping several files opens each in its own tab (today only the first). Recommended for consistency; it can stay first-file-only if preferred.
+
+
+---
+
+## Built (7 Nov)
+
+### Kit (shared by every host)
+| Piece | Where | What |
+|---|---|---|
+| `IAppInstance` | `ChuvadiReader.Platform/AppInstance.cs` | `FilesReceived` (UI thread; an empty list means "come to the front"). Kit default `NoAppInstance` |
+| `IncomingFiles` | `ChuvadiReader.Hosting/IncomingFiles.cs` (registered by the kit) | One router for command line, hand-over, drop, macOS open-file and Android intents: only existing, openable files; Bench shelf when the Bench is open, else one Reader tab each, in order; holds files until the first render (`IAppReadySignal.IsReady`, new); `Delivered` event → bring the window forward |
+| `DesktopSingleInstance` | `ChuvadiReader.Hosting/Desktop/DesktopSingleInstance.cs` | `Claim(args)` → `Primary` / `HandedOver` / `Standalone`; `ClaimAsync` (same, on a background thread); `StartListening(runOnUi)` after the first paint; `ActivationToken` (Wayland) |
+| `InstanceChannel` | `…/Desktop/InstanceChannel.cs` | Windows named pipe (current user only) / Unix socket; versioned, length-prefixed message (≤ 64 files, ≤ 64 KB, full paths only, + activation token); reply byte. Loaded only when a hand-over happens or the running copy starts listening |
+
+### Windows (built)
+- `App.OnStartup`: `Claim(e.Args, beforeHandOff: AllowSetForegroundWindow(any))` first; `HandedOver` → `Shutdown()` before building anything. Registers the instance as `IAppInstance`; routes `e.Args` (**Windows now opens the file it is started with**); listens after the first render; `Delivered` restores and activates the window.
+- `RunOnUi`: `Dispatcher.InvokeAsync`, waits `UiWait` (1.0 s), aborts if not started — so a frozen UI never takes the files late (F-1).
+- `MainWindow.OnFileDrop`: through the router — **every dropped file opens in its own tab** (approved).
+
+### Tests (13, `SingleInstanceTests`)
+Hand-over; a launch while the running copy is still starting (waits up to 3 s); a frozen copy (new launch goes `Standalone` after ~1.5 s, the frozen copy never takes the file); the next launch becomes primary after the running copy ends; no running copy → primary at once; background claim; malformed messages refused (6 cases); round trip with a Tamil file name and a token; the router (waits for the first render, filters, order; Bench; empty hand-over). They run the **real** Windows path on Windows runners and the real Unix path on Linux/macOS runners. Here (Linux): 48/48 kit tests, stable over 5 repeats. **The Windows path has compiled but not run yet** — CI is stopped (GitHub billing); Arun's Windows checks 20–23 cover it.
+
+### Startup cost (first launch)
+- Windows: one named mutex in the core library; no pipe code loaded until after the first paint. To be confirmed on Windows with `scripts/measure-startup.ps1`.
+- Linux (measured here, cold process, ReadyToRun): the claim costs **1–3.5 ms** (median ~3 ms; this sandbox is noisy). It was ~7.7 ms in the first version: culture-aware formatting, `string.Create<T>` (JIT-compiled) and the user database lookup were removed. The rest is the first native file open + lock. **Linux: use `ClaimAsync`** at the top of `Main` and await it just before showing the window — it overlaps the host's own start-up, so nothing is added to the critical path.
+
+## For the Linux chat
+```csharp
+// Program.Main, first line: the claim runs on its own thread while the host starts GTK etc.
+var claim = DesktopSingleInstance.ClaimAsync(args);
+// … host start-up that doesn't need services …
+var instance = await claim;               // before building services and showing the window
+if (instance.Role == InstanceRole.HandedOver) return 0;
+services.AddSingleton<IAppInstance>(instance);
+// … build the provider, create the window …
+var incoming = provider.GetRequiredService<IncomingFiles>();
+incoming.Delivered += () => { /* present the window; pass instance.ActivationToken to GTK (xdg-activation) */ };
+incoming.Receive(args);
+ready.Ready += () => instance.StartListening(RunOnGtkMainLoop);
+// RunOnGtkMainLoop(action, wait): g_main_context_invoke the action, wait up to `wait`; if it hasn't
+// started by then, cancel it so it never runs, and return false.
+// On exit: instance.Dispose().
+```
+- Delete `LinuxAppPaths` (kit now has the same fallback) and route drops through `IncomingFiles`.
+
+## For the Mac chat
+- Nothing to elect (LaunchServices). Optionally replace `MacIncomingFiles` with the kit's `IncomingFiles`: raise `FilesReceived` from a small `IAppInstance` fed by `SceneOpenUrl`/`OpenUrls`, or call `IncomingFiles.Receive(paths)` directly — same rules (Bench / one tab each / wait for first render).
+
+## For the Android chat
+- `singleTask` already delivers new intents; call `IncomingFiles.Receive(localPaths)` from `DocumentImport` (or keep its own routing — the rules are the same).

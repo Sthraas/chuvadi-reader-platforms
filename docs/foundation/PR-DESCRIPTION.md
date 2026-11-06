@@ -35,6 +35,8 @@ Three commits: code (`src`, `tests`, `ChuvadiReader.Platforms.slnx`), dev tools 
 - **Bug fix:** a PDF whose permissions forbid printing no longer prints — the Print card says why (tests added).
 - **Bug fix:** the Home greeting no longer adds a second full stop after a name ending in "." (the name is shown as typed).
 - **Bug fix:** open requests queue instead of overwriting each other (only reachable with several at once, e.g. a multi-file upload).
+- **Single instance, tabbed:** opening a file while Chuvadi runs hands it to the running window as a new tab; Windows now opens the file it is started with (it ignored it before); every dropped file opens (before: only the first). A frozen running copy can't block a launch: after 1.5 s the new launch opens its own window.
+- Print results show as errors when printing failed or was refused (before: decided from the wording).
 - Web and Android wording for the Home summary, the drop zone, Appearance and the Preferred-name hint (Windows text unchanged).
 - Shared kit: the default save folder no longer falls back to the temp folder when Documents doesn't exist yet (Linux).
 - `ci/packages`: Chuvadi.Print and Chuvadi.Print.Ipp 1.0.0-rc.2 (used by the Linux host; nothing in this PR references them).
@@ -90,6 +92,10 @@ Also for this PR's other changes:
 17. A PDF whose permissions forbid printing: the Print card is greyed with "This file's permissions don't allow printing."; an ordinary PDF still prints.
 18. Explorer › Properties › Details on `ChuvadiReader.Windows.exe`: Company "Sthraas Intelligence Pvt Ltd", Product "Chuvadi Reader", Copyright "© 2026 Sthraas Intelligence Pvt Ltd. All rights reserved."; `LICENSE.txt`, `EULA.txt`, `THIRD-PARTY-NOTICES.txt` sit beside the exe.
 19. Settings › About › Licences › Open: the licence agreement, the licence and the third-party notices; "‹ About" goes back.
+20. With Chuvadi open, double-click (or Open with) a PDF in Explorer: it opens as a new tab in the running window, which comes to the front — no second window.
+21. With Chuvadi closed, double-click a PDF: Chuvadi starts with that file open.
+22. Select three PDFs in Explorer and open them, or drag three onto the window: three tabs.
+23. Print a PDF whose permissions forbid printing: the message shows as an error, not with a tick.
 
 ## Known gaps (not changed here)
 - Windows printing is raster (`WpfPrintService`); move to Chuvadi.Print's vector XPS route when rc.3 is released.
