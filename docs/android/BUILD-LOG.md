@@ -410,3 +410,16 @@ Usage note: each full run is 1 build plus 4 emulator jobs of about 30 minutes ea
 - **Composition:** Foundation 615afde + Mobile UI 745ef8e (merges cleanly) + mobile-ui-hooks-3 + P-06 +
   host: Android 0 warnings; Platforms solution `-warnaserror` 0 warnings; tests 171 + 33 + 12 + 19 pass.
 - Still blocked: GitHub Actions on Sthraas (billing / spending limit), so no emulator evidence this step.
+
+### 40. .NET runtime notices in the app (coordinator decision (a), 7 Nov)
+- The app bundles the .NET runtime and .NET for Android, so it ships both packs' own
+  `THIRD-PARTY-NOTICES.TXT` as assets `notices/dotnet-runtime.txt` (76 KB) and `notices/dotnet-android.txt`
+  (145 KB). They come from the exact packs of the build (`BundledNETCoreAppPackageVersion`,
+  `AndroidNETSdkVersion`, API from `TargetPlatformVersion`), with the NuGet cache as a fallback. The
+  build fails if either is missing.
+- First attempt (from `ResolvedRuntimePack`) worked for the single-CPU Debug build but packed nothing
+  in Release: the multi-CPU outer build resolves no runtime packs. Caught by unzipping the Release
+  packages. Now verified in all three: Debug x64 .apk, Release .apk and Release .aab.
+- `Platform/RuntimeNotices.cs` reads both under headings, on demand only (never at startup). It is
+  handed to Foundation's host-notices contract when that lands (Foundation is adding it). The
+  Licences page then shows it.

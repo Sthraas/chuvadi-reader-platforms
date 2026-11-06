@@ -59,4 +59,29 @@
     <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appicon_foreground.svg" ForegroundScale="1" />
     <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#F2EAD6" BaseSize="160,160" />
   </ItemGroup>
+
+  <!--
+    The app bundles the .NET runtime and .NET for Android, so it carries their own third-party
+    notices (Foundation HANDOFF §2b; coordinator decision (a): shown on the Licences page through the
+    host-supplied notices contract). Taken from the exact runtime packs this build resolves, so they
+    always match what ships. Read back by Platform/RuntimeNotices.cs.
+  -->
+  <Target Name="ChuvadiRuntimeNotices" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <!-- Notices are the same for every CPU type; take them from the first runtime pack this build uses. -->
+      <_ChuvadiNoticeRid Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</_ChuvadiNoticeRid>
+      <_ChuvadiNoticeRid Condition="'$(_ChuvadiNoticeRid)' == ''">$([System.String]::Copy('$(RuntimeIdentifiers)').Split(';')[0])</_ChuvadiNoticeRid>
+      <_ChuvadiApi>$([System.Version]::Parse('$(TargetPlatformVersion)').Major)</_ChuvadiApi>
+      <_ChuvadiDotNetNotices>$(NetCoreTargetingPackRoot)/Microsoft.NETCore.App.Runtime.Mono.$(_ChuvadiNoticeRid)/$(BundledNETCoreAppPackageVersion)/THIRD-PARTY-NOTICES.TXT</_ChuvadiDotNetNotices>
+      <_ChuvadiDotNetNotices Condition="!Exists('$(_ChuvadiDotNetNotices)')">$(NuGetPackageRoot)microsoft.netcore.app.runtime.mono.$(_ChuvadiNoticeRid)/$(BundledNETCoreAppPackageVersion)/THIRD-PARTY-NOTICES.TXT</_ChuvadiDotNetNotices>
+      <_ChuvadiAndroidNotices>$(NetCoreTargetingPackRoot)/Microsoft.Android.Runtime.$(_ChuvadiApi).android/$(AndroidNETSdkVersion)/THIRD-PARTY-NOTICES.TXT</_ChuvadiAndroidNotices>
+      <_ChuvadiAndroidNotices Condition="!Exists('$(_ChuvadiAndroidNotices)')">$(NuGetPackageRoot)microsoft.android.runtime.$(_ChuvadiApi).android/$(AndroidNETSdkVersion)/THIRD-PARTY-NOTICES.TXT</_ChuvadiAndroidNotices>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(_ChuvadiDotNetNotices)')" Text="The app must ship .NET's third-party notices; not found at $(_ChuvadiDotNetNotices)." />
+    <Error Condition="!Exists('$(_ChuvadiAndroidNotices)')" Text="The app must ship .NET for Android's third-party notices; not found at $(_ChuvadiAndroidNotices)." />
+    <ItemGroup>
+      <AndroidAsset Include="$(_ChuvadiDotNetNotices)" Link="notices/dotnet-runtime.txt" />
+      <AndroidAsset Include="$(_ChuvadiAndroidNotices)" Link="notices/dotnet-android.txt" />
+    </ItemGroup>
+  </Target>
 </Project>
