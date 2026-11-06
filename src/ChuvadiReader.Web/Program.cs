@@ -6,6 +6,7 @@ using ChuvadiReader.Platform;
 using ChuvadiReader.Web.Components;
 using ChuvadiReader.Web.Files;
 using ChuvadiReader.Web.Hosting;
+using ChuvadiReader.Web.Hosting.Acme;
 using ChuvadiReader.Web.Platform;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Components.Server.Circuits;
@@ -57,8 +58,27 @@ public static class Program
                 });
             }
         });
-        if (tls is { CertificatePath.Length: > 0 })
+        var acme = builder.Configuration.GetSection(AcmeOptions.Section).Get<AcmeOptions>() ?? new();
+        builder.Services.Configure<AcmeOptions>(builder.Configuration.GetSection(AcmeOptions.Section));
+        builder.Services.AddSingleton<Http01ChallengeStore>();
+        if (acme.Enabled && (tls is not { CertificatePath.Length: > 0, KeyPath.Length: > 0 } || acme.Domains.Count == 0 || string.IsNullOrWhiteSpace(acme.AccountFolder)))
         {
+            throw new InvalidOperationException("ACME needs Portal:Tls:CertificatePath, Portal:Tls:KeyPath, Portal:Tls:Acme:Domains and Portal:Tls:Acme:AccountFolder.");
+        }
+
+        if (tls is { CertificatePath.Length: > 0 } && acme.Enabled)
+        {
+            // Let's Encrypt through our own ACME client: ordered, renewed and hot-swapped in the background.
+            builder.Services.AddSingleton<IHttpClientFactoryLite, DefaultHttpClientFactoryLite>();
+            builder.Services.AddSingleton(sp => new AcmeCertificateManager(tls, acme, sp.GetRequiredService<TimeProvider>(),
+                sp.GetRequiredService<ILogger<AcmeCertificateManager>>()));
+            builder.Services.AddSingleton<ICertificateSource>(sp => sp.GetRequiredService<AcmeCertificateManager>());
+            builder.Services.AddSingleton<AcmeRenewalService>();
+            builder.Services.AddHostedService(sp => sp.GetRequiredService<AcmeRenewalService>());
+        }
+        else if (tls is { CertificatePath.Length: > 0 })
+        {
+            // A PEM pair renewed by something else; re-read when it changes.
             builder.Services.AddSingleton<ICertificateSource>(sp =>
                 new PemFileCertificateSource(tls, sp.GetRequiredService<ILogger<PemFileCertificateSource>>(), sp.GetRequiredService<TimeProvider>()));
         }
@@ -109,6 +129,8 @@ public static class Program
             app.UseExceptionHandler("/error", createScopeForErrors: true);
         }
 
+        // ACME http-01 answers come first: plain HTTP, no redirect, no sign-in.
+        app.UseHttp01Challenges();
         app.UsePortalSecurityHeaders(hsts: !devSignIn);
         if (!devSignIn)
         {
