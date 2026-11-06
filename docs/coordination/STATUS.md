@@ -2,7 +2,7 @@
 
 _Last updated: 7 Nov 2026, 05:05 IST (browser back; all chats read and messaged)._
 
-**CI:** Arun made the repo public at 04:46 IST after an ~$18 bill. Coordinator recommends private again (ci/packages exposes the library DLLs) plus cutting minutes (D-90); awaiting A/B. No Mac/Windows/Android runs until then.
+**CI:** running again on public-repo minutes (D-93). Repo stays public until the work is complete, then private.
 
 | Chat | State |
 |---|---|

@@ -207,5 +207,10 @@ Options considered:
 | D-91 | Foundation PR | Coordinator add_repo for arunshivab/chuvadi-reader with push now succeeds; Foundation retries the push of platform/foundation-pr and opens the PR (never merges) |
 | D-92 | Linux | Build accepted as complete (107/107 UI steps x64 locally; ARM64 last green on 833cea3). Linux Test chat opened; platform/linux takes only fixes the Test chat reports. ARM64 rerun when CI is confirmed |
 
+## 7 Nov 2026 05:15 — Arun on the public repo
+| # | Item | Decision |
+|---|---|---|
+| D-93 | Repo visibility and CI (replaces the hold in D-90) | Arun: the Chuvadi library and Reader repos are already public; the working repo stays public until the work is complete, then goes private; ci/packages stays as is. CI runs on public-repo minutes again (confirmed: 23:36 UTC runs started on all runners). Hold lifted: Android round 3, Mac verification run, Linux ARM64 rerun may go. Foundation's workflow patch keeps only (a) docs-only pushes run nothing and (d) cancel-in-progress per branch, because they save time; (b) and (c) dropped. Pros: free minutes, no history rewrite. Cons: costs return when it goes private — revisit D-90 (b)/(c) then |
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).
