@@ -82,6 +82,8 @@ jobs:
           echo "BIN=$APP/Contents/MacOS/$EXE" >> "$GITHUB_ENV"
           echo "app: $APP  executable: $EXE"
           du -sh "$APP"
+          # Size breakdown: biggest items in the bundle.
+          du -ak "$APP/Contents" | sort -n | tail -25 | awk '{printf "%8.1f MB  %s\n", $1/1024, $2}'
 
       - name: Verify both architectures
         run: |
