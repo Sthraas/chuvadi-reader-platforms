@@ -423,3 +423,14 @@ Usage note: each full run is 1 build plus 4 emulator jobs of about 30 minutes ea
 - `Platform/RuntimeNotices.cs` reads both under headings, on demand only (never at startup). It is
   handed to Foundation's host-notices contract when that lands (Foundation is adding it). The
   Licences page then shows it.
+
+### 41. CI by hand only (coordinator, 7 Nov 04:55 IST)
+- The dispatches every 10 minutes from 20:47 to 22:27 UTC (02:17–03:57 IST) were mine: a watcher
+  started after step 40 to begin round 3 the moment Actions came back. It ended on its own after ~110
+  minutes; nothing of mine is running now. It won't be restarted, and nothing here starts runs on its own.
+- The workflow is now `workflow_dispatch` only (no push / pull-request triggers), with an `emulators`
+  input (`all`, `none`, or a list such as `phone-36,tablet-35`). The build job turns it into the
+  emulator matrix, so a round runs only what it needs.
+- Round 3 is on hold until the coordinator confirms. Its checklist adds D-89 option C: where
+  `DropFiles` is false (Android), the first-run box says "open" rather than "drop" (Foundation's
+  wording change; check on the emulator).

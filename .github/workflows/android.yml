@@ -9,13 +9,15 @@ name: Android
 # Tooling here (setup actions, the emulator runner) is test/CI tooling only; nothing from it
 # ships in the app (programme rule 3).
 
+# Manual dispatch only (coordinator, 7 Nov: emulator minutes are the largest part of the bill; one run
+# per round, started by hand). Pushes and pull requests start nothing.
 on:
-  push:
-    branches: [platform/android]
-  pull_request:
-    branches: [main]
-    paths: ['src/ChuvadiReader.Android/**', 'docs/android/**', '.github/workflows/android.yml']
   workflow_dispatch:
+    inputs:
+      emulators:
+        description: "Emulators to run: all, none (build only), or a comma list of phone-35, phone-36, tablet-35, tablet-36"
+        required: true
+        default: all
 
 env:
   # platform/foundation: third combined patch (licence, Licences page), L-8, F-3; chuvadi-pdf 3.31.2.
@@ -29,7 +31,27 @@ jobs:
   build:
     name: build (.aab + .apk)
     runs-on: ubuntu-latest
+    outputs:
+      emulators: ${{ steps.plan.outputs.emulators }}
     steps:
+      - name: Plan the emulators asked for
+        id: plan
+        env:
+          WANT: ${{ inputs.emulators }}
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          profiles = {"phone": "pixel_7", "tablet": "pixel_tablet"}
+          every = [f"{d}-{a}" for d in ("phone", "tablet") for a in (35, 36)]
+          want = os.environ.get("WANT", "all").replace(" ", "").lower()
+          names = every if want == "all" else [] if want in ("", "none") else want.split(",")
+          bad = [n for n in names if n not in every]
+          if bad:
+              raise SystemExit(f"unknown emulator(s): {bad}; use {every}, all or none")
+          plan = [{"device": n.split("-")[0], "api": int(n.split("-")[1]), "profile": profiles[n.split("-")[0]]} for n in names]
+          print("emulators=" + json.dumps(plan))
+          PY
+
       - uses: actions/checkout@v4
         with:
           path: platforms
@@ -102,18 +124,14 @@ jobs:
   emulator:
     name: emulator (${{ matrix.device }}, API ${{ matrix.api }})
     needs: build
+    # Only the emulators asked for in the dispatch.
+    if: needs.build.outputs.emulators != '[]'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
-        api: [35, 36]
-        device: [phone, tablet]
-        include:
-          - device: phone
-            profile: pixel_7
-          - device: tablet
-            profile: pixel_tablet
+        include: ${{ fromJSON(needs.build.outputs.emulators) }}
     steps:
       - uses: actions/checkout@v4
 

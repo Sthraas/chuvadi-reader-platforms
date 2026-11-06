@@ -51,13 +51,20 @@ Without signing properties, Release packages are signed with the SDK's debug key
 testing, never for Play.
 
 ## CI
-`.github/workflows/android.yml` on every push to `platform/android`:
+`.github/workflows/android.yml` runs **only when started by hand** (Actions → Android → Run workflow,
+or `gh workflow run android.yml --ref platform/android -f emulators=…`). Pushes and pull requests start
+nothing. Emulator minutes are the largest part of the Actions bill, so it's one run per round, with
+only the emulators that round needs. The `emulators` input takes `all`, `none` (build only), or a comma
+list of `phone-35`, `phone-36`, `tablet-35`, `tablet-36`.
 1. builds the Release `.aab` + `.apk` and a Debug x86_64 `.apk`, uploaded as `android-packages`;
-2. installs the Debug `.apk` on emulators — phone (pixel_7) and tablet (pixel_tablet), API 35 and
-   36 — cold-starts it, waits until the Ui's own text is on screen, rotates it (same process, Ui
-   still there), fails on any crash or WebView console error; then opens a test PDF through "Open
-   with" and checks real touch gestures (swipe, double-tap, pinch, Arrange long-press drag).
-   Screenshots, UI dumps, logcat and `gestures.json` are uploaded.
+2. on each chosen emulator (phone = pixel_7, tablet = pixel_tablet; no hardware keyboard):
+   - smoke test: cold start, the Ui's own text on screen, real rotation, no crash or console error;
+   - gestures: Open with, swipe, double-tap zoom, pinch, Arrange long-press drag (real touch), and
+     the over-wide element report for Fit page;
+   - platform: Open with .docx/.xlsx while running (new tab, same activity), Share to, rotation with
+     a document, keyboard and on-screen keyboard, printing (PrintManager → saved PDF; range; L-8
+     no-print file locked), Back, split screen.
+   Screenshots, UI dumps, logs and the JSON results are uploaded.
 
 ## Signing for Play (Arun only — never commit a key)
 Play uses **Play App Signing**: Google holds the app signing key; you sign uploads with your own
