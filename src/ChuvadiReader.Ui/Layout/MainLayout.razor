@@ -27,7 +27,20 @@
 
 <div class="shell">
     <ChuvadiReader.Ui.Components.Settings.PreferencesHost />
+    @if (ShellLayout is ChuvadiReader.Platform.ShellLayout.Tablet or ChuvadiReader.Platform.ShellLayout.Phone)
+    {
+        <ChuvadiReader.Ui.Components.Platform.Phone.TouchSupport />
+    }
 
+    @if (ShellLayout == ChuvadiReader.Platform.ShellLayout.Phone)
+    {
+        <ChuvadiReader.Ui.Components.Platform.Phone.PhoneShell RequestMode="RequestMode" ModeDisabledReason="ModeDisabledReason"
+                                                               Open="AddTab" Find="FindNow" Go="Go" OnDocView="OnDocView">
+            @Body
+        </ChuvadiReader.Ui.Components.Platform.Phone.PhoneShell>
+    }
+    else
+    {
     <header class="topbar @(_leftOpen ? "lb-open" : null)" @onmousedown="StartDrag">
         <div class="tb-left">
             @if (Platform.Chrome.Buttons == ChuvadiReader.Platform.WindowButtons.Left)
@@ -133,6 +146,10 @@
                     <button class="tl tl-close" @onclick="() => Win.Close()" aria-label="Close"><Icon Name="x" Size="10" /></button>
                 </div>
             }
+            @if (Platform.Chrome.AccountMenu)
+            {
+                <ChuvadiReader.Ui.Components.Platform.Portal.AccountMenu />
+            }
         </div>
     </header>
 
@@ -153,7 +170,7 @@
                 </button>
             }
             <span class="lb-sep"></span>
-            <button class="lb-btn" @onclick="AddTab" title="Open (@Platform.Keys.Format("Ctrl O"))"><Icon Name="folder" Size="19" /><span class="lb-l">Open</span><span class="lb-k">@Platform.Keys.Format("Ctrl O")</span></button>
+            <button class="lb-btn" @onclick="AddTab" title="@(IsPortal ? "Upload" : "Open") (@Platform.Keys.Format("Ctrl O"))"><Icon Name="@(IsPortal ? "upload" : "folder")" Size="19" /><span class="lb-l">@(IsPortal ? "Upload" : "Open")</span><span class="lb-k">@Platform.Keys.Format("Ctrl O")</span></button>
             <button class="lb-btn" @onclick="FindNow" title="Find (@Platform.Keys.Format("Ctrl F"))"><Icon Name="find-in-page" Size="19" /><span class="lb-l">Find</span><span class="lb-k">@Platform.Keys.Format("Ctrl F")</span></button>
             <button class="lb-btn @(IsAt("/library") ? "here" : null)" @onclick='() => Go("/library")' title="Library"><Icon Name="library" Size="19" /><span class="lb-l">Library</span><span class="lb-k"></span></button>
             <button class="lb-btn @(IsAt("/") ? "here" : null)" @onclick='() => Go("/")' title="Home"><Icon Name="home" Size="19" /><span class="lb-l">Home</span><span class="lb-k"></span></button>
@@ -168,9 +185,16 @@
     </div>
 
     <footer class="statusbar">
-        <span class="sb-item"><span class="status-dot"></span>@(Platform.Capabilities.ServerSide ? "processed on the server · encrypted at rest · only you can see it" : "offline · on this device")</span>
+        <span class="sb-item"><span class="status-dot@(Platform.Capabilities.ServerSide ? " server" : null)"></span>@(Platform.Capabilities.ServerSide ? "processed on the server · encrypted at rest · only you can see it" : "offline · on this device")</span>
         <span class="sb-div"></span>
-        <span class="sb-item"><span class="sb-avatar">@Initials</span>@(Profile.Name ?? "This computer")</span>
+        @if (IsPortal)
+        {
+            <span class="sb-item"><ChuvadiReader.Ui.Components.Platform.Portal.PortalStatusUser /></span>
+        }
+        else
+        {
+            <span class="sb-item"><span class="sb-avatar">@Initials</span>@(Profile.Name ?? "This computer")</span>
+        }
         @if (!string.IsNullOrEmpty(Shell.Activity))
         {
             <span class="sb-div"></span>
@@ -183,9 +207,10 @@
         }
         <span class="sb-right">
             <span class="sb-ver">v1.0.0-preview</span>
-            <span class="sb-clock">@_clock</span>
+            <StatusClock />
         </span>
     </footer>
+    }
 
     @if (Shell.Messages.Count > 0)
     {
@@ -237,8 +262,10 @@
             // remembering the choice is a nicety
         }
     }
-    private string _clock = DateTime.Now.ToString("HH:mm:ss");
-    private System.Threading.Timer? _clockTimer;
+    // Platform layout (desktop / tablet / phone / portal) and portal chrome (Kind == Web at any size).
+    private ChuvadiReader.Platform.ShellLayout ShellLayout => ChuvadiReader.Platform.ShellLayouts.Shell(Platform);
+
+    private bool IsPortal => Platform.Kind == ChuvadiReader.Platform.PlatformKind.Web;
     private readonly HashSet<Guid> _fading = new();
 
     protected override void OnInitialized()
@@ -255,11 +282,6 @@
             Platform.FormFactorChanged += OnFormFactorChanged;
         }
 
-        _clockTimer = new System.Threading.Timer(_ =>
-        {
-            _clock = DateTime.Now.ToString("HH:mm:ss");
-            _ = InvokeAsync(StateHasChanged);
-        }, null, 1000, 1000);
     }
 
     // ── where are we ──────────────────────────────────────────────────────
@@ -738,7 +760,6 @@
         Shell.CommandBarRequested -= OpenCommandBarFromService;
         OpenDoc.Requested -= OnOpenRequested;
         Nav.LocationChanged -= OnLocationChanged;
-        _clockTimer?.Dispose();
         try
         {
             if (_shellJs is not null)

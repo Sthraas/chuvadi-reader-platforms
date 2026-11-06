@@ -31,6 +31,7 @@ let currentTool = 'none';
 let wheelHandler = null;
 let deskPointer = null;
 let panning = null;
+let penSplit = null;
 let marq = null;
 let marqEl = null;
 let loupeEl = null;
@@ -316,6 +317,21 @@ function setupViewTools(deskEl) {
     deskRef.addEventListener('pointermove', deskPointer.move);
     deskRef.addEventListener('pointerup', deskPointer.up);
     deskRef.addEventListener('pointerleave', deskPointer.leave);
+
+    // Tablets with a pen (<html data-input~="pen">, design 12e, D-42): the pen draws on the Mark
+    // layer, a finger pans. A finger on a Mark layer never reaches its (Blazor) stroke handler and
+    // pans the desk instead. data-input is absent on Windows, so nothing changes there.
+    if (penSplit) deskRef.removeEventListener('pointerdown', penSplit, true);
+    penSplit = (e) => {
+        if (e.pointerType !== 'touch') return;
+        if (!/(^|\s)pen(\s|$)/.test(document.documentElement.getAttribute('data-input') || '')) return;
+        const layer = e.target && e.target.closest ? e.target.closest('.mk-layer') : null;
+        if (!layer) return;
+        e.stopPropagation();
+        panning = { x: e.clientX, y: e.clientY, sl: deskRef.scrollLeft, st: deskRef.scrollTop };
+        try { deskRef.setPointerCapture(e.pointerId); } catch (_) { }
+    };
+    deskRef.addEventListener('pointerdown', penSplit, true);
 
     // Touchscreen: two-finger pinch zooms the page canvas only (chrome never moves);
     // double-tap toggles a readable zoom. One finger is left alone for native panning.
@@ -702,6 +718,7 @@ export function dispose() {
         deskRef.removeEventListener('pointerup', deskPointer.up);
         deskRef.removeEventListener('pointerleave', deskPointer.leave);
     }
+    if (deskRef && penSplit) deskRef.removeEventListener('pointerdown', penSplit, true);
     if (deskRef && touchHandlers) {
         deskRef.removeEventListener('touchstart', touchHandlers.start);
         deskRef.removeEventListener('touchmove', touchHandlers.move);
@@ -714,7 +731,7 @@ export function dispose() {
     if (zoomNotifyTimer) { clearTimeout(zoomNotifyTimer); zoomNotifyTimer = 0; }
     removeMarqEl(); hideLoupe();
     document.body.classList.remove('chvd-immersive');
-    wheelHandler = null; deskPointer = null; panning = null; marq = null;
+    wheelHandler = null; deskPointer = null; penSplit = null; panning = null; marq = null;
     touchHandlers = null; pinch = null; pinchActive = false; tapCand = null; sawPinch = false;
     deskRef = null; currentTool = 'none';
 }
