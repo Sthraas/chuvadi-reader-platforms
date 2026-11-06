@@ -5,7 +5,8 @@ portal -> Sangam sign-in -> consent -> back to the portal signed in -> the Reade
 person's name -> sign out -> Sangam end-session -> signed-out page -> the portal asks to sign in again.
 Also checks that a back-channel logout from Sangam ends an open tab (optional, see --backchannel).
 
-Usage: python3 sangam_signin.py <portal base> <sangam base> <out folder>
+Usage: python3 sangam_signin.py <portal base> <sangam base> <out folder> [--insecure]
+(--insecure accepts a self-signed test certificate, for rehearsing the production setup locally.)
 """
 import re, sys, time, os, random, string
 from playwright.sync_api import sync_playwright
@@ -37,7 +38,7 @@ password = "Chuvadi-e2e-" + tag + "-Pass!"
 
 with sync_playwright() as p:
     b = p.chromium.launch(channel="chrome", args=["--no-sandbox"])
-    ctx = b.new_context(viewport={"width": 1440, "height": 900})
+    ctx = b.new_context(viewport={"width": 1440, "height": 900}, ignore_https_errors="--insecure" in sys.argv)
     page = ctx.new_page()
 
     # Register through the portal's own sign-in (so the return goes back to the portal).
@@ -101,6 +102,8 @@ with sync_playwright() as p:
         cookies = {c["name"]: c for c in ctx.cookies(portal)}
         sess = cookies.get("chvd.session") or cookies.get("__Host-chvd")
         check("portal session cookie is HttpOnly, SameSite=Lax", bool(sess) and sess["httpOnly"] and sess["sameSite"] == "Lax")
+        if portal.startswith("https:"):
+            check("on https the cookie is __Host-chvd and Secure", "__Host-chvd" in cookies and cookies["__Host-chvd"]["secure"])
         check("no sign-in flow cookie left behind", not any(n.startswith("chvd.oidc.") for n in cookies))
         page.screenshot(path=os.path.join(out, "sangam-3-portal.png"))
 

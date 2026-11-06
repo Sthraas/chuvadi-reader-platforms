@@ -2,13 +2,17 @@
 
 Blazor Server portal for Chuvadi Reader: the unchanged `ChuvadiReader.Ui` rendered on the server, Sangam sign-in, hosted on E2E Networks under a Chuvadi domain (a configuration value; not bought yet). Design spec: `docs/design-handoff/Portal & Android.dc.html` 12a–12c.
 
-## Status (6 Nov 2026)
-- Server host built: the unchanged Ui under Blazor Server; uploads, downloads, browser printing, session folders deleted at session end; pluggable TLS certificate; security headers; 93 tests; web CI.
+## Status (7 Nov 2026)
+- Server host built: the unchanged Ui under Blazor Server; uploads, downloads, browser printing, session folders deleted at session end; pluggable TLS certificate; security headers; 123 tests; web CI.
+- **Per-person workers behind our own gateway (D-24)** built: `Portal:Mode=Gateway` relays each person's HTTP and circuit WebSocket over a Unix socket to their own worker process (private HOME/TMPDIR, memory cap, secret on standard input, ends with the gateway).
+- **Session expiry (D-30)**: 30 minutes idle, 8 hours at most, a warning in every open tab 5 minutes before that offers the open documents (and the document with unsaved marks) as downloads.
+- **Working copies in RAM (D-28)**: outside Development the portal refuses to start unless `DataRoot` is on tmpfs and swap is off, dm-crypt or zram.
+- Load-tested with real browsers through the gateway: 15 people at once, all succeeded; ~175 MB per active person. Deployment runbook ready: `DEPLOYMENT-RUNBOOK.md` (rehearsed locally in the production configuration).
 - Sangam sign-in built (our own OpenID Connect client, `src/ChuvadiReader.Web/Auth/`): tested in CI against a fake Sangam (our test code) and end to end against a real Sangam run locally (read-only, test only), including sign-out and back-channel logout ending open tabs.
 - Based on `platform/foundation` (Group A applied); services through `AddChuvadiReader(AppStateLifetime.PerConnection)` with the portal's own `IPlatformInfo`, `IAppPaths`, `IAccount`, `IFileWriteBack`, `IClipboard`.
 - Own ACME client (Let's Encrypt) built and tested against a strict fake ACME server (our test code).
 - Based on `platform/foundation` @ `63af90f`: chuvadi-pdf 3.31.2 (D-54; Pdf A/B cleared, D-55) and the combined hooks (D-26), so the portal shows the 12b account menu, the server status dot and the signed-in person; the host supplies `PortalLinks` and `IAccount.Unit`.
-- Next: session expiry (D-30), per-person workers behind our gateway (D-24), load and browser tests, then the E2E runbook.
+- Next: integrate the Web portal UI chat's "Continue with Sangam"-only 12a when it lands (U-9 (a)); deployment waits for B5/B6.
 
 ## Build and test
 Requires the .NET 10 SDK (10.0.403 or later). Packages come from the committed `ci/packages` feed.
@@ -22,15 +26,22 @@ dotnet test tests/ChuvadiReader.Web.Tests/ChuvadiReader.Web.Tests.csproj -c Rele
 ## Run locally (Development sign-in)
 ```
 cd src/ChuvadiReader.Web
-ASPNETCORE_ENVIRONMENT=Development dotnet run
+ASPNETCORE_ENVIRONMENT=Development dotnet run                         # one process
+ASPNETCORE_ENVIRONMENT=Development Portal__Mode=Gateway dotnet run    # as in production: gateway + a worker per person
 ```
-Session files go to `src/ChuvadiReader.Web/.portal-data` (git-ignored) and are deleted when the browser session ends.
+Session files go to `src/ChuvadiReader.Web/.portal-data` (git-ignored) and are deleted when the browser session ends. Browser tests: `tests/web-e2e/README.md`.
 
 ## Configuration (`Portal` section, or `Portal__…` environment variables)
 | Key | Meaning |
 |---|---|
+| `Mode` | `Single` (default; development, tests) or `Gateway` (production, D-24). `Worker` is set by the gateway only |
 | `PublicOrigin` | The portal's https address, e.g. `https://chuvadi.in` (config value; required outside Development) |
-| `DataRoot` | Folder for session files (production: RAM-backed or encrypted volume, see W-09) |
+| `DataRoot` | Folder for session files; production: a tmpfs (D-28) |
+| `Storage:RequireMemoryFileSystem`, `Storage:RequireEncryptedSwap` | D-28 start-up checks, on outside Development |
+| `IdleTimeout`, `ExpiryWarning`, `ExpiryCheckInterval` | 30 min, 5 min, 15 s (D-30); the 8-hour limit is `Sangam:AbsoluteSessionLifetime` |
+| `Workers:MaxWorkers`, `Workers:MemoryLimitMB` | 40 people at once, 1536 MB heap cap per worker (size them with the runbook's table) |
+| `Workers:IdleStop`, `Workers:CheckInterval`, `Workers:StartTimeout` | 2 min with no open tab, 30 s, 30 s |
+| `Workers:SocketFolder`, `Workers:Command` | Socket folder (production `/run/chuvadi-portal`); the program to start (default: this one, started the same way) |
 | `MaxUploadBytes`, `MaxFilesPerPick`, `UploadChunkBytes` | Upload limits (200 MB, 50 files, 4 MB chunks) |
 | `PickTimeout`, `DownloadLinkLifetime`, `SaveWaitLimit` | 30 min, 10 min, 30 min |
 | `AllowCertificateUpload` | Off (D-27) |
@@ -75,7 +86,7 @@ Sangam__Authority=http://localhost:5100/ Sangam__ClientId=chuvadi-portal Sangam_
 python3 tests/web-e2e/sangam_signin.py http://localhost:5600 http://localhost:5100 <out folder>
 ```
 
-Package, install and production deployment (E2E runbook) sections will follow.
+Package, install and production deployment: `DEPLOYMENT-RUNBOOK.md`.
 
 ## Blockers
 | # | Blocker | Owner | Effect on Web |

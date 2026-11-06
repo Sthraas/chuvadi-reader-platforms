@@ -139,3 +139,45 @@ Findings for Sangam's team are in `SANGAM-INTEGRATION.md` (`login_hint` unsuppor
 - Sign-in page: (a) — visitors go straight to Sangam until the Web portal UI chat's "Continue with Sangam"-only 12a lands (its U-9 (a)); then the host renders it. `login_hint` goes to Arun as a Sangam ask.
 - `org.current` is now in the default scope, so the unit shows after the Sangam ID; people in several organisations see Sangam's chooser (intended). Real local Sangam e2e passes with it.
 - F-3 (one pending path in `OpenDocumentService`): nothing to change in the host. Opening on the web goes through `PickDocumentAsync` (one file, `multiple: false`); the host never calls `OpenDocumentService.Request`; `PickDocumentsAsync` (Merge, Bench) returns a list that those pages use themselves. Any future multi-file open in the host must open one file at a time until the Foundation's queue lands.
+
+### 17. Per-person workers behind our own gateway (D-24) — 7 Nov
+- `Portal:Mode`: `Single` (one process; development, tests), `Gateway` (production), `Worker` (started by the gateway only). Same program and publish for all three.
+- Gateway: TLS and ACME, Sangam sign-in, the session clock, static files, `/healthz`. Every other signed-in request goes to the person's worker through `GatewayRelay` (our own code): HTTP streamed both ways (upload chunks get the chunk limit, everything else the 64 KB default), and the circuit's WebSocket frame by frame. Browser `X-Chvd-*` headers, `X-Dev-User` and the gateway's own cookies never reach a worker; `/_worker/*` answers 404 to browsers.
+- `WorkerPool`: one worker per person (start races give exactly one). Each has `{DataRoot}/workers/<key>/{home,tmp,data}` (0700), HOME/TMPDIR/XDG there, `DOTNET_GCHeapHardLimit`, no crash dumps, and none of the gateway's `Sangam__`/`Portal__`/URL settings. The shared secret goes on standard input, never the environment. The socket lives in a 0700 folder. It is started the way the gateway was (`dotnet` or the app host), with `DOTNET_ROOT` passed on. A worker is stopped (folder deleted) when it has had no circuit and no request for `IdleStop`, or stops answering three checks; it is replaced if it crashes. Supervision runs in parallel. `MaxWorkers` reached → "The portal is busy" page.
+- Worker: listens only on its Unix socket. `GatewayIdentityHandler` accepts a request only with the secret and only for its own person. Control endpoints `/_worker/{health,end,notice}`. `GatewayLifeline`: end of standard input (gateway gone) stops it.
+- `ITabControl` splits "which sign-ins count" (`PortalSessions`, where the cookie lives) from "the open tabs" (`OpenTabs`, where the circuits live). Back-channel logout and sign-out now reach tabs in workers.
+- Data Protection keys are kept in memory (`InMemoryKeyRepository`): nothing written to disk, and no start-up warning. A restart ends every session anyway.
+- Fixes on the way: workers didn't start through the app host where .NET isn't in a standard place (now started like the gateway, with `DOTNET_ROOT`); `HasExited` after a stop.
+- Tests: 10 gateway tests with real worker processes (one per person, private env and folders, a worker refuses anyone but its gateway and its person, header spoofing, end and idle stop with the files removed, crash and replace, busy page, start race, health check, static files without a worker). Browser flows, real-Sangam e2e and expiry e2e all pass through the gateway.
+
+### 18. Session expiry (D-30) — 7 Nov
+- `SessionClock` (gateway or single process): per sign-in, idle 30 min, at most 8 h (`chvd_signin` claim), warning 5 min before. When the time is up the sign-in is revoked and its tabs ended.
+- Activity is page loads, file transfers, and `POST /portal/activity` from the page's input (pointer, key, wheel, touch). Reports go out at most once per 1/30 of the idle limit (a minute). The request needs the portal's Origin and `X-Chvd-Activity`. Not counted: the circuit's WebSocket (its keep-alive pings would keep an abandoned tab alive) and static files.
+- `ExpiryWarning` in every open tab, including tabs opened during the warning:
+  - "I'm still here" (idle only);
+  - "Download the open document(s)": a copy, or a ZIP of every open document the session may hand out;
+  - "Download with your marks", which runs the Reader's own `m.saveas` when marks aren't saved.
+- Fix found by the e2e: the portal's own components had no `_Imports.razor`, so `@onclick` was written into the HTML as text and the buttons did nothing. Added; the e2e now checks each button's effect.
+- Tests: 8 clock and activity tests (manual clock) and `tests/web-e2e/expiry.py`.
+
+### 19. Working copies in RAM (D-28) — 7 Nov
+- `StorageCheck` at start-up outside Development refuses to start in two cases, with a message naming the problem:
+  - `DataRoot` is not on tmpfs/ramfs (read from `/proc/self/mountinfo`);
+  - an active swap isn't on dm-crypt (`/sys/block/dm-N/dm/uuid` starts with `CRYPT-`) or zram. Swap files are refused.
+- Both checks can be turned off one by one (`Portal:Storage`). LUKS for the rest of the disk, log storage, core dumps and the systemd hardening are in the runbook.
+- 5 tests with fake `/proc` and `/sys`, plus a refused production start.
+
+### 20. Load test, health check, runbook — 7 Nov
+- `tests/web-e2e/load.py` (Playwright, async): N people at once through the gateway, each with their own worker.
+  - All succeeded at 3, 10 and 15 people.
+  - 15 people (2-core sandbox shared with 15 headless browsers): ready 4.8 s median, upload+render 8.6 s, print 4.1 s.
+  - Peak 15 workers, ~173 MB each; gateway ~110 MB. After everyone left, every worker stopped and its files were removed (reconnect window + idle stop).
+- ReadyToRun publish measured: no gain in worker start (0.55–0.7 s either way), so not used for the web.
+- `/healthz` (anonymous, `ok` only, starts no worker).
+- `DEPLOYMENT-RUNBOOK.md`, rehearsed locally in the production configuration:
+  - set-up: Production environment, gateway mode, app host, tmpfs data root, TLS on 8443 with `ASPNETCORE_HTTPS_PORT`;
+  - passed: the D-28 refusal on a disk data root; the 307 to HTTPS; HSTS and CSP headers; real Sangam sign-in; the `__Host-chvd` Secure cookie; sign-out of every tab; workers and socket folder removed on stop;
+  - not run: back-channel, because the local Sangam can't trust a self-signed certificate.
+```
+dotnet test tests/ChuvadiReader.Web.Tests -c Release   # 123 passed, 0 warnings
+```
