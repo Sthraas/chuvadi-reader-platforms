@@ -32,7 +32,7 @@ public class WebPrintTests
         public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args)
         {
             Calls.Add(identifier);
-            return ValueTask.FromResult((TValue)(object)true);
+            return ValueTask.FromResult((TValue)(object)(typeof(TValue) == typeof(string) ? "dialog" : true));
         }
 
         public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)

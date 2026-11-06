@@ -48,14 +48,14 @@ public sealed class WebPrintService : IPrintService
             copy = prepared.CopyPath;
             var ticket = _registry.CreatePrint(_space.UserKey, _space.SessionId, prepared.CopyPath ?? pdfPath, title, TimeSpan.FromMinutes(30));
             var shown = await _browser.PrintAsync($"{FileEndpoints.Prefix}/print/{ticket.Id}", ct).ConfigureAwait(false);
-            if (!shown)
-            {
-                return new PrintResult(PrintOutcome.Failed, 0, "The browser couldn't open its print dialog");
-            }
-
             var n = prepared.PageCount;
-            return new PrintResult(PrintOutcome.Printed, n,
-                n == 1 ? "Sent 1 page to the browser's print dialog" : $"Sent {n} pages to the browser's print dialog");
+            var pages = n == 1 ? "1 page" : $"{n} pages";
+            return shown switch
+            {
+                "dialog" => new PrintResult(PrintOutcome.Printed, n, $"Sent {pages} to the browser's print dialog"),
+                "tab" => new PrintResult(PrintOutcome.Printed, n, $"Ready: open the PDF ({pages}) from the link, then print it from its tab"),
+                _ => new PrintResult(PrintOutcome.Failed, 0, "The browser couldn't open its print dialog"),
+            };
         }
         catch (OperationCanceledException)
         {

@@ -71,3 +71,26 @@
    to its Blazor page component and so absent here. */
 .chvd-static-licence { padding: 32px 40px; box-sizing: border-box; min-height: 100vh; background: var(--chvd-paper, #fbf7ef); }
 @media (max-width: 600px) { .chvd-static-licence { padding: 16px; } }
+
+/* "Open the PDF to print" (browsers that print a PDF from its own tab, e.g. Safari). */
+.chvd-print-offer {
+    position: fixed;
+    left: 50%;
+    bottom: calc(var(--chvd-statusbar-h, 24px) + 16px);
+    transform: translateX(-50%);
+    z-index: 10002;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    max-width: calc(100vw - 32px);
+    box-sizing: border-box;
+    padding: 10px 14px;
+    background: var(--chvd-paper, #fbf7ef);
+    color: var(--chvd-ink, #1a1310);
+    border: 1px solid var(--chvd-border, rgba(0, 0, 0, .14));
+    border-radius: var(--chvd-radius-md, 8px);
+    box-shadow: var(--chvd-shadow-popover, 0 6px 20px rgba(0, 0, 0, .14));
+    font-size: var(--chvd-fs-ui, 13px);
+}
+.chvd-print-offer a.btn { text-decoration: none; }
