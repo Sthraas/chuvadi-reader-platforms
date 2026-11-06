@@ -241,3 +241,8 @@ Reader tests 161/161.
 - results are read from the page through the Debug build's WebView DevTools socket (`cdp.py`):
   swipe → counter +1; double-tap → fit mode flips; pinch out → page ≥ 8 % wider; Arrange long-press
   drag → page order changes. Screenshots after each.
+
+### 27. chuvadi-pdf 3.31.2 (D-54)
+Foundation `be4498a` packed 3.31.2 from the unchanged tag into `ci/packages` (SHA-256s in its
+`PACKAGES-3.31.2.md`) and pinned Core. Re-composed on it: the patch applies unchanged (only packages and
+the version moved); Android Debug build 0 warnings. CI re-pinned to `be4498a`.

@@ -18,8 +18,8 @@ on:
   workflow_dispatch:
 
 env:
-  # platform/foundation: Groups A, B and C applied, PR-ready (chuvadi-pdf 3.31.1 + Chuvadi.Fonts 1.0.0).
-  FOUNDATION_REF: 60dca85b77b7320aaa03a98838492c33cd36017b
+  # platform/foundation: Groups A, B and C applied; chuvadi-pdf 3.31.2 (D-54) + Chuvadi.Fonts 1.0.0.
+  FOUNDATION_REF: be4498adb3f195d0a69a19adf2de709ff8a45f15
   # platform/mobile-ui: phone shell, tablet sizing, touch gestures.
   MOBILEUI_REF: ea5d775cde9f7ef15abcca3b14a18881f52d6463
   DOTNET_NOLOGO: '1'
