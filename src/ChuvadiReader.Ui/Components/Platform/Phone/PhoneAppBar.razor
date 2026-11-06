@@ -17,13 +17,27 @@
         <span class="ph-brand cv-brand">C<span class="cv-brand-ta">ச</span>huvadi</span>
     }
 
-    <span class="ph-title">
-        <span class="ph-t">@Title</span>
-        @if (!string.IsNullOrEmpty(Sub))
-        {
-            <span class="ph-sub">@Sub</span>
-        }
-    </span>
+    @if (TitleOpensTabs)
+    {
+        @* D-43: the title (and its "1 of 4 tabs" line) opens the Tabs sheet. *@
+        <button class="ph-title ph-title-b" @onclick="OnTitle" aria-label="@($"{Title}. {Sub}. Show tabs")">
+            <span class="ph-t">@Title</span>
+            @if (!string.IsNullOrEmpty(Sub))
+            {
+                <span class="ph-sub">@Sub</span>
+            }
+        </button>
+    }
+    else
+    {
+        <span class="ph-title">
+            <span class="ph-t">@Title</span>
+            @if (!string.IsNullOrEmpty(Sub))
+            {
+                <span class="ph-sub">@Sub</span>
+            }
+        </span>
+    }
 
     @if (OnDocView && Shell.Mode == DocMode.Arrange)
     {
@@ -51,6 +65,9 @@
 @code {
     [Parameter] public EventCallback OnBack { get; set; }
     [Parameter] public EventCallback OnMenu { get; set; }
+
+    /// <summary>Tap on the document title (Read, Mark, Protect) → Tabs sheet.</summary>
+    [Parameter] public EventCallback OnTitle { get; set; }
     [Parameter] public bool OnDocView { get; set; }
 
     /// <summary>Title for pages that aren't a document (Library, Settings…); null on Home.</summary>
@@ -67,6 +84,8 @@
     }
 
     private bool ShowBack => OnDocView || PageTitle is not null;
+
+    private bool TitleOpensTabs => OnDocView && Shell.Mode != DocMode.Arrange && Tabs.Tabs.Count > 0;
 
     private ShellCommand? BindCommand => Shell.Commands.FirstOrDefault(c => c.Id == Phone.PhoneCommands.ArrangeBind);
 

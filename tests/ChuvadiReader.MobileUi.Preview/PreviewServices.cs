@@ -18,9 +18,12 @@ public sealed class PreviewPlatform(FormFactor formFactor) : IPlatformInfo
 
     public event Action? FormFactorChanged { add { } remove { } }
 
-    public InputKinds Input => formFactor == FormFactor.Desktop
-        ? InputKinds.Mouse | InputKinds.Keyboard
-        : InputKinds.Touch;
+    public InputKinds Input => formFactor switch
+    {
+        FormFactor.Desktop => InputKinds.Mouse | InputKinds.Keyboard,
+        FormFactor.Tablet => InputKinds.Touch | InputKinds.Pen,   // 12e: a tablet with a pen
+        _ => InputKinds.Touch,
+    };
 
     public ShellChrome Chrome => formFactor == FormFactor.Desktop
         ? new ShellChrome(WindowButtons.Right, false, false, true, 0)

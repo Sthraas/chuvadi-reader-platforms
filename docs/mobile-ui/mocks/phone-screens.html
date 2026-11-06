@@ -1,0 +1,283 @@
+<!doctype html>
+<!--
+  MU-8 / D-45 — mock phone layouts for Home, Library and Settings (two options each).
+  Static mock for discussion only: not product code. Built from the handout's own tokens.css, fonts
+  and LiPicons so it reads like the real thing. Content mirrors Chuvadi Mobile 4a.
+  Render: tools/mobile-ui/mocks.py (headless Chrome) → docs/mobile-ui/mocks/*.png
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Phone screens — options</title>
+<link rel="stylesheet" href="../../design-handoff/tokens.css">
+<script src="../../design-handoff/lipicons.js"></script>
+<style>
+@font-face{font-family:"LiPi Sans";font-weight:100 900;src:url("../../design-handoff/fonts/LiPi-Sans-Latin.woff2") format("woff2-variations");}
+@font-face{font-family:"LiPi Sans";font-weight:100 900;src:url("../../design-handoff/fonts/LiPi-Sans-Tamil.woff2") format("woff2-variations");unicode-range:U+0B80-0BFF;}
+@font-face{font-family:"Instrument Serif";src:url("../../design-handoff/fonts/InstrumentSerif.woff2") format("woff2");}
+@font-face{font-family:"Instrument Serif";font-style:italic;src:url("../../design-handoff/fonts/InstrumentSerif-Italic.woff2") format("woff2");}
+@font-face{font-family:"Fraunces";src:url("../../design-handoff/fonts/Fraunces.woff2") format("woff2");}
+@font-face{font-family:"IBM Plex Mono";src:url("../../design-handoff/fonts/PlexMono-400.woff2") format("woff2");}
+@font-face{font-family:"IBM Plex Mono";font-weight:500;src:url("../../design-handoff/fonts/PlexMono-500.woff2") format("woff2");}
+@font-face{font-family:"Tiro Tamil";src:url("../../design-handoff/fonts/TiroTamil.woff2") format("woff2");}
+
+*{box-sizing:border-box}
+body{margin:0;padding:24px;display:flex;flex-wrap:wrap;gap:24px;background:#9a948a;font-family:"LiPi Sans",system-ui,sans-serif;color:var(--chvd-ink)}
+.ph{width:392px;height:816px;position:relative;overflow:hidden;display:flex;flex-direction:column;background:var(--chvd-surface-lo)}
+.bar{flex:none;height:56px;display:flex;align-items:center;gap:4px;padding:0 6px;background:var(--chvd-surface-hi);border-bottom:.5px solid var(--chvd-border)}
+.ib{width:44px;height:44px;display:flex;align-items:center;justify-content:center;color:var(--chvd-ink)}
+.brand{font-family:"Instrument Serif";font-style:italic;font-size:21px;padding:0 8px 0 10px;flex:1}
+.brand b{font-family:"Tiro Tamil";font-style:normal;font-weight:400;color:var(--chvd-binding)}
+.t{flex:1;font-size:15.5px;font-weight:500}
+.av{width:32px;height:32px;border-radius:16px;background:var(--chvd-binding);color:var(--chvd-on-accent);font:500 12px "IBM Plex Mono";display:flex;align-items:center;justify-content:center;margin-right:6px}
+.body{flex:1;overflow:hidden;position:relative}
+.pad{padding:18px 18px 0}
+.eyebrow{font:10.5px "IBM Plex Mono";letter-spacing:.12em;text-transform:uppercase;color:var(--chvd-ink-muted);margin:18px 0 8px}
+.hello{font-family:"Instrument Serif";font-size:34px;line-height:1.05}
+.hello b{display:block;font-family:"Tiro Tamil";font-weight:400;font-size:28px;color:var(--chvd-binding);margin-top:2px}
+.blurb{font-family:"Fraunces";font-size:13.5px;color:var(--chvd-ink-soft);margin-top:6px}
+.search{height:46px;margin-top:16px;border-radius:12px;background:var(--chvd-surface-hi);border:.5px solid var(--chvd-border);display:flex;align-items:center;gap:10px;padding:0 14px;color:var(--chvd-ink-muted);font-size:14px}
+.resume{display:flex;gap:10px;overflow:hidden;margin-right:-18px}
+.rc{flex:none;width:218px;height:92px;border-radius:12px;background:var(--chvd-surface-hi);border:.5px solid var(--chvd-border);display:flex;gap:10px;padding:12px}
+.rc .th{width:46px;height:62px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.15);border-top:3px solid var(--chvd-binding)}
+.rc .n{font:11.5px "IBM Plex Mono";white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:136px}
+.rc .w{font-size:12.5px;margin-top:4px}
+.rc .m{font-family:"Instrument Serif";font-style:italic;font-size:17px;color:var(--chvd-binding);margin-top:8px}
+.row{display:flex;align-items:center;gap:12px;min-height:50px;border-bottom:.5px solid var(--chvd-border-soft);font-size:14px}
+.row .x{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .v{font:11px "IBM Plex Mono";color:var(--chvd-ink-muted);white-space:nowrap}
+.row .s{display:block;font:10.5px "IBM Plex Mono";color:var(--chvd-ink-muted);margin-top:2px}
+.fab{position:absolute;right:16px;bottom:16px;height:56px;padding:0 20px;border-radius:16px;background:var(--chvd-binding);color:var(--chvd-on-accent);display:flex;align-items:center;gap:8px;font-size:15px;box-shadow:0 6px 16px rgba(0,0,0,.25)}
+.nav{flex:none;height:80px;display:grid;grid-template-columns:repeat(4,1fr);padding:8px 8px 14px;background:var(--chvd-surface-hi);border-top:.5px solid var(--chvd-border)}
+.nb{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--chvd-ink-soft)}
+.pill{width:60px;height:32px;border-radius:16px;display:flex;align-items:center;justify-content:center}
+.verb{font-family:"Instrument Serif";font-style:italic;font-size:15px;line-height:1}
+.lab{font-size:12px;line-height:1}
+.nb.on{color:var(--chvd-binding)} .nb.on .pill{background:color-mix(in srgb,var(--chvd-binding) 16%,transparent)}
+.nb.dim{opacity:.38}
+.chips{display:flex;gap:6px;overflow:hidden;margin:12px -18px 0 0}
+.chip{flex:none;height:32px;padding:0 12px;border-radius:16px;background:var(--chvd-surface-mid);border:.5px solid var(--chvd-border-soft);display:flex;align-items:center;gap:6px;font:12px "IBM Plex Mono";color:var(--chvd-ink-soft)}
+.chip.on{background:var(--chvd-binding);border-color:var(--chvd-binding);color:var(--chvd-on-accent)}
+.dot{width:7px;height:7px;border-radius:4px}
+.seg{display:inline-flex;margin-top:12px;border-radius:9px;border:.5px solid var(--chvd-border);overflow:hidden}
+.seg span{height:34px;padding:0 14px;display:flex;align-items:center;gap:6px;font:12px "IBM Plex Mono";color:var(--chvd-ink-soft)}
+.seg span.on{background:var(--chvd-surface-hi);color:var(--chvd-binding)}
+.shelf{margin:14px 0 0;}
+.shelf h4{margin:0 0 6px;font:10.5px "IBM Plex Mono";letter-spacing:.12em;text-transform:uppercase;color:var(--chvd-ink-muted);display:flex;justify-content:space-between}
+.books{display:flex;align-items:flex-end;gap:5px;height:118px;padding:0 10px;overflow:hidden;margin-right:-18px;border-bottom:9px solid #8a6a48;box-shadow:0 6px 8px -6px rgba(0,0,0,.35)}
+.bk{flex:none;width:26px;border-radius:2px 2px 0 0;position:relative;overflow:hidden;box-shadow:inset -3px 0 0 rgba(0,0,0,.12)}
+.bk i{position:absolute;left:50%;bottom:8px;writing-mode:vertical-rl;transform:translateX(-50%) rotate(180deg);white-space:nowrap;font:9px "IBM Plex Mono";color:rgba(255,255,255,.92);font-style:normal}
+.end{flex:none;width:10px;height:62px;background:#6d5238;border-radius:2px 2px 0 0}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.tc{border-radius:12px;border:.5px solid var(--chvd-border);background:var(--chvd-surface-hi);padding:8px}
+.tc.on{border:2px solid var(--chvd-binding)}
+.tc .pv{height:64px;border-radius:6px;display:flex;align-items:center;justify-content:center}
+.tc .pv span{width:26px;height:36px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.tc .nm{font-family:"Instrument Serif";font-size:16px;margin-top:6px}
+.h2{font-family:"Instrument Serif";font-size:28px;margin-top:14px}
+.sub{font-size:12.5px;color:var(--chvd-ink-soft);margin-top:2px}
+.tog{margin-left:auto;width:40px;height:24px;border-radius:12px;background:var(--chvd-binding);position:relative;flex:none}
+.tog:after{content:"";position:absolute;right:3px;top:3px;width:18px;height:18px;border-radius:9px;background:#fff}
+.tog.off{background:var(--chvd-border)} .tog.off:after{right:auto;left:3px}
+.tag{font:9.5px "IBM Plex Mono";color:var(--chvd-binding);margin-left:6px}
+.stick{position:sticky;top:0;background:var(--chvd-surface-lo);padding:10px 18px 10px;margin:0 -18px;border-bottom:.5px solid var(--chvd-border-soft);display:flex;gap:6px;overflow:hidden}
+.label{position:absolute;left:0;top:-22px;font:600 13px system-ui;color:#fff}
+.wrap{position:relative;margin-top:22px}
+</style>
+</head>
+<body>
+
+<!-- ───────────────────────────── HOME A ───────────────────────────── -->
+<div class="wrap"><span class="label">Home · A — 4a content, inside the 12g phone shell</span>
+<div class="ph" id="home-a">
+  <div class="bar"><span class="brand">C<b>ச</b>huvadi</span><span class="ib"><lp-i name="more-vertical" size="20"></lp-i></span></div>
+  <div class="body"><div class="pad">
+    <div class="hello">Good evening, Arun.<b>வணக்கம்.</b></div>
+    <div class="blurb">214 documents · nothing leaves this phone.</div>
+    <div class="search"><lp-i name="search" size="18"></lp-i>Find or do anything…</div>
+    <div class="eyebrow">Pick up where you left off</div>
+    <div class="resume">
+      <div class="rc"><div class="th"></div><div><div class="n">discharge-summary.pdf</div><div class="w">Page 3 of 12</div><div class="m">Marking</div></div></div>
+      <div class="rc"><div class="th" style="border-top-color:#c86f2a"></div><div><div class="n">referral-letters.pdf</div><div class="w">3 desks</div><div class="m">Arranging</div></div></div>
+    </div>
+    <div class="eyebrow">Recent</div>
+    <div class="row"><lp-i name="file-pdf" size="20"></lp-i><span class="x">lab-report-meena-r.pdf</span><span class="v">2 h</span></div>
+    <div class="row"><lp-i name="file-excel" size="20"></lp-i><span class="x">insurance-claims.xlsx</span><span class="v">1 d</span></div>
+    <div class="row"><lp-i name="file-pdf" size="20"></lp-i><span class="x">consent-form-signed.pdf</span><span class="v">1 d</span></div>
+    <div class="row"><lp-i name="file-word" size="20"></lp-i><span class="x">ot-checklist-v3.docx</span><span class="v">3 d</span></div>
+    <div class="eyebrow">Pinned</div>
+    <div class="row"><lp-i name="pin" size="18"></lp-i><span class="x">tariff-2026.pdf</span><span class="v">48 p</span></div>
+  </div>
+  <div class="fab"><lp-i name="plus" size="18"></lp-i>Open</div></div>
+  <div class="nav">
+    <div class="nb"><span class="pill"><lp-i name="reading-mode" size="20"></lp-i></span><span class="verb">Read</span></div>
+    <div class="nb"><span class="pill"><lp-i name="edit" size="20"></lp-i></span><span class="verb">Mark</span></div>
+    <div class="nb"><span class="pill"><lp-i name="grid-view" size="20"></lp-i></span><span class="verb">Arrange</span></div>
+    <div class="nb"><span class="pill"><lp-i name="redact" size="20"></lp-i></span><span class="verb">Protect</span></div>
+  </div>
+</div></div>
+
+<!-- ───────────────────────────── HOME B ───────────────────────────── -->
+<div class="wrap"><span class="label">Home · B — 4a as designed, its own bar off-document</span>
+<div class="ph" id="home-b">
+  <div class="bar"><span class="brand">C<b>ச</b>huvadi</span><span class="av">AS</span></div>
+  <div class="body"><div class="pad">
+    <div class="hello">Good evening, Arun.<b>வணக்கம்.</b></div>
+    <div class="blurb">214 documents · nothing leaves this phone.</div>
+    <div class="search"><lp-i name="search" size="18"></lp-i>Find or do anything…</div>
+    <div class="eyebrow">Pick up where you left off</div>
+    <div class="resume">
+      <div class="rc"><div class="th"></div><div><div class="n">discharge-summary.pdf</div><div class="w">Page 3 of 12</div><div class="m">Marking</div></div></div>
+      <div class="rc"><div class="th" style="border-top-color:#c86f2a"></div><div><div class="n">referral-letters.pdf</div><div class="w">3 desks</div><div class="m">Arranging</div></div></div>
+    </div>
+    <div class="eyebrow">Recent</div>
+    <div class="row"><lp-i name="file-pdf" size="20"></lp-i><span class="x">lab-report-meena-r.pdf</span><span class="v">2 h</span></div>
+    <div class="row"><lp-i name="file-excel" size="20"></lp-i><span class="x">insurance-claims.xlsx</span><span class="v">1 d</span></div>
+    <div class="row"><lp-i name="file-pdf" size="20"></lp-i><span class="x">consent-form-signed.pdf</span><span class="v">1 d</span></div>
+    <div class="row"><lp-i name="file-word" size="20"></lp-i><span class="x">ot-checklist-v3.docx</span><span class="v">3 d</span></div>
+    <div class="eyebrow">Pinned</div>
+    <div class="row"><lp-i name="pin" size="18"></lp-i><span class="x">tariff-2026.pdf</span><span class="v">48 p</span></div>
+  </div>
+  <div class="fab"><lp-i name="plus" size="18"></lp-i>Open</div></div>
+  <div class="nav">
+    <div class="nb on"><span class="pill"><lp-i name="home" size="20"></lp-i></span><span class="lab">Home</span></div>
+    <div class="nb"><span class="pill"><lp-i name="library" size="20"></lp-i></span><span class="lab">Library</span></div>
+    <div class="nb"><span class="pill"><lp-i name="copy" size="20"></lp-i></span><span class="lab">Tabs · 4</span></div>
+    <div class="nb"><span class="pill"><lp-i name="settings" size="20"></lp-i></span><span class="lab">Settings</span></div>
+  </div>
+</div></div>
+
+<!-- ───────────────────────────── LIBRARY A ───────────────────────────── -->
+<div class="wrap"><span class="label">Library · A — list first, one row of chips</span>
+<div class="ph" id="library-a">
+  <div class="bar"><span class="ib"><lp-i name="arrow-left" size="21"></lp-i></span><span class="t">Library</span><span class="ib"><lp-i name="more-vertical" size="20"></lp-i></span></div>
+  <div class="body"><div class="pad">
+    <div class="search" style="margin-top:0"><lp-i name="search" size="18"></lp-i>Search a word across every PDF</div>
+    <div class="chips">
+      <span class="chip on">All · 214</span>
+      <span class="chip"><span class="dot" style="background:#3f9a8c"></span>Finance</span>
+      <span class="chip"><span class="dot" style="background:#5578b5"></span>Legal</span>
+      <span class="chip"><span class="dot" style="background:#b4557d"></span>Clinical</span>
+      <span class="chip"><span class="dot" style="background:#c98a3a"></span>Admin</span>
+    </div>
+    <div class="seg"><span class="on"><lp-i name="list" size="14"></lp-i>List</span><span><lp-i name="library" size="14"></lp-i>Shelf</span></div>
+    <div class="eyebrow" style="display:flex;justify-content:space-between"><span>214 documents</span><span>newest ▾</span></div>
+    <div class="row"><lp-i name="file-pdf" size="20"></lp-i><span class="x">lab-report-meena-r.pdf<span class="s">Clinical · 4 p · 2 h</span></span><lp-i name="more-vertical" size="18"></lp-i></div>
+    <div class="row"><lp-i name="file-pdf" size="20"></lp-i><span class="x">discharge-summary.pdf<span class="s">Clinical · 12 p · 1 d</span></span><lp-i name="more-vertical" size="18"></lp-i></div>
+    <div class="row"><lp-i name="file-excel" size="20"></lp-i><span class="x">insurance-claims.xlsx<span class="s">Finance · 3 sheets · 1 d</span></span><lp-i name="more-vertical" size="18"></lp-i></div>
+    <div class="row"><lp-i name="file-pdf" size="20"></lp-i><span class="x">consent-form-signed.pdf<span class="s">Legal · 2 p · 1 d · signed</span></span><lp-i name="more-vertical" size="18"></lp-i></div>
+    <div class="row"><lp-i name="file-pdf" size="20"></lp-i><span class="x">tariff-2026.pdf<span class="s">Admin · 48 p · 4 d</span></span><lp-i name="more-vertical" size="18"></lp-i></div>
+    <div class="row"><lp-i name="file-word" size="20"></lp-i><span class="x">ot-checklist-v3.docx<span class="s">Clinical · 3 d</span></span><lp-i name="more-vertical" size="18"></lp-i></div>
+    <div class="row"><lp-i name="file-pdf" size="20"></lp-i><span class="x">vendor-agreement.pdf<span class="s">Legal · 18 p · 6 d · 🔒 encrypted</span></span><lp-i name="more-vertical" size="18"></lp-i></div>
+  </div></div>
+  <div class="nav">
+    <div class="nb"><span class="pill"><lp-i name="reading-mode" size="20"></lp-i></span><span class="verb">Read</span></div>
+    <div class="nb"><span class="pill"><lp-i name="edit" size="20"></lp-i></span><span class="verb">Mark</span></div>
+    <div class="nb"><span class="pill"><lp-i name="grid-view" size="20"></lp-i></span><span class="verb">Arrange</span></div>
+    <div class="nb"><span class="pill"><lp-i name="redact" size="20"></lp-i></span><span class="verb">Protect</span></div>
+  </div>
+</div></div>
+
+<!-- ───────────────────────────── LIBRARY B ───────────────────────────── -->
+<div class="wrap"><span class="label">Library · B — shelf first, one shelf per category</span>
+<div class="ph" id="library-b">
+  <div class="bar"><span class="ib"><lp-i name="arrow-left" size="21"></lp-i></span><span class="t">Library</span><span class="ib"><lp-i name="search" size="20"></lp-i></span><span class="ib"><lp-i name="more-vertical" size="20"></lp-i></span></div>
+  <div class="body"><div class="pad" style="padding-top:12px">
+    <div class="seg" style="margin-top:0"><span><lp-i name="list" size="14"></lp-i>List</span><span class="on"><lp-i name="library" size="14"></lp-i>Shelf</span></div>
+    <div class="shelf"><h4><span>Clinical · 58</span><span>›</span></h4>
+      <div class="books"><span class="end"></span>
+        <span class="bk" style="height:96px;background:#b4557d"><i><span>discharge-summary</span></i></span>
+        <span class="bk" style="height:70px;width:20px;background:#9b4a6c"><i><span>lab-report</span></i></span>
+        <span class="bk" style="height:104px;width:32px;background:#c56a8f"><i><span>ot-checklist-v3</span></i></span>
+        <span class="bk" style="height:84px;background:#a34f73"><i><span>radiology-notes</span></i></span>
+        <span class="bk" style="height:90px;width:22px;background:#b4557d"><i><span>consult-12</span></i></span>
+        <span class="bk" style="height:76px;background:#9b4a6c"><i><span>tumour-board</span></i></span>
+        <span class="bk" style="height:100px;width:30px;background:#c56a8f"><i><span>chemo-protocol</span></i></span>
+        <span class="bk" style="height:88px;background:#a34f73"><i><span>imaging</span></i></span>
+        <span class="bk" style="height:72px;background:#b4557d"><i><span>op-notes</span></i></span>
+      </div></div>
+    <div class="shelf"><h4><span>Legal · 31</span><span>›</span></h4>
+      <div class="books"><span class="end"></span>
+        <span class="bk" style="height:100px;width:30px;background:#5578b5"><i><span>vendor-agreement</span></i></span>
+        <span class="bk" style="height:64px;width:20px;background:#476aa5"><i><span>consent-form</span></i></span>
+        <span class="bk" style="height:92px;background:#6688c2"><i><span>ppp-concession</span></i></span>
+        <span class="bk" style="height:80px;background:#476aa5"><i><span>nda-2026</span></i></span>
+        <span class="bk" style="height:96px;width:28px;background:#5578b5"><i><span>lease-deed</span></i></span>
+        <span class="bk" style="height:70px;background:#6688c2"><i><span>poa</span></i></span>
+        <span class="bk" style="height:86px;background:#476aa5"><i><span>tender-terms</span></i></span>
+      </div></div>
+    <div class="shelf"><h4><span>Finance · 44</span><span>›</span></h4>
+      <div class="books"><span class="end"></span>
+        <span class="bk" style="height:90px;background:#3f9a8c"><i><span>insurance-claims</span></i></span>
+        <span class="bk" style="height:104px;width:32px;background:#358a7d"><i><span>tariff-2026</span></i></span>
+        <span class="bk" style="height:74px;background:#4fa99b"><i><span>invoice-1142</span></i></span>
+        <span class="bk" style="height:96px;background:#3f9a8c"><i><span>budget-q3</span></i></span>
+        <span class="bk" style="height:82px;width:22px;background:#358a7d"><i><span>gst-returns</span></i></span>
+        <span class="bk" style="height:68px;background:#4fa99b"><i><span>receipts</span></i></span>
+      </div></div>
+  </div></div>
+  <div class="nav">
+    <div class="nb"><span class="pill"><lp-i name="reading-mode" size="20"></lp-i></span><span class="verb">Read</span></div>
+    <div class="nb"><span class="pill"><lp-i name="edit" size="20"></lp-i></span><span class="verb">Mark</span></div>
+    <div class="nb"><span class="pill"><lp-i name="grid-view" size="20"></lp-i></span><span class="verb">Arrange</span></div>
+    <div class="nb"><span class="pill"><lp-i name="redact" size="20"></lp-i></span><span class="verb">Protect</span></div>
+  </div>
+</div></div>
+
+<!-- ───────────────────────────── SETTINGS A ───────────────────────────── -->
+<div class="wrap"><span class="label">Settings · A — section list, tap pushes the section</span>
+<div class="ph" id="settings-a">
+  <div class="bar"><span class="ib"><lp-i name="arrow-left" size="21"></lp-i></span><span class="t">Settings</span><span class="ib"><lp-i name="search" size="20"></lp-i></span></div>
+  <div class="body"><div class="pad" style="padding-top:6px">
+    <div class="row" style="min-height:60px"><lp-i name="sliders" size="20"></lp-i><span class="x">Appearance<span class="s">Theme · interface size · reduce motion</span></span><lp-i name="chevron-right" size="16"></lp-i></div>
+    <div class="row" style="min-height:60px"><lp-i name="reading-mode" size="20"></lp-i><span class="x">Reading<span class="s">Default zoom · layout</span></span><lp-i name="chevron-right" size="16"></lp-i></div>
+    <div class="row" style="min-height:60px"><lp-i name="save" size="20"></lp-i><span class="x">Saving &amp; files<span class="s">Save folder · name new files · autosave drafts</span></span><lp-i name="chevron-right" size="16"></lp-i></div>
+    <div class="row" style="min-height:60px"><lp-i name="library" size="20"></lp-i><span class="x">Library &amp; folders<span class="s">Folder · default view · check every</span></span><lp-i name="chevron-right" size="16"></lp-i></div>
+    <div class="row" style="min-height:60px"><lp-i name="user" size="20"></lp-i><span class="x">Account &amp; roles<span class="tag">new</span><span class="s">Roles · lock after idle · audit log</span></span><lp-i name="chevron-right" size="16"></lp-i></div>
+    <div class="row" style="min-height:60px"><lp-i name="lock" size="20"></lp-i><span class="x">Kiosk<span class="tag">new</span><span class="s">Allowed folder · exit PIN</span></span><lp-i name="chevron-right" size="16"></lp-i></div>
+    <div class="row" style="min-height:60px"><lp-i name="star" size="20"></lp-i><span class="x">Language<span class="tag">new</span><span class="s">Language · dates · numbers · preferred name</span></span><lp-i name="chevron-right" size="16"></lp-i></div>
+    <div class="row" style="min-height:60px"><lp-i name="accessibility" size="20"></lp-i><span class="x">Accessibility<span class="tag">new</span><span class="s">Interface size · focus rings · larger touch targets</span></span><lp-i name="chevron-right" size="16"></lp-i></div>
+    <div class="row" style="min-height:60px"><lp-i name="menu" size="20"></lp-i><span class="x">Shortcuts<span class="s">With a keyboard attached</span></span><lp-i name="chevron-right" size="16"></lp-i></div>
+    <div class="row" style="min-height:60px"><lp-i name="info" size="20"></lp-i><span class="x">About<span class="s">Versions · licences · data folder</span></span><lp-i name="chevron-right" size="16"></lp-i></div>
+  </div></div>
+  <div class="nav">
+    <div class="nb"><span class="pill"><lp-i name="reading-mode" size="20"></lp-i></span><span class="verb">Read</span></div>
+    <div class="nb"><span class="pill"><lp-i name="edit" size="20"></lp-i></span><span class="verb">Mark</span></div>
+    <div class="nb"><span class="pill"><lp-i name="grid-view" size="20"></lp-i></span><span class="verb">Arrange</span></div>
+    <div class="nb"><span class="pill"><lp-i name="redact" size="20"></lp-i></span><span class="verb">Protect</span></div>
+  </div>
+</div></div>
+
+<!-- ───────────────────────────── SETTINGS B ───────────────────────────── -->
+<div class="wrap"><span class="label">Settings · B — one page, sticky section chips</span>
+<div class="ph" id="settings-b">
+  <div class="bar"><span class="ib"><lp-i name="arrow-left" size="21"></lp-i></span><span class="t">Settings</span><span class="ib"><lp-i name="search" size="20"></lp-i></span></div>
+  <div class="body"><div class="pad" style="padding-top:0">
+    <div class="stick">
+      <span class="chip on">Appearance</span><span class="chip">Reading</span><span class="chip">Saving</span><span class="chip">Library</span><span class="chip">Account</span>
+    </div>
+    <div class="h2">Appearance</div>
+    <div class="sub">Pages stay white; only the paper around them changes.</div>
+    <div class="cards">
+      <div class="tc on"><div class="pv" style="background:#e8dcc4"><span></span></div><div class="nm">Cream paper</div></div>
+      <div class="tc"><div class="pv" style="background:#100b08"><span></span></div><div class="nm">Night paper</div></div>
+      <div class="tc"><div class="pv" style="background:#dcd3ae"><span></span></div><div class="nm">Palm leaf</div></div>
+      <div class="tc"><div class="pv" style="background:#dfe4ee"><span></span></div><div class="nm">Indigo ink</div></div>
+    </div>
+    <div class="sub" style="margin-top:8px">+ High contrast</div>
+    <div class="row" style="margin-top:4px">Interface size<span class="v" style="margin-left:auto">100 % ▾</span></div>
+    <div class="row">Reduce motion<span class="tog off"></span></div>
+    <div class="h2">Reading</div>
+    <div class="row">Default zoom<span class="v" style="margin-left:auto">▾</span></div>
+    <div class="row">Layout<span class="v" style="margin-left:auto">▾</span></div>
+  </div></div>
+  <div class="nav">
+    <div class="nb"><span class="pill"><lp-i name="reading-mode" size="20"></lp-i></span><span class="verb">Read</span></div>
+    <div class="nb"><span class="pill"><lp-i name="edit" size="20"></lp-i></span><span class="verb">Mark</span></div>
+    <div class="nb"><span class="pill"><lp-i name="grid-view" size="20"></lp-i></span><span class="verb">Arrange</span></div>
+    <div class="nb"><span class="pill"><lp-i name="redact" size="20"></lp-i></span><span class="verb">Protect</span></div>
+  </div>
+</div></div>
+
+</body>
+</html>

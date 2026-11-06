@@ -19,5 +19,6 @@
     <!-- The mode views' command registrations, read as text by the contract test. -->
     <None Include="..\..\src\ChuvadiReader.Ui\Pages\*.Shell.cs" LinkBase="ShellSources" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\src\ChuvadiReader.Ui\wwwroot\css\mobile.css" Link="mobile.css.txt" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\src\ChuvadiReader.Ui\Layout\MainLayout.razor" Link="MainLayout.razor.txt" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

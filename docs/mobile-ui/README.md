@@ -1,6 +1,6 @@
 # Mobile app UI — Android tablet and phone look
 
-Branch `platform/mobile-ui` (based on `platform/foundation` aeeac43, Group A applied).
+Branch `platform/mobile-ui` (up to date with `platform/foundation` be4498a: Groups A–C, startup fixes, chuvadi-pdf 3.31.2).
 Design: `docs/design-handoff/Portal & Android.dc.html` 12d-12j, `Reader Side Rails.dc.html`, `tokens.css`.
 
 ## What is here (all new files)
@@ -17,12 +17,16 @@ Design: `docs/design-handoff/Portal & Android.dc.html` 12d-12j, `Reader Side Rai
 | `tests/ChuvadiReader.MobileUi.Tests` | Contract tests: command ids exist; strip/sheet match the frames; every CSS rule is scoped |
 | `tests/ChuvadiReader.MobileUi.Preview` | **Testing only.** Blazor Server page that renders the Ui at phone/tablet/desktop |
 | `tools/mobile-ui/*.sh, *.py` | **Testing only.** Preview runner, headless-Chromium screenshots with touch emulation, pixel compare |
-| `docs/mobile-ui/proposal/mobile-ui-hooks-1.patch` | The only existing-file change (MainLayout), **not applied** — see `OPTIONS.md` |
+| `docs/mobile-ui/proposal/H1-…, H3-…, mobile-ui-hooks-2.patch` | The only existing-file changes (MainLayout, Reader.razor), **not applied** — for the Foundation's combined patch: `FOR-FOUNDATION.md` |
+| `docs/mobile-ui/MU-8-PHONE-SCREENS.md`, `mocks/` | Phone Home / Library / Settings: two options each, mock screenshots |
+| `tools/mobile-ui/mocks.py` | **Design only.** Renders the mock frames |
 
 ## How it switches
-`PlatformRoot` (Foundation) writes `<html data-shell>`; `mobile.css` keys on it. `MainLayout` renders
-`PhoneShell` instead of its top bar / left bar / status bar when `PlatformState.Shell == Phone`
-(hook H-1) and `TouchSupport` everywhere (H-2, a no-op on desktop/portal). The phone shell runs
+The host page writes `<html data-shell …>` for the first paint and MainLayout keeps it in sync
+(non-Windows only); `mobile.css` keys on it. Components read `IPlatformInfo` (`@inject`, `Shell()`,
+`FormFactorChanged`) — there is no cascade. `MainLayout` renders `PhoneShell` instead of its top bar /
+left bar / status bar when `FormFactor == Phone`, and `TouchSupport` on non-Windows tablet/phone
+(hook H-1; Windows renders neither). The phone shell runs
 MainLayout's own methods (passed in) and the commands the mode views already register for Ctrl K —
 nothing is re-implemented.
 
@@ -34,7 +38,7 @@ gives it small-screen layouts). Windows doesn't need it (harmless if linked).
 ```bash
 dotnet restore ChuvadiReader.Platforms.slnx --configfile ci/nuget.config
 dotnet build   ChuvadiReader.Platforms.slnx -c Release --no-restore -warnaserror
-dotnet test    tests/ChuvadiReader.MobileUi.Tests -c Release --configfile ci/nuget.config
+dotnet test    tests/ChuvadiReader.MobileUi.Tests -c Release --no-restore
 
 # preview + screenshots (needs Chromium + Python Playwright — testing only)
 tools/mobile-ui/run.sh phone   5180 out "phone-read 392x816" "phone-mark 392x816" "phone-viewsheet 392x816"

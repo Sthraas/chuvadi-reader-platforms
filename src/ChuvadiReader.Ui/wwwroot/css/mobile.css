@@ -1,7 +1,7 @@
 /*
  * Chuvadi Reader — Android tablet and phone look (Portal & Android 12d-12j).
- * Every rule is keyed on <html data-shell="tablet"> or <html data-shell="phone">, which PlatformRoot
- * sets from the host's platform signal, so nothing here can reach the desktop or portal layouts.
+ * Every rule is keyed on <html data-shell="tablet"> or <html data-shell="phone">, which the host
+ * page sets for the first paint and MainLayout keeps in sync (non-Windows only), so nothing here can reach the desktop or portal layouts.
  * Link after shell.css. Colours and type come only from tokens.css, so all five themes work.
  *
  *   tablet  top bar 52 · left bar 72 · Tools rail 72 · View rail 60 · 48 px targets · no status bar
@@ -130,6 +130,13 @@ html[data-shell="tablet"] .srail:hover .rtext { justify-content: center; padding
 /* Messages sit above the gesture bar, not above a status bar that isn't there. */
 html[data-shell="tablet"] .msgs { bottom: calc(14px + env(safe-area-inset-bottom)); }
 
+/* Arrange (12f "‹ 2 desks ›"): the counter TouchSupport publishes reads "1 / 2 desks". */
+html[data-shell="tablet"] .tb-pg-box[aria-label="desk number"] + .tb-pg-total::after { content: " desks"; }
+
+/* Mark with a pen (12e, D-42): the pen draws, a finger pans the desk. Reader.razor ignores a
+   finger's press on the Mark layer on a tablet (hook H-3); this lets the browser pan with it. */
+html[data-shell="tablet"][data-input~="pen"] .mk-layer { touch-action: pan-x pan-y; }
+
 /* Arrange, portrait (12f): desks two across; 76 × 106 page cards; 48 px desk header. */
 @media (max-width: 999px) {
     html[data-shell="tablet"] .bench-desks { --desk-cols: 2 !important; }
@@ -167,6 +174,11 @@ html[data-shell="phone"] {
 .ph-title { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .ph-t { font-size: 15.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--chvd-ink); }
 .ph-sub { font-family: var(--chvd-mono); font-size: 10.5px; color: var(--chvd-ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ph-title-b {
+    border: none; background: transparent; padding: 0 4px; margin: 0; text-align: left; cursor: pointer;
+    min-height: 44px; justify-content: center; border-radius: 10px; font: inherit; color: inherit;
+}
+.ph-title-b:active { background: var(--chvd-surface-mid); }
 .ph-pager {
     flex: none; display: flex; align-items: center; height: 36px; min-width: 44px; padding: 0 6px; box-sizing: border-box;
     background: var(--chvd-surface-mid); border: var(--chvd-stroke) solid var(--chvd-border-soft); border-radius: 9px;
@@ -248,6 +260,16 @@ html[data-shell="phone"] {
 .ph-row-l { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ph-row-v { font-family: var(--chvd-mono); font-size: 11px; color: var(--chvd-ink-muted); white-space: nowrap; }
 .ph-row:disabled { color: var(--chvd-ink-muted); cursor: default; }
+/* Tabs sheet (D-43): the row holds a switch button and a close button. */
+.ph-tab { gap: 0; padding: 0; }
+.ph-tab-b {
+    flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0;
+    border: none; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.ph-tab-b > .cv-icon:first-child { color: var(--chvd-ink-soft); }
+.ph-tab.on .ph-tab-b { color: var(--chvd-binding); }
+.ph-tab.on .ph-tab-b > .cv-icon:first-child { color: var(--chvd-binding); }
+.ph-tab-x { color: var(--chvd-ink-muted); }
 @keyframes ph-rise { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes ph-fade { from { opacity: 0; } to { opacity: 1; } }
 
@@ -326,6 +348,15 @@ html[data-shell="phone"] .desk-drop {
 html[data-shell="phone"] .bpage { flex: none; width: 58px; }
 html[data-shell="phone"] .bthumb { width: 58px; }
 html[data-shell="phone"] .desk-add { min-height: 88px; }
+
+/* Phone in landscape (D-44): 48 px app bar, icon-only 56 px bottom bar, so the page keeps the height. */
+@media (orientation: landscape) {
+    html[data-shell="phone"] { --ph-bar: 48px; --ph-nav: 56px; }
+    html[data-shell="phone"] .ph-nav { padding: 4px 8px calc(4px + env(safe-area-inset-bottom)); }
+    html[data-shell="phone"] .ph-nav-b { min-height: 48px; gap: 0; }
+    html[data-shell="phone"] .ph-verb { display: none; }
+    html[data-shell="phone"] .ph-sheet { max-height: 92dvh; }
+}
 
 /* Immersive keeps only the page, as on desktop. */
 body.chvd-immersive .ph-bar,

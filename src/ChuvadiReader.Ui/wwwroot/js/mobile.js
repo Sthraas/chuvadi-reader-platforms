@@ -262,3 +262,10 @@ export function unwatchOrientation() {
     orientHandler = null;
     orientRef = null;
 }
+
+// ── tablet Arrange: the top-bar counter's ‹ › scroll to a desk (12f) ────────
+export function scrollToDesk(n) {
+    const desks = document.querySelectorAll('.bench-desks > .desk');
+    const el = desks[n - 1];
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+}

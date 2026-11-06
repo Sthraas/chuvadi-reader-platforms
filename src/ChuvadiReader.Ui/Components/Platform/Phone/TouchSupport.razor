@@ -1,8 +1,9 @@
-@using ChuvadiReader.Ui.Components.Platform
 @implements IAsyncDisposable
 @inject IJSRuntime JS
+@inject IPlatformInfo Info
 @inject ShellService Shell
 @inject TabsService Tabs
+@inject BenchService Bench
 
 @*
     Touch behaviour for the tablet and phone shells (hook H-2): renders nothing; loads mobile.js,
@@ -11,17 +12,75 @@
       * double-tap → Fit width ⇄ Fit page;  swipe (when the page fits) → next / previous page
       * tap on the canvas → shows the per-page strip (the desktop shows it on hover)
       * Arrange: long-press a page to drag it; a quick swipe scrolls the desks instead
-    Nothing is attached on desktop or portal layouts.
+      * Tablet Arrange (12f, D-46): the top-bar counter shows the desks; ‹ › scroll to a desk
+    Nothing is attached on desktop or portal layouts; MainLayout renders this only on tablet / phone
+    (hook H-1), so it costs Windows nothing.
 *@
 
 @code {
-    [CascadingParameter] public PlatformState? Platform { get; set; }
-
     private IJSObjectReference? _js;
     private DotNetObjectReference<TouchSupport>? _self;
     private bool _on;
 
-    private bool Wanted => Platform?.Shell is ChuvadiReader.Platform.ShellLayout.Tablet or ChuvadiReader.Platform.ShellLayout.Phone;
+    private bool Wanted => Info.Shell() is ShellLayout.Tablet or ShellLayout.Phone;
+
+    // Fold / unfold, split screen: a component without parameters isn't re-rendered by its parent.
+    protected override void OnInitialized()
+    {
+        Info.FormFactorChanged += OnFormFactorChanged;
+        Shell.Changed += OnShellChanged;
+        Bench.Changed += OnShellChanged;
+    }
+
+    // ── tablet desk counter (12f "‹ 2 desks ›") ──────────────────────────
+    // The active page owns the counter; Arrange publishes none, so on a tablet this fills it with
+    // the desks while Arrange is showing. Reader and Redact set their own counter when they open.
+    private Func<int, Task>? _deskHandler;
+    private int _desk = 1;
+
+    private void OnShellChanged()
+    {
+        if (Info.FormFactor != FormFactor.Tablet || Shell.Mode != DocMode.Arrange)
+        {
+            // Left Arrange: hand the counter back (the next page sets its own).
+            if (_deskHandler is not null && Shell.CounterHandler == _deskHandler)
+            {
+                Shell.CounterHandler = null;
+            }
+
+            return;
+        }
+
+        var desks = Bench.Desks.Count;
+        _desk = Math.Clamp(_desk, 1, Math.Max(1, desks));
+        _deskHandler ??= GoToDesk;
+        if (Shell.CounterHandler != _deskHandler)
+        {
+            Shell.CounterHandler = _deskHandler;
+        }
+
+        // SetCounter raises Changed only when something differs, so this settles at once.
+        Shell.SetCounterStep(1);
+        Shell.SetCounter(desks == 0 ? 0 : _desk, desks, "desk");
+    }
+
+    private async Task GoToDesk(int n)
+    {
+        _desk = n;
+        Shell.SetCounter(n, Bench.Desks.Count, "desk");
+        if (_js is not null)
+        {
+            try
+            {
+                await _js.InvokeVoidAsync("scrollToDesk", n);
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+    }
+
+    private void OnFormFactorChanged() => _ = InvokeAsync(StateHasChanged);
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -79,6 +138,14 @@
 
     public async ValueTask DisposeAsync()
     {
+        Info.FormFactorChanged -= OnFormFactorChanged;
+        Shell.Changed -= OnShellChanged;
+        Bench.Changed -= OnShellChanged;
+        if (_deskHandler is not null && Shell.CounterHandler == _deskHandler)
+        {
+            Shell.CounterHandler = null;
+        }
+
         _self?.Dispose();
         if (_js is null)
         {

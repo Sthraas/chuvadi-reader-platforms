@@ -24,7 +24,7 @@ if [ "$FF" = "desktop-base" ]; then
   export CHVD_FF=desktop
 else
   # Copy the working tree (tracked + new files), not .git.
-  (cd "$ROOT" && git ls-files -co --exclude-standard -z | xargs -0 -I{} cp --parents {} "$SCRATCH/")
+  (cd "$ROOT" && git ls-files -co --exclude-standard -z | xargs -0 -I{} sh -c 'if [ -e "$1" ]; then cp --parents "$1" "$0"; fi' "$SCRATCH" {})
   for p in "$ROOT"/docs/mobile-ui/proposal/mobile-ui-hooks-*.patch; do (cd "$SCRATCH" && git apply "$p"); done
   export CHVD_FF="$FF"
 fi

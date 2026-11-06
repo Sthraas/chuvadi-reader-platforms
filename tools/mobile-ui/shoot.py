@@ -4,6 +4,7 @@
 # design frames. Usage:
 #   shoot.py <url> <outdir> <scenario> [width height]
 # Scenarios: phone-read, phone-mark, phone-protect, phone-arrange, phone-viewsheet, phone-menu,
+#            phone-tabs, phone-redact,
 #            tablet-read, tablet-mark, tablet-arrange, desktop-read
 import asyncio, json, sys
 from playwright.async_api import async_playwright
@@ -26,8 +27,11 @@ async def main():
         pg = await ctx.new_page()
         pg.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
         pg.on("pageerror", lambda e: errors.append(str(e)))
-        await pg.goto(url + "/reader")
+        start = {"-home": "/", "-library": "/library", "-settings": "/settings"}
+        await pg.goto(url + next((v for k, v in start.items() if scen.endswith(k)), "/reader"))
         await pg.wait_for_timeout(3500)
+        if scen.startswith("phone-") and not scen.endswith(("-home", "-library", "-settings")):
+            await tap(pg, ".ph-nav-b:nth-child(1)")   # every scenario starts from Read
         if scen.endswith("-mark"):
             await tap(pg, ".ph-nav-b:nth-child(2), .lb-mode:nth-of-type(2)")
         elif scen.endswith("-protect"):
@@ -39,6 +43,12 @@ async def main():
             await tap(pg, ".ph-nav-b:nth-child(4)")
             await tap(pg, ".ph-bar .ph-ib[aria-label='More']")
             await tap(pg, ".ph-row:has-text('View')")
+        elif scen.endswith("-tabs"):
+            await tap(pg, ".ph-title-b")
+        elif scen.endswith("-redact"):
+            await tap(pg, ".ph-nav-b:nth-child(4)")
+            await tap(pg, ".ph-tool:first-child")
+            await pg.wait_for_timeout(1500)
         elif scen.endswith("-menu"):
             await tap(pg, ".ph-bar .ph-ib[aria-label='More']")
         await pg.wait_for_timeout(1500)

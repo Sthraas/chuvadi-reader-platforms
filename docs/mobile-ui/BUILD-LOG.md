@@ -62,3 +62,48 @@ Both in `OPTIONS.md`.
 
 ### Screens
 `docs/mobile-ui/screens/2026-11-06/` — phone, tablet, desktop before/after, and crops of the design frames.
+
+## 2026-11-06 — session 2 (after D-40 … D-54)
+
+### Read
+DECISIONS.md on main (D-01 … D-53; D-54 from the coordinator's message). Foundation moved to 60dca85:
+**no `PlatformRoot` / `PlatformState` cascade any more** (startup rule) — components inject
+`IPlatformInfo`; MainLayout sets `<html data-*>` on non-Windows hosts; host pages set them for the
+first paint. chuvadi-pdf 3.31.2 not in Foundation's feed yet (3.31.1).
+
+### Done
+- Rebased on 60dca85 (clean). Ported TouchSupport / PhoneShell / preview host off the cascade
+  (`IPlatformInfo`, injected `IAppLifecycle`); the preview page writes the `<html data-*>` attributes
+  (none on Windows, as the WPF page).
+- H-1 regenerated: Windows renders neither TouchSupport nor PhoneShell (my first version rendered
+  TouchSupport everywhere — a cost under the startup rule). Gates on plain properties.
+- D-43 Tabs sheet; D-44 landscape bars; D-46 Protect FAB = Save redacted copy; D-46 desk counter with
+  no hook; D-42 pen/finger diff (corrected to Reader.razor) + CSS.
+- D-48: wrote the fix and a test; the test failed **with** the fix → found my report was wrong;
+  withdrew both (`FOR-FOUNDATION.md`).
+- MU-8: two options each for phone Home / Library / Settings, rendered from the handout's tokens and
+  icons with the app's real theme names, labels and section icons; the handout's own phone Home
+  (Chuvadi Mobile 4a) is the base for Home. Not built.
+- Harness: drops a browser session's components on disconnect (stale sessions kept the redaction view
+  registered and leaked into the next screenshot); every phone scenario starts from Read; copy step
+  skips deleted files.
+
+### Evidence
+0 warnings; 161 + 27 + 4 tests; desktop pixel-identical on Read ×2, Arrange, Mark; StartupProbe
++1 JIT method / +2.2 ms (noise floor 7 ms); 0 console errors in every phone/tablet scenario.
+Screens: `screens/2026-11-06-pm/`, mocks: `mocks/`.
+
+### Found
+- Settings wording "computer" on Android (Appearance, Language) — for PlatformText (Foundation).
+- The redaction view opens at its desktop zoom on a phone (page wider than the screen) — needs a
+  fit-width default on phone; Redact is an existing file → hook, next session with options.
+- Tablet desk label can't singularise ("1 / 1 desks").
+
+### D-54 — chuvadi-pdf 3.31.2
+Foundation landed it (be4498a) during the session. A rebase was clean locally, but publishing it
+needs a force-push over this branch's pushed history, which was refused as destructive. So the
+branch takes Foundation by a **merge** instead (no history rewritten; fast-forward push); the
+resulting tree was checked byte-identical to the rebased one. Restore resolves Chuvadi.Pdf.* 3.31.2
+from `ci/packages`. Re-verified on 3.31.2: 0 warnings; 161 + 27 + 4 tests; hook patches still
+apply; desktop pixel-identical (Read, Arrange, Mark at 1440×900); 0 console errors on phone
+Read / Tabs / Redact / Arrange and tablet Read / Arrange.

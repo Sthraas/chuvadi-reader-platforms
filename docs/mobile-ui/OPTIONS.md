@@ -1,5 +1,25 @@
 # Mobile app UI — options and hooks for the coordinator
 
+## Status of every item (decisions D-40 … D-49, 6 Nov)
+| Item | Decision | State on `platform/mobile-ui` |
+|---|---|---|
+| MU-1 phone shell hook | D-40 (a) via combined patch | Regenerated against 60dca85 with `IPlatformInfo` (no cascade): `proposal/H1-…patch`, see `FOR-FOUNDATION.md` |
+| MU-2/3/4 CSS, command ids, mobile.js | D-41 (a) | Built; real-device check with the Android chat's emulator still to do |
+| MU-5 pen draws, finger pans | D-42 (a) | Diff ready — **in `Reader.razor` `MkDown`, not reader.js** (my earlier note named the wrong file): `proposal/H3-…patch` |
+| MU-6 Tabs sheet | D-43 (a) | Built: tap the title → Tabs sheet (switch, × close via MainLayout's own CloseTab, Open…) |
+| MU-7 phone landscape | D-44 (b) | Built: 48 px app bar, icon-only 56 px bottom bar |
+| MU-8 phone Home / Library / Settings | D-45 | Two options each with mock screenshots: `MU-8-PHONE-SCREENS.md` — **needs a decision; not built** |
+| MU-9 Protect FAB | D-46 | Built: Save redacted copy (`rd.save`, redaction view) |
+| MU-9 desk counter | D-46 hook | Built **without** a hook (TouchSupport, tablet only) — confirm or ask for the Bench hook (`FOR-FOUNDATION.md`) |
+| MU-10 title | D-47 file name | As built |
+| TabsService duplicates | D-48 approved | **Withdrawn — my report was wrong** (test shows no duplicate on real hosts); host rule instead (`FOR-FOUNDATION.md`) |
+| Android host fixes | D-49 | Android chat |
+| chuvadi-pdf 3.31.2 | D-54 | Done: branch brought up to be4498a (3.31.2 in `ci/packages`); nothing here pins a version; re-verified on 3.31.2 |
+
+---
+
+## Original options (6 Nov, morning) — kept for the record
+
 Each item: options with pros and cons, my recommendation, and status. Nothing below is applied to an
 existing file. **Bold** = what I recommend.
 

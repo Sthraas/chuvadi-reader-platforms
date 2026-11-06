@@ -15,7 +15,9 @@ var ff = (Environment.GetEnvironmentVariable("CHVD_FF") ?? "phone").ToLowerInvar
 };
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddRazorComponents().AddInteractiveServerComponents();
+// One screenshot = one browser session; app state is process-wide (like the desktop app), so drop a
+// session's components the moment its browser closes instead of keeping them registered for minutes.
+builder.Services.AddRazorComponents().AddInteractiveServerComponents(o => o.DisconnectedCircuitRetentionPeriod = TimeSpan.Zero);
 builder.Services.AddChuvadiReader(AppStateLifetime.Process);
 builder.Services.AddSingleton<IAppStorage, MemoryStorage>();
 builder.Services.AddSingleton<IFilePicker, FixturePicker>();
