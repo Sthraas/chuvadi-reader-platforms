@@ -3,7 +3,7 @@ Upstream-Name: Chuvadi Reader
 Source: https://github.com/arunshivab/chuvadi-reader
 
 Files: *
-Copyright: 2026 Dr. Arun Shiva B
+Copyright: 2026 Sthraas Intelligence Pvt Ltd
 License: Chuvadi-Proprietary
 
 Files: usr/lib/chuvadi-reader/Microsoft.*.dll usr/lib/chuvadi-reader/System.*.dll
