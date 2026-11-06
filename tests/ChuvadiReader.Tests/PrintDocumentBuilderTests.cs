@@ -73,6 +73,36 @@ public class PrintDocumentBuilderTests
     }
 
     [Fact]
+    public async Task Annotations_are_baked_into_the_page_and_none_stay_live()
+    {
+        // A red filled square annotation in the middle of a blank page.
+        var src = TestPdf.BlankPage(200, 200);
+        var annotated = TestPdf.TempOutput();
+        using (var doc = PdfDocument.Open(src))
+        using (var fs = File.Create(annotated))
+        {
+            var red = Chuvadi.Pdf.Graphics.ColorF.FromRgb(1, 0, 0, 1);
+            var square = new Chuvadi.Pdf.Annotations.SquareAnnotation(
+                0, new Chuvadi.Pdf.Graphics.RectangleF(50, 50, 100, 100),
+                new Chuvadi.Pdf.Annotations.BorderStyle(1, Chuvadi.Pdf.Annotations.BorderStyleType.Solid, Array.Empty<float>()),
+                red, string.Empty, red, string.Empty, 1f);
+            Chuvadi.Pdf.Annotations.AnnotationWriter.Add(fs, doc, new[] { square });
+        }
+
+        var result = await PrintDocumentBuilder.BuildAsync(annotated, new PrintRequest());
+        var printed = TestPdf.TempOutput();
+        await File.WriteAllBytesAsync(printed, result.Pdf);
+
+        using (var doc = PdfDocument.Open(printed))
+        {
+            Assert.Empty(Chuvadi.Pdf.Annotations.AnnotationReader.GetAllAnnotations(doc));
+        }
+
+        Assert.True(TestPdf.IsReddish(TestPdf.SamplePixel(printed, 0, 0.50, 0.50)), "the square should be baked into the page");
+        Assert.True(TestPdf.IsWhitish(TestPdf.SamplePixel(printed, 0, 0.05, 0.05)), "outside the square stays white");
+    }
+
+    [Fact]
     public async Task Bad_range_gives_the_parser_message()
     {
         var src = await ThreePagesAsync();

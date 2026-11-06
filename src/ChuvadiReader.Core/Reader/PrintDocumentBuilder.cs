@@ -8,9 +8,17 @@ public sealed record PrintDocument(byte[] Pdf, int PageCount, string JobName);
 
 /// <summary>
 /// Prepares a PDF for printing through an OS print system (macOS print panel, Android PrintManager,
-/// browser print): chuvadi-pdf opens the file (with its password, if any) and writes a new PDF holding
-/// exactly the requested pages, in the requested order, unencrypted. The pages stay vector — nothing is
-/// rasterised — and the original file is never changed. Used by hosts whose print path takes a PDF.
+/// browser print), so what prints is what Chuvadi shows, not the OS's own reading of the file:
+/// <list type="number">
+/// <item>chuvadi-pdf opens the file (with its password, if any);</item>
+/// <item>form fields and annotations are flattened into the page content — using chuvadi-pdf's generated
+/// appearances where the file's are missing or out of date — and anything that could not be baked is
+/// dropped, so no live annotation is left for the OS to draw its own way;</item>
+/// <item>exactly the requested pages are written, in the requested order, unencrypted.</item>
+/// </list>
+/// Everything stays vector — nothing is rasterised — and the original file is never changed.
+/// The flatten follows on-screen rules (as the Reader and the Windows print path draw today); the
+/// print-flag rules (ISO 32000 §12.5.3) need a library option — see docs/mac/LIBRARY-ASKS.md.
 /// </summary>
 public static class PrintDocumentBuilder
 {
@@ -32,7 +40,20 @@ public static class PrintDocumentBuilder
             }
 
             ct.ThrowIfCancellationRequested();
-            var selectors = pages.Select(p => new PageSelector(doc, p)).ToList();
+
+            // Flatten the whole document first: the form's /NeedAppearances and field tree live in the
+            // catalog, so baking before picking pages keeps generated field appearances correct.
+            using var flat = new MemoryStream();
+            AnnotationFlattener.Flatten(flat, doc, new AnnotationFlattenOptions
+            {
+                Kinds = AnnotationFlattenKinds.All,
+                DropRemainingAnnotations = true,
+            });
+
+            ct.ThrowIfCancellationRequested();
+            flat.Position = 0;
+            using var flatDoc = PdfDocument.Open(flat, leaveOpen: true);
+            var selectors = pages.Select(p => new PageSelector(flatDoc, p)).ToList();
             using var output = new MemoryStream();
             PageOperations.Assemble(output, selectors);
 
