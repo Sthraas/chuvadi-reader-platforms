@@ -11,6 +11,7 @@ using ChuvadiReader.Core.Theme;
 using ChuvadiReader.Core.Window;
 using ChuvadiReader.Windows.Platform;
 using ChuvadiReader.Hosting;
+using ChuvadiReader.Hosting.Desktop;
 using ChuvadiReader.Platform;
 using Microsoft.Extensions.DependencyInjection;
 
