@@ -1,10 +1,8 @@
-using ChuvadiReader.Core.Documents;
-using ChuvadiReader.Core.Licensing;
-using ChuvadiReader.Core.Lifecycle;
 using ChuvadiReader.Core.Reader;
 using ChuvadiReader.Core.Storage;
-using ChuvadiReader.Core.Theme;
 using ChuvadiReader.Core.Window;
+using ChuvadiReader.Hosting;
+using ChuvadiReader.Platform;
 using ChuvadiReader.Web.Components;
 using ChuvadiReader.Web.Files;
 using ChuvadiReader.Web.Hosting;
@@ -131,54 +129,29 @@ public static class Program
     }
 
     /// <summary>
-    /// The Reader's services, as the Windows host registers them, but one set per session (scoped)
-    /// instead of one per process — on the server a process serves many people.
+    /// The Reader's services through the Foundation kit, one set per browser connection
+    /// (<see cref="AppStateLifetime.PerConnection"/>), then the portal's own implementation of every
+    /// platform seam (a later registration wins). Scoped throughout: a process serves many people.
     /// </summary>
     internal static void AddReader(IServiceCollection s)
     {
+        s.AddChuvadiReader(AppStateLifetime.PerConnection);
+
+        s.AddScoped<WebPlatformInfo>();
+        s.AddScoped<IPlatformInfo>(sp => sp.GetRequiredService<WebPlatformInfo>());
+        s.AddScoped<ViewportReporter>();
+        s.AddScoped<WebAccount>();
+        s.AddScoped<IAccount>(sp => sp.GetRequiredService<WebAccount>());
+        s.AddScoped<IAppPaths, SessionAppPaths>();
         s.AddScoped<IAppStorage, SessionAppStorage>();
-        s.AddScoped<SaveFolderService>();
-        s.AddScoped<CategoryService>();
-        s.AddScoped<ThemeService>();
-        s.AddScoped<UserProfileService>();
-        s.AddScoped<RecentFilesService>();
-        s.AddScoped<PinnedService>();
-        s.AddScoped<WatchedFolderService>();
-        s.AddScoped<LibraryService>();
-        s.AddScoped<TagService>();
-        s.AddScoped<FolderSearchService>();
-        s.AddScoped<DocumentPropertiesService>();
-        s.AddScoped<ExportService>();
-        s.AddScoped<RedactService>();
-        s.AddScoped<StampService>();
-        s.AddScoped<DocxViewService>();
-        s.AddScoped<XlsxViewService>();
-        s.AddScoped<FlattenService>();
-        s.AddScoped<RecoveryService>();
-        s.AddScoped<PressService>();
-        s.AddScoped<IPdfReader, ChuvadiPdfReader>();
-        s.AddScoped<TabsService>();
-        s.AddScoped<PdfToolsService>();
-        s.AddScoped<BenchComposer>();
-        s.AddScoped<BenchService>();
-        s.AddScoped<SessionService>();
-        s.AddScoped<OpenDocumentService>();
-        s.AddScoped<BenchDropService>();
-        s.AddScoped<RedactRequestService>();
-        s.AddScoped<ShellService>();
-        s.AddScoped<IUiScale, NoopUiScale>();
-        s.AddScoped<IExternalLinks, WebExternalLinks>();
-        s.AddScoped<PreferencesService>();
-        s.AddScoped<TextViewService>();
-        s.AddScoped<MeasureService>();
-        s.AddScoped<SignatureCheckService>();
-        s.AddScoped<PasswordService>();
-        s.AddScoped<CertificateSignService>();
-        s.AddScoped<IPrintService, WebPrintService>();
-        s.AddScoped<IEntitlements, DefaultEntitlements>();
         s.AddScoped<IFilePicker, WebFilePicker>();
-        s.AddScoped<IImageClipboard, WebImageClipboard>();
-        s.AddScoped<IAppReadySignal, AppReadySignal>();
+        s.AddScoped<IFileWriteBack, WebFileWriteBack>();
+        s.AddScoped<IPrintService, WebPrintService>();
+        s.AddScoped<WebClipboard>();
+        s.AddScoped<IClipboard>(sp => sp.GetRequiredService<WebClipboard>());
+        s.AddScoped<IImageClipboard>(sp => sp.GetRequiredService<WebClipboard>());
+        s.AddScoped<IExternalLinks, WebExternalLinks>();
+        s.AddScoped<IUiScale, NoopUiScale>();
         s.AddScoped<IWindowControls, NoopWindowControls>();
     }
 }

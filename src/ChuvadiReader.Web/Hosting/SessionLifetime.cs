@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Components.Server.Circuits;
 namespace ChuvadiReader.Web.Hosting;
 
 /// <summary>
-/// Ends a session cleanly: when the Blazor circuit closes (tab closed and the reconnect window passed,
+/// Starts and ends a session. When the Blazor circuit closes (tab closed and the reconnect window passed,
 /// or sign-out), its tickets are forgotten and its folder is deleted. The scoped services' own
 /// <c>Dispose</c> does the same as a second line of defence.
 /// </summary>
@@ -12,11 +12,21 @@ public sealed class SessionLifetime : CircuitHandler
 {
     private readonly SessionSpace _space;
     private readonly TransferRegistry _registry;
+    private readonly Platform.WebAccount _account;
 
-    public SessionLifetime(SessionSpace space, TransferRegistry registry)
+    public SessionLifetime(SessionSpace space, TransferRegistry registry, Platform.WebAccount account)
     {
         _space = space;
         _registry = registry;
+        _account = account;
+    }
+
+    /// <summary>A session starts: its folders exist before any Reader service asks for a path, and the
+    /// signed-in person is known.</summary>
+    public override async Task OnCircuitOpenedAsync(Circuit circuit, CancellationToken cancellationToken)
+    {
+        await _space.EnsureAsync(cancellationToken).ConfigureAwait(false);
+        await _account.LoadAsync().ConfigureAwait(false);
     }
 
     public override Task OnCircuitClosedAsync(Circuit circuit, CancellationToken cancellationToken)

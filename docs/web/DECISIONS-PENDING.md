@@ -7,7 +7,10 @@ Kept by the Web chat. "Decided" items record who decided and when; "Open" items 
 | # | Decision | By, when |
 |---|---|---|
 | W-01 | **No server storage** this release. Files live only for the session; Save / Save as deliver a browser download. Dropped: My files, quota, "autosaved to your storage", storage in the account menu. | Arun, 6 Nov |
-| W-03 | TLS: certificate source is **pluggable** (PEM files on disk, reloaded on renewal; built). Whether Pezhai issues/renews certificates is being asked of the Vault chat. No Let's Encrypt client for now. | Arun, 6 Nov |
+| W-03 | TLS: Pezhai can't issue browser-trusted certificates, so **our own C# ACME client for Let's Encrypt** (no externals), automatic renewal, hot reload in Kestrel (pluggable source already built). Storing the certificate in Pezhai as a secret: maybe later. | Arun, 6 Nov |
+| — | Domain will likely be **chuvadi.in**; it stays a config value. | Arun, 6 Nov |
+| — | Sangam client registration when Sangam goes to production; until then integrate and test against Sangam run locally from `arunshivab/sangam` (read-only) or its demo setup. Issuer, client id and redirect URLs are config. | Arun, 6 Nov |
+| — | E2E deployment is the **last** step: build and test everything first; keep the runbook ready. | Arun, 6 Nov |
 | W-04 / S-01 | Sangam sign-in with **our own OpenID Connect client code**; no Microsoft sign-in package; Sangam repo read-only. Protocol facts: `SANGAM-INTEGRATION.md`. | Arun, 6 Nov |
 | W-06 | Packages come from the Reader's committed `ci/packages` feed (byte-identical to what Windows ships). | Coordinator, 6 Nov |
 | W-07 | No sharing ("Shared with me", "Share a link") this release. | Arun, 6 Nov |
@@ -21,8 +24,8 @@ Kept by the Web chat. "Decided" items record who decided and when; "Open" items 
 ### W-02 Isolation: per-person worker vs shared process
 Full pros, cons and measurements: `ISOLATION-DECISION.md`. Recommendation: per-person workers.
 
-### W-05 Existing-file hooks H0–H9
-Exact diffs and pros/cons: `proposals/HOST-CHROME-PROPOSAL.md`.
+### W-05 Existing-file hooks
+The earlier H0–H9 proposal is withdrawn in favour of the Foundation's groups. Remaining gaps G1–G4: `WEB-GAPS-AFTER-FOUNDATION.md`.
 
 ### W-08 Signing certificates uploaded to the server
 The Reader's "Sign with a certificate" asks for a `.pfx`/`.p12`, which contains the person's **private key**. On the portal that key would be uploaded to our server (kept only for the session). 12c lists signing as Sangam-gated.

@@ -238,6 +238,39 @@
         }
     }
 
+    async function copyText(text) {
+        try {
+            if (!navigator.clipboard) return false;
+            await navigator.clipboard.writeText(text);
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    // Reports the viewport to .NET (WebPlatformInfo) at start and after resizes settle, so the Ui
+    // can follow the browser between desktop, tablet and phone layouts (Foundation F-5).
+    function watchViewport(dotnet) {
+        var coarse = window.matchMedia ? window.matchMedia('(pointer: coarse)') : null;
+        var isMac = /Mac|iPhone|iPad|iPod/.test(navigator.platform || '') || /Mac OS X/.test(navigator.userAgent);
+        var last = '';
+        var timer = null;
+        function report() {
+            var w = Math.round(window.innerWidth || document.documentElement.clientWidth || 0);
+            var c = !!(coarse && coarse.matches);
+            var key = w + '|' + c;
+            if (key === last) return;
+            last = key;
+            dotnet.invokeMethodAsync('Report', w, c, isMac).catch(function () { });
+        }
+        window.addEventListener('resize', function () {
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(report, 150);
+        });
+        if (coarse && coarse.addEventListener) coarse.addEventListener('change', report);
+        report();
+    }
+
     function openLink(url) {
         try {
             if (!/^(https?:|mailto:)/i.test(url)) return false;
@@ -249,5 +282,5 @@
         }
     }
 
-    window.chvdPortal = { pick: pick, download: download, print: print, copyImage: copyImage, openLink: openLink };
+    window.chvdPortal = { pick: pick, download: download, print: print, copyImage: copyImage, copyText: copyText, openLink: openLink, watchViewport: watchViewport };
 })();
