@@ -7,7 +7,7 @@ nothing from them is still waiting.
 
 Four new hooks. They are **not** applied on this branch; `tools/mobile-ui/preview.sh` applies
 `proposal/mobile-ui-hooks-3.patch` (all four) in a scratch copy for testing. It applies cleanly to
-63af90f with `git apply`.
+63af90f and to the current tip **615afde** (second and third combined patches) with `git apply`.
 
 | Patch | File | Decision | Lines |
 |---|---|---|---|

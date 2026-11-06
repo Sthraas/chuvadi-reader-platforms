@@ -398,6 +398,10 @@ html[data-shell="phone"] .home .r-lock span { display: none; }
 html[data-shell="phone"] .home .side { width: auto; margin-top: 26px; padding: 0; border: none; background: transparent; position: static; }
 html[data-shell="phone"] .home .smap-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
+/* Folder paths mean nothing without a file manager (the Reader hides "Show in folder" there too). */
+html[data-shell="tablet"] .libp-folder, html[data-shell="phone"] .libp-folder,
+html[data-shell="tablet"] .smap-folder, html[data-shell="phone"] .smap-folder { display: none; }
+
 /* Library: one row of chips that scrolls sideways; Table becomes a two-line list; the Shelf keeps
    its desktop look (each shelf scrolls sideways). Opens with Table (the Default view setting is not
    built yet — Settings shows it as "Coming soon"). */
@@ -410,13 +414,40 @@ html[data-shell="phone"] .librow {
     display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; grid-template-areas: "c n p" "c t u";
     align-items: center; column-gap: 8px; row-gap: 0; padding: 4px 0; min-height: 52px;
 }
-html[data-shell="phone"] .librow > .libcheck { grid-area: c; width: 20px; height: 20px; }
+/* The row's checkbox (bulk select) as a 44 px target: drawn with the theme's tokens, 20 px box inside. */
+html[data-shell="phone"] .librow > .libcheck {
+    grid-area: c; position: relative; flex: none; width: 44px; height: 44px; margin: 0 0 0 -8px;
+    -webkit-appearance: none; appearance: none; background: none; border: none; border-radius: 10px; cursor: pointer;
+}
+html[data-shell="phone"] .librow > .libcheck::before {
+    content: ""; position: absolute; inset: 12px; box-sizing: border-box; border-radius: 5px;
+    border: 1.5px solid var(--chvd-border); background: var(--chvd-surface-hi);
+}
+html[data-shell="phone"] .librow > .libcheck:checked::before { background: var(--chvd-binding); border-color: var(--chvd-binding); }
+html[data-shell="phone"] .librow > .libcheck:checked::after {
+    content: ""; position: absolute; left: 18px; top: 14px; width: 5px; height: 10px;
+    border: solid var(--chvd-on-accent); border-width: 0 2px 2px 0; transform: rotate(45deg);
+}
+html[data-shell="phone"] .librow > .libcheck:focus-visible { outline: 2px solid var(--chvd-binding); outline-offset: -4px; }
 html[data-shell="phone"] .librow > .lib-name { grid-area: n; min-width: 0; min-height: 32px; }
 html[data-shell="phone"] .librow > .lib-tags { grid-area: t; min-width: 0; flex-wrap: nowrap; overflow: hidden; }
 html[data-shell="phone"] .librow > .num:nth-of-type(1) { grid-area: p; }
 html[data-shell="phone"] .librow > .num:nth-of-type(2) { display: none; }
 html[data-shell="phone"] .librow > .num:nth-of-type(3) { grid-area: u; }
 html[data-shell="phone"] .librow .lib-path { display: none; }
+/* Small controls keep their look; an invisible ::after brings each hit area to 44 px. */
+html[data-shell="phone"] .librow .tag-add,
+html[data-shell="phone"] .librow > .lib-name,
+html[data-shell="phone"] .libp-filter .tagchip,
+html[data-shell="phone"] .libp-views .vbtn,
+html[data-shell="phone"] .libp-go { position: relative; }
+html[data-shell="phone"] .librow .tag-add::after { content: ""; position: absolute; inset: -12px; }
+html[data-shell="phone"] .librow > .lib-name::after,
+html[data-shell="phone"] .libp-filter .tagchip::after { content: ""; position: absolute; inset: -6px 0; }
+html[data-shell="phone"] .libp-views .vbtn::after { content: ""; position: absolute; inset: -4px 0; }
+html[data-shell="phone"] .libp-go::after { content: ""; position: absolute; inset: -9px -4px; }
+html[data-shell="phone"] .libp-search { margin: 8px 16px; }
+html[data-shell="phone"] .libp-search input { min-height: 44px; margin: -12px 0; min-width: 0; text-overflow: ellipsis; }
 /* The Shelf keeps its desktop look; each shelf already scrolls sideways. */
 
 /* Settings A: the section list alone; a section opens as its own screen (hook H-6 adds .phone-list

@@ -8,7 +8,7 @@
 | MU-5 pen draws, finger pans | D-42 (a) | **Applied by Foundation** in reader.js (`penSplit`); my CSS half removed (reader.js handles it) |
 | MU-6 Tabs sheet | D-43 (a) | Built; switch / close need H-5 |
 | MU-7 phone landscape | D-44 (b) | Built; the off-document bar is icon-only in landscape too |
-| MU-8 phone Home / Library / Settings | D-45: bar B, Home B, Library both, Settings A | **Built.** Settings A needs H-6. Open points below |
+| MU-8 phone Home / Library / Settings | D-45: bar B, Home B, Library both, Settings A | **Built.** Settings A needs H-6. 7 Nov polish: every Library control ≥ 44 px (checkbox, + tag, chips, name, Search, view toggle), folder paths hidden on phone and tablet, search box fills its field. Open points below |
 | MU-9 Protect FAB | D-46 | Built: Save redacted copy |
 | MU-9 desk counter | D-46 | Bench's (Foundation 63af90f). Mine removed so the two don't fight; please confirm |
 | MU-10 title | D-47 file name | As built |

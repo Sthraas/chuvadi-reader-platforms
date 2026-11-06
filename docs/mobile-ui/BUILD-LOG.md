@@ -215,3 +215,24 @@ Evidence:
   - Now: every check passes on phone portrait and landscape, jitter, and tablet.
 - Lesson: my fling limit was tuned to CDP's instant events. Injected touch on a slow emulator, and a
   slow real finger, need the distance rule too.
+
+### 7 Nov (late): Foundation 615afde merged; MU-8 polish
+- Merged `platform/foundation` 615afde (second and third combined patches: PlatformText wording —
+  "Follow the phone's light / dark setting" now shows —, Licences page, Print packages). Clean merge.
+  All four hooks (H-5 to H-8) still apply.
+- Results: 0 warnings; tests 171 + 33 + 19 + 12 = 235 pass with hooks applied.
+- MU-8 fidelity pass against 4a and the D-45 mocks (CSS only):
+  - The Library row checkbox (20 px) and "+" tag (20 px) were under the 44 px target. The checkbox is
+    now a 44 px theme-drawn box (tap selects; the Press bar appears). The tag "+", category chips,
+    file name, view toggle and Search keep their look, with an invisible `::after` making each hit
+    area 44 px. A script checks every visible control on the Library: none under 44 px.
+  - Folder paths (Library header, Home storage map) are hidden on phone and tablet: no file manager
+    there.
+  - The Library search input fills its 44 px field, with an ellipsis on the long placeholder.
+- Evidence:
+  - Desktop vs 615afde: Home, Library and Read differ only in the clock.
+  - Phone and tablet gestures and checks all pass; 0 console errors on the 5 MU-8 screens.
+- Still open (decisions; OPTIONS.md): Home search placement (Dashboard hook), Settings row summaries
+  (Settings hook), Library Default view (the Reader chat's setting).
+- Android CI is stopped (GitHub billing), so this was tested locally only. The device check of the
+  swipe fix and the over-wide phone element wait for the Android chat's run.
