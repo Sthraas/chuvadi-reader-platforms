@@ -7,7 +7,7 @@
 Packages come from chuvadi-reader's committed `ci/packages` (byte-identical to what the Windows app ships).
 ```bash
 scripts/setup-feed.sh                 # copy ci/packages → ./localpackages (what nuget.config points to)
-scripts/setup-feed.sh --verify-pack   # also check: chuvadi-pdf v3.31.1 re-packs to the same package set
+scripts/setup-feed.sh --verify-pack   # also check: chuvadi-pdf v3.31.2 re-packs to the same package set
 ```
 CI restores directly with `--configfile ci/nuget.config`.
 
@@ -22,7 +22,11 @@ Expected: 0 warnings, 0 errors, all tests pass.
 ```powershell
 dotnet build ChuvadiReader.slnx -c Release
 dotnet run --project src/ChuvadiReader.Windows -c Release
+dotnet publish src/ChuvadiReader.Windows -c Release              # ReadyToRun, win-x64 (add -r win-arm64 for Arm)
 ```
 
+## Testing-only previews and pixel checks
+`tests/ChuvadiReader.MobileUi.Preview` serves the real Ui in a browser (`CHVD_FF=phone|tablet|desktop`; desktop reports Windows). `tools/PixelProof` holds the Playwright scripts used to prove Windows renders unchanged (`COMBINED-HOOKS.md`). Neither ships.
+
 ## Writing a host
-See `PLATFORM-INTERFACE.md` §1-§2 and `HANDOFF.md` (written once Arun has decided F-1…F-6).
+See `PLATFORM-INTERFACE.md` §1-§2 and `HANDOFF.md`.
