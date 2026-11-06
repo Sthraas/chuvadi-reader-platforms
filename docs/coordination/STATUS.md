@@ -1,6 +1,6 @@
 # Programme status
 
-_Last updated: 6 Nov 2026, 08:30 IST (coordinator check-in, from the repo and CI; no browser tool available to reach the chats at 06:00–08:30; no commits on any branch since 06:40 IST — all chats paused waiting for decisions)._
+_Last updated: 6 Nov 2026, 09:30 IST (coordinator check-in, from the repo and CI; no browser tool available to reach the chats at 06:00–09:30; no commits on any branch since 06:40 IST — all chats paused waiting for decisions)._
 
 | Chat | Branch | Last commit (UTC) | CI | State |
 |---|---|---|---|---|
@@ -13,7 +13,7 @@ _Last updated: 6 Nov 2026, 08:30 IST (coordinator check-in, from the repo and CI
 | Web portal UI | `platform/web-ui` | 00:15 sign-in, account menu, gate | green | Waiting for decisions D-31–D-39 (logged) |
 
 ## Delivery gap
-Decisions D-24 to D-53 are logged in `DECISIONS.md` but not yet delivered: the coordinator's browser link to Arun's Chrome (Claude in Chrome side panel) was disconnected at every check-in from 06:00 to 08:30. They are delivered at the next check-in with the link up.
+Decisions D-24 to D-53 are logged in `DECISIONS.md` but not yet delivered: the coordinator's browser link to Arun's Chrome (Claude in Chrome side panel) was disconnected at every check-in from 06:00 to 09:30. They are delivered at the next check-in with the link up.
 
 ## Needs Arun
 - Push `platform/foundation-pr` to arunshivab/chuvadi-reader and open the PR (text in `docs/foundation/PR-DESCRIPTION.md`); merge after the six Windows checks. Access to the public repo was blocked for the chats and the coordinator.
