@@ -31,6 +31,12 @@
     {
         <ChuvadiReader.Ui.Components.Platform.Phone.TouchSupport />
     }
+@if (IsPortal && Platform.Capabilities.DropFiles)
+{
+    @* D-89 A: the portal catches dropped documents itself (the browser would otherwise open them),
+       on every layout, phone included. Never rendered on desktop or Android. *@
+    <ChuvadiReader.Ui.Components.Platform.Portal.PortalDropCatcher />
+}
 
     @if (ShellLayout == ChuvadiReader.Platform.ShellLayout.Phone)
     {

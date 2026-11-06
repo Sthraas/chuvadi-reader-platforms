@@ -37,8 +37,12 @@ public sealed class PreviewPlatform(FormFactor formFactor, bool web = false) : I
         {
             PickFolders = false, SaveInPlace = false, WatchFolders = false, RevealInFolder = false,
             SavesAsDownload = true, ServerSide = true,
+            // CHVD_DROP=0: the portal before its drop catcher is on (the Web host's D-89 setting until then).
+            DropFiles = Environment.GetEnvironmentVariable("CHVD_DROP") != "0",
         }
-        : FixedPlatformInfo.DesktopCapabilities;
+        : formFactor == FormFactor.Desktop
+        ? FixedPlatformInfo.DesktopCapabilities
+        : FixedPlatformInfo.DesktopCapabilities with { DropFiles = false }; // as the Android host reports
 
     public IKeyLabels Keys { get; } = new CtrlKeyLabels();
 }
@@ -135,4 +139,42 @@ public sealed class PreviewHostNotices : IHostNotices
     public string? Title => ".NET runtime";
 
     public string ReadText() => "PREVIEW: a host's own third-party notices appear here (Android: the .NET runtime and .NET for Android notices).";
+}
+
+/// <summary>Preview stand-in for the Web host's drop handling (D-89 A): stores each dropped file in a temp
+/// folder and opens it through the kit's router, as the Web host does with its working copies.</summary>
+public sealed class PreviewDroppedFiles(ChuvadiReader.Hosting.IncomingFiles incoming) : IDroppedFiles
+{
+    private static readonly string Folder = Path.Combine(Path.GetTempPath(), "chvd-preview-drops");
+
+    public bool IsAvailable => true;
+
+    public long MaxFileBytes => 50L * 1024 * 1024;
+
+    public async Task<IReadOnlyList<string>> ReceiveAsync(IReadOnlyList<DroppedFile> files, CancellationToken ct = default)
+    {
+        Directory.CreateDirectory(Folder);
+        var failures = new List<string>();
+        var stored = new List<string>();
+        foreach (var f in files)
+        {
+            if (!ChuvadiReader.Core.Documents.DocumentFormatExtensions.IsOpenable(f.Name))
+            {
+                failures.Add($"Couldn't upload {f.Name}: Chuvadi doesn't open this kind of file.");
+                continue;
+            }
+
+            var path = Path.Combine(Folder, Guid.NewGuid().ToString("N")[..8] + "-" + Path.GetFileName(f.Name));
+            await using (var source = f.OpenRead(ct))
+            await using (var target = File.Create(path))
+            {
+                await source.CopyToAsync(target, ct);
+            }
+
+            stored.Add(path);
+        }
+
+        incoming.Receive(stored);
+        return failures;
+    }
 }

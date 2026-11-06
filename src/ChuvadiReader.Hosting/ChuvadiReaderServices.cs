@@ -100,6 +100,7 @@ public static class ChuvadiReaderServices
         (typeof(IPrintService), typeof(NoopPrintService)),
         (typeof(IAppInstance), typeof(NoAppInstance)),
         (typeof(IHostNotices), typeof(NoHostNotices)),
+        (typeof(IDroppedFiles), typeof(NoDroppedFiles)),
         (typeof(IFileWriteBack), typeof(NoFileWriteBack)),
         (typeof(IAppPaths), typeof(Desktop.DesktopAppPaths)),
         (typeof(IAccount), typeof(LocalAccount)),

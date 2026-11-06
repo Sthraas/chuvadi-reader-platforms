@@ -33,6 +33,7 @@ if (ff != FormFactor.Desktop)
 if (web)
 {
     // The Web host registers these from its configuration; the preview uses the placeholders.
+    builder.Services.AddScoped<IDroppedFiles, PreviewDroppedFiles>();
     builder.Services.AddSingleton(new ChuvadiReader.Ui.Components.Platform.Portal.PortalLinks(ChuvadiReader.Ui.Components.Platform.Portal.PortalLinks.PlaceholderDesktopAppUrl, null, TermsUrl: "/licence"));
 }
 
