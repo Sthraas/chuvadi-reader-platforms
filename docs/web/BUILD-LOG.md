@@ -92,3 +92,23 @@ Findings for the Reader chat / coordinator (in the proposal): Phase 0 sample rec
 - Delivery: `OutboxDelivery.DeliverAsync` (write-back) and the outbox watch share one record of delivered file versions (path, size, time), so a save is downloaded once whichever path reports it, and a later re-save of the same file is delivered again.
 - Checks: build 0 warnings/0 errors; 47/47 tests; browser flows all pass (open, print → PDF + `print()`, merge → download, no console errors); with Group A the portal shows no window buttons and the server status text; a 390 px touch viewport switches `<html data-form-factor>` to `phone`, back to `desktop` at 1440 px.
 - Decisions received: own ACME client for Let's Encrypt; domain likely chuvadi.in (config); Sangam tested locally until it goes to production; E2E deployment last.
+
+### 12. Decisions D-24 to D-54 read; branch pushed (6 Nov, afternoon)
+- Read `docs/coordination/DECISIONS.md` on main. For Web: per-person workers (D-24), own ACME client (D-25), hooks into the Foundation's combined patch (D-26), certificate signing off (D-27), tmpfs + LUKS (D-28), appearance settings in browser storage (D-29), 30 min idle / 8 h absolute with a 5-minute warning (D-30), portal UI items D-31 to D-39, chuvadi-pdf 3.31.2 everywhere (D-54).
+- Pushed the Foundation-based branch with `--force-with-lease` (approved), rebased again onto `platform/foundation` @ `60dca85` (Groups B and C applied): build 0/0, 47/47 tests, browser flows pass, Merge downloaded once (write-back and outbox watch agree).
+- chuvadi-pdf 3.31.2 is not yet in `ci/packages` on `platform/foundation`; rebase when it is.
+
+### 13. ACME client for Let's Encrypt (`src/ChuvadiReader.Web/Hosting/Acme/`)
+Our own RFC 8555 client, BCL only:
+- `AcmeJws`: base64url, P-256 JWK, RFC 7638 thumbprint, flattened JWS with ES256 (`jwk` on newAccount, `kid` after), POST-as-GET.
+- `AcmeClient`: directory, nonces (Replay-Nonce kept; `badNonce` retried 3 times), account (terms must be agreed), order, http-01 per authorization, polling with Retry-After, finalize with a CSR for a fresh P-256 key naming every domain, PEM chain download; challenge tokens removed afterwards whatever happens.
+- `Http01ChallengeStore` + `UseHttp01Challenges()`: answers only published tokens, GET only, ahead of HTTPS redirection and sign-in.
+- `AcmeCertificateManager` (the `ICertificateSource` when ACME is on): loads the stored certificate at start, else serves a 2-day self-signed one so HTTPS comes up; installs a new certificate at once (Kestrel's certificate selector reads it per handshake) and writes key and chain atomically, owner-only. Renewal window = `RenewBeforeDays`, capped at a third of the lifetime.
+- `AcmeRenewalService`: checks every 12 h; on failure keeps the current certificate, logs, retries after 10 min doubling up to 12 h.
+- Startup fails fast if ACME is on without certificate paths, domains or account folder. Default directory is Let's Encrypt staging.
+
+Tests (`AcmeTests.cs`, 16 new): a strict fake ACME server in the test project (our code) checks every signature, single-use nonces, the `url` header, jwk/kid use, POST-as-GET, CSR names, and validates http-01 by fetching from the portal. Covered: real portal first start orders, installs and **serves the new certificate on the same listener without restart** (TLS handshake checked); restart reuses certificate and account; renewal inside the window; 6-day/90-day windows; bad-nonce retry and give-up; failed validation; terms not agreed; same key → same account; challenge endpoint answers only published tokens; incomplete settings stop startup.
+```
+dotnet test tests/ChuvadiReader.Web.Tests -c Release   # 63 passed, 3 consecutive runs
+```
+Not done here: a run against Let's Encrypt **staging** needs the real domain pointing at the server (deployment step). Pebble (Let's Encrypt's own test server) would be an extra conformance check, but building it from source here was refused by my sandbox's safety check (external code); it can be run on the test VM if the coordinator wants it, test-only.
