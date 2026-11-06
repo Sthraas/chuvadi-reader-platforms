@@ -1,0 +1,27 @@
+/* Host overlays for the browser file chooser and upload progress, plus the hidden print frame.
+   Functional only, built from the Ui's own tokens; the Web portal UI chat owns their final look. */
+.chvd-portal-overlay {
+    position: fixed; inset: 0; z-index: 10000;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(26, 19, 16, 0.30);
+}
+.chvd-portal-card {
+    min-width: 300px; max-width: min(440px, calc(100vw - 32px));
+    padding: 18px 20px 16px; border-radius: 12px;
+    background: var(--chvd-surface-hi); color: var(--chvd-ink);
+    border: 0.5px solid var(--chvd-border);
+    box-shadow: 0 20px 60px rgba(26, 19, 16, 0.25);
+}
+.chvd-portal-title { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+.chvd-portal-body { font-size: 13.5px; color: var(--chvd-ink-soft); word-break: break-word; }
+.chvd-portal-body p { margin: 0 0 4px; }
+.chvd-portal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+.chvd-portal-btn {
+    height: 32px; padding: 0 14px; border-radius: 8px; font: inherit; font-size: 13px; cursor: pointer;
+    background: transparent; color: var(--chvd-ink); border: 0.5px solid var(--chvd-border);
+}
+.chvd-portal-btn.primary { background: var(--chvd-binding); color: var(--chvd-on-accent); border-color: var(--chvd-binding); }
+.chvd-portal-progress { height: 5px; margin-top: 10px; border-radius: 3px; background: var(--chvd-surface-lo); overflow: hidden; }
+.chvd-portal-progress span { display: block; height: 100%; width: 0; background: var(--chvd-olive); transition: width 0.2s; }
+/* Off-screen but rendered: a PDF viewer in a hidden (display:none / visibility:hidden) frame may not print. */
+.chvd-portal-print { position: fixed; left: -10000px; top: 0; width: 800px; height: 600px; border: 0; }
