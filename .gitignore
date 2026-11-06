@@ -4,3 +4,5 @@ obj/
 .vs/
 *.keystore
 *.jks
+__pycache__/
+*.pyc

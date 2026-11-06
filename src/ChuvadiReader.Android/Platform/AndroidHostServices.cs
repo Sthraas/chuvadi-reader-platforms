@@ -161,3 +161,28 @@ public sealed class AndroidExternalLinks : IExternalLinks
         }
     }
 }
+
+/// <summary>
+/// Who is using the app (decision A-10, option a). Android has no person's name to offer: the OS
+/// user is the app's sandbox id (e.g. u0_a209), which Home would show as "Good morning, U0_a209".
+/// So the display name is empty and Core's UserProfileService shows no name until the person sets
+/// one in Settings › Profile. No sign-in on Android yet (Sangam comes later).
+/// </summary>
+public sealed class AndroidAccount : IAccount
+{
+    public bool IsSignedIn => false;
+
+    public string DisplayName => string.Empty;
+
+    public string? Email => null;
+
+    public event Action? Changed
+    {
+        add { }
+        remove { }
+    }
+
+    public Task<bool> SignInAsync(CancellationToken ct = default) => Task.FromResult(false);
+
+    public Task SignOutAsync(CancellationToken ct = default) => Task.CompletedTask;
+}

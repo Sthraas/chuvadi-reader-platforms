@@ -83,26 +83,5 @@ on `data-form-factor="phone"` instead of the top bar, left bar and side rails.
 Move `theme.js` into `ChuvadiReader.Ui/wwwroot/js/` and the host service registrations into one
 `AddChuvadiReaderCore()` in Core, so each host stops copying them.
 
-## P-05 `src/ChuvadiReader.Core/Documents/UserProfileService.cs` — no sandbox user name on Android (A-10)
-Android's `Environment.UserName` is the app's sandbox id (`u0_a216`), shown on Home as
-"Good evening, U0_a216". Return no name instead; the person can set one in Settings, and the
-greeting already handles a null name.
-
-```diff
-@@ public string? Name
-             try
-             {
-+                // Android's OS user name is the app's sandbox id (e.g. u0_a216), not a person's name.
-+                if (OperatingSystem.IsAndroid())
-+                {
-+                    return null;
-+                }
-+
-                 var os = Environment.UserName;
-                 return string.IsNullOrWhiteSpace(os) ? null : Capitalize(os);
-             }
-```
-- **For:** one line; nothing changes on Windows, macOS, Linux or Web.
-- **Against:** a platform check inside Core (the alternative is an `IAccount`/`IPlatformInfo` lookup,
-  which Core can't reach until Foundation's F-2 lands).
-- **Verify:** Android CI tablet screenshot shows the greeting without the id.
+## P-05 — withdrawn (6 Nov)
+A-10 is solved host-side through `IAccount` (Foundation's `UserProfileService` reads it first); no Core edit.

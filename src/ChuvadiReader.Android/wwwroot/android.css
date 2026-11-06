@@ -1,7 +1,0 @@
-/*
-  Android host stylesheet. It styles only the page frame, never Ui markup: platform differences in
-  the Ui (window buttons, tablet sizing, phone shell) come from IPlatformInfo inside the Ui
-  (decision A-03). System bars, cut-outs and the keyboard are kept clear natively (SystemBars.cs):
-  the Android WebView does not apply CSS safe-area insets.
-*/
-html, body { height: 100%; }

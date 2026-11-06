@@ -31,6 +31,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IAppStorage>(storage);
         builder.Services.AddSingleton(storage);
 
+        builder.Services.AddSingleton<IAccount, AndroidAccount>();
         builder.Services.AddSingleton<AndroidPlatformInfo>();
         builder.Services.AddSingleton<IPlatformInfo>(sp => sp.GetRequiredService<AndroidPlatformInfo>());
         builder.Services.AddSingleton<AndroidLifecycle>();

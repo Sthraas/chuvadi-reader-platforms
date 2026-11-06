@@ -58,15 +58,7 @@ a side-by-side with the handout. The app now uses the adaptive layers. Review sh
 the final release. Not drafted: the handout's Night / High-contrast variants and the small "no leaf"
 sizes (≤ 32 px) — Android launchers don't use them.
 
-## A-10 Name shown on Home — OPEN (new)
-Home greets the person by name: Core's `UserProfileService.Name` uses the name set in Settings,
-else falls back to the operating-system account name. On Android that is the app's sandbox user,
-so the CI tablet screenshot shows "Good evening, **U0_a216**".
-| Option | For | Against |
-|---|---|---|
-| (a) No OS-name fallback on Android: `Name` returns null (Core already handles null: greeting without a name) until the person sets one in Settings | Honest; one line; no permission. | Existing Core file (P-05). |
-| (b) Device owner name from the Contacts profile | Personal. | Needs a contacts permission — against "no permissions" and the Play data-safety answer. |
-| (c) Leave it | No work. | Looks broken to every Android user. |
-
-Recommendation: **(a)**, exact diff in `EXISTING-FILE-PROPOSAL.md` P-05. (If Foundation later moves
-the name to `IAccount.DisplayName`, the same rule applies there.)
+## A-10 Name shown on Home — DECIDED (coordinator, 6 Nov): (a), via IAccount
+No name on Android until the person sets one. Foundation's `UserProfileService` already reads
+`IAccount.DisplayName` first, so the host's `AndroidAccount` returns an empty name — no Core edit;
+P-05 withdrawn.

@@ -7,14 +7,15 @@ the .NET 10 Android SDK's (API 36). Distributed through Google Play as an `.aab`
 Decisions waiting on Arun: [DECISIONS.md](DECISIONS.md). Step-by-step record: [BUILD-LOG.md](BUILD-LOG.md).
 
 ## Layout during development
-In this working repo the host lives alone in `src/ChuvadiReader.Android`. It references
+In this working repo the host lives alone in `src/ChuvadiReader.Android`; it references
 `..\ChuvadiReader.Core`, `..\ChuvadiReader.Ui`, `..\ChuvadiReader.Platform` and
-`..\ChuvadiReader.Hosting` — the layout it will have after the platform push. To build, place it
-beside the pinned Foundation snapshot (`FOUNDATION_REF` in `.github/workflows/android.yml`):
+`..\ChuvadiReader.Hosting`, the layout it has after the platform push. Build it in the test
+composition (Foundation + Mobile UI + this host), at the pins in `.github/workflows/android.yml`:
 
 ```bash
-git worktree add --detach ../foundation 5505d5eb97b62a7209b1cb6c4ea872635ce252ab
-cp -r src/ChuvadiReader.Android ../foundation/src/
+git worktree add --detach ../foundation <FOUNDATION_REF>
+git worktree add --detach ../mobileui   <MOBILEUI_REF>
+docs/android/integration/compose.sh ../foundation ../mobileui .
 cd ../foundation
 ```
 
@@ -54,8 +55,9 @@ testing, never for Play.
 1. builds the Release `.aab` + `.apk` and a Debug x86_64 `.apk`, uploaded as `android-packages`;
 2. installs the Debug `.apk` on emulators — phone (pixel_7) and tablet (pixel_tablet), API 35 and
    36 — cold-starts it, waits until the Ui's own text is on screen, rotates it (same process, Ui
-   still there), fails on any crash or WebView console error, and uploads screenshots, UI dumps
-   and logcat.
+   still there), fails on any crash or WebView console error; then opens a test PDF through "Open
+   with" and checks real touch gestures (swipe, double-tap, pinch, Arrange long-press drag).
+   Screenshots, UI dumps, logcat and `gestures.json` are uploaded.
 
 ## Signing for Play (Arun only — never commit a key)
 Play uses **Play App Signing**: Google holds the app signing key; you sign uploads with your own

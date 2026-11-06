@@ -1,0 +1,71 @@
+diff --git a/src/ChuvadiReader.Ui/Components/Platform/Phone/TouchSupport.razor b/src/ChuvadiReader.Ui/Components/Platform/Phone/TouchSupport.razor
+index 8d435a5..a7a5bcd 100644
+--- a/src/ChuvadiReader.Ui/Components/Platform/Phone/TouchSupport.razor
++++ b/src/ChuvadiReader.Ui/Components/Platform/Phone/TouchSupport.razor
+@@ -3,6 +3,7 @@
+ @inject IJSRuntime JS
+ @inject ShellService Shell
+ @inject TabsService Tabs
++@inject ChuvadiReader.Platform.IPlatformInfo PlatformInfo
+ 
+ @*
+     Touch behaviour for the tablet and phone shells (hook H-2): renders nothing; loads mobile.js,
+@@ -15,13 +16,18 @@
+ *@
+ 
+ @code {
+-    [CascadingParameter] public PlatformState? Platform { get; set; }
++    // Reads IPlatformInfo directly (Foundation removed the PlatformState cascade) and re-checks on
++    // FormFactorChanged: a parameterless child isn't re-rendered by MainLayout's own re-render.
+ 
+     private IJSObjectReference? _js;
+     private DotNetObjectReference<TouchSupport>? _self;
+     private bool _on;
+ 
+-    private bool Wanted => Platform?.Shell is ChuvadiReader.Platform.ShellLayout.Tablet or ChuvadiReader.Platform.ShellLayout.Phone;
++    private bool Wanted => ChuvadiReader.Platform.ShellLayouts.Shell(PlatformInfo) is ChuvadiReader.Platform.ShellLayout.Tablet or ChuvadiReader.Platform.ShellLayout.Phone;
++
++    protected override void OnInitialized() => PlatformInfo.FormFactorChanged += OnFormFactorChanged;
++
++    private void OnFormFactorChanged() => _ = InvokeAsync(StateHasChanged);
+ 
+     protected override async Task OnAfterRenderAsync(bool firstRender)
+     {
+@@ -79,6 +85,7 @@
+ 
+     public async ValueTask DisposeAsync()
+     {
++        PlatformInfo.FormFactorChanged -= OnFormFactorChanged;
+         _self?.Dispose();
+         if (_js is null)
+         {
+diff --git a/src/ChuvadiReader.Ui/Layout/MainLayout.razor b/src/ChuvadiReader.Ui/Layout/MainLayout.razor
+index 8708395..d89f613 100644
+--- a/src/ChuvadiReader.Ui/Layout/MainLayout.razor
++++ b/src/ChuvadiReader.Ui/Layout/MainLayout.razor
+@@ -27,6 +27,17 @@
+ 
+ <div class="shell">
+     <ChuvadiReader.Ui.Components.Settings.PreferencesHost />
++    <ChuvadiReader.Ui.Components.Platform.Phone.TouchSupport />
++
++    @if (ChuvadiReader.Platform.ShellLayouts.Shell(Platform) == ChuvadiReader.Platform.ShellLayout.Phone)
++    {
++        <ChuvadiReader.Ui.Components.Platform.Phone.PhoneShell RequestMode="RequestMode" ModeDisabledReason="ModeDisabledReason"
++                                                               Open="AddTab" Find="FindNow" Go="Go" OnDocView="OnDocView">
++            @Body
++        </ChuvadiReader.Ui.Components.Platform.Phone.PhoneShell>
++    }
++    else
++    {
+ 
+     <header class="topbar @(_leftOpen ? "lb-open" : null)" @onmousedown="StartDrag">
+         <div class="tb-left">
+@@ -186,6 +197,7 @@
+             <span class="sb-clock">@_clock</span>
+         </span>
+     </footer>
++    }
+ 
+     @if (Shell.Messages.Count > 0)
+     {

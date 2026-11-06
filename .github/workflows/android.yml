@@ -1,9 +1,10 @@
 name: Android
 
-# Builds the Android host against an exact, pinned snapshot of the Foundation branch (chuvadi-reader
-# c7b9e44 unchanged, plus Foundation's ChuvadiReader.Platform contracts and ChuvadiReader.Hosting kit;
-# read-only checkout, never modified), produces the Play Store .aab plus an .apk, and smoke-tests the app on
-# Android emulators — phone and tablet, on API 35 (the minimum) and API 36 (the latest).
+# Builds the Android test composition (docs/android/integration/compose.sh): a pinned snapshot of
+# platform/foundation + the Mobile app UI chat's new Ui files from a pinned platform/mobile-ui + the
+# hooks re-based on Foundation (pending Foundation's combined patch) + this branch's Android host.
+# Produces the Play Store .aab plus an .apk, then on Android emulators — phone and tablet, API 35
+# (the minimum) and API 36 (the latest) — runs the smoke test and real touch-gesture checks.
 #
 # Tooling here (setup actions, the emulator runner) is test/CI tooling only; nothing from it
 # ships in the app (programme rule 3).
@@ -17,8 +18,10 @@ on:
   workflow_dispatch:
 
 env:
-  # platform/foundation: chuvadi-reader c7b9e44 (chuvadi-pdf 3.31.1 + Chuvadi.Fonts 1.0.0) + platform kit draft.
-  FOUNDATION_REF: 5505d5eb97b62a7209b1cb6c4ea872635ce252ab
+  # platform/foundation: Groups A, B and C applied, PR-ready (chuvadi-pdf 3.31.1 + Chuvadi.Fonts 1.0.0).
+  FOUNDATION_REF: 60dca85b77b7320aaa03a98838492c33cd36017b
+  # platform/mobile-ui: phone shell, tablet sizing, touch gestures.
+  MOBILEUI_REF: ea5d775cde9f7ef15abcca3b14a18881f52d6463
   DOTNET_NOLOGO: '1'
   DOTNET_CLI_TELEMETRY_OPTOUT: '1'
 
@@ -37,8 +40,14 @@ jobs:
           ref: ${{ env.FOUNDATION_REF }}
           path: reader
 
-      - name: Place the Android host beside Core and Ui (final repo layout)
-        run: cp -r platforms/src/ChuvadiReader.Android reader/src/ChuvadiReader.Android
+      - name: Check out the Mobile app UI snapshot (pinned, read-only)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.MOBILEUI_REF }}
+          path: mobileui
+
+      - name: Compose Foundation + Mobile UI + Android host
+        run: bash platforms/docs/android/integration/compose.sh reader mobileui platforms
 
       - uses: actions/setup-dotnet@v4
         with:
@@ -124,7 +133,10 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      - name: Smoke test on the emulator
+      - name: Test tooling (DevTools client for checking gesture results; never shipped)
+        run: pip install websocket-client==1.8.0
+
+      - name: Smoke test and touch gestures on the emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: ${{ matrix.api }}
@@ -133,7 +145,7 @@ jobs:
           profile: ${{ matrix.profile }}
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
-          script: bash docs/android/ci/smoke-test.sh out/chuvadi-reader-debug-x64.apk results/${{ matrix.device }}-api${{ matrix.api }}
+          script: bash docs/android/ci/emulator-tests.sh out/chuvadi-reader-debug-x64.apk results/${{ matrix.device }}-api${{ matrix.api }}
 
       - uses: actions/upload-artifact@v4
         if: always()

@@ -196,3 +196,48 @@ lines of each real crash format (3 of 3 caught, the tool's line ignored).
 | tablet, API 36 | 15 s | 2560x1600 → 1600x2560 | emulator System UI ANR dismissed |
 Same process before and after rotation, Ui still present, no crash or ANR of the app, no WebView
 console errors. Local Release publish: `.aab` 53.9 MB, `.apk` 54.3 MB, 0 warnings.
+
+## 2026-11-06 — Session 3: D-49, A-10, Mobile UI integration, gesture tests
+
+### 22. Inputs
+`docs/coordination/DECISIONS.md` (D-01…D-53) read. For Android: D-16, D-17, D-49, A-10 (a) approved;
+D-54 chuvadi-pdf 3.31.2 — the Foundation packs it; not on any branch yet at this session, so this
+session builds on 3.31.1 and rebases when it lands.
+
+### 23. D-49 (host fixes from the Mobile UI chat)
+| Item | State |
+|---|---|
+| link `ChuvadiReader.Android.styles.css` | done in session 2 (step 16) |
+| link `_content/ChuvadiReader.Ui/css/mobile.css` | done (after shell.css) |
+| remove host tablet CSS, `.topbar .traffic`, body safe-area padding, `data-form-factor` writer | done in session 2 (A-03); `android.css` now removed entirely |
+| form factor via `IPlatformInfo.FormFactorChanged` | done in session 2 (`AndroidPlatformInfo`, sw600dp) |
+| register `IAppLifecycle`, raise `BackRequested` | done in session 2 (`AndroidLifecycle`, `MainActivity` back callback) |
+Also from Foundation's current HANDOFF §2: `theme.js` now comes from the Ui
+(`_content/ChuvadiReader.Ui/js/theme.js`; host copy removed); the host page carries the starting
+`data-shell / data-platform / data-form-factor / data-input` on `<html>` for the first paint, from a
+one-shot inline script using the same 600 dp rule (no resize listener; MainLayout keeps them in sync).
+
+### 24. A-10 — no Core edit needed
+Foundation's `UserProfileService.Name` already reads `IAccount.DisplayName` before the OS name. The host
+registers `AndroidAccount` with an empty display name, so Home says "Good morning." until the person sets a
+name. P-05 withdrawn.
+
+### 25. Mobile UI integration (test composition)
+`docs/android/integration/compose.sh`: Foundation `60dca85` + the Mobile UI chat's new Ui files from
+`ea5d775` (Phone/*, mobile.css, mobile.js) + `mobile-ui-on-foundation.patch` + this host.
+The patch (21 lines) exists only because the Mobile UI branch predates Foundation removing the
+`PlatformState` cascade: MainLayout hooks H-1/H-2 re-based on the current file (`ShellLayouts.Shell(Platform)`),
+and `TouchSupport` reading `IPlatformInfo` + `FormFactorChanged` instead of the cascade. To be replaced by
+Foundation's combined patch (D-26) and the Mobile UI chat's own rebase.
+Results on the composition: Android Debug build 0 warnings; Mobile UI tests 3/3, Hosting tests 27/27,
+Reader tests 161/161.
+
+### 26. Gesture tests (CI)
+`docs/android/ci/emulator-tests.sh` = smoke test + `gestures.py`:
+- the test PDF (`make-test-pdf.py`, 6 pages, checked to open with chuvadi-pdf 3.31.1) is pushed to
+  Downloads and opened by ACTION_VIEW with its MediaStore `content://` URI — the real "Open with" path;
+- gestures are real multi-touch events written to the emulator's touchscreen (`touch.py`; `adb input`
+  can't do two fingers or a fast double-tap);
+- results are read from the page through the Debug build's WebView DevTools socket (`cdp.py`):
+  swipe → counter +1; double-tap → fit mode flips; pinch out → page ≥ 8 % wider; Arrange long-press
+  drag → page order changes. Screenshots after each.
