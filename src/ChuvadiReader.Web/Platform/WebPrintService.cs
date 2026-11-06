@@ -10,7 +10,8 @@ namespace ChuvadiReader.Web.Platform;
 /// Printing on the portal is the browser printing the PDF (coordinator decision, 6 Nov). The whole,
 /// unprotected document is handed over as it is. For a page range or a password-protected file,
 /// chuvadi-pdf assembles a print copy of just those pages (unprotected, in this session's folder,
-/// deleted with the session). The browser's own dialog then chooses printer, copies and scaling, and
+/// deleted with the session). A file whose permissions forbid printing is refused, as on every
+/// platform. The browser's own dialog then chooses printer, copies and scaling, and
 /// it does not report back whether the person printed or cancelled — so success means "handed to
 /// the print dialog".
 /// </summary>
@@ -77,6 +78,14 @@ public sealed class WebPrintService : IPrintService
     private Prepared Prepare(string pdfPath, PrintRequest request, CancellationToken ct)
     {
         using var doc = string.IsNullOrEmpty(request.Password) ? PdfDocument.Open(pdfPath) : PdfDocument.Open(pdfPath, request.Password);
+
+        // The file's own "no printing" permission (L-8). Checked before anything is handed over: the
+        // browser would otherwise get the whole file, and a print copy would carry no protection at all.
+        if (!PrintPermission.Allows(doc))
+        {
+            return new Prepared(null, 0, PrintPermission.Refused);
+        }
+
         if (!PageRangeParser.TryParse(request.PageRange, doc.Pages.Count, request.CurrentPage, out var pages, out var error))
         {
             return new Prepared(null, 0, error);
