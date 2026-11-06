@@ -2,6 +2,13 @@
 
 6 Nov 2026. Each with pros, cons and a recommendation. L-1 to L-3 are carried over from session 1.
 
+**Decided by the coordinator (6 Nov, 23:55):** L-5 A; L-6 A; L-7 A now, single instance on Arun's programme
+list; L-8 B — respect "no printing" on every platform as a listed bug fix (Foundation in Core and Windows,
+Linux follows); L-9 (1) the kit takes the save-folder fallback, (2) Print packages adopted centrally in
+`ci/packages` (the Linux copies go on rebase), (3) placeholders stand, licence on Arun's list, (4) the
+coordinator deletes `platform/linux-probe`. L-5's library asks (1)–(3) go to Arun for the library
+coordinator. Still open: L-1, L-2, L-3, L-4.
+
 ## L-1 Which Ubuntu releases (and GTK)
 | Option | Pros | Cons |
 |---|---|---|

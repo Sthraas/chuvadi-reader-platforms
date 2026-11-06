@@ -313,3 +313,35 @@ No crash, no effect on the job. A two-dialog C reproducer without our code does 
 worked around (it would mean reaching into GTK's internals).
 Also in the CI log: Microsoft Edge (preinstalled on the runner) aborts at teardown — the UI pass's external
 link opened it through `xdg-open`; test environment only.
+
+## 2026-11-07 — Session 3: coordinator decisions, ReadyToRun check
+
+### 26. ReadyToRun publish (HANDOFF §2a, D-50)
+The host csproj carries §2a's block (only when publishing; `PublishReadyToRun`, `SelfContained` false unless
+asked). One difference, kept on purpose: the default runtime is the SDK's own (`linux-x64` on x64,
+`linux-arm64` on ARM64) rather than a fixed `linux-x64`, so a plain `dotnet publish` on an ARM64 machine
+builds ARM64; `-r` still picks either.
+
+Checked on a fresh publish: **all 40 of our assemblies are precompiled** (CLI header has a non-zero
+ManagedNativeHeader): `chuvadi-reader.dll`, Ui, Core, Hosting, Platform, every Chuvadi library
+(Pdf.*, Sheets, Docs, Fonts, Print, Print.Ipp) and Blazor's Components / WebView.
+
+Measured on the real app (not only the shared part): `smoke.sh`, launches alternating between the two
+builds, 2-CPU sandbox, no GPU, build servers stopped.
+
+| Publish | Size | Window shown (median) | Blazor first render (median) |
+|---|---|---|---|
+| JIT (`-p:PublishReadyToRun=false`) | 17 MB | 252 ms | 1,267 ms |
+| **ReadyToRun (shipped)** | 25 MB | 229 ms | **1,089 ms** (−14 %) |
+
+The rest of first render is WebKit's page load and Blazor's first render in the page, not JIT.
+(Absolute numbers are higher than §21's 785 ms: this session's sandbox has 2 CPUs.)
+
+### 27. Window drag: ignore a move that arrives after the button is up
+One local full pass (2-CPU sandbox, first step after launch) failed `04-window-restore-drag-maximise`: the
+top bar's mouse-down reaches `chvd_begin_move` one page → .NET → GTK round trip later, and the test's
+half-second drag had ended by then. Repeated drags moved the window 8/8 with no stuck move afterwards, so
+the outcome was only "no move". To make a late move safe, `chvd_begin_move` now checks the pointer's button
+state and skips the move when the button is already released (otherwise the window manager could start a
+move with no release to end it). Checked: drags at two speeds 8/8 move; quick clicks on the top bar 5/5 leave
+the window where it was, and it does not follow the pointer afterwards.

@@ -631,6 +631,20 @@ CHVD_EXPORT void chvd_begin_move(void)
         return;
     }
 
+    /* The page's mouse-down reaches here one round trip later; if the button is already up, a
+       move would start with nothing to end it (the window would follow the pointer). Skip it. */
+    GdkModifierType held = 0;
+    double px = 0, py = 0;
+    if (gdk_surface_get_device_position(surface, S.press_device, &px, &py, &held))
+    {
+        int b = S.press_button ? S.press_button : 1;
+        GdkModifierType need = b == 1 ? GDK_BUTTON1_MASK : b == 2 ? GDK_BUTTON2_MASK : GDK_BUTTON3_MASK;
+        if (!(held & need))
+        {
+            return;
+        }
+    }
+
     graphene_point_t in = GRAPHENE_POINT_INIT((float)S.press_x, (float)S.press_y), out;
     if (!gtk_widget_compute_point(GTK_WIDGET(S.view), GTK_WIDGET(native), &in, &out))
     {
