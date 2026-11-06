@@ -1,5 +1,7 @@
 # W-02 — How users are kept apart on the server (final pros and cons, no server storage)
 
+**Decided: D-24, option (b). Built 7 Nov** — `src/ChuvadiReader.Web/Hosting/Workers/`, see BUILD-LOG step 17. The analysis below is kept as the record.
+
 For the coordinator to finalise. Updated 6 Nov 2026 after Arun's decision that nothing is kept after the session, and after rebasing on the Foundation (Group A applied; Groups B and C proposed). The session code already built (`SessionSpace`, tickets, uploads, downloads, print) works the same under both options; what differs is how many processes run it.
 
 ## Measurements (sandbox, 2 cores, .NET 10.0.14, Release publish)
