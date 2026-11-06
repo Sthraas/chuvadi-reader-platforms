@@ -65,11 +65,27 @@
       <_ChvdMonoNotices>@(_ChvdMonoPack->'%(RuntimePackPath)')</_ChvdMonoNotices>
       <_ChvdMonoNotices>$(_ChvdMonoNotices.Split(';').GetValue(0))</_ChvdMonoNotices>
       <_ChvdMonoNotices Condition="'$(_ChvdMonoNotices)' != ''">$([System.IO.Path]::Combine('$(_ChvdMonoNotices)', 'THIRD-PARTY-NOTICES.TXT'))</_ChvdMonoNotices>
+    </PropertyGroup>
+    <!-- The outer step of a universal build has no single RuntimeIdentifier, so no runtime pack is resolved
+         there; the packs it downloads for each architecture are listed in _PackageToDownload with their exact
+         version. Use the first .NET runtime pack, from the NuGet cache or the SDK's packs folder. -->
+    <ItemGroup Condition="'$(_ChvdMonoNotices)' == ''">
+      <_ChvdMonoDownload Include="@(_PackageToDownload)" Condition="$([System.String]::Copy('%(_PackageToDownload.Identity)').StartsWith('Microsoft.NETCore.App.Runtime.'))" />
+    </ItemGroup>
+    <PropertyGroup Condition="'$(_ChvdMonoNotices)' == ''">
+      <_ChvdMonoId>@(_ChvdMonoDownload->'%(Identity)')</_ChvdMonoId>
+      <_ChvdMonoId>$(_ChvdMonoId.Split(';').GetValue(0))</_ChvdMonoId>
+      <_ChvdMonoVersion>@(_ChvdMonoDownload->'%(Version)')</_ChvdMonoVersion>
+      <_ChvdMonoVersion>$(_ChvdMonoVersion.Split(';').GetValue(0).ToString().Trim('[]'))</_ChvdMonoVersion>
+      <_ChvdMonoNotices Condition="'$(_ChvdMonoId)' != '' and Exists('$(NuGetPackageRoot)$(_ChvdMonoId.ToLowerInvariant())/$(_ChvdMonoVersion)/THIRD-PARTY-NOTICES.TXT')">$(NuGetPackageRoot)$(_ChvdMonoId.ToLowerInvariant())/$(_ChvdMonoVersion)/THIRD-PARTY-NOTICES.TXT</_ChvdMonoNotices>
+      <_ChvdMonoNotices Condition="'$(_ChvdMonoNotices)' == '' and '$(_ChvdMonoId)' != '' and Exists('$(NetCoreTargetingPackRoot)/$(_ChvdMonoId)/$(_ChvdMonoVersion)/THIRD-PARTY-NOTICES.TXT')">$(NetCoreTargetingPackRoot)/$(_ChvdMonoId)/$(_ChvdMonoVersion)/THIRD-PARTY-NOTICES.TXT</_ChvdMonoNotices>
+    </PropertyGroup>
+    <PropertyGroup>
       <_ChvdAppleLicense>@(_ChvdApplePack->'%(PackageDirectory)')</_ChvdAppleLicense>
       <_ChvdAppleLicense>$(_ChvdAppleLicense.Split(';').GetValue(0))</_ChvdAppleLicense>
       <_ChvdAppleLicense Condition="'$(_ChvdAppleLicense)' != ''">$([System.IO.Path]::Combine('$(_ChvdAppleLicense)', 'LICENSE'))</_ChvdAppleLicense>
     </PropertyGroup>
-    <Error Condition="'$(_ChvdMonoNotices)' == '' or !Exists('$(_ChvdMonoNotices)')" Text="Chuvadi: .NET runtime notices not found in the resolved runtime pack ('$(_ChvdMonoNotices)'). Resolved framework references: @(ResolvedFrameworkReference->'%(Identity)=%(RuntimePackName)@%(RuntimePackPath)', ' | ')" />
+    <Error Condition="'$(_ChvdMonoNotices)' == '' or !Exists('$(_ChvdMonoNotices)')" Text="Chuvadi: .NET runtime notices not found in the resolved runtime pack ('$(_ChvdMonoNotices)'). Resolved framework references: @(ResolvedFrameworkReference->'%(Identity)=%(RuntimePackName)@%(RuntimePackPath)', ' | '). Downloaded runtime packs: @(_ChvdMonoDownload->'%(Identity) %(Version)', ' | '). NuGet root: $(NuGetPackageRoot). Packs root: $(NetCoreTargetingPackRoot)." />
     <Error Condition="'$(_ChvdAppleLicense)' == '' or !Exists('$(_ChvdAppleLicense)')" Text="Chuvadi: .NET for Mac Catalyst licence not found in the resolved runtime pack ('$(_ChvdAppleLicense)'). Resolved runtime packs: @(ResolvedRuntimePack->'%(FrameworkName)@%(PackageDirectory)', ' | ')" />
     <ItemGroup>
       <BundleResource Include="$(_ChvdMonoNotices)" LogicalName="legal/DOTNET-RUNTIME-THIRD-PARTY-NOTICES.txt" />
