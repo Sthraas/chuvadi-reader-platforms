@@ -23,6 +23,7 @@ public partial class App : Application
     private MainWindow? _main;
     private WpfWindowControls? _windowControls;
     private DispatcherTimer? _fallback;
+    private DesktopSingleInstance? _instance;
 
     private static readonly string LogPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -33,6 +34,15 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        // Single instance (W-A, F-1): a launch while Chuvadi runs hands its files to the running copy
+        // and exits here, before building anything. The first launch pays only for one named mutex.
+        _instance = DesktopSingleInstance.Claim(e.Args, beforeHandOff: WpfForeground.AllowAnyProcess);
+        if (_instance.Role == InstanceRole.HandedOver)
+        {
+            Shutdown();
+            return;
+        }
 
         // Nothing fails silently any more.
         DispatcherUnhandledException += (_, args) =>
@@ -74,6 +84,7 @@ public partial class App : Application
             services.AddSingleton<IImageClipboard, WpfImageClipboard>();
             services.AddSingleton<IClipboard, WpfClipboard>();
             services.AddSingleton<IFileManager, WpfFileManager>();
+            services.AddSingleton<IAppInstance>(_instance);
             services.AddSingleton<IPlatformInfo>(new FixedPlatformInfo(
                 PlatformKind.Windows,
                 InputKinds.Mouse | InputKinds.Keyboard | InputKinds.Touch,
@@ -89,6 +100,14 @@ public partial class App : Application
             _main = new MainWindow(Services);
             _windowControls.Attach(_main);
             MainWindow = _main;
+
+            // Files this copy was started with (Open with, double-click) and files handed over later
+            // all go through one router; each opens in its own tab once the Ui has rendered.
+            var incoming = Services.GetRequiredService<IncomingFiles>();
+            incoming.Delivered += BringToFront;
+            incoming.Receive(e.Args);
+            var instance = _instance;
+            Services.GetRequiredService<IAppReadySignal>().Ready += () => instance.StartListening(RunOnUi);
 
             // Match the window background to the saved theme so the pale default
             // doesn't flash before the (dark) WebView content paints on startup.
@@ -152,6 +171,49 @@ public partial class App : Application
                 _main.Focus();
             }
         });
+    }
+
+    /// <summary>Runs <paramref name="action"/> on the UI thread within <paramref name="wait"/>; when the
+    /// UI is busy past that, the action is withdrawn and never runs (the new launch opens its own window).</summary>
+    private bool RunOnUi(Action action, TimeSpan wait)
+    {
+        var op = Dispatcher.InvokeAsync(action);
+        if (op.Wait(wait) == DispatcherOperationStatus.Completed)
+        {
+            return true;
+        }
+
+        if (op.Abort())
+        {
+            return false;
+        }
+
+        op.Wait(); // it had just started: let it finish (a few microseconds)
+        return op.Status == DispatcherOperationStatus.Completed;
+    }
+
+    private void BringToFront()
+    {
+        if (_main is null || !_main.IsVisible)
+        {
+            return; // at startup the window shows itself
+        }
+
+        if (_main.WindowState == WindowState.Minimized)
+        {
+            _main.WindowState = WindowState.Normal;
+        }
+
+        _main.Activate();
+        _main.Topmost = true;
+        _main.Topmost = false;
+        _main.Focus();
+    }
+
+    protected override void OnExit(ExitEventArgs e)
+    {
+        _instance?.Dispose();
+        base.OnExit(e);
     }
 
     private static void Report(Exception ex)

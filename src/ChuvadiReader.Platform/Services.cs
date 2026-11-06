@@ -187,3 +187,25 @@ public interface IAppCommands
     /// Call it on the Blazor dispatcher (e.g. <c>BlazorWebView.Dispatcher</c>), like any Ui action.</summary>
     Task<bool> InvokeAsync(string id);
 }
+
+/// <summary>
+/// One extra third-party notices text a host ships itself, shown as its own tab on the Licences page
+/// (coordinator, 7 Nov 2026) — e.g. the .NET runtime notices a self-contained host bundles (Android,
+/// Linux, macOS). Read only when that tab opens, never at startup.
+/// </summary>
+public interface IHostNotices
+{
+    /// <summary>Tab label, e.g. ".NET runtime". Null: the host adds nothing (no tab).</summary>
+    string? Title { get; }
+
+    /// <summary>The full text, exactly as shipped. Called when the tab opens.</summary>
+    string ReadText();
+}
+
+/// <summary>Default: no extra notices (Windows, which uses the installed .NET; Web).</summary>
+public sealed class NoHostNotices : IHostNotices
+{
+    public string? Title => null;
+
+    public string ReadText() => string.Empty;
+}

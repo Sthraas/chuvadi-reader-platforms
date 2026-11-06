@@ -122,3 +122,11 @@ public static class Fixtures
         return path;
     }
 }
+
+/// <summary>Preview stand-in for a host's own notices (Android ships the .NET runtime's).</summary>
+public sealed class PreviewHostNotices : IHostNotices
+{
+    public string? Title => ".NET runtime";
+
+    public string ReadText() => "PREVIEW: a host's own third-party notices appear here (Android: the .NET runtime and .NET for Android notices).";
+}

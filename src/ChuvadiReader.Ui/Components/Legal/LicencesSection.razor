@@ -1,6 +1,7 @@
 @namespace ChuvadiReader.Ui.Components.Legal
 @using ChuvadiReader.Ui.Components.Settings
 @inject ChuvadiReader.Platform.IPlatformInfo Platform
+@inject IServiceProvider Services
 
 @*
     Licences (About › Help › Licences; /licence, /terms, /privacy): the legal documents as shipped.
@@ -16,7 +17,7 @@
             }
             <Segmented Options="Options" Value="@Current.Id" ValueChanged="v => _part = v" AriaLabel="Document" />
         </div>
-        <pre class="lic-text" tabindex="0" aria-label="@Current.Label">@LegalTexts.Text(Current)</pre>
+        <pre class="lic-text" tabindex="0" aria-label="@Current.Label">@TextOf(Current)</pre>
     </Lead>
 </SettingsSection>
 
@@ -32,7 +33,26 @@
 
     private string? _part;
 
-    private IReadOnlyList<LegalDoc> Docs => Platform.Capabilities.ServerSide ? LegalTexts.PortalDocs : LegalTexts.AppDocs;
+    private const string HostId = "host";
+
+    private ChuvadiReader.Platform.IHostNotices? _host;
+    private string? _hostText;
+
+    // Optional host seam (kit default: none). Resolved here, not injected, so a host built without the kit still renders.
+    private ChuvadiReader.Platform.IHostNotices? Host =>
+        _host ??= Services.GetService(typeof(ChuvadiReader.Platform.IHostNotices)) as ChuvadiReader.Platform.IHostNotices;
+
+    private IReadOnlyList<LegalDoc> Docs
+    {
+        get
+        {
+            var docs = Platform.Capabilities.ServerSide ? LegalTexts.PortalDocs : LegalTexts.AppDocs;
+            return Host?.Title is { Length: > 0 } title ? [.. docs, new LegalDoc(HostId, title, string.Empty)] : docs;
+        }
+    }
+
+    // The host's text is read when its tab is first shown, then kept.
+    private string TextOf(LegalDoc doc) => doc.Id == HostId ? _hostText ??= Host!.ReadText() : LegalTexts.Text(doc);
 
     private IReadOnlyList<SegOption> Options => Docs.Select(d => new SegOption(d.Id, d.Label)).ToList();
 
