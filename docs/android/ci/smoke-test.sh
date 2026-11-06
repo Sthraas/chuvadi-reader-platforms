@@ -18,12 +18,23 @@ mkdir -p "$OUT"
 fail=0
 
 adb wait-for-device
+# "device" is reported before Android has finished booting; wait until the package manager answers.
+for i in $(seq 1 60); do
+  if [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1" ] && adb shell pm path android >/dev/null 2>&1; then break; fi
+  sleep 5
+done
 adb shell settings put system accelerometer_rotation 0
 adb shell settings put system user_rotation 0
 adb logcat -c
 
 echo "Installing $APK"
-adb install -r "$APK" || { echo "::error::install failed"; exit 1; }
+installed=0
+for attempt in 1 2 3; do
+  if adb install -r "$APK"; then installed=1; break; fi
+  echo "install attempt $attempt failed; retrying"
+  sleep 10
+done
+[ "$installed" -eq 1 ] || { echo "::error::install failed"; exit 1; }
 
 echo "Cold start"
 adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null
