@@ -6,6 +6,16 @@ namespace ChuvadiReader.Core.Reader;
 /// <summary>The PDF a host hands to its operating system's print system, plus what it holds.</summary>
 public sealed record PrintDocument(byte[] Pdf, int PageCount, string JobName);
 
+/// <summary>The file's own permissions forbid printing (<see cref="PrintPermission"/>); the message is
+/// <see cref="PrintPermission.Refused"/>.</summary>
+public sealed class PrintRefusedException : Exception
+{
+    public PrintRefusedException()
+        : base(PrintPermission.Refused)
+    {
+    }
+}
+
 /// <summary>
 /// Prepares a PDF for printing through an OS print system (macOS print panel, Android PrintManager,
 /// browser print), so what prints is what Chuvadi shows, not the OS's own reading of the file:
@@ -22,8 +32,9 @@ public sealed record PrintDocument(byte[] Pdf, int PageCount, string JobName);
 /// </summary>
 public static class PrintDocumentBuilder
 {
-    /// <summary>Builds the print PDF. Throws <see cref="ArgumentException"/> with a short user-facing
-    /// message when the page range can't be used.</summary>
+    /// <summary>Builds the print PDF. Throws <see cref="PrintRefusedException"/> when the file's permissions
+    /// forbid printing (checked first, before any work), and <see cref="ArgumentException"/> with a short
+    /// user-facing message when the page range can't be used.</summary>
     public static Task<PrintDocument> BuildAsync(string pdfPath, PrintRequest request, CancellationToken ct = default)
         => Task.Run(() =>
         {
@@ -33,6 +44,11 @@ public static class PrintDocumentBuilder
             using var doc = string.IsNullOrEmpty(request.Password)
                 ? PdfDocument.Open(pdfPath)
                 : PdfDocument.Open(pdfPath, request.Password);
+
+            if (!PrintPermission.Allows(doc))
+            {
+                throw new PrintRefusedException();
+            }
 
             if (!PageRangeParser.TryParse(request.PageRange, doc.PageCount, request.CurrentPage, out var pages, out var error))
             {

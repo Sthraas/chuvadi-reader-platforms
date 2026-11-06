@@ -61,6 +61,9 @@ version and the Mac model, and attach a screenshot where it says so.
 - [ ] Drop 3 PDFs while the Bench is open: all three join the shelf, in drag order.
 - [ ] Drop an unsupported file (.zip): nothing happens, no error.
 - [ ] Finder → right-click a PDF → Open With → Chuvadi: opens (app already running, and app not running).
+- [ ] **Single instance, tabbed:** with Chuvadi running and a document open, Open With on two more PDFs →
+      both open as new tabs in the same window; no second Chuvadi appears in the Dock.
+- [ ] Drop three PDFs on the **Dock icon** (running and not running): three tabs, in drag order.
 - [ ] Chuvadi does **not** become the default PDF app by itself.
 - [ ] Show in Finder: Finder opens with the file selected.
 - [ ] Share (where the Ui offers it): the macOS share sheet appears next to the top bar; Mail attaches the file.
@@ -82,6 +85,8 @@ version and the Mac model, and attach a screenshot where it says so.
       screen (known risk: macOS substitutes its own fonts — library ask L-1).
 - [ ] A real printer (if one is available): one page in colour, one duplex.
 - [ ] Cancel in the panel: no error, nothing printed.
+- [ ] A PDF whose permissions forbid printing: Print is locked with "This file's permissions don't allow
+      printing."; the print panel never opens.
 
 ## 8. Everything else in the Reader
 - [ ] Open, read, search, Mark, Arrange, Protect, Bench, Merge, Split, Redact, Stamp, Sign — the same
