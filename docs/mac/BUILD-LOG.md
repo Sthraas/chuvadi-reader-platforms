@@ -181,3 +181,35 @@ measured on a real Mac and optimised next.
   `MacAppPaths` instead); Core `CertificateSignService.cs:117` picks `EphemeralKeySet`, which macOS doesn't support
   (signing with a .pfx would fail on Mac); `PasswordService.cs:185` uses case-sensitive path comparison on Mac.
   Fix: test `OperatingSystem.IsMacOS() || OperatingSystem.IsMacCatalyst()`.
+
+---
+
+## 2026-11-06 (afternoon) — Session 2: decisions D-01…D-54 applied
+
+### 17. Rebased on `platform/foundation` (Groups B and C)
+Picks up write-back at every save, host folders, account, individual chuvadi-pdf packages (F4), F1–F3,
+MainLayout platform attributes, `FileAppStorage` moved into the kit (atomic write, F3). Still waiting on
+Foundation for chuvadi-pdf 3.31.2 (D-54) and the Mac Catalyst `IsMacOS()` fixes (F6) — rebase again then.
+
+### 18. Host changes for the newer HANDOFF
+- Host page sets `<html data-shell="desktop" data-platform="macos" data-form-factor="desktop"
+  data-input="mouse keyboard">` so the first paint is already the Mac layout.
+- Mac copy of `FileAppStorage` removed; the kit's `ChuvadiReader.Hosting.Desktop.FileAppStorage` is used.
+- `IShare` → `MacShare` (the macOS share sheet, anchored at the top bar).
+- Incoming files in one place, `MacIncomingFiles`: Finder drop, Finder "Open With" (while running and at
+  launch, via the scene lifecycle events) → Bench when open, else Reader (first file, as the Windows
+  drop). Files that arrive before the first render wait for it.
+- Info.plist `CFBundleDocumentTypes`: the Open panel's types (PDF as Editor, the rest as Viewer), rank
+  **Alternate** — Chuvadi is offered in Open With but never takes over a type by itself.
+  `LSSupportsOpeningDocumentsInPlace` so the original file arrives, not a copy.
+
+### 19. Print fidelity (b) — approved
+`PrintDocumentBuilder` now flattens the whole document with `AnnotationFlattener` (all kinds, chuvadi-pdf's
+generated appearances where the file's are missing or stale, `DropRemainingAnnotations` so nothing stays
+live for macOS to draw its own way), then assembles the chosen pages. Still vector. New test
+`Annotations_are_baked_into_the_page_and_none_stay_live` (red square annotation → no annotations left,
+red pixels in the page). Suite 167/167; Hosting 27/27.
+Residual gaps → library asks (`LIBRARY-ASKS.md`): L-1 embed missing fonts; L-2 flatten with print rules.
+
+### 20. Docs
+`REAL-MAC-CHECKS.md` — the checklist for the real Mac at the end. `LIBRARY-ASKS.md` — L-1, L-2.
