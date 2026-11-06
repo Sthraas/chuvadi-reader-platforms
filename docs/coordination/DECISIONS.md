@@ -177,3 +177,15 @@ Each decided on the chat's own pros and cons. Delivered to the chats at the next
 3. Governing-law city and legal contact for the EULA.
 4. Keep the "not a medical device" clause in the EULA?
 5. Web portal needs its own Terms of Use and a privacy notice (DPDP Act) — and whether sign-in implies acceptance (click-through/tick-box) or just a link.
+
+## 7 Nov 2026 02:05 check-in — coordinator
+| # | Item | Decision |
+|---|---|---|
+| D-82 | Arun's legal answers relayed | Copyright Sthraas Intelligence Pvt Ltd everywhere (incl. LiPicons, via Arun's later assignment); Ahmedabad jurisdiction; keep medical-device clause; Foundation drafts EULA, portal Terms, DPDP Privacy Notice, cookie/storage notice, third-party/font notices, Play data-safety — all "DRAFT, counsel review" |
+| D-83 | Single instance | W-A + L-A + F-1 (Foundation's recommendation); multi-file drop opens each in a tab |
+| D-84 | .NET runtime notices | (a) host supplies one extra notices text shown on the Licences page |
+| D-85 | Android Back closes card (P-06) | Into Foundation's combined patch |
+| D-86 | Web next steps | /terms and /privacy before sign-in; apply web-12a-ready after Foundation; write TEST-PLAN.md |
+
+## Blocker for Arun
+- GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move.
