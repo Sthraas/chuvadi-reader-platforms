@@ -78,9 +78,27 @@ public class SpaceLayoutTests
     internal static ClaimsPrincipal Principal(string sub)
         => new(new ClaimsIdentity([new Claim("sub", sub)], "test"));
 
+    /// <summary>One folder per test run, removed when the run ends.</summary>
+    private static readonly Lazy<string> RunFolder = new(() =>
+    {
+        var run = Path.Combine(Path.GetTempPath(), "chvd-web-tests", Environment.ProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        Directory.CreateDirectory(run);
+        AppDomain.CurrentDomain.ProcessExit += (_, _) =>
+        {
+            try
+            {
+                Directory.Delete(run, recursive: true);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+            }
+        };
+        return run;
+    });
+
     internal static string NewTempDir()
     {
-        var dir = Path.Combine(Path.GetTempPath(), "chvd-web-tests", Guid.NewGuid().ToString("N"));
+        var dir = Path.Combine(RunFolder.Value, Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         return dir;
     }

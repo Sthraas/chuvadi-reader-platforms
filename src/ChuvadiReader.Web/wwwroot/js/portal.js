@@ -288,5 +288,45 @@
         }
     }
 
-    window.chvdPortal = { pick: pick, download: download, print: print, copyImage: copyImage, copyText: copyText, openLink: openLink, watchViewport: watchViewport, leave: leave };
+    // Session expiry (D-30): the server counts a person as active from their input in the page, reported
+    // at most once a minute (the circuit's own keep-alive must not keep an abandoned tab alive).
+    var lastReport = 0, pending = false, reportTimer = null, tracking = false;
+    var REPORT_EVERY = 60000;
+
+    function report() {
+        reportTimer = null;
+        pending = false;
+        lastReport = Date.now();
+        try {
+            fetch('/portal/activity', { method: 'POST', credentials: 'same-origin', keepalive: true, headers: { 'X-Chvd-Activity': '1' } })
+                .catch(function () { });
+        } catch (e) { }
+    }
+
+    function onInput() {
+        var since = Date.now() - lastReport;
+        if (since >= REPORT_EVERY) {
+            report();
+        } else if (!pending) {
+            pending = true;
+            reportTimer = setTimeout(report, REPORT_EVERY - since);
+        }
+    }
+
+    function trackActivity(everyMs) {
+        if (tracking) return;
+        tracking = true;
+        if (everyMs >= 1000) REPORT_EVERY = everyMs;
+        ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(function (name) {
+            document.addEventListener(name, onInput, { capture: true, passive: true });
+        });
+    }
+
+    // "I'm still here": report now, whatever the last report was.
+    function stillHere() {
+        if (reportTimer) clearTimeout(reportTimer);
+        report();
+    }
+
+    window.chvdPortal = { pick: pick, download: download, print: print, copyImage: copyImage, copyText: copyText, openLink: openLink, watchViewport: watchViewport, leave: leave, trackActivity: trackActivity, stillHere: stillHere };
 })();

@@ -25,6 +25,12 @@ public static class UserKey
             return null;
         }
 
+        return FromSub(sub);
+    }
+
+    /// <summary>The key for a Sangam <c>sub</c>.</summary>
+    public static string FromSub(string sub)
+    {
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes("chuvadi-portal-user:" + sub));
         return Convert.ToHexStringLower(hash.AsSpan(0, 16));
     }

@@ -1,0 +1,179 @@
+@* Session expiry warning (D-30), shown in every open tab of a sign-in five minutes before it ends.
+   Offers to keep going (idle only), to download the open documents, and — when the Reader holds
+   marks not yet saved into a file — to download the document with them. Host chrome, functional
+   look from the Ui's own tokens and buttons; the Web portal UI chat may restyle it. *@
+@using System.IO.Compression
+@using ChuvadiReader.Core.Reader
+@using ChuvadiReader.Platform
+@using ChuvadiReader.Web.Auth
+@using ChuvadiReader.Web.Files
+@using ChuvadiReader.Web.Hosting
+@using ChuvadiReader.Web.Platform
+@using Microsoft.Extensions.Options
+@implements IDisposable
+@inject TabsService ReaderTabs
+@inject IAppCommands Commands
+@inject SessionSpace Space
+@inject OutboxDelivery Outbox
+@inject BrowserBridge Browser
+@inject TimeProvider Time
+@inject IOptions<PortalOptions> Options
+@inject IOptions<SangamOptions> Sangam
+@inject ILogger<ExpiryWarning> Log
+
+<div class="chvd-expiry" role="alertdialog" aria-live="assertive" aria-labelledby="chvd-expiry-title" aria-describedby="chvd-expiry-text">
+    <h2 id="chvd-expiry-title">@(Notice.Reason == ExpiryReason.Idle ? "Are you still there?" : "Your session is about to end")</h2>
+    <p id="chvd-expiry-text">
+        @if (Notice.Reason == ExpiryReason.Idle)
+        {
+            <text>Nothing has happened here for a while, so this session ends @Remaining(). Your files are then removed from the server.</text>
+        }
+        else
+        {
+            <text>A session lasts at most @Hours() hours, so this one ends @Remaining(). Your files are then removed from the server; sign in again to go on.</text>
+        }
+    </p>
+    @if (_message is not null)
+    {
+        <p class="chvd-expiry-msg">@_message</p>
+    }
+    <div class="chvd-expiry-actions">
+        @if (HasUnsavedMarks)
+        {
+            <button type="button" class="btn" disabled="@_busy" @onclick="DownloadWithMarksAsync">Download with your marks</button>
+        }
+        @if (OpenFiles().Count > 0)
+        {
+            <button type="button" class="btn" disabled="@_busy" @onclick="DownloadOpenAsync">@(OpenFiles().Count == 1 ? "Download the open document" : "Download open documents")</button>
+        }
+        @if (Notice.Reason == ExpiryReason.Idle)
+        {
+            <button type="button" class="btn primary" @onclick="StillHereAsync">I'm still here</button>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ExpiryNotice Notice { get; set; } = default!;
+
+    private Timer? _tick;
+    private bool _busy;
+    private string? _message;
+
+    protected override void OnInitialized()
+    {
+        // Keep "in N minutes" current.
+        _tick = new Timer(_ => InvokeAsync(StateHasChanged), null, TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(15));
+    }
+
+    private string Remaining()
+    {
+        var left = Notice.EndsAt - Time.GetUtcNow();
+        return left.TotalSeconds < 60 ? "in less than a minute" : left.TotalMinutes < 1.5 ? "in about a minute" : $"in about {(int)Math.Round(left.TotalMinutes)} minutes";
+    }
+
+    private int Hours() => (int)Math.Round(Sangam.Value.AbsoluteSessionLifetime.TotalHours);
+
+    private bool HasUnsavedMarks => Commands.Commands.Any(c => c.Id == "m.saveas" && c.IsEnabled);
+
+    /// <summary>Documents open in the Reader whose files this session may hand out.</summary>
+    private IReadOnlyList<ReaderTab> OpenFiles()
+        => ReaderTabs.Tabs.Where(t => Allowed(t.Path)).GroupBy(t => t.Path, StringComparer.Ordinal).Select(g => g.First()).ToList();
+
+    private bool Allowed(string? path)
+    {
+        if (string.IsNullOrEmpty(path) || !File.Exists(path))
+        {
+            return false;
+        }
+
+        // The session's own folder; behind the gateway also the worker's private temp folder, where the
+        // Reader keeps results it made (the worker is this person's alone).
+        return Space.Contains(path)
+               || Options.Value.Mode == PortalMode.Worker && SpaceLayout.IsInside(Path.GetTempPath(), path);
+    }
+
+    private async Task StillHereAsync()
+    {
+        try
+        {
+            await Browser.StillHereAsync();
+        }
+        catch (Microsoft.JSInterop.JSException)
+        {
+        }
+    }
+
+    private async Task DownloadWithMarksAsync()
+    {
+        _busy = true;
+        try
+        {
+            await Commands.InvokeAsync("m.saveas");
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task DownloadOpenAsync()
+    {
+        _busy = true;
+        _message = null;
+        try
+        {
+            var files = OpenFiles();
+            if (files.Count == 0)
+            {
+                _message = "No documents are open.";
+                return;
+            }
+
+            // A folder of its own, not watched: the file is complete before it is offered.
+            var folder = Path.Combine(Space.Outbox, "keep-" + Convert.ToHexStringLower(System.Security.Cryptography.RandomNumberGenerator.GetBytes(6)));
+            SpaceLayout.CreatePrivateDirectory(folder);
+            string target;
+            if (files.Count == 1)
+            {
+                target = Path.Combine(folder, SpaceLayout.SafeFileName(files[0].FileName, "document.pdf"));
+                File.Copy(files[0].Path, target);
+            }
+            else
+            {
+                target = Path.Combine(folder, "Chuvadi documents.zip");
+                var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                using var zip = new ZipArchive(File.Create(target), ZipArchiveMode.Create);
+                foreach (var tab in files)
+                {
+                    var name = SpaceLayout.SafeFileName(tab.FileName, "document.pdf");
+                    var stem = Path.GetFileNameWithoutExtension(name);
+                    var ext = Path.GetExtension(name);
+                    for (var n = 2; !names.Add(name); n++)
+                    {
+                        name = $"{stem} ({n}){ext}";
+                    }
+
+                    zip.CreateEntryFromFile(tab.Path, name, CompressionLevel.Fastest);
+                }
+            }
+
+            var result = await Outbox.DeliverAsync(target);
+            if (!result.Succeeded)
+            {
+                _message = result.Message ?? "The download didn't start.";
+            }
+        }
+        catch (IOException ex)
+        {
+            Log.LogWarning("Couldn't prepare the open documents: {Message}", ex.Message);
+            _message = "The documents couldn't be prepared for download.";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    public void Dispose() => _tick?.Dispose();
+}

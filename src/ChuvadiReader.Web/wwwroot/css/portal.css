@@ -25,3 +25,25 @@
 .chvd-portal-progress span { display: block; height: 100%; width: 0; background: var(--chvd-olive); transition: width 0.2s; }
 /* Off-screen but rendered: a PDF viewer in a hidden (display:none / visibility:hidden) frame may not print. */
 .chvd-portal-print { position: fixed; left: -10000px; top: 0; width: 800px; height: 600px; border: 0; }
+
+/* Session expiry warning (D-30): host chrome on the Ui's tokens. */
+.chvd-expiry {
+    position: fixed;
+    left: 50%;
+    bottom: calc(var(--chvd-statusbar-h, 24px) + 16px);
+    transform: translateX(-50%);
+    z-index: 10000;
+    width: min(520px, calc(100vw - 32px));
+    box-sizing: border-box;
+    padding: 18px 20px 16px;
+    background: var(--chvd-paper, #fbf7ef);
+    color: var(--chvd-ink, #1a1310);
+    border: 1px solid var(--chvd-border, rgba(0, 0, 0, .14));
+    border-radius: var(--chvd-radius-lg, 10px);
+    box-shadow: var(--chvd-shadow-dialog, 0 12px 40px rgba(0, 0, 0, .18));
+    font-size: var(--chvd-fs-ui, 13px);
+}
+.chvd-expiry h2 { margin: 0 0 6px; font-size: var(--chvd-fs-title-s, 16px); font-weight: 600; }
+.chvd-expiry p { margin: 0 0 12px; line-height: 1.45; color: var(--chvd-ink-soft, inherit); }
+.chvd-expiry .chvd-expiry-msg { color: var(--chvd-error, #a33); }
+.chvd-expiry-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }

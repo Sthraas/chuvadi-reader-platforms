@@ -43,6 +43,12 @@ public sealed class BrowserBridge
         await _js.InvokeVoidAsync("chvdPortal.leave", cts.Token, path).ConfigureAwait(false);
     }
 
+    /// <summary>Starts reporting the person's input in this tab (session expiry, D-30).</summary>
+    public ValueTask TrackActivityAsync(TimeSpan every) => _js.InvokeVoidAsync("chvdPortal.trackActivity", (int)every.TotalMilliseconds);
+
+    /// <summary>"I'm still here": reports activity now.</summary>
+    public ValueTask StillHereAsync() => _js.InvokeVoidAsync("chvdPortal.stillHere");
+
     /// <summary>Puts text on the clipboard. Returns false when the browser refused.</summary>
     public ValueTask<bool> CopyTextAsync(string text, CancellationToken ct)
         => _js.InvokeAsync<bool>("chvdPortal.copyText", ct, text);

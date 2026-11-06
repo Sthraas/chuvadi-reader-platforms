@@ -104,7 +104,7 @@ public sealed class SangamSignInTests : IAsyncLifetime
         Assert.Equal(43, q["code_challenge"].ToString().Length);
         Assert.True(q["state"].ToString().Length >= 40);
         Assert.True(q["nonce"].ToString().Length >= 40);
-        Assert.Equal("openid profile email", q["scope"]);
+        Assert.Equal("openid profile email org.current", q["scope"]);
         var flow = cookies.GetCookies(new Uri(_base, "/signin-sangam")).Single();
         Assert.True(flow.HttpOnly);
         Assert.StartsWith(SangamSignIn.FlowCookiePrefix, flow.Name, StringComparison.Ordinal);
@@ -226,15 +226,15 @@ public sealed class SangamSignInTests : IAsyncLifetime
     [Fact]
     public async Task Back_channel_logout_ends_open_tabs_of_that_sign_in_only()
     {
-        var sessions = _portal.Services.GetRequiredService<PortalSessions>();
+        var sessions = _portal.Services.GetRequiredService<OpenTabs>();
         int endedA = 0, endedB = 0;
-        using var a = sessions.Open(_sangam.Subject, "sid-A", () => { endedA++; return Task.CompletedTask; });
-        using var b = sessions.Open(_sangam.Subject, "sid-B", () => { endedB++; return Task.CompletedTask; });
+        using var a = sessions.Open(_sangam.Subject, "sid-A", () => { endedA++; return Task.CompletedTask; }, _ => Task.CompletedTask);
+        using var b = sessions.Open(_sangam.Subject, "sid-B", () => { endedB++; return Task.CompletedTask; }, _ => Task.CompletedTask);
         Assert.Equal(HttpStatusCode.OK, (await PostLogoutAsync(_sangam.LogoutToken("sid-A"))).StatusCode);
         Assert.Equal((1, 0), (endedA, endedB));
 
         // sub only: every sign-in of that person.
-        using var c = sessions.Open(_sangam.Subject, "sid-C", () => { endedB++; return Task.CompletedTask; });
+        using var c = sessions.Open(_sangam.Subject, "sid-C", () => { endedB++; return Task.CompletedTask; }, _ => Task.CompletedTask);
         Assert.Equal(HttpStatusCode.OK, (await PostLogoutAsync(_sangam.LogoutToken(null, _sangam.Subject))).StatusCode);
         Assert.Equal(2, endedB);
     }
@@ -272,11 +272,11 @@ public sealed class SangamSignInTests : IAsyncLifetime
     [Fact]
     public async Task A_replayed_logout_token_does_nothing_more()
     {
-        var sessions = _portal.Services.GetRequiredService<PortalSessions>();
+        var sessions = _portal.Services.GetRequiredService<OpenTabs>();
         var token = _sangam.LogoutToken("sid-R");
         Assert.Equal(HttpStatusCode.OK, (await PostLogoutAsync(token)).StatusCode);
         int ended = 0;
-        using var reg = sessions.Open(_sangam.Subject, "sid-R2", () => { ended++; return Task.CompletedTask; });
+        using var reg = sessions.Open(_sangam.Subject, "sid-R2", () => { ended++; return Task.CompletedTask; }, _ => Task.CompletedTask);
         Assert.Equal(HttpStatusCode.OK, (await PostLogoutAsync(token)).StatusCode);
         Assert.Equal(0, ended);
     }
