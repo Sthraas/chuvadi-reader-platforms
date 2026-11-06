@@ -56,7 +56,7 @@ Without `Sangam:Authority` and `Sangam:ClientId` the portal uses the Development
 | `ClientId` | The portal's client id registered with Sangam |
 | `PrivateKeyPath`, `PrivateKeyId` | ES256 key (PEM) and its registered key id for `private_key_jwt` (preferred) |
 | `ClientSecret` | Otherwise a client secret (`client_secret_basic`); set it as an environment variable, never in a file in the repo |
-| `Scope`, `UiLocales` | `openid profile email`; optional `en`, `hi` or `ml`. Add `org.current` to show the unit after the Sangam ID (12b; open question) |
+| `Scope`, `UiLocales` | `openid profile email org.current` (`org.current` gives the unit after the Sangam ID, 12b; people in several organisations see Sangam's chooser, which is intended); optional `en`, `hi` or `ml` |
 | `CallbackPath`, `SignedOutCallbackPath`, `BackChannelLogoutPath` | `/signin-sangam`, `/signout-sangam`, `/backchannel-logout` — register these three addresses with Sangam |
 | `ClockSkew`, `SignInTimeLimit`, `AbsoluteSessionLifetime` | 2 min, 10 min to finish signing in, 8 h per sign-in (D-30) |
 

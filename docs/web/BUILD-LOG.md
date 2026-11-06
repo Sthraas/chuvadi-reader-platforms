@@ -134,3 +134,8 @@ Findings for Sangam's team are in `SANGAM-INTEGRATION.md` (`login_hint` unsuppor
 - `IAccount.Unit` (D-35): the name in Sangam's `sangam_org` claim (sent with the `org.current` scope), kept in the portal cookie; malformed claims give no unit.
 - Browser flows updated for the portal's "Upload" label; the Sangam e2e now signs out from the account menu and checks it shows the person's name and Sangam ID.
 - Checks: build 0/0; 100/100 tests; browser flows all pass; real local Sangam e2e passes 3 runs in a row.
+
+### 16. Coordinator decisions of 6 Nov night
+- Sign-in page: (a) — visitors go straight to Sangam until the Web portal UI chat's "Continue with Sangam"-only 12a lands (its U-9 (a)); then the host renders it. `login_hint` goes to Arun as a Sangam ask.
+- `org.current` is now in the default scope, so the unit shows after the Sangam ID; people in several organisations see Sangam's chooser (intended). Real local Sangam e2e passes with it.
+- F-3 (one pending path in `OpenDocumentService`): nothing to change in the host. Opening on the web goes through `PickDocumentAsync` (one file, `multiple: false`); the host never calls `OpenDocumentService.Request`; `PickDocumentsAsync` (Merge, Bench) returns a list that those pages use themselves. Any future multi-file open in the host must open one file at a time until the Foundation's queue lands.
