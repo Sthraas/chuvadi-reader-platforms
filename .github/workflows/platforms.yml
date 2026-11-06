@@ -5,9 +5,16 @@ name: platforms
 on:
   push:
     branches: ['platform/**']
+    paths-ignore: ['docs/**', '**/*.md']   # docs-only pushes run nothing (D-90 a, kept by D-93)
   pull_request:
     branches: ['platform/**']
+    paths-ignore: ['docs/**', '**/*.md']
   workflow_dispatch:
+
+# A newer push to the same branch cancels the older run (D-90 d, kept by D-93).
+concurrency:
+  group: platforms-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   # Shared code (Core, Ui, Platform contracts, host kit) on every runner the hosts will use.
