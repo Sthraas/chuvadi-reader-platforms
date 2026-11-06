@@ -67,8 +67,8 @@ Files arriving from outside (drop, Open with, share intent, macOS open-file, upl
 
 Host page: copy the Windows `wwwroot/index.html` shape; load `_content/ChuvadiReader.Ui/js/theme.js` before the Blazor script; disable page zoom/pinch in the web view (the Reader zooms the canvas itself). **Put your initial `data-shell`, `data-platform`, `data-form-factor` and `data-input` on `<html>` in the host page** (Web: computed from the request / a tiny inline script; Android: from the device) so the first paint already has the right layout; MainLayout keeps them in sync afterwards with one `chuvadiTheme.setPlatform` call. Windows sets none (absent = Windows desktop) and makes no call — zero startup cost. **Print services:** refuse a document when `PrintPermission.Allows(doc)` is false, with `PrintPermission.Refused` as the message (the Print card already locks it; this is the second guard). **Web:** register `PortalLinks` (the portal's account menu and sign-in need it). **Tablet and phone hosts (Android; Web when it serves small screens) also link `_content/ChuvadiReader.Ui/css/mobile.css`**; desktop hosts must not (every rule in it is keyed on `data-shell`, but it is one more file to load).
 
-## 2b. Licence (Arun, 7 Nov 2026: proprietary, free to use — final; texts await legal review)
-Repository root `LICENSE`, `legal/EULA.txt` (installer EULA), `legal/THIRD-PARTY-NOTICES.txt` — all three marked **DRAFT FOR LEGAL REVIEW**. Ship all three beside the app and show the EULA in every installer that has a licence page. Shared metadata is in `Directory.Build.props` (Company, Authors, Product, Copyright → every assembly's version info).
+## 2b. Licence and legal documents (Arun, 7 Nov 2026 — final; every text a DRAFT, to be reviewed by counsel)
+Copyright holder for all products: **Sthraas Intelligence Pvt Ltd** — use exactly `Copyright © 2026 Sthraas Intelligence Pvt Ltd. All rights reserved.` Courts: Ahmedabad, Gujarat, India. Everything is indexed in `legal/README.md`: `LICENSE`, `legal/EULA.txt` (desktop and mobile), `TERMS-OF-USE.txt` and `COOKIE-NOTICE.txt` (portal), `PRIVACY-NOTICE.txt` (apps and portal, DPDP), `THIRD-PARTY-NOTICES.txt`, `store/` (Play data safety, App Store privacy). Ship all three beside the app and show the EULA in every installer that has a licence page. Shared metadata is in `Directory.Build.props` (Company, Authors, Product, Copyright → every assembly's version info).
 
 | Host | Use |
 |---|---|
@@ -76,9 +76,9 @@ Repository root `LICENSE`, `legal/EULA.txt` (installer EULA), `legal/THIRD-PARTY
 | Linux | `.deb` `copyright`: `Files: *` → `Copyright: 2026 Sthraas Intelligence Pvt Ltd`, `License: proprietary` + the LICENSE text; keep the .NET runtime paragraph (MIT). AppStream `<project_license>LicenseRef-proprietary</project_license>`. Maintainer stays Sthraas. Ship `THIRD-PARTY-NOTICES.txt` under `/usr/share/doc/chuvadi-reader/` |
 | Mac | `Info.plist` `NSHumanReadableCopyright` = the Copyright value; the DMG/pkg licence page shows `EULA.txt`; notices in `Contents/Resources` |
 | Android | notices and licence reachable in the app (Settings › About) and the store listing's licence/terms link; self-contained .NET → also ship .NET's `ThirdPartyNotices.txt` |
-| Web | the EULA does not fit a hosted service: the portal needs Terms of Use + a privacy notice (separate legal drafts — flagged to the coordinator) |
+| Web | serve `/terms` and `/privacy` **before sign-in** (the Ui pages; no host code beyond allowing the routes); set `PortalLinks.TermsUrl = "/terms"`. Signed in, About › Licences shows Terms, Privacy, Cookies and notices |
 
-The texts are also in the app: Settings › About › Licences, and the `/licence` page (no host code). Self-contained hosts (Linux, Mac, Android) must also ship the bundled .NET runtime's own `ThirdPartyNotices.txt`.
+The texts are also in the app: Settings › About › Licences (apps: licence agreement, licence, privacy, notices; portal: terms, privacy, cookies, notices), and the `/licence`, `/terms` and `/privacy` pages (no host code). Store privacy-policy URL: `https://<portal domain>/privacy`. Self-contained hosts (Linux, Mac, Android) must also ship the bundled .NET runtime's own `ThirdPartyNotices.txt`.
 
 ## 3. macOS menu bar — `IAppCommands` (decided: filled host-side from `ShellService`, no Ui hook)
 - `Commands`: everything the Ctrl K bar can run now (global + the mounted page's) — `Id`, `Label`, `Group` (File, Tabs, Document, Read, Mark, Arrange, Protect, View…), canonical `Keys`, `IsEnabled`, `DisabledReason`.
@@ -120,6 +120,7 @@ Packages come from chuvadi-reader's committed `ci/packages` (byte-identical to t
 11. L-8: open a PDF whose permissions forbid printing (e.g. saved from Acrobat with Printing: Not allowed) → the Print card is greyed with "This file's permissions don't allow printing."; an ordinary PDF still prints.
 
 ## 7. Blockers (library — Arun's decisions)
+- **LiPicons copyright (known item, 7 Nov):** `LiPicons.Blazor` 1.1.0 names imagiQa Healthcare Services Pvt Ltd and states no licence. Its copyright goes to Sthraas by the same transfer as the rest; Arun will have imagiQa removed in the icon package's own repository. Don't edit the package here; the notices file records it.
 - **Owner-password printing (L-8, left as is by decision, 7 Nov):** a file whose permissions forbid printing stays unprintable even when it was opened with its owner (permissions) password, because the library can't yet say which password opened it. Planned in chuvadi-pdf 3.32.0 as **PDF-16**; then `PrintPermission.Allows` also returns true for an owner-password open (one line, Core). Same gap blocks removing a password from such a file.
 - Layout not released; `Layout.Pdf` pins chuvadi-pdf [3.30.2] — Word/Excel exact view, Save as PDF and their printing.
 - Pdf A (name table never shrinks), Pdf B (LiPi FontRenderer race) — before Web multi-user load.
