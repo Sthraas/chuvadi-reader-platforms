@@ -271,6 +271,12 @@
         report();
     }
 
+    // Leave for another portal address. Only same-origin paths; returns at once, navigates after.
+    function leave(path) {
+        if (typeof path !== 'string' || path.charAt(0) !== '/' || path.charAt(1) === '/') return;
+        setTimeout(function () { window.location.replace(path); }, 0);
+    }
+
     function openLink(url) {
         try {
             if (!/^(https?:|mailto:)/i.test(url)) return false;
@@ -282,5 +288,5 @@
         }
     }
 
-    window.chvdPortal = { pick: pick, download: download, print: print, copyImage: copyImage, copyText: copyText, openLink: openLink, watchViewport: watchViewport };
+    window.chvdPortal = { pick: pick, download: download, print: print, copyImage: copyImage, copyText: copyText, openLink: openLink, watchViewport: watchViewport, leave: leave };
 })();

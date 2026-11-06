@@ -22,7 +22,7 @@ Answers to my W-04 questions, read from `github.com/arunshivab/sangam` (read-onl
 | Language and branding of the Sangam screens | `ui_locales` (en, hi, ml) and `sangam_org` on the authorise request; branding is set on the partner console. |
 | The 12a "or with your Sangam ID" field | **Not supported today.** Sangam's code and docs have no `login_hint` handling, so an ID typed on our page cannot be passed to Sangam. Options below (S-02). |
 
-## How the portal will integrate (decided 6 Nov: our own code, no Microsoft sign-in package)
+## How the portal integrates (built 6 Nov: our own code, no Microsoft sign-in package)
 
 The portal is a confidential OpenID Connect client written in our own C# on the .NET framework only:
 
@@ -33,7 +33,14 @@ The portal is a confidential OpenID Connect client written in our own C# on the 
 5. `GET /signout` → end the portal session (stop the circuit/worker, delete the session folder), then RP-initiated logout at `end_session_endpoint` with `id_token_hint` and `post_logout_redirect_uri=https://<portal>/signout-sangam`.
 6. `POST /backchannel-logout` → validate the `logout_token` (signature, `iss`, `aud`, `iat`, `events` contains the back-channel event, no `nonce`), then end every portal session with that `sid` (or `sub`). Answer 200.
 
-Tests will use a local fake Sangam (our own test code) that issues signed tokens, plus Sangam's shared conformance vectors where they apply.
+Also: RFC 9207 `iss` on the authorization response is checked when Sangam advertises it; a revoked sign-in's cookie stops working at once (checked on every request) and every open tab of it is ended (files deleted, browser sent to `/signed-out`); logout tokens are single-use (`jti`); the portal cookie lasts at most 8 hours (D-30).
+
+Tests: 30 in CI against `FakeSangam` (our test code: discovery, JWKS, authorize, token with PKCE and client authentication, end-session, logout tokens), covering refusals (wrong signature, `alg`, `iss`, `aud`, `azp`, nonce, expiry, replayed or wrong logout tokens, missing `iss`, open redirects). End to end against a real Sangam run locally (`tests/web-e2e/sangam_signin.py`): register a person, sign in, the Reader shows the name, cookie flags, sign-out ends a second tab too, sign in again with the password, sign out on Sangam itself → back-channel logout ends the open portal tab (1.5–4 s; 4 runs in a row).
+
+## Found while testing against Sangam (for Sangam's team; nothing changed in Sangam)
+1. **`login_hint` is not supported** (D-34: "else report"). The 12a "Sangam ID" field can't be passed on; the portal shows "Continue with Sangam" and Sangam asks for the ID.
+2. **The back-channel logout address can only be set from Sangam's operator console**, not through the client configuration. Production registration must include `https://<portal>/backchannel-logout`.
+3. **In Development, Sangam signs logout tokens with issuer `http://localhost/`** unless `Sangam:Issuer` is set, while discovery reports the real address; the portal (correctly) refuses those tokens. Production sets the issuer, so this matters only for local runs.
 
 ## Still open (S-02, S-03)
 **S-02 The "Sangam ID" field on 12a.** (a) Show only "Continue with Sangam" and the "Download the desktop app" line — Sangam asks for the ID on its own screen; (b) keep the field and ask Sangam to support `login_hint` (a Sangam change, your decision). Recommendation: (a) for launch, which needs your approval as a small departure from 12a, and (b) as a Sangam ask.

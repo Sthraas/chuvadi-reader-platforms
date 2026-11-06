@@ -112,3 +112,18 @@ Tests (`AcmeTests.cs`, 16 new): a strict fake ACME server in the test project (o
 dotnet test tests/ChuvadiReader.Web.Tests -c Release   # 63 passed, 3 consecutive runs
 ```
 Not done here: a run against Let's Encrypt **staging** needs the real domain pointing at the server (deployment step). Pebble (Let's Encrypt's own test server) would be an extra conformance check, but building it from source here was refused by my sandbox's safety check (external code); it can be run on the test VM if the coordinator wants it, test-only.
+
+### 14. Sangam sign-in (`src/ChuvadiReader.Web/Auth/`)
+Our own OpenID Connect client, BCL and ASP.NET Core only:
+- `Jwt`, `JsonWebKey`: compact JWS parsing (no JWE, no `none`, size limit), RSA ≥ 2048 and EC P-256/384/521 keys, RS/PS/ES signature checks.
+- `SangamMetadata`: discovery and JWKS, cached; unknown `kid` refreshes the keys (rate-limited).
+- `JwtVerifier`: ID tokens (signature, algorithm allow-list, `crit` refused, `iss`, `aud`, `azp`, `exp`/`nbf`/`iat` with 2 min skew, `nonce`) and logout tokens (`typ` `logout+jwt`, back-channel event, no `nonce`, `jti`, `sid` or `sub`).
+- `SangamSignIn`: `/signin` (Auth Code + PKCE S256, state, nonce; flow kept in a Data Protection cookie for 10 min), `/signin-sangam` (state and RFC 9207 `iss` check, code exchange with `private_key_jwt` or `client_secret_basic`, cookie sign-in, safe local return address only), `/signout` → Sangam end-session with `id_token_hint` → `/signout-sangam` → `/signed-out`, `POST /backchannel-logout`.
+- `PortalSessions`: revoked sign-ins (cookie refused on the next request) and the open tabs of each sign-in; ending a tab deletes its files and sends the browser to `/signed-out` through `chvdPortal.leave` (our one-way call; `NavigationManager` from a request thread faulted the circuit).
+- Cookie: `__Host-chvd` on https (`chvd.session` on local http), HttpOnly, SameSite=Lax, 8 h absolute, no sliding. `/portal/*` and `/_blazor` answer 401 instead of redirecting.
+- Fixes found on the way: a re-entrant lock in key refresh (deadlock), tabs ended mid-redirect at `/signout` (now ended on the way back), the e2e wait loops (the Playwright sync API only sees navigations while it is called, so `time.sleep` made the back-channel check look flaky).
+```
+dotnet test tests/ChuvadiReader.Web.Tests -c Release   # 93 passed, 0 warnings, 3 runs
+python3 tests/web-e2e/sangam_signin.py …               # real local Sangam: all checks pass, 4 runs in a row
+```
+Findings for Sangam's team are in `SANGAM-INTEGRATION.md` (`login_hint` unsupported, back-channel address set only from the operator console, Development logout-token issuer).
