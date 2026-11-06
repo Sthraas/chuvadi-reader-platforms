@@ -170,3 +170,11 @@ Phone API 35: Ui rendered after 15 s; screenshots confirm the status and gesture
 of the app. They also showed the "rotated" shot was still portrait: the emulator never rotated,
 so the rotation check proved nothing. The test now rotates through the window manager's own lock
 (`cmd window user-rotation lock 1`) and fails unless the screenshot size actually changes.
+
+### 19. Run 42137557959 — real rotation verified; one emulator flake handled
+Phone API 35 and tablet API 35 pass with real rotation (phone 1080x2400 → 2400x1080, same
+process, Ui re-laid out, clear of the status bar, gesture bar and the camera cut-out). Tablet API 36
+failed only because the emulator's own System UI hung ("System UI isn't responding", an ANR in
+`com.android.systemui`) and its dialog covered the screen; the screenshot shows the app fully
+rendered underneath and our logcat is clean. The test now taps "Wait" on that system dialog before
+reading the screen.

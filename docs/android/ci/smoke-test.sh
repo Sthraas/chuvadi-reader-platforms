@@ -39,11 +39,34 @@ done
 echo "Cold start"
 adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null
 
+# The CI emulators render in software and their own System UI sometimes stops responding, which
+# covers the screen with "System UI isn't responding" (not our app). Tap "Wait" whenever it shows.
+dismiss_system_anr() {
+  local xml="$1" b
+  grep -qE "isn.t responding" "$xml" || return 1
+  b="$(grep -oE 'text="Wait"[^>]*bounds="\[[0-9]+,[0-9]+\]\[[0-9]+,[0-9]+\]"' "$xml" | grep -oE '\[[0-9]+,[0-9]+\]\[[0-9]+,[0-9]+\]' | head -1)"
+  [ -n "$b" ] || return 1
+  read -r x1 y1 x2 y2 <<<"$(echo "$b" | tr -c '0-9' ' ')"
+  echo "System UI ANR dialog on screen (emulator); tapping Wait"
+  adb shell input tap $(((x1 + x2) / 2)) $(((y1 + y2) / 2))
+  sleep 2
+  return 0
+}
+
+# Dumps the screen's UI tree to $1, first clearing any System UI ANR dialog.
+dump_ui() {
+  local xml="$1" i
+  for i in 1 2 3; do
+    adb exec-out uiautomator dump /dev/tty > "$xml" 2>/dev/null || true
+    dismiss_system_anr "$xml" || return 0
+  done
+}
+
 # Wait for the Ui to render.
 rendered=0
 for i in $(seq 1 24); do
   sleep 5
-  adb exec-out uiautomator dump /dev/tty > "$OUT/ui-portrait.xml" 2>/dev/null || true
+  dump_ui "$OUT/ui-portrait.xml"
   if grep -qE "$MARKERS" "$OUT/ui-portrait.xml"; then rendered=1; echo "Ui rendered after $((i*5)) s"; break; fi
   case $i in 2|6|12) adb exec-out screencap -p > "$OUT/portrait-$((i*5))s.png" || true ;; esac
 done
@@ -70,7 +93,7 @@ adb shell cmd window user-rotation lock "$rot" 2>/dev/null || adb shell settings
 sleep 10
 pid_after="$(adb shell pidof "$PKG" | tr -d '\r' || true)"
 adb exec-out screencap -p > "$OUT/rotated.png" || true
-adb exec-out uiautomator dump /dev/tty > "$OUT/ui-rotated.xml" 2>/dev/null || true
+dump_ui "$OUT/ui-rotated.xml"
 echo "before $(png_size "$OUT/portrait.png"), after $(png_size "$OUT/rotated.png")"
 if [ "$(png_size "$OUT/portrait.png")" = "$(png_size "$OUT/rotated.png")" ]; then
   echo "::error::the screen did not rotate (still $(png_size "$OUT/rotated.png")); rotation was not tested"
