@@ -479,3 +479,8 @@ capitalises on Enter (the search found 1/4).
 5. Double-tap / page width: measure the page under the desk's centre, not the first page with a box.
 6. Over-wide probe: report the over-wide element itself (not its outermost ancestor) and leave out
    elements clipped inside their page. Re-checked in headless Chromium (finds `div.rpage`, 38 px over).
+**For the Mobile UI chat (seen in the screenshots, round 3):**
+- Double-tap zoom lands on the wrong page: on page 2, the zoom-in shows 1 / 6 (phone 36) or 6 / 6 (phone 35);
+  the second double-tap returns to 2 / 6 (`round3-gestures-phone.png`). The zoom keeps no anchor on the tapped page.
+- Phone API 35 Fit page is far too small: page box 147.6 px in a 402 px desk (`overwide.json`: the visible
+  `.rpage-wrap`); phone API 36 is 341.9 px. Sideways overflow is 0 on all four emulators, so H-9 fixed that.
