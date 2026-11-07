@@ -446,3 +446,36 @@ Usage note: each full run is 1 build plus 4 emulator jobs of about 30 minutes ea
   every host: Bench shelf or a new tab, after the first render); our import errors stay as they were.
   Single instance on Android = `LaunchMode.SingleTask` + `OnNewIntent` (already; tested in platform.py).
 - **New check:** D-89 B, Home says "Open…", never "drop", on Android (`DropFiles` false).
+
+### 43. Round 3 — run 42314548860 (all four emulators): results and test-tool fixes
+**App results** (each emulator's first platform pass; the second pass was a test bug, below):
+| Check | Phone 35 | Phone 36 | Tablet 35 | Tablet 36 |
+|---|---|---|---|---|
+| Smoke (start, Ui, rotation, no crash/console error) | PASS | PASS | PASS | PASS |
+| Swipe pages | PASS | PASS | PASS | PASS |
+| Double-tap zoom in / back | PASS | PASS | PASS (screenshots: 58 % → 200 % → 58 %; the check measured a placeholder page, fixed) | PASS |
+| Pinch | PASS | PASS | PASS | PASS |
+| Arrange → Shelf; long-press drag to desk | PASS | PASS | PASS | PASS |
+| Phone Fit page sideways overflow | **0 px** (H-9 cured it) | **0 px** | 0 px | 0 px |
+| Open with .docx / .xlsx while running → new tab, same activity + process | PASS | PASS | PASS* | PASS* |
+| Share to Chuvadi → new tab | PASS | PASS | PASS* | PASS* |
+| Rotation with a document (process, tab, page; no overflow) | PASS | PASS | PASS | PASS |
+| → next page, Ctrl = zoom | PASS | PASS | PASS | PASS |
+| Ctrl F + typing finds (1/4) | PASS | PASS* | PASS* | PASS* |
+| Typing control (plain field) arrives exactly | PASS | PASS | PASS | PASS |
+| On-screen keyboard: shows, app resizes above it (innerHeight 839→527 phone, 744→408 tablet), Find stays visible | PASS | PASS | PASS | PASS |
+| Print card → Android print dialog (Save as PDF; preview 1/4…4/4) | PASS | PASS | PASS | PASS |
+| Save as PDF wrote the file ("chuvadi-share (1).pdf", 3.05 kB, in the picker) | file made; page count not read (test bug) | ← | ← | ← |
+\* marked FAIL by the check, wrong for test reasons: the tablet tab count counted each tab twice (every tab is a
+`.rtab`, plus the "+N" chip, which is Tabs.Count − 1); find's value came back "Test" because Gboard's autocorrect
+capitalises on Enter (the search found 1/4).
+**Not reached** (the test crashed after printing): range print, L-8 no-print card, Back, split screen, D-89 wording.
+**Test-tool bugs found and fixed (no app change):**
+1. `platform.py` ran twice per job: with its folder first on `sys.path`, a library's `import platform` loaded the
+   script itself. Renamed `platform_checks.py`.
+2. The saved PDF's path had a space ("chuvadi-share (1).pdf"); `find` output was split on spaces. Split on lines.
+3. Tablet tab count: count `.rtab` only.
+4. Find: clear the field first; compare case-insensitively (Gboard autocorrect).
+5. Double-tap / page width: measure the page under the desk's centre, not the first page with a box.
+6. Over-wide probe: report the over-wide element itself (not its outermost ancestor) and leave out
+   elements clipped inside their page. Re-checked in headless Chromium (finds `div.rpage`, 38 px over).

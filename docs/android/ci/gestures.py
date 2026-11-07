@@ -34,7 +34,13 @@ STATE_JS = r"""
 (() => {
   const vis = e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < innerHeight; };
   const desk = [...document.querySelectorAll('.rdesk')].find(vis) || null;
-  const page = [...document.querySelectorAll('.rpage')].find(vis) || null;
+  // The page on screen: the one under the centre of the desk (not just any page with a box — a
+  // neighbour still at its unrendered placeholder size misled the double-tap check on API 35).
+  const centre = (() => { const d = [...document.querySelectorAll('.rdesk')].find(vis); if (!d) return null; const r = d.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; })();
+  const pages = [...document.querySelectorAll('.rpage')].filter(vis);
+  const page = (centre && pages.find(e => { const r = e.getBoundingClientRect(); return r.left <= centre[0] && centre[0] <= r.right && r.top <= centre[1] && centre[1] <= r.bottom; }))
+    || pages.sort((a, b) => { const ar = a.getBoundingClientRect(), br = b.getBoundingClientRect();
+         const area = r => Math.max(0, Math.min(r.bottom, innerHeight) - Math.max(r.top, 0)) * r.width; return area(br) - area(ar); })[0] || null;
   const fitOn = t => [...document.querySelectorAll('[title^="' + t + '"]')].some(e => e.classList.contains('on') || e.classList.contains('active') || e.getAttribute('aria-pressed') === 'true');
   const ctr = (document.querySelector('.ph-pager')?.textContent || document.querySelector('.tb-pg-box')?.value || '').trim();
   const rect = e => { if (!e) return null; const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; };
@@ -246,7 +252,10 @@ OVERWIDE_JS = r"""
                          borderLeft: c.borderLeftWidth, borderRight: c.borderRightWidth, transform: c.transform, position: c.position },
              inlineStyle: e.getAttribute('style') };
   };
-  const over = [...desk.querySelectorAll('*')].filter(e => vis(e) && e.getBoundingClientRect().right > limit + 0.5);
+  // Clipped: an ancestor below the desk hides its overflow, so it can't widen the desk.
+  const clipped = e => { for (let x = e.parentElement; x && x !== desk; x = x.parentElement) { if (cs(x).overflowX !== 'visible') return true; } return false; };
+  const past = [...desk.querySelectorAll('*')].filter(e => vis(e) && e.getBoundingClientRect().right > limit + 0.5);
+  const over = past.filter(e => !clipped(e));
   // The outermost over-wide elements (whose parent is not itself over-wide) are where it starts.
   const roots = over.filter(e => !over.includes(e.parentElement));
   const chain = e => { const out = []; for (let x = e; x && x !== desk; x = x.parentElement) out.unshift(describe(x)); return out; };
@@ -255,7 +264,7 @@ OVERWIDE_JS = r"""
        : [...document.querySelectorAll('[title^="Fit width"]')].some(e => e.classList.contains('on')) ? 'width' : 'custom',
     viewport: { innerWidth, dpr: devicePixelRatio },
     desk: { ...describe(desk), clientWidth: desk.clientWidth, scrollWidth: desk.scrollWidth, overflowX: desk.scrollWidth - desk.clientWidth },
-    overWideCount: over.length,
+    overWideCount: over.length, clippedCount: past.length - over.length,
     starts: roots.slice(0, 5).map(chain),
   };
 })()
@@ -267,10 +276,11 @@ except SystemExit as e:
 with open(os.path.join(OUT, "overwide.json"), "w") as f:
     json.dump(ow, f, indent=1)
 if ow.get("desk"):
-    print(f"desk overflowX {ow['desk'].get('overflowX')} px (fit {ow.get('fit')}), {ow.get('overWideCount')} element(s) past the desk's right edge")
+    print(f"desk overflowX {ow['desk'].get('overflowX')} px (fit {ow.get('fit')}), {ow.get('overWideCount')} element(s) past the "
+          f"desk's right edge ({ow.get('clippedCount')} more, clipped inside their page)")
     for ch in ow.get("starts") or []:
-        top = ch[0] if ch else {}
-        print(f"  starts at <{top.get('tag')} class=\"{top.get('classes')}\"> width {top.get('width')} px, over by {top.get('overBy')} px, "
+        top = ch[-1] if ch else {}   # the over-wide element itself (the chain runs desk → it)
+        print(f"  over-wide: <{top.get('tag')} class=\"{top.get('classes')}\"> width {top.get('width')} px, over by {top.get('overBy')} px, "
               f"computed width {top.get('computed', {}).get('width')}, margins {top.get('computed', {}).get('marginLeft')}/{top.get('computed', {}).get('marginRight')}")
 
 # Now the gestures. The emulator's SELinux policy denies the shell user writes to /dev/input even though it is in the

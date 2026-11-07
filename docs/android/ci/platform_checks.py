@@ -19,7 +19,10 @@ app produced. Screenshots and raw evidence go to the results folder.
      back to full screen
 Writes platform.json; exits 1 if any check fails.
 
-    platform.py <results-dir>
+    platform_checks.py <results-dir>
+
+(Not named platform.py: with this folder first on sys.path, a library's `import platform` would load
+this script again and run every check twice — round 3, run 42314548860.)
 """
 import json
 import os
@@ -45,7 +48,13 @@ STATE_JS = r"""
 (() => {
   const vis = e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < innerHeight; };
   const desk = [...document.querySelectorAll('.rdesk')].find(vis) || null;
-  const page = [...document.querySelectorAll('.rpage')].find(vis) || null;
+  // The page on screen: the one under the centre of the desk (not just any page with a box — a
+  // neighbour still at its unrendered placeholder size misled the double-tap check on API 35).
+  const centre = (() => { const d = [...document.querySelectorAll('.rdesk')].find(vis); if (!d) return null; const r = d.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; })();
+  const pages = [...document.querySelectorAll('.rpage')].filter(vis);
+  const page = (centre && pages.find(e => { const r = e.getBoundingClientRect(); return r.left <= centre[0] && centre[0] <= r.right && r.top <= centre[1] && centre[1] <= r.bottom; }))
+    || pages.sort((a, b) => { const ar = a.getBoundingClientRect(), br = b.getBoundingClientRect();
+         const area = r => Math.max(0, Math.min(r.bottom, innerHeight) - Math.max(r.top, 0)) * r.width; return area(br) - area(ar); })[0] || null;
   const card = document.querySelector('section.chvd-card[aria-label="Print"]');
   const find = document.querySelector('.rfind-box');
   const r = e => { if (!e) return null; const b = e.getBoundingClientRect(); return { x: b.x, y: b.y, w: b.width, h: b.height }; };
@@ -64,8 +73,8 @@ STATE_JS = r"""
     sheet: !!document.querySelector('.ph-sheet'),
     tabs: (() => { const sub = (document.querySelector('.ph-sub')?.textContent || '').match(/of\s+(\d+)\s+tab/);
                    if (sub) return +sub[1];
-                   const more = (document.querySelector('.rtab-more')?.textContent || '').match(/(\d+)/);
-                   return document.querySelectorAll('.rtab').length + (more ? +more[1] : 0); })(),
+                   // Tablet / desktop strip: one .rtab per open tab (the "+N" chip is just Tabs.Count - 1).
+                   return document.querySelectorAll('.rtab').length; })(),
     route: location.pathname + location.search,
     active: document.activeElement ? (document.activeElement.tagName + '.' + String(document.activeElement.className || '').split(' ')[0]) : null,
     printReason: card ? (card.querySelector('.footer .primary')?.getAttribute('title') || card.getAttribute('title') || '') : null,
@@ -280,6 +289,8 @@ def counter_total(st):
 
 
 def pdf_pages(path):
+    if not path or not os.path.exists(path):
+        return None
     with open(path, "rb") as f:
         data = f.read()
     return len(re.findall(rb"/Type\s*/Page(?![a-z])", data))
@@ -432,12 +443,16 @@ key("KEYCODE_CTRL_LEFT", "KEYCODE_0")
 key("KEYCODE_CTRL_LEFT", "KEYCODE_F")
 kf = wait_for(lambda s: s.get("find") is not None, 6, "Ctrl F to open find")
 dismiss_ime_dialogs()
+adb("shell", "input", "keycombination", "KEYCODE_CTRL_LEFT", "KEYCODE_A")   # clear what a previous search left
+adb("shell", "input", "keyevent", "KEYCODE_DEL")
 typed_find = type_slowly("test")
 adb("shell", "input", "keyevent", "KEYCODE_ENTER")
-kf = wait_for(lambda s: (s.get("find") or {}).get("value") == "test" and re.search(r"[1-9]", s.get("findCount") or ""), 10, "find results")
+# Gboard's autocorrect capitalises the first letter when Enter commits ("Test"): the keyboard's own
+# behaviour (the control field below gets no Enter, so stays lower-case); the search is case-insensitive.
+kf = wait_for(lambda s: ((s.get("find") or {}).get("value") or "").lower() == "test" and re.search(r"[1-9]", s.get("findCount") or ""), 10, "find results")
 shot("p5-find")
 check("keyboard Ctrl F opens find; typed text finds matches",
-      (kf.get("find") or {}).get("value") == "test" and bool(re.search(r"[1-9]", kf.get("findCount") or "")),
+      ((kf.get("find") or {}).get("value") or "").lower() == "test" and bool(re.search(r"[1-9]", kf.get("findCount") or "")),
       {"find": kf.get("find"), "count": kf.get("findCount"), "afterEachKey": typed_find})
 
 # Control for typing: the same keys into a plain <input> with no Blazor binding (test-only, added
@@ -557,7 +572,8 @@ def print_and_save(tag):
     for _ in range(15):
         time.sleep(2)
         # /storage/emulated/0, not /sdcard: `find` doesn't follow the /sdcard symlink.
-        found = adb("shell", "find", "/storage/emulated/0/", "-name", "'*.pdf'", "-newer", "/data/local/tmp/chvd-print-mark").split()
+        found = [ln.strip() for ln in adb("shell", "find", "/storage/emulated/0/", "-name", "'*.pdf'", "-newer",
+                                          "/data/local/tmp/chvd-print-mark").splitlines() if ln.strip()]
         if found:
             path = found[0]
             break
@@ -565,7 +581,7 @@ def print_and_save(tag):
     leave_spooler()
     if path:
         local = os.path.join(OUT, f"printed-{tag}.pdf")
-        adb("pull", path, local)
+        adb("pull", path, local)   # one argv item each: names like "chuvadi-share (1).pdf" have spaces
         adb("shell", "rm", "-f", f"'{path}'")
         ev["saved"] = path
         return True, local, ev
