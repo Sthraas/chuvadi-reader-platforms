@@ -212,5 +212,15 @@ Options considered:
 |---|---|---|
 | D-93 | Repo visibility and CI (replaces the hold in D-90) | Arun: the Chuvadi library and Reader repos are already public; the working repo stays public until the work is complete, then goes private; ci/packages stays as is. CI runs on public-repo minutes again (confirmed: 23:36 UTC runs started on all runners). Hold lifted: Android round 3, Mac verification run, Linux ARM64 rerun may go. Foundation's workflow patch keeps only (a) docs-only pushes run nothing and (d) cancel-in-progress per branch, because they save time; (b) and (c) dropped. Pros: free minutes, no history rewrite. Cons: costs return when it goes private — revisit D-90 (b)/(c) then |
 
+## 7 Nov 2026 05:50 check-in — coordinator
+| # | Item | Decision |
+|---|---|---|
+| D-94 | Mobile UI hooks H-5 to H-12 and the PhoneShell slot (1a27cd6) | All into Foundation's next combined patch. Pros: phone/tablet follow the handout; H8/H9/H-12 are bug fixes (H-12: no sample recent files or watched folder on a fresh platform install, so the first-run box shows). Cons: several existing-file edits in one patch, covered by desktop pixel-identical proof, 0 warnings and all tests. Full removal of the sample data stays with the Reader chat (Arun to relay) |
+| D-95 | PR #11 | Green on a12b14e; Foundation updates it after the next patch is green; coordinator tells Arun when it's ready for his checks |
+| D-96 | Tablet/phone first-run tip "Ctrl K finds any file" | Touch wording on Tablet and Phone, keyed on form factor (the Android host always reports a keyboard); Foundation proposes the exact text |
+| D-97 | Web UI U-15: Terms and Privacy in the account menu | (a) a small footer line, kept in About › Licences too. Pros: least change to the designed menu. Cons: small text. (b) two menu rows add rows the handout doesn't have; (c) is hard to find |
+| — | Linux | Bug: on GNOME's close-only button layout, minimise and maximise still show; Linux chat fixing (the button layout must be followed exactly) |
+| — | Web | The 04:55 message didn't arrive; resent at 05:50 with D-86, D-89 and D-93 |
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).
