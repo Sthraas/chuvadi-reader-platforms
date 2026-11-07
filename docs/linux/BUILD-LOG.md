@@ -423,3 +423,15 @@ Everything asked of the Linux build is done and green locally. Open only because
 2. Single instance — when the Foundation's kit contract lands (D-Bus or Unix socket; options then).
 3. The Print card fix — arrives with the Foundation's combined patch.
 4. ARM64 re-run in CI when Actions is back.
+
+### 34. ARM64 rerun on the current head (D-93)
+CI is back. Run 42314276500 (workflow_dispatch on `eb65770`, the head that was green locally on x64):
+
+| | x64 | ARM64 |
+|---|---|---|
+| Full UI pass | 107 / 107 | **107 / 107** |
+| `.deb` self-contained / framework-dependent | 36.7 / 10.7 MB | 33.1 / 10.2 MB |
+| Blazor first render, launch test | 0.85–1.09 s | 0.89–1.01 s (first launch 4.2 s, cold disk) |
+
+Build, all tests, ReadyToRun publish, launch test, both `.deb` packages, install + launch of the installed
+app, CUPS queue: green on both.
