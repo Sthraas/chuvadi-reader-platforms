@@ -343,3 +343,24 @@ construction). `MacFileArrivals` only hops onto the Blazor dispatcher once the W
 ### 32. Workflows
 `mac.yml` and `mac-startup.yml` are now **manual only** (`workflow_dispatch`), as D-90 proposes for Mac jobs.
 Foundation's `platforms` workflow still runs on push (including a macOS job), so pushes stay on hold.
+
+### 33. CI back (D-93) — legal texts verified on the Mac runner
+Pushed and ran the Mac workflow by hand. Four runs to get the .NET notices lookup right — each failure was the
+build's own guard stopping it, never a silent miss:
+
+| Run | Result | What it showed → fix |
+|---|---|---|
+| 42314097811 | ✘ | No `Microsoft.NETCore.App` runtime pack in `@(ResolvedRuntimePack)` on Mac Catalyst → use `@(ResolvedFrameworkReference)`'s `RuntimePackPath`, as macios does |
+| 42314551631 | ✘ | Universal build's outer step has no RID: framework references carry no runtime pack path → also try `_PackageToDownload` |
+| 42314833601 | ✘ | Outer step has no download list either → last resort: the SDK's `KnownRuntimePack` table (Mono pack pattern + exact version), valid in every step |
+| 42315095775 | ✘ | Runtime notices found; Mac Catalyst licence then hit the same outer-step gap → `KnownFrameworkReference` "Microsoft.MacCatalyst.Runtimes" (pattern + exact version), packs folder or NuGet cache |
+| **42315335992** | **✔** | tests 178/178 on macOS; **bundle layout verified**; universal x86_64 + arm64; launched to first render; artifact 43 MB |
+
+Verified in `Chuvadi.app/Contents/Resources/legal/` (sizes = sources): `LICENSE.txt` 2959, `EULA.txt` 4282,
+`THIRD-PARTY-NOTICES.txt` 41491 (all three byte-identical to the repo, DRAFT line kept),
+`DOTNET-RUNTIME-THIRD-PARTY-NOTICES.txt` 76623 (Mono runtime pack), `DOTNET-MACCATALYST-LICENSE.txt` 6434
+(Mac Catalyst runtime pack, "Xamarin SDK" MIT + third parties). `NSHumanReadableCopyright` exact.
+Each lookup step was first run locally against real SDK builds (single-RID and multi-RID) or a packs layout
+copied from the pinned SDK before it went to CI.
+Foundation's `platforms` workflow green on the same code after rebasing onto a73a898 (its 839571e fixed the
+Windows single-instance tests that failed on fa9d120).
