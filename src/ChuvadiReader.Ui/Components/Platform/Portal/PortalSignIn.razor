@@ -53,24 +53,8 @@
                 <button type="submit" class="psi-submit" disabled="@(Busy || !CanSubmit)">Sign in</button>
             }
             <span class="psi-foot">Prefer to keep files on your computer? <a href="@Links.DesktopAppUrl" target="_blank" rel="noopener">Download the desktop app</a> — no sign-in needed to read.</span>
-            @if (Links.TermsUrl is not null || Links.PrivacyUrl is not null)
-            {
-                @* Legal links (U-13 a; D-86): the Foundation's drafts, served before sign-in by the Web host. *@
-                <span class="psi-foot psi-terms">
-                    @if (Links.TermsUrl is { } terms)
-                    {
-                        <a href="@terms" target="_blank" rel="noopener">Terms of use</a>
-                    }
-                    @if (Links.TermsUrl is not null && Links.PrivacyUrl is not null)
-                    {
-                        <span aria-hidden="true"> · </span>
-                    }
-                    @if (Links.PrivacyUrl is { } privacy)
-                    {
-                        <a href="@privacy" target="_blank" rel="noopener">Privacy</a>
-                    }
-                </span>
-            }
+            @* Legal links (U-13 a; D-86): the Foundation's drafts, served before sign-in by the Web host. *@
+            <div class="psi-terms"><PortalLegalLinks /></div>
         </form>
     </section>
 </div>

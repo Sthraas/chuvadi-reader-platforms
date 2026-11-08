@@ -22,7 +22,7 @@
             }
         </span>
     </div>
-    <span class="ppa-server"><span class="status-dot server"></span>processed on the server · encrypted at rest · only you can see it</span>
+    <span class="ppa-server"><span class="status-dot server"></span>processed on the server · kept in memory only · only you can see it</span>
 </div>
 <a class="ph-row" href="@Links.DesktopAppUrl" target="_blank" rel="noopener" @onclick="Done"><Icon Name="download" Size="18" /><span class="ph-row-l">Get the desktop app</span></a>
 @if (Links.AccountSettingsUrl is { } settings)
@@ -30,6 +30,8 @@
     <a class="ph-row" href="@settings" target="_blank" rel="noopener" @onclick="Done"><Icon Name="settings" Size="18" /><span class="ph-row-l">Account settings</span></a>
 }
 <button class="ph-row ppa-out" @onclick="SignOut" disabled="@_signingOut"><Icon Name="log-out" Size="18" /><span class="ph-row-l">Sign out</span></button>
+@* U-15 (a) / D-97: the same small legal footer as the desktop account card. *@
+<div class="ppa-legal"><PortalLegalLinks OnClick="Done" /></div>
 
 @code {
     /// <summary>Raised after a row was used, so the sheet can close.</summary>

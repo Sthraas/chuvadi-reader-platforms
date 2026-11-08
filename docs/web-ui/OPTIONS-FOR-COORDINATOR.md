@@ -127,7 +127,7 @@ public static string CommandTip(IPlatformInfo platform) =>
 - **O-2 (Foundation, `PlatformText`):** Web gets "computer" everywhere (`DeviceNoun` is "computer" for every non-Android kind): a phone browser shows "Follow the computer's light / dark setting" — on the portal it follows the browser's setting; and `PreferredNameHint` says "Leave blank to use your computer's name. Stored locally, never sent anywhere." — on the portal the name comes from Sangam and the setting is in browser storage (D-29). Suggest: Web → "Follow the browser's light / dark setting"; hint → "Leave blank to use your Sangam name. Stored in this browser."
 - **O-3 (Mobile UI / Foundation):** phone Home tip "Tip: Ctrl K finds any file or action" (`Dashboard.razor:62`) on a touch phone with no keyboard — on Web phone and Android phone.
 
-## U-15 Terms of use and Privacy from the account menu (coordinator 7 Nov 04:55: "propose one if the handout has no place")
+## ✔ decided (a), D-97 — built session 9 — U-15 Terms of use and Privacy from the account menu (coordinator 7 Nov 04:55: "propose one if the handout has no place")
 **12a (sign-in): built.** "Terms of use · Privacy" on one line under the desktop-app line (`PortalLinks.TermsUrl`, new optional `PortalLinks.PrivacyUrl`; each hidden when null). The Web host passes `"/terms"` and `"/privacy"` (the Foundation's `Licence` page, served before sign-in).
 
 **12b (account menu): the handout has no place for them.** The card holds the person, the storage meter (out of scope), My files / Shared with me (out of scope), Get the desktop app, Account settings, Sign out. Options:
@@ -137,7 +137,24 @@ public static string CommandTip(IPlatformInfo platform) =>
 
 Recommendation: **(a)**. Not built until decided (it touches `AccountMenu`, which the Foundation edited for Unit — I would send the change as a small diff on its current copy).
 
-## D-89 Home drop overlay on the portal — what I will check when the Foundation's overlay lands
+## U-16 The 12a sign-in pitch still says "encrypted at rest" (D-98 follow-up)
+D-98 changed the status bar (and the draft Terms) because, under D-28, documents live only in memory and memory itself is not encrypted. The same claim is in the 12a pitch (`PortalSignIn`, D-31 kept it): "…On the portal, files are processed on our server, **encrypted at rest**, and visible only to you." Not changed yet — the decision named only the status bar.
+- **(a) Same wording as D-98:** "…On the portal, files are processed on our server, **kept in memory only**, and visible only to you." Pros: true; matches the status bar and the promises ("Files live only for your session, then are wiped"). Cons: departs from the handout text (as D-98 already does).
+- **(b) Drop the clause:** "…files are processed on our server and visible only to you." Pros: shortest. Cons: loses a reassurance that is true.
+- **(c) Keep as is.** Cons: untrue under D-28 — the same reason D-98 gave.
+
+Recommendation **(a)** — a one-word-group change in my file, ready as soon as you say.
+
+## D-89 Home drop overlay — checked (Foundation's `PortalDropCatcher`, on foundation since the fifth patch)
+Behaviour is right: catches only file drags (`types` includes "Files"), lets image-only drags through to the Reader, never lets the browser open a dropped file, clears on drop, `dragend` and window blur, and is rendered only on the portal (`IsPortal && DropFiles`; desktop and Android never). Multi-file: up to 64 per drop, the rest reported.
+**One gap against the handout:** the catcher is **invisible by design** ("nothing to see — the desktop window shows nothing either"), but the handout draws a drag-over state (Walkthrough "Drop to open": dashed 2 px binding border inset 24 px, radius 14, light wash, upload icon, "Drop to open" in Instrument Serif 28 px). Options:
+- **(a) Keep it invisible.** Pros: same as the desktop today; nothing to build. Cons: on the web there is no sign that the page — not the browser — will take the file, until it opens.
+- **(b) The portal shows the handout's overlay while files are dragged** (the catcher already toggles an `on` class; the visual is CSS + one icon and one line, no new logic), without the file-name line (browsers don't expose names before the drop). Pros: matches the handout; clear feedback where it matters most. Cons: portal differs from desktop until the desktop gets the same.
+- **(c) Both portal and desktop.** Cons: desktop needs work in the Windows host (WebView drop), outside this chat.
+
+Recommendation **(b)**. It is the Foundation's component; I can send the CSS + markup as a diff for it if you prefer.
+
+## D-54 (chuvadi-pdf 3.31.2) — what I will check when the Foundation's overlay lands
 Handout references: **Walkthrough "Drop to open"** (drag-over state) and **States & Feedback 8b** ("Home with nothing yet").
 1. Drag-over overlay: full window, **inset 24 px**, **2 px dashed** border in the binding colour (`#8a3a1c` in Cream), **radius 14 px**, background `rgba(251,247,236,.55)` (theme-tinted in the other themes), upload icon in the binding colour, **"Drop to open"** in Instrument Serif 28 px.
 2. **Heads-up:** the handout's second line ("scan-lab-0931.pdf · 1 page · from the scanner folder", IBM Plex Mono 12 px) **cannot be shown before the drop in a browser** — `DataTransfer` exposes no file names or contents during `dragover` (only after `drop`; Chromium gives types at most). Suggest: no second line during drag on the portal, or a type-only line ("1 file") where the browser gives a count; the file name can show in the upload progress after the drop.
