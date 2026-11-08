@@ -538,3 +538,26 @@ capitalises on Enter (the search found 1/4).
   host (Back first, transparent WebView). Android 0 warnings; Platforms `-warnaserror` 0 warnings; tests
   171 + 54 + 32 + 16 pass.
 - New check: double-tap zoom stays on the tapped page (H-13).
+
+### 47. Round 5 — run 42485287858 (all four emulators)
+| Check | Phone 35 | Phone 36 | Tablet 35 | Tablet 36 |
+|---|---|---|---|---|
+| WebView | **124.0.6367.219** | 133.0.6943.137 | **124.0.6367.219** | 133.0.6943.137 |
+| Smoke · swipe · pinch · Arrange · long-press drag | PASS | PASS | PASS | PASS |
+| Double-tap zoom stays on the tapped page (H-13) | PASS | PASS | PASS | PASS |
+| Double-tap / Ctrl = page width grows | FAIL¹ | PASS | FAIL¹ | PASS |
+| Open with .docx/.xlsx while running · Share | PASS | PASS | PASS | PASS |
+| Rotation · keys · find · typing · on-screen keyboard | PASS | PASS | PASS | PASS |
+| Print → dialog · Save as PDF (4) · range (2) · L-8 locked | PASS | PASS | PASS | PASS |
+| **Back closes the Print card (P-06 + Back-first host fix)** | **PASS** | **PASS** | **PASS** | **PASS** |
+| Phone: Back key / edge gesture closes the ⋮ sheet | PASS | PASS | — | — |
+| Back walks screens, then leaves; no dead presses | FAIL² | FAIL² | FAIL² | FAIL² |
+| Relaunch · D-89 Home "open" · split in/out · no crash | PASS | PASS | PASS | PASS |
+| Phone Fit page sideways overflow | 0 | 0 | 0 | 0 |
+1. **WebView 124 (API 35) and CSS `zoom`.** H-13 fixed the API 35 Fit page (the phone now matches API 36), but on
+   WebView 124 zoomed pages still measure at their unzoomed size (793 px at every zoom), and double-tap / pinch land
+   on a blank white area (the page number stays right). Chromium standardised `zoom` in 128. Decision needed.
+2. Back does leave the app (… /reader → /bench → /reader → / → launcher), but first takes 4 presses that change
+   nothing: one per file opened while on the Reader (DOCX, XLSX, Share, no-print). Cause: `MainLayout.OnOpenRequested`
+   navigates to `/reader` even when already there. **P-07** (Ui, for Foundation's combined patch) navigates only when
+   the Reader isn't showing; the composition applies it in round 6.

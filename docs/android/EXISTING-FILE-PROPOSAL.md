@@ -107,3 +107,18 @@ that consumes.
   route, same tab) — will run when GitHub Actions runs again.
 - **Not included (say if wanted):** Back closing the pages drawer or the find bar (Escape closes both on
   the desktop). Same pattern, a few lines each.
+
+## P-07 Open from another app: no duplicate "/reader" history entry — for Foundation's combined patch
+Patch: [`proposal/P-07-no-duplicate-reader-history.patch`](proposal/P-07-no-duplicate-reader-history.patch), against
+platform/foundation **8098695**; one file, `Ui/Layout/MainLayout.razor` (+9 −1).
+
+`OnOpenRequested` navigates to `/reader` on every open request, even when the Reader is already showing (it takes the
+request live through `OnOpenRequestedLive`). Each extra navigation adds another `/reader` entry to the WebView
+history. On Android, Back walks that history after the Ui declines, so each one is a Back press that does nothing
+visible: round 5 counted 4 such presses after 4 opens (DOCX, XLSX, Share, no-print), on all four emulators. The change
+navigates only when the Reader isn't the current page.
+- **For:** Back on Android goes straight through real screens; no behaviour change on any desktop (no history Back
+  there, and the Reader already consumed the request without the navigation).
+- **Against:** one more condition in MainLayout.
+- **Verified (sandbox):** Platforms `-warnaserror` 0 warnings; tests 171 + 54 + 32 + 16 pass. On device: round 6
+  (the composition applies Android's pending proposals), check "back steps back … with no dead presses".

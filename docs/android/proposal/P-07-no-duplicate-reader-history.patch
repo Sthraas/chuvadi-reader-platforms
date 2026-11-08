@@ -1,0 +1,21 @@
+diff --git a/src/ChuvadiReader.Ui/Layout/MainLayout.razor b/src/ChuvadiReader.Ui/Layout/MainLayout.razor
+index 9bd0ecd..2eb4712 100644
+--- a/src/ChuvadiReader.Ui/Layout/MainLayout.razor
++++ b/src/ChuvadiReader.Ui/Layout/MainLayout.razor
+@@ -446,7 +446,15 @@
+ 
+     // A file dropped on the window (handled WPF-side) sets a pending open; bring
+     // the reader forward so it consumes it.
+-    private void OnOpenRequested() => InvokeAsync(() => Nav.NavigateTo("/reader"));
++    // Already on the Reader: it takes the request live (OnOpenRequestedLive), so navigating again would
++    // only add another "/reader" history entry — a Back press that does nothing visible on Android (P-07).
++    private void OnOpenRequested() => InvokeAsync(() =>
++    {
++        if (!Nav.ToBaseRelativePath(Nav.Uri).StartsWith("reader", StringComparison.OrdinalIgnoreCase))
++        {
++            Nav.NavigateTo("/reader");
++        }
++    });
+ 
+     private async Task SwitchTab(string id)
+     {
