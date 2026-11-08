@@ -28,7 +28,8 @@ case "$FF" in *-base)
   (cd "$ROOT" && git ls-files -co --exclude-standard -z | xargs -0 -I{} sh -c 'if [ -e "$1" ]; then cp --parents "$1" "$0"; fi' "$SCRATCH" {})
   # Each mobile-ui-hooks-N.patch is the full set; apply only the highest N (as Android's compose.sh does).
   p=$(ls "$ROOT"/docs/mobile-ui/proposal/mobile-ui-hooks-*.patch | sort -V | tail -1)
-  (cd "$SCRATCH" && git apply "$p")
+  # Skip it once Foundation has landed it (the tree already contains every hunk).
+  if (cd "$SCRATCH" && git apply --check -R "$p" 2>/dev/null); then echo "hooks: $(basename "$p") already in the tree"; else (cd "$SCRATCH" && git apply "$p"); fi
   export CHVD_FF="$FF"
   ;;
 esac

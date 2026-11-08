@@ -341,3 +341,17 @@ Evidence:
   - 274 tests; desktop Read / Mark identical, Read 990 clock only, Arrange / Home 1-level noise as A/A.
   - 39 touch checks pass; 0 console errors.
 - D-111 (keep the mode-name heading) and D-113 (keep More view options) recorded.
+
+## 9 Nov, 01:30: eighth combined patch merged; nothing outstanding for Foundation
+- Foundation 839d39d (eighth combined patch) contains **H-14** (63f37b1) and **H-16** (839d39d), both
+  exactly as written (reverse-apply check). The D-112 tablet Save needed no diff (mobile.css). No hooks
+  are outstanding.
+- preview.sh skips a hooks patch that is already in the tree.
+- Results: 295 tests; 26 phone and tablet touch checks pass; 0 console errors.
+- Android Test chat: no `platform/android-test` branch or `docs/android-test/BUGS.md` yet. Nothing to
+  pick up.
+- Other Test chats' lists, checked for Mobile UI items:
+  - Web Test WT-03 (phone portal showed desktop rails) is fixed upstream by the sixth patch's
+    PhoneShell, waiting for the Web rebase.
+  - WT-09 (no-print reason only in a hover tooltip) is an existing file, routed to Arun.
+  - Linux and Mac lists have no touch items.

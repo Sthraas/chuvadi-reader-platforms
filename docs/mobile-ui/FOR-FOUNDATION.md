@@ -1,5 +1,9 @@
 # Mobile app UI → Foundation: hooks and hand-off (updated 8 Nov, 18:51 IST)
 
+## Outstanding for Foundation: nothing (9 Nov)
+H-14 and H-16 landed in the eighth combined patch (63f37b1, 839d39d), exactly as written. The record
+of both follows.
+
 ## Outstanding for Foundation: H-14 and H-16 (`proposal/mobile-ui-hooks-5.patch`)
 Coordinator decisions D-111 to D-114 (8 Nov 20:22). `mobile-ui-hooks-5.patch` = H-14 + H-16, which
 applies cleanly to 9fbed93.
