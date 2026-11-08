@@ -60,13 +60,13 @@
             {
                 <div class="shelf-empty">
                     <Icon Name="folder" Size="20" />
-                    <span>Fetch a PDF to start.</span>
-                    <button class="bt bt-fetch" @onclick="FetchFile" disabled="@_fetching"><Icon Name="folder" Size="14" /> Fetch a file</button>
+                    <span>@ChuvadiReader.Ui.Components.Platform.PlatformText.FetchOrUpload(Platform, "Fetch a PDF to start.", "Upload a PDF to start.")</span>
+                    <button class="bt bt-fetch" @onclick="FetchFile" disabled="@_fetching"><Icon Name="folder" Size="14" /> @ChuvadiReader.Ui.Components.Platform.PlatformText.FetchOrUpload(Platform, "Fetch a file", "Upload a file")</button>
                 </div>
             }
             else if (BenchSvc.HasSources)
             {
-                <button class="shelf-add" @onclick="FetchFile" disabled="@_fetching" title="Fetch another PDF onto the shelf">
+                <button class="shelf-add" @onclick="FetchFile" disabled="@_fetching" title="@(ChuvadiReader.Ui.Components.Platform.PlatformText.FetchOrUpload(Platform, "Fetch another PDF onto the shelf", "Upload another PDF onto the shelf"))">
                     <Icon Name="folder" Size="14" /><span>Add a file</span>
                 </button>
                 <div class="shelf-zoom" title="Thumbnail size">
@@ -385,7 +385,7 @@
                     {
                     <div class="desk-foot">
                         <div class="desk-foot-acts">
-                            <button class="bt sm" @onclick="() => FetchImageToDesk(deskId)" title="Fetch image"><Icon Name="file-image" Size="13" /><span class="btxt">Image</span></button>
+                            <button class="bt sm" @onclick="() => FetchImageToDesk(deskId)" title="@(ChuvadiReader.Ui.Components.Platform.PlatformText.FetchOrUpload(Platform, "Fetch image", "Upload image"))"><Icon Name="file-image" Size="13" /><span class="btxt">Image</span></button>
                             <button class="bt sm" @onclick="() => AddBlank(deskId)" title="Add blank page"><Icon Name="file" Size="13" /><span class="btxt">Blank</span></button>
                             <button class="bt sm" @onclick="() => ReverseDesk(deskId)" disabled="@(desk.Pages.Count < 2)" title="Reverse page order"><Icon Name="rotate-ccw" Size="13" /><span class="btxt">Reverse</span></button>
                             <button class="bt sm" @onclick="() => SortDesk(deskId)" disabled="@(desk.Pages.Count < 2)" title="Sort pages into source order"><Icon Name="menu" Size="13" /><span class="btxt">Sort</span></button>
@@ -1126,7 +1126,7 @@
     <div class="mview-rails">
         <SideRail Kind="tools" Heading="ARRANGE">
             <RailButton Icon="shelf" Label="Shelf" Active="!_shelfHidden" OnClick="() => _shelfHidden = !_shelfHidden" />
-            <RailButton Icon="folder" Label="Fetch file" Disabled="@(_busy || _fetching)" OnClick="FetchFile" />
+            <RailButton Icon="folder" Label="@(ChuvadiReader.Ui.Components.Platform.PlatformText.FetchOrUpload(Platform, "Fetch file", "Upload file"))" Disabled="@(_busy || _fetching)" OnClick="FetchFile" />
             <RailButton Icon="plus" Label="Add desk" Disabled="@(_busy || !BenchSvc.CanAddDesk)" DisabledReason="@(BenchSvc.CanAddDesk ? null : "30-desk limit reached")" OnClick="AddDesk" />
             <RailButton Icon="page-add" Label="Blank page" Disabled="@(_busy || FocusDeskId is null)" OnClick="AddBlankToFocused" />
             <RailSep />

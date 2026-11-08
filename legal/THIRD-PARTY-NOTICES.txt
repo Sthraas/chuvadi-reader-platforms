@@ -52,10 +52,11 @@ COMPONENTS
     Chuvadi.Pdf.Xfa 3.31.2
 
 * MIT  -  Arun  -  https://github.com/arunshivab/chuvadi
-    Chuvadi.Docs 1.1.0
+    Chuvadi.Docs 2.0.0
     Chuvadi.Print 1.0.0-rc.2
     Chuvadi.Print.Ipp 1.0.0-rc.2
-    Chuvadi.Sheets 1.1.2
+    Chuvadi.Sheets 2.0.2
+    Chuvadi.Zip 1.0.0
 
 * MIT AND OFL-1.1  -  Arun  -  https://github.com/arunshivab/chuvadi
     Chuvadi.Fonts 1.0.0
@@ -80,7 +81,7 @@ COMPONENTS
   (wwwroot/lipi-sans) and in Chuvadi.Fonts / Chuvadi.Pdf.Fonts.Bundled
 
 ============================================================================================
-MIT LICENSE (Chuvadi.Docs, Chuvadi.Sheets, Chuvadi.Print, Chuvadi.Print.Ipp, Chuvadi.Fonts code,
+MIT LICENSE (Chuvadi.Docs, Chuvadi.Sheets, Chuvadi.Zip, Chuvadi.Print, Chuvadi.Print.Ipp, Chuvadi.Fonts code,
 Microsoft and .NET components; each with the copyright line shown above)
 ============================================================================================
 The MIT License (MIT)

@@ -1,0 +1,4718 @@
+{
+ "values.xlsx": {
+  "note": "cell -> what the file holds (shared/inline strings verbatim; numbers as stored; formula cells: their stored result; booleans; errors)",
+  "strings": {
+   "A1": "Ward",
+   "B1": "தமிழ் உரை",
+   "C1": " inline  text ",
+   "A2": "  leading spaces",
+   "B2": "trailing spaces  ",
+   "C2": "double  space inside",
+   "D2": "Line1\nLine2",
+   "E2": "A&B <tag>",
+   "B4": "Total: 42"
+  },
+  "numbers": {
+   "A3": 42,
+   "B3": -7.25,
+   "C3": 0.1,
+   "D3": 1234567890123,
+   "E3": 1.5e-07,
+   "F3": 3.14159265358979,
+   "A4": 84,
+   "C4": 34.75
+  },
+  "booleans": {
+   "A5": true,
+   "B5": false,
+   "D4": true
+  },
+  "errors": {
+   "C5": "#DIV/0!",
+   "D5": "#DIV/0!"
+  },
+  "dates_1900": {
+   "A6": "2024-11-05",
+   "B6": "2024-11-05 12:00",
+   "C6": "1900-01-01",
+   "D6": "1900-02-28",
+   "E6": "1900-03-01"
+  }
+ },
+ "dates1904.xlsx": {
+  "dates_1904": {
+   "A1": "1904-01-01",
+   "B1": "2024-11-05"
+  },
+  "numbers": {
+   "C1": 44139
+  }
+ },
+ "realistic.xlsx": {
+  "note": "every cell with a value, read back by openpyxl; G2 is a formula saved with no stored result, so it holds nothing",
+  "cells": {
+   "0!A1": {
+    "kind": "text",
+    "value": "Bed"
+   },
+   "0!B1": {
+    "kind": "text",
+    "value": "Patient"
+   },
+   "0!C1": {
+    "kind": "text",
+    "value": "Admitted"
+   },
+   "0!D1": {
+    "kind": "text",
+    "value": "Charges (₹)"
+   },
+   "0!E1": {
+    "kind": "text",
+    "value": "Paid"
+   },
+   "0!F1": {
+    "kind": "text",
+    "value": "Notes"
+   },
+   "0!G1": {
+    "kind": "text",
+    "value": "Total"
+   },
+   "0!A2": {
+    "kind": "text",
+    "value": "B-001"
+   },
+   "0!B2": {
+    "kind": "text",
+    "value": " Ravi"
+   },
+   "0!C2": {
+    "kind": "text",
+    "value": "2026-10-03"
+   },
+   "0!D2": {
+    "kind": "number",
+    "value": 236992.41
+   },
+   "0!E2": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!A3": {
+    "kind": "text",
+    "value": "B-002"
+   },
+   "0!B3": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C3": {
+    "kind": "text",
+    "value": "2026-10-04"
+   },
+   "0!D3": {
+    "kind": "number",
+    "value": 205407.94
+   },
+   "0!E3": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F3": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A4": {
+    "kind": "text",
+    "value": "B-003"
+   },
+   "0!B4": {
+    "kind": "text",
+    "value": "Dr. S. Iyer"
+   },
+   "0!C4": {
+    "kind": "text",
+    "value": "2026-10-05"
+   },
+   "0!D4": {
+    "kind": "number",
+    "value": 14970.73
+   },
+   "0!E4": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!A5": {
+    "kind": "text",
+    "value": "B-004"
+   },
+   "0!B5": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C5": {
+    "kind": "text",
+    "value": "2026-10-06"
+   },
+   "0!D5": {
+    "kind": "number",
+    "value": 108694.6
+   },
+   "0!E5": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F5": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A6": {
+    "kind": "text",
+    "value": "B-005"
+   },
+   "0!B6": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C6": {
+    "kind": "text",
+    "value": "2026-10-07"
+   },
+   "0!D6": {
+    "kind": "number",
+    "value": 137986.29
+   },
+   "0!E6": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!A7": {
+    "kind": "text",
+    "value": "B-006"
+   },
+   "0!B7": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C7": {
+    "kind": "text",
+    "value": "2026-10-08"
+   },
+   "0!D7": {
+    "kind": "number",
+    "value": 157841.17
+   },
+   "0!E7": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F7": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A8": {
+    "kind": "text",
+    "value": "B-007"
+   },
+   "0!B8": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C8": {
+    "kind": "text",
+    "value": "2026-10-09"
+   },
+   "0!D8": {
+    "kind": "number",
+    "value": 244075.65
+   },
+   "0!E8": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F8": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A9": {
+    "kind": "text",
+    "value": "B-008"
+   },
+   "0!B9": {
+    "kind": "text",
+    "value": " Ravi"
+   },
+   "0!C9": {
+    "kind": "text",
+    "value": "2026-10-10"
+   },
+   "0!D9": {
+    "kind": "number",
+    "value": 105075.19
+   },
+   "0!E9": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F9": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A10": {
+    "kind": "text",
+    "value": "B-009"
+   },
+   "0!B10": {
+    "kind": "text",
+    "value": "Dr. S. Iyer"
+   },
+   "0!C10": {
+    "kind": "text",
+    "value": "2026-10-11"
+   },
+   "0!D10": {
+    "kind": "number",
+    "value": 204123.53
+   },
+   "0!E10": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!A11": {
+    "kind": "text",
+    "value": "B-010"
+   },
+   "0!B11": {
+    "kind": "text",
+    "value": "Dr. S. Iyer"
+   },
+   "0!C11": {
+    "kind": "text",
+    "value": "2026-10-12"
+   },
+   "0!D11": {
+    "kind": "number",
+    "value": 143015.5
+   },
+   "0!E11": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F11": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A12": {
+    "kind": "text",
+    "value": "B-011"
+   },
+   "0!B12": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C12": {
+    "kind": "text",
+    "value": "2026-10-13"
+   },
+   "0!D12": {
+    "kind": "number",
+    "value": 137162.24
+   },
+   "0!E12": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!A13": {
+    "kind": "text",
+    "value": "B-012"
+   },
+   "0!B13": {
+    "kind": "text",
+    "value": "Dr. S. Iyer"
+   },
+   "0!C13": {
+    "kind": "text",
+    "value": "2026-10-14"
+   },
+   "0!D13": {
+    "kind": "number",
+    "value": 51886.7
+   },
+   "0!E13": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F13": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A14": {
+    "kind": "text",
+    "value": "B-013"
+   },
+   "0!B14": {
+    "kind": "text",
+    "value": "Meena "
+   },
+   "0!C14": {
+    "kind": "text",
+    "value": "2026-10-15"
+   },
+   "0!D14": {
+    "kind": "number",
+    "value": 146597.68
+   },
+   "0!E14": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F14": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A15": {
+    "kind": "text",
+    "value": "B-014"
+   },
+   "0!B15": {
+    "kind": "text",
+    "value": " Ravi"
+   },
+   "0!C15": {
+    "kind": "text",
+    "value": "2026-10-16"
+   },
+   "0!D15": {
+    "kind": "number",
+    "value": 62482.43
+   },
+   "0!E15": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F15": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A16": {
+    "kind": "text",
+    "value": "B-015"
+   },
+   "0!B16": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C16": {
+    "kind": "text",
+    "value": "2026-10-17"
+   },
+   "0!D16": {
+    "kind": "number",
+    "value": 143818.72
+   },
+   "0!E16": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F16": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A17": {
+    "kind": "text",
+    "value": "B-016"
+   },
+   "0!B17": {
+    "kind": "text",
+    "value": "Meena "
+   },
+   "0!C17": {
+    "kind": "text",
+    "value": "2026-10-18"
+   },
+   "0!D17": {
+    "kind": "number",
+    "value": 72340.47
+   },
+   "0!E17": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!A18": {
+    "kind": "text",
+    "value": "B-017"
+   },
+   "0!B18": {
+    "kind": "text",
+    "value": "Dr. S. Iyer"
+   },
+   "0!C18": {
+    "kind": "text",
+    "value": "2026-10-19"
+   },
+   "0!D18": {
+    "kind": "number",
+    "value": 104821.64
+   },
+   "0!E18": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F18": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A19": {
+    "kind": "text",
+    "value": "B-018"
+   },
+   "0!B19": {
+    "kind": "text",
+    "value": "Meena "
+   },
+   "0!C19": {
+    "kind": "text",
+    "value": "2026-10-20"
+   },
+   "0!D19": {
+    "kind": "number",
+    "value": 105713.74
+   },
+   "0!E19": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F19": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A20": {
+    "kind": "text",
+    "value": "B-019"
+   },
+   "0!B20": {
+    "kind": "text",
+    "value": " Ravi"
+   },
+   "0!C20": {
+    "kind": "text",
+    "value": "2026-10-21"
+   },
+   "0!D20": {
+    "kind": "number",
+    "value": 173976.19
+   },
+   "0!E20": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F20": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A21": {
+    "kind": "text",
+    "value": "B-020"
+   },
+   "0!B21": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C21": {
+    "kind": "text",
+    "value": "2026-10-22"
+   },
+   "0!D21": {
+    "kind": "number",
+    "value": 210071.96
+   },
+   "0!E21": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F21": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A22": {
+    "kind": "text",
+    "value": "B-021"
+   },
+   "0!B22": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C22": {
+    "kind": "text",
+    "value": "2026-10-23"
+   },
+   "0!D22": {
+    "kind": "number",
+    "value": 15637.02
+   },
+   "0!E22": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F22": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A23": {
+    "kind": "text",
+    "value": "B-022"
+   },
+   "0!B23": {
+    "kind": "text",
+    "value": " Ravi"
+   },
+   "0!C23": {
+    "kind": "text",
+    "value": "2026-10-24"
+   },
+   "0!D23": {
+    "kind": "number",
+    "value": 179298.63
+   },
+   "0!E23": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!A24": {
+    "kind": "text",
+    "value": "B-023"
+   },
+   "0!B24": {
+    "kind": "text",
+    "value": "Meena "
+   },
+   "0!C24": {
+    "kind": "text",
+    "value": "2026-10-25"
+   },
+   "0!D24": {
+    "kind": "number",
+    "value": 89188.3
+   },
+   "0!E24": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F24": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A25": {
+    "kind": "text",
+    "value": "B-024"
+   },
+   "0!B25": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C25": {
+    "kind": "text",
+    "value": "2026-10-26"
+   },
+   "0!D25": {
+    "kind": "number",
+    "value": 54942.84
+   },
+   "0!E25": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F25": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A26": {
+    "kind": "text",
+    "value": "B-025"
+   },
+   "0!B26": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C26": {
+    "kind": "text",
+    "value": "2026-10-27"
+   },
+   "0!D26": {
+    "kind": "number",
+    "value": 99775.47
+   },
+   "0!E26": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!A27": {
+    "kind": "text",
+    "value": "B-026"
+   },
+   "0!B27": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C27": {
+    "kind": "text",
+    "value": "2026-10-28"
+   },
+   "0!D27": {
+    "kind": "number",
+    "value": 112572.26
+   },
+   "0!E27": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F27": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A28": {
+    "kind": "text",
+    "value": "B-027"
+   },
+   "0!B28": {
+    "kind": "text",
+    "value": "Meena "
+   },
+   "0!C28": {
+    "kind": "text",
+    "value": "2026-10-29"
+   },
+   "0!D28": {
+    "kind": "number",
+    "value": 216064.13
+   },
+   "0!E28": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F28": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A29": {
+    "kind": "text",
+    "value": "B-028"
+   },
+   "0!B29": {
+    "kind": "text",
+    "value": " Ravi"
+   },
+   "0!C29": {
+    "kind": "text",
+    "value": "2026-10-30"
+   },
+   "0!D29": {
+    "kind": "number",
+    "value": 170839.4
+   },
+   "0!E29": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F29": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A30": {
+    "kind": "text",
+    "value": "B-029"
+   },
+   "0!B30": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C30": {
+    "kind": "text",
+    "value": "2026-10-01"
+   },
+   "0!D30": {
+    "kind": "number",
+    "value": 21204.68
+   },
+   "0!E30": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F30": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A31": {
+    "kind": "text",
+    "value": "B-030"
+   },
+   "0!B31": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C31": {
+    "kind": "text",
+    "value": "2026-10-02"
+   },
+   "0!D31": {
+    "kind": "number",
+    "value": 3509.73
+   },
+   "0!E31": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F31": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A32": {
+    "kind": "text",
+    "value": "B-031"
+   },
+   "0!B32": {
+    "kind": "text",
+    "value": " Ravi"
+   },
+   "0!C32": {
+    "kind": "text",
+    "value": "2026-10-03"
+   },
+   "0!D32": {
+    "kind": "number",
+    "value": 1521.35
+   },
+   "0!E32": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F32": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A33": {
+    "kind": "text",
+    "value": "B-032"
+   },
+   "0!B33": {
+    "kind": "text",
+    "value": "Dr. S. Iyer"
+   },
+   "0!C33": {
+    "kind": "text",
+    "value": "2026-10-04"
+   },
+   "0!D33": {
+    "kind": "number",
+    "value": 141802.14
+   },
+   "0!E33": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!A34": {
+    "kind": "text",
+    "value": "B-033"
+   },
+   "0!B34": {
+    "kind": "text",
+    "value": "Meena "
+   },
+   "0!C34": {
+    "kind": "text",
+    "value": "2026-10-05"
+   },
+   "0!D34": {
+    "kind": "number",
+    "value": 224933.49
+   },
+   "0!E34": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F34": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A35": {
+    "kind": "text",
+    "value": "B-034"
+   },
+   "0!B35": {
+    "kind": "text",
+    "value": "Meena "
+   },
+   "0!C35": {
+    "kind": "text",
+    "value": "2026-10-06"
+   },
+   "0!D35": {
+    "kind": "number",
+    "value": 98832.94
+   },
+   "0!E35": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F35": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A36": {
+    "kind": "text",
+    "value": "B-035"
+   },
+   "0!B36": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C36": {
+    "kind": "text",
+    "value": "2026-10-07"
+   },
+   "0!D36": {
+    "kind": "number",
+    "value": 48057.08
+   },
+   "0!E36": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F36": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A37": {
+    "kind": "text",
+    "value": "B-036"
+   },
+   "0!B37": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C37": {
+    "kind": "text",
+    "value": "2026-10-08"
+   },
+   "0!D37": {
+    "kind": "number",
+    "value": 27927.11
+   },
+   "0!E37": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!A38": {
+    "kind": "text",
+    "value": "B-037"
+   },
+   "0!B38": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C38": {
+    "kind": "text",
+    "value": "2026-10-09"
+   },
+   "0!D38": {
+    "kind": "number",
+    "value": 141912.51
+   },
+   "0!E38": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F38": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A39": {
+    "kind": "text",
+    "value": "B-038"
+   },
+   "0!B39": {
+    "kind": "text",
+    "value": "Dr. S. Iyer"
+   },
+   "0!C39": {
+    "kind": "text",
+    "value": "2026-10-10"
+   },
+   "0!D39": {
+    "kind": "number",
+    "value": 6862.47
+   },
+   "0!E39": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F39": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A40": {
+    "kind": "text",
+    "value": "B-039"
+   },
+   "0!B40": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C40": {
+    "kind": "text",
+    "value": "2026-10-11"
+   },
+   "0!D40": {
+    "kind": "number",
+    "value": 158785.19
+   },
+   "0!E40": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F40": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A41": {
+    "kind": "text",
+    "value": "B-040"
+   },
+   "0!B41": {
+    "kind": "text",
+    "value": "Meena "
+   },
+   "0!C41": {
+    "kind": "text",
+    "value": "2026-10-12"
+   },
+   "0!D41": {
+    "kind": "number",
+    "value": 31149.14
+   },
+   "0!E41": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F41": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A42": {
+    "kind": "text",
+    "value": "B-041"
+   },
+   "0!B42": {
+    "kind": "text",
+    "value": "Meena "
+   },
+   "0!C42": {
+    "kind": "text",
+    "value": "2026-10-13"
+   },
+   "0!D42": {
+    "kind": "number",
+    "value": 121216.75
+   },
+   "0!E42": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F42": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A43": {
+    "kind": "text",
+    "value": "B-042"
+   },
+   "0!B43": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C43": {
+    "kind": "text",
+    "value": "2026-10-14"
+   },
+   "0!D43": {
+    "kind": "number",
+    "value": 187543.64
+   },
+   "0!E43": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F43": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A44": {
+    "kind": "text",
+    "value": "B-043"
+   },
+   "0!B44": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C44": {
+    "kind": "text",
+    "value": "2026-10-15"
+   },
+   "0!D44": {
+    "kind": "number",
+    "value": 129325.46
+   },
+   "0!E44": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F44": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A45": {
+    "kind": "text",
+    "value": "B-044"
+   },
+   "0!B45": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C45": {
+    "kind": "text",
+    "value": "2026-10-16"
+   },
+   "0!D45": {
+    "kind": "number",
+    "value": 172671.86
+   },
+   "0!E45": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F45": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A46": {
+    "kind": "text",
+    "value": "B-045"
+   },
+   "0!B46": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C46": {
+    "kind": "text",
+    "value": "2026-10-17"
+   },
+   "0!D46": {
+    "kind": "number",
+    "value": 174201.1
+   },
+   "0!E46": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F46": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A47": {
+    "kind": "text",
+    "value": "B-046"
+   },
+   "0!B47": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C47": {
+    "kind": "text",
+    "value": "2026-10-18"
+   },
+   "0!D47": {
+    "kind": "number",
+    "value": 89246.19
+   },
+   "0!E47": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F47": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A48": {
+    "kind": "text",
+    "value": "B-047"
+   },
+   "0!B48": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C48": {
+    "kind": "text",
+    "value": "2026-10-19"
+   },
+   "0!D48": {
+    "kind": "number",
+    "value": 153500.44
+   },
+   "0!E48": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F48": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A49": {
+    "kind": "text",
+    "value": "B-048"
+   },
+   "0!B49": {
+    "kind": "text",
+    "value": "Meena "
+   },
+   "0!C49": {
+    "kind": "text",
+    "value": "2026-10-20"
+   },
+   "0!D49": {
+    "kind": "number",
+    "value": 185098.32
+   },
+   "0!E49": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F49": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A50": {
+    "kind": "text",
+    "value": "B-049"
+   },
+   "0!B50": {
+    "kind": "text",
+    "value": "Dr. S. Iyer"
+   },
+   "0!C50": {
+    "kind": "text",
+    "value": "2026-10-21"
+   },
+   "0!D50": {
+    "kind": "number",
+    "value": 123449.07
+   },
+   "0!E50": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!A51": {
+    "kind": "text",
+    "value": "B-050"
+   },
+   "0!B51": {
+    "kind": "text",
+    "value": " Ravi"
+   },
+   "0!C51": {
+    "kind": "text",
+    "value": "2026-10-22"
+   },
+   "0!D51": {
+    "kind": "number",
+    "value": 118323.9
+   },
+   "0!E51": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F51": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A52": {
+    "kind": "text",
+    "value": "B-051"
+   },
+   "0!B52": {
+    "kind": "text",
+    "value": "Meena "
+   },
+   "0!C52": {
+    "kind": "text",
+    "value": "2026-10-23"
+   },
+   "0!D52": {
+    "kind": "number",
+    "value": 202237.15
+   },
+   "0!E52": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F52": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A53": {
+    "kind": "text",
+    "value": "B-052"
+   },
+   "0!B53": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C53": {
+    "kind": "text",
+    "value": "2026-10-24"
+   },
+   "0!D53": {
+    "kind": "number",
+    "value": 55505.35
+   },
+   "0!E53": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F53": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A54": {
+    "kind": "text",
+    "value": "B-053"
+   },
+   "0!B54": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C54": {
+    "kind": "text",
+    "value": "2026-10-25"
+   },
+   "0!D54": {
+    "kind": "number",
+    "value": 84765.5
+   },
+   "0!E54": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!A55": {
+    "kind": "text",
+    "value": "B-054"
+   },
+   "0!B55": {
+    "kind": "text",
+    "value": "Meena "
+   },
+   "0!C55": {
+    "kind": "text",
+    "value": "2026-10-26"
+   },
+   "0!D55": {
+    "kind": "number",
+    "value": 227345.2
+   },
+   "0!E55": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!A56": {
+    "kind": "text",
+    "value": "B-055"
+   },
+   "0!B56": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C56": {
+    "kind": "text",
+    "value": "2026-10-27"
+   },
+   "0!D56": {
+    "kind": "number",
+    "value": 227489.4
+   },
+   "0!E56": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F56": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A57": {
+    "kind": "text",
+    "value": "B-056"
+   },
+   "0!B57": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C57": {
+    "kind": "text",
+    "value": "2026-10-28"
+   },
+   "0!D57": {
+    "kind": "number",
+    "value": 108764.31
+   },
+   "0!E57": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!A58": {
+    "kind": "text",
+    "value": "B-057"
+   },
+   "0!B58": {
+    "kind": "text",
+    "value": "Meena "
+   },
+   "0!C58": {
+    "kind": "text",
+    "value": "2026-10-29"
+   },
+   "0!D58": {
+    "kind": "number",
+    "value": 116058.55
+   },
+   "0!E58": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F58": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A59": {
+    "kind": "text",
+    "value": "B-058"
+   },
+   "0!B59": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C59": {
+    "kind": "text",
+    "value": "2026-10-30"
+   },
+   "0!D59": {
+    "kind": "number",
+    "value": 248281.53
+   },
+   "0!E59": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F59": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A60": {
+    "kind": "text",
+    "value": "B-059"
+   },
+   "0!B60": {
+    "kind": "text",
+    "value": "Dr. S. Iyer"
+   },
+   "0!C60": {
+    "kind": "text",
+    "value": "2026-10-01"
+   },
+   "0!D60": {
+    "kind": "number",
+    "value": 226260.6
+   },
+   "0!E60": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F60": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A61": {
+    "kind": "text",
+    "value": "B-060"
+   },
+   "0!B61": {
+    "kind": "text",
+    "value": " Ravi"
+   },
+   "0!C61": {
+    "kind": "text",
+    "value": "2026-10-02"
+   },
+   "0!D61": {
+    "kind": "number",
+    "value": 39400.15
+   },
+   "0!E61": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!A62": {
+    "kind": "text",
+    "value": "B-061"
+   },
+   "0!B62": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C62": {
+    "kind": "text",
+    "value": "2026-10-03"
+   },
+   "0!D62": {
+    "kind": "number",
+    "value": 199939.57
+   },
+   "0!E62": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F62": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A63": {
+    "kind": "text",
+    "value": "B-062"
+   },
+   "0!B63": {
+    "kind": "text",
+    "value": "Meena "
+   },
+   "0!C63": {
+    "kind": "text",
+    "value": "2026-10-04"
+   },
+   "0!D63": {
+    "kind": "number",
+    "value": 246644.08
+   },
+   "0!E63": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F63": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A64": {
+    "kind": "text",
+    "value": "B-063"
+   },
+   "0!B64": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C64": {
+    "kind": "text",
+    "value": "2026-10-05"
+   },
+   "0!D64": {
+    "kind": "number",
+    "value": 63332.79
+   },
+   "0!E64": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F64": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A65": {
+    "kind": "text",
+    "value": "B-064"
+   },
+   "0!B65": {
+    "kind": "text",
+    "value": "Dr. S. Iyer"
+   },
+   "0!C65": {
+    "kind": "text",
+    "value": "2026-10-06"
+   },
+   "0!D65": {
+    "kind": "number",
+    "value": 81834.33
+   },
+   "0!E65": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F65": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A66": {
+    "kind": "text",
+    "value": "B-065"
+   },
+   "0!B66": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C66": {
+    "kind": "text",
+    "value": "2026-10-07"
+   },
+   "0!D66": {
+    "kind": "number",
+    "value": 227549.26
+   },
+   "0!E66": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F66": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A67": {
+    "kind": "text",
+    "value": "B-066"
+   },
+   "0!B67": {
+    "kind": "text",
+    "value": "Dr. S. Iyer"
+   },
+   "0!C67": {
+    "kind": "text",
+    "value": "2026-10-08"
+   },
+   "0!D67": {
+    "kind": "number",
+    "value": 203854.23
+   },
+   "0!E67": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F67": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A68": {
+    "kind": "text",
+    "value": "B-067"
+   },
+   "0!B68": {
+    "kind": "text",
+    "value": "Dr. S. Iyer"
+   },
+   "0!C68": {
+    "kind": "text",
+    "value": "2026-10-09"
+   },
+   "0!D68": {
+    "kind": "number",
+    "value": 38383.18
+   },
+   "0!E68": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F68": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A69": {
+    "kind": "text",
+    "value": "B-068"
+   },
+   "0!B69": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C69": {
+    "kind": "text",
+    "value": "2026-10-10"
+   },
+   "0!D69": {
+    "kind": "number",
+    "value": 152334.38
+   },
+   "0!E69": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F69": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A70": {
+    "kind": "text",
+    "value": "B-069"
+   },
+   "0!B70": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C70": {
+    "kind": "text",
+    "value": "2026-10-11"
+   },
+   "0!D70": {
+    "kind": "number",
+    "value": 118636.49
+   },
+   "0!E70": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!A71": {
+    "kind": "text",
+    "value": "B-070"
+   },
+   "0!B71": {
+    "kind": "text",
+    "value": " Ravi"
+   },
+   "0!C71": {
+    "kind": "text",
+    "value": "2026-10-12"
+   },
+   "0!D71": {
+    "kind": "number",
+    "value": 170741.68
+   },
+   "0!E71": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!A72": {
+    "kind": "text",
+    "value": "B-071"
+   },
+   "0!B72": {
+    "kind": "text",
+    "value": "Dr. S. Iyer"
+   },
+   "0!C72": {
+    "kind": "text",
+    "value": "2026-10-13"
+   },
+   "0!D72": {
+    "kind": "number",
+    "value": 14677.23
+   },
+   "0!E72": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F72": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A73": {
+    "kind": "text",
+    "value": "B-072"
+   },
+   "0!B73": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C73": {
+    "kind": "text",
+    "value": "2026-10-14"
+   },
+   "0!D73": {
+    "kind": "number",
+    "value": 193179.14
+   },
+   "0!E73": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!A74": {
+    "kind": "text",
+    "value": "B-073"
+   },
+   "0!B74": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C74": {
+    "kind": "text",
+    "value": "2026-10-15"
+   },
+   "0!D74": {
+    "kind": "number",
+    "value": 111090.47
+   },
+   "0!E74": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F74": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A75": {
+    "kind": "text",
+    "value": "B-074"
+   },
+   "0!B75": {
+    "kind": "text",
+    "value": "Meena "
+   },
+   "0!C75": {
+    "kind": "text",
+    "value": "2026-10-16"
+   },
+   "0!D75": {
+    "kind": "number",
+    "value": 127284.96
+   },
+   "0!E75": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F75": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A76": {
+    "kind": "text",
+    "value": "B-075"
+   },
+   "0!B76": {
+    "kind": "text",
+    "value": "Dr. S. Iyer"
+   },
+   "0!C76": {
+    "kind": "text",
+    "value": "2026-10-17"
+   },
+   "0!D76": {
+    "kind": "number",
+    "value": 219195.6
+   },
+   "0!E76": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F76": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A77": {
+    "kind": "text",
+    "value": "B-076"
+   },
+   "0!B77": {
+    "kind": "text",
+    "value": "Meena "
+   },
+   "0!C77": {
+    "kind": "text",
+    "value": "2026-10-18"
+   },
+   "0!D77": {
+    "kind": "number",
+    "value": 34715.04
+   },
+   "0!E77": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F77": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A78": {
+    "kind": "text",
+    "value": "B-077"
+   },
+   "0!B78": {
+    "kind": "text",
+    "value": "Meena "
+   },
+   "0!C78": {
+    "kind": "text",
+    "value": "2026-10-19"
+   },
+   "0!D78": {
+    "kind": "number",
+    "value": 79336.96
+   },
+   "0!E78": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F78": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A79": {
+    "kind": "text",
+    "value": "B-078"
+   },
+   "0!B79": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C79": {
+    "kind": "text",
+    "value": "2026-10-20"
+   },
+   "0!D79": {
+    "kind": "number",
+    "value": 53566.1
+   },
+   "0!E79": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!A80": {
+    "kind": "text",
+    "value": "B-079"
+   },
+   "0!B80": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C80": {
+    "kind": "text",
+    "value": "2026-10-21"
+   },
+   "0!D80": {
+    "kind": "number",
+    "value": 234906.41
+   },
+   "0!E80": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F80": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A81": {
+    "kind": "text",
+    "value": "B-080"
+   },
+   "0!B81": {
+    "kind": "text",
+    "value": " Ravi"
+   },
+   "0!C81": {
+    "kind": "text",
+    "value": "2026-10-22"
+   },
+   "0!D81": {
+    "kind": "number",
+    "value": 220766.79
+   },
+   "0!E81": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F81": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A82": {
+    "kind": "text",
+    "value": "B-081"
+   },
+   "0!B82": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C82": {
+    "kind": "text",
+    "value": "2026-10-23"
+   },
+   "0!D82": {
+    "kind": "number",
+    "value": 99865.09
+   },
+   "0!E82": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F82": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A83": {
+    "kind": "text",
+    "value": "B-082"
+   },
+   "0!B83": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C83": {
+    "kind": "text",
+    "value": "2026-10-24"
+   },
+   "0!D83": {
+    "kind": "number",
+    "value": 40785.78
+   },
+   "0!E83": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F83": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A84": {
+    "kind": "text",
+    "value": "B-083"
+   },
+   "0!B84": {
+    "kind": "text",
+    "value": " Ravi"
+   },
+   "0!C84": {
+    "kind": "text",
+    "value": "2026-10-25"
+   },
+   "0!D84": {
+    "kind": "number",
+    "value": 105608.48
+   },
+   "0!E84": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F84": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A85": {
+    "kind": "text",
+    "value": "B-084"
+   },
+   "0!B85": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C85": {
+    "kind": "text",
+    "value": "2026-10-26"
+   },
+   "0!D85": {
+    "kind": "number",
+    "value": 180676.63
+   },
+   "0!E85": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F85": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A86": {
+    "kind": "text",
+    "value": "B-085"
+   },
+   "0!B86": {
+    "kind": "text",
+    "value": "Dr. S. Iyer"
+   },
+   "0!C86": {
+    "kind": "text",
+    "value": "2026-10-27"
+   },
+   "0!D86": {
+    "kind": "number",
+    "value": 114938.36
+   },
+   "0!E86": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F86": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A87": {
+    "kind": "text",
+    "value": "B-086"
+   },
+   "0!B87": {
+    "kind": "text",
+    "value": " Ravi"
+   },
+   "0!C87": {
+    "kind": "text",
+    "value": "2026-10-28"
+   },
+   "0!D87": {
+    "kind": "number",
+    "value": 129599.75
+   },
+   "0!E87": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!A88": {
+    "kind": "text",
+    "value": "B-087"
+   },
+   "0!B88": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C88": {
+    "kind": "text",
+    "value": "2026-10-29"
+   },
+   "0!D88": {
+    "kind": "number",
+    "value": 246278.27
+   },
+   "0!E88": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!A89": {
+    "kind": "text",
+    "value": "B-088"
+   },
+   "0!B89": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C89": {
+    "kind": "text",
+    "value": "2026-10-30"
+   },
+   "0!D89": {
+    "kind": "number",
+    "value": 66758.29
+   },
+   "0!E89": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F89": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A90": {
+    "kind": "text",
+    "value": "B-089"
+   },
+   "0!B90": {
+    "kind": "text",
+    "value": " Ravi"
+   },
+   "0!C90": {
+    "kind": "text",
+    "value": "2026-10-01"
+   },
+   "0!D90": {
+    "kind": "number",
+    "value": 189066.25
+   },
+   "0!E90": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F90": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A91": {
+    "kind": "text",
+    "value": "B-090"
+   },
+   "0!B91": {
+    "kind": "text",
+    "value": "Meena "
+   },
+   "0!C91": {
+    "kind": "text",
+    "value": "2026-10-02"
+   },
+   "0!D91": {
+    "kind": "number",
+    "value": 37767.3
+   },
+   "0!E91": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F91": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A92": {
+    "kind": "text",
+    "value": "B-091"
+   },
+   "0!B92": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C92": {
+    "kind": "text",
+    "value": "2026-10-03"
+   },
+   "0!D92": {
+    "kind": "number",
+    "value": 70126.04
+   },
+   "0!E92": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F92": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A93": {
+    "kind": "text",
+    "value": "B-092"
+   },
+   "0!B93": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C93": {
+    "kind": "text",
+    "value": "2026-10-04"
+   },
+   "0!D93": {
+    "kind": "number",
+    "value": 67596.39
+   },
+   "0!E93": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!A94": {
+    "kind": "text",
+    "value": "B-093"
+   },
+   "0!B94": {
+    "kind": "text",
+    "value": " Ravi"
+   },
+   "0!C94": {
+    "kind": "text",
+    "value": "2026-10-05"
+   },
+   "0!D94": {
+    "kind": "number",
+    "value": 21393.76
+   },
+   "0!E94": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!A95": {
+    "kind": "text",
+    "value": "B-094"
+   },
+   "0!B95": {
+    "kind": "text",
+    "value": " Ravi"
+   },
+   "0!C95": {
+    "kind": "text",
+    "value": "2026-10-06"
+   },
+   "0!D95": {
+    "kind": "number",
+    "value": 215762.35
+   },
+   "0!E95": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!A96": {
+    "kind": "text",
+    "value": "B-095"
+   },
+   "0!B96": {
+    "kind": "text",
+    "value": " Ravi"
+   },
+   "0!C96": {
+    "kind": "text",
+    "value": "2026-10-07"
+   },
+   "0!D96": {
+    "kind": "number",
+    "value": 248579.32
+   },
+   "0!E96": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F96": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A97": {
+    "kind": "text",
+    "value": "B-096"
+   },
+   "0!B97": {
+    "kind": "text",
+    "value": "Dr. S. Iyer"
+   },
+   "0!C97": {
+    "kind": "text",
+    "value": "2026-10-08"
+   },
+   "0!D97": {
+    "kind": "number",
+    "value": 32741.59
+   },
+   "0!E97": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!A98": {
+    "kind": "text",
+    "value": "B-097"
+   },
+   "0!B98": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C98": {
+    "kind": "text",
+    "value": "2026-10-09"
+   },
+   "0!D98": {
+    "kind": "number",
+    "value": 65842.88
+   },
+   "0!E98": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F98": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A99": {
+    "kind": "text",
+    "value": "B-098"
+   },
+   "0!B99": {
+    "kind": "text",
+    "value": " Ravi"
+   },
+   "0!C99": {
+    "kind": "text",
+    "value": "2026-10-10"
+   },
+   "0!D99": {
+    "kind": "number",
+    "value": 157353.44
+   },
+   "0!E99": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F99": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A100": {
+    "kind": "text",
+    "value": "B-099"
+   },
+   "0!B100": {
+    "kind": "text",
+    "value": "Meena "
+   },
+   "0!C100": {
+    "kind": "text",
+    "value": "2026-10-11"
+   },
+   "0!D100": {
+    "kind": "number",
+    "value": 125272.11
+   },
+   "0!E100": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F100": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A101": {
+    "kind": "text",
+    "value": "B-100"
+   },
+   "0!B101": {
+    "kind": "text",
+    "value": " Ravi"
+   },
+   "0!C101": {
+    "kind": "text",
+    "value": "2026-10-12"
+   },
+   "0!D101": {
+    "kind": "number",
+    "value": 201017.9
+   },
+   "0!E101": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!A102": {
+    "kind": "text",
+    "value": "B-101"
+   },
+   "0!B102": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C102": {
+    "kind": "text",
+    "value": "2026-10-13"
+   },
+   "0!D102": {
+    "kind": "number",
+    "value": 5099.26
+   },
+   "0!E102": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F102": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A103": {
+    "kind": "text",
+    "value": "B-102"
+   },
+   "0!B103": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C103": {
+    "kind": "text",
+    "value": "2026-10-14"
+   },
+   "0!D103": {
+    "kind": "number",
+    "value": 233693.39
+   },
+   "0!E103": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F103": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A104": {
+    "kind": "text",
+    "value": "B-103"
+   },
+   "0!B104": {
+    "kind": "text",
+    "value": "Meena "
+   },
+   "0!C104": {
+    "kind": "text",
+    "value": "2026-10-15"
+   },
+   "0!D104": {
+    "kind": "number",
+    "value": 136703.61
+   },
+   "0!E104": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F104": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A105": {
+    "kind": "text",
+    "value": "B-104"
+   },
+   "0!B105": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C105": {
+    "kind": "text",
+    "value": "2026-10-16"
+   },
+   "0!D105": {
+    "kind": "number",
+    "value": 245618.91
+   },
+   "0!E105": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F105": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A106": {
+    "kind": "text",
+    "value": "B-105"
+   },
+   "0!B106": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C106": {
+    "kind": "text",
+    "value": "2026-10-17"
+   },
+   "0!D106": {
+    "kind": "number",
+    "value": 101472.08
+   },
+   "0!E106": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!A107": {
+    "kind": "text",
+    "value": "B-106"
+   },
+   "0!B107": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C107": {
+    "kind": "text",
+    "value": "2026-10-18"
+   },
+   "0!D107": {
+    "kind": "number",
+    "value": 4056.65
+   },
+   "0!E107": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F107": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A108": {
+    "kind": "text",
+    "value": "B-107"
+   },
+   "0!B108": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C108": {
+    "kind": "text",
+    "value": "2026-10-19"
+   },
+   "0!D108": {
+    "kind": "number",
+    "value": 14322.57
+   },
+   "0!E108": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F108": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A109": {
+    "kind": "text",
+    "value": "B-108"
+   },
+   "0!B109": {
+    "kind": "text",
+    "value": "Dr. S. Iyer"
+   },
+   "0!C109": {
+    "kind": "text",
+    "value": "2026-10-20"
+   },
+   "0!D109": {
+    "kind": "number",
+    "value": 60932.13
+   },
+   "0!E109": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!A110": {
+    "kind": "text",
+    "value": "B-109"
+   },
+   "0!B110": {
+    "kind": "text",
+    "value": "Meena "
+   },
+   "0!C110": {
+    "kind": "text",
+    "value": "2026-10-21"
+   },
+   "0!D110": {
+    "kind": "number",
+    "value": 46745.33
+   },
+   "0!E110": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F110": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A111": {
+    "kind": "text",
+    "value": "B-110"
+   },
+   "0!B111": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C111": {
+    "kind": "text",
+    "value": "2026-10-22"
+   },
+   "0!D111": {
+    "kind": "number",
+    "value": 66179.15
+   },
+   "0!E111": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F111": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A112": {
+    "kind": "text",
+    "value": "B-111"
+   },
+   "0!B112": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C112": {
+    "kind": "text",
+    "value": "2026-10-23"
+   },
+   "0!D112": {
+    "kind": "number",
+    "value": 9094.46
+   },
+   "0!E112": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F112": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A113": {
+    "kind": "text",
+    "value": "B-112"
+   },
+   "0!B113": {
+    "kind": "text",
+    "value": " Ravi"
+   },
+   "0!C113": {
+    "kind": "text",
+    "value": "2026-10-24"
+   },
+   "0!D113": {
+    "kind": "number",
+    "value": 46147.99
+   },
+   "0!E113": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F113": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A114": {
+    "kind": "text",
+    "value": "B-113"
+   },
+   "0!B114": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C114": {
+    "kind": "text",
+    "value": "2026-10-25"
+   },
+   "0!D114": {
+    "kind": "number",
+    "value": 118923.59
+   },
+   "0!E114": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F114": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A115": {
+    "kind": "text",
+    "value": "B-114"
+   },
+   "0!B115": {
+    "kind": "text",
+    "value": "Dr. S. Iyer"
+   },
+   "0!C115": {
+    "kind": "text",
+    "value": "2026-10-26"
+   },
+   "0!D115": {
+    "kind": "number",
+    "value": 194171.4
+   },
+   "0!E115": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F115": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A116": {
+    "kind": "text",
+    "value": "B-115"
+   },
+   "0!B116": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C116": {
+    "kind": "text",
+    "value": "2026-10-27"
+   },
+   "0!D116": {
+    "kind": "number",
+    "value": 36394.35
+   },
+   "0!E116": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F116": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A117": {
+    "kind": "text",
+    "value": "B-116"
+   },
+   "0!B117": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C117": {
+    "kind": "text",
+    "value": "2026-10-28"
+   },
+   "0!D117": {
+    "kind": "number",
+    "value": 75261.69
+   },
+   "0!E117": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!A118": {
+    "kind": "text",
+    "value": "B-117"
+   },
+   "0!B118": {
+    "kind": "text",
+    "value": "Dr. S. Iyer"
+   },
+   "0!C118": {
+    "kind": "text",
+    "value": "2026-10-29"
+   },
+   "0!D118": {
+    "kind": "number",
+    "value": 239430.48
+   },
+   "0!E118": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F118": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A119": {
+    "kind": "text",
+    "value": "B-118"
+   },
+   "0!B119": {
+    "kind": "text",
+    "value": " Ravi"
+   },
+   "0!C119": {
+    "kind": "text",
+    "value": "2026-10-30"
+   },
+   "0!D119": {
+    "kind": "number",
+    "value": 180308.98
+   },
+   "0!E119": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F119": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A120": {
+    "kind": "text",
+    "value": "B-119"
+   },
+   "0!B120": {
+    "kind": "text",
+    "value": " Ravi"
+   },
+   "0!C120": {
+    "kind": "text",
+    "value": "2026-10-01"
+   },
+   "0!D120": {
+    "kind": "number",
+    "value": 181176.87
+   },
+   "0!E120": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!A121": {
+    "kind": "text",
+    "value": "B-120"
+   },
+   "0!B121": {
+    "kind": "text",
+    "value": "Dr. S. Iyer"
+   },
+   "0!C121": {
+    "kind": "text",
+    "value": "2026-10-02"
+   },
+   "0!D121": {
+    "kind": "number",
+    "value": 157019.37
+   },
+   "0!E121": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!A122": {
+    "kind": "text",
+    "value": "B-121"
+   },
+   "0!B122": {
+    "kind": "text",
+    "value": "Dr. S. Iyer"
+   },
+   "0!C122": {
+    "kind": "text",
+    "value": "2026-10-03"
+   },
+   "0!D122": {
+    "kind": "number",
+    "value": 199592.81
+   },
+   "0!E122": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!A123": {
+    "kind": "text",
+    "value": "B-122"
+   },
+   "0!B123": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C123": {
+    "kind": "text",
+    "value": "2026-10-04"
+   },
+   "0!D123": {
+    "kind": "number",
+    "value": 10944.59
+   },
+   "0!E123": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!A124": {
+    "kind": "text",
+    "value": "B-123"
+   },
+   "0!B124": {
+    "kind": "text",
+    "value": "Meena "
+   },
+   "0!C124": {
+    "kind": "text",
+    "value": "2026-10-05"
+   },
+   "0!D124": {
+    "kind": "number",
+    "value": 209037.39
+   },
+   "0!E124": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!A125": {
+    "kind": "text",
+    "value": "B-124"
+   },
+   "0!B125": {
+    "kind": "text",
+    "value": "Dr. S. Iyer"
+   },
+   "0!C125": {
+    "kind": "text",
+    "value": "2026-10-06"
+   },
+   "0!D125": {
+    "kind": "number",
+    "value": 170325.71
+   },
+   "0!E125": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F125": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A126": {
+    "kind": "text",
+    "value": "B-125"
+   },
+   "0!B126": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C126": {
+    "kind": "text",
+    "value": "2026-10-07"
+   },
+   "0!D126": {
+    "kind": "number",
+    "value": 114508.66
+   },
+   "0!E126": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!A127": {
+    "kind": "text",
+    "value": "B-126"
+   },
+   "0!B127": {
+    "kind": "text",
+    "value": "Dr. S. Iyer"
+   },
+   "0!C127": {
+    "kind": "text",
+    "value": "2026-10-08"
+   },
+   "0!D127": {
+    "kind": "number",
+    "value": 16979.56
+   },
+   "0!E127": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F127": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A128": {
+    "kind": "text",
+    "value": "B-127"
+   },
+   "0!B128": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C128": {
+    "kind": "text",
+    "value": "2026-10-09"
+   },
+   "0!D128": {
+    "kind": "number",
+    "value": 211610.34
+   },
+   "0!E128": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F128": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A129": {
+    "kind": "text",
+    "value": "B-128"
+   },
+   "0!B129": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C129": {
+    "kind": "text",
+    "value": "2026-10-10"
+   },
+   "0!D129": {
+    "kind": "number",
+    "value": 185087.23
+   },
+   "0!E129": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F129": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A130": {
+    "kind": "text",
+    "value": "B-129"
+   },
+   "0!B130": {
+    "kind": "text",
+    "value": "Meena "
+   },
+   "0!C130": {
+    "kind": "text",
+    "value": "2026-10-11"
+   },
+   "0!D130": {
+    "kind": "number",
+    "value": 19646.6
+   },
+   "0!E130": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!A131": {
+    "kind": "text",
+    "value": "B-130"
+   },
+   "0!B131": {
+    "kind": "text",
+    "value": "Dr. S. Iyer"
+   },
+   "0!C131": {
+    "kind": "text",
+    "value": "2026-10-12"
+   },
+   "0!D131": {
+    "kind": "number",
+    "value": 158381.81
+   },
+   "0!E131": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!A132": {
+    "kind": "text",
+    "value": "B-131"
+   },
+   "0!B132": {
+    "kind": "text",
+    "value": "Dr. S. Iyer"
+   },
+   "0!C132": {
+    "kind": "text",
+    "value": "2026-10-13"
+   },
+   "0!D132": {
+    "kind": "number",
+    "value": 37282.56
+   },
+   "0!E132": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F132": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A133": {
+    "kind": "text",
+    "value": "B-132"
+   },
+   "0!B133": {
+    "kind": "text",
+    "value": "Dr. S. Iyer"
+   },
+   "0!C133": {
+    "kind": "text",
+    "value": "2026-10-14"
+   },
+   "0!D133": {
+    "kind": "number",
+    "value": 142156.54
+   },
+   "0!E133": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F133": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A134": {
+    "kind": "text",
+    "value": "B-133"
+   },
+   "0!B134": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C134": {
+    "kind": "text",
+    "value": "2026-10-15"
+   },
+   "0!D134": {
+    "kind": "number",
+    "value": 121706.61
+   },
+   "0!E134": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F134": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A135": {
+    "kind": "text",
+    "value": "B-134"
+   },
+   "0!B135": {
+    "kind": "text",
+    "value": "Meena "
+   },
+   "0!C135": {
+    "kind": "text",
+    "value": "2026-10-16"
+   },
+   "0!D135": {
+    "kind": "number",
+    "value": 73068.69
+   },
+   "0!E135": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F135": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A136": {
+    "kind": "text",
+    "value": "B-135"
+   },
+   "0!B136": {
+    "kind": "text",
+    "value": "Meena "
+   },
+   "0!C136": {
+    "kind": "text",
+    "value": "2026-10-17"
+   },
+   "0!D136": {
+    "kind": "number",
+    "value": 116851.62
+   },
+   "0!E136": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F136": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A137": {
+    "kind": "text",
+    "value": "B-136"
+   },
+   "0!B137": {
+    "kind": "text",
+    "value": " Ravi"
+   },
+   "0!C137": {
+    "kind": "text",
+    "value": "2026-10-18"
+   },
+   "0!D137": {
+    "kind": "number",
+    "value": 244542.37
+   },
+   "0!E137": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!A138": {
+    "kind": "text",
+    "value": "B-137"
+   },
+   "0!B138": {
+    "kind": "text",
+    "value": " Ravi"
+   },
+   "0!C138": {
+    "kind": "text",
+    "value": "2026-10-19"
+   },
+   "0!D138": {
+    "kind": "number",
+    "value": 115013.22
+   },
+   "0!E138": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F138": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A139": {
+    "kind": "text",
+    "value": "B-138"
+   },
+   "0!B139": {
+    "kind": "text",
+    "value": "Meena "
+   },
+   "0!C139": {
+    "kind": "text",
+    "value": "2026-10-20"
+   },
+   "0!D139": {
+    "kind": "number",
+    "value": 52854.39
+   },
+   "0!E139": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!A140": {
+    "kind": "text",
+    "value": "B-139"
+   },
+   "0!B140": {
+    "kind": "text",
+    "value": "Dr. S. Iyer"
+   },
+   "0!C140": {
+    "kind": "text",
+    "value": "2026-10-21"
+   },
+   "0!D140": {
+    "kind": "number",
+    "value": 23030.62
+   },
+   "0!E140": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F140": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A141": {
+    "kind": "text",
+    "value": "B-140"
+   },
+   "0!B141": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C141": {
+    "kind": "text",
+    "value": "2026-10-22"
+   },
+   "0!D141": {
+    "kind": "number",
+    "value": 151039.75
+   },
+   "0!E141": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!A142": {
+    "kind": "text",
+    "value": "B-141"
+   },
+   "0!B142": {
+    "kind": "text",
+    "value": " Ravi"
+   },
+   "0!C142": {
+    "kind": "text",
+    "value": "2026-10-23"
+   },
+   "0!D142": {
+    "kind": "number",
+    "value": 58230.21
+   },
+   "0!E142": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F142": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A143": {
+    "kind": "text",
+    "value": "B-142"
+   },
+   "0!B143": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C143": {
+    "kind": "text",
+    "value": "2026-10-24"
+   },
+   "0!D143": {
+    "kind": "number",
+    "value": 40186.78
+   },
+   "0!E143": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F143": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A144": {
+    "kind": "text",
+    "value": "B-143"
+   },
+   "0!B144": {
+    "kind": "text",
+    "value": "Meena "
+   },
+   "0!C144": {
+    "kind": "text",
+    "value": "2026-10-25"
+   },
+   "0!D144": {
+    "kind": "number",
+    "value": 75836.78
+   },
+   "0!E144": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F144": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A145": {
+    "kind": "text",
+    "value": "B-144"
+   },
+   "0!B145": {
+    "kind": "text",
+    "value": " Ravi"
+   },
+   "0!C145": {
+    "kind": "text",
+    "value": "2026-10-26"
+   },
+   "0!D145": {
+    "kind": "number",
+    "value": 94338.48
+   },
+   "0!E145": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F145": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A146": {
+    "kind": "text",
+    "value": "B-145"
+   },
+   "0!B146": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C146": {
+    "kind": "text",
+    "value": "2026-10-27"
+   },
+   "0!D146": {
+    "kind": "number",
+    "value": 81474.62
+   },
+   "0!E146": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F146": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A147": {
+    "kind": "text",
+    "value": "B-146"
+   },
+   "0!B147": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C147": {
+    "kind": "text",
+    "value": "2026-10-28"
+   },
+   "0!D147": {
+    "kind": "number",
+    "value": 235000.32
+   },
+   "0!E147": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!A148": {
+    "kind": "text",
+    "value": "B-147"
+   },
+   "0!B148": {
+    "kind": "text",
+    "value": " Ravi"
+   },
+   "0!C148": {
+    "kind": "text",
+    "value": "2026-10-29"
+   },
+   "0!D148": {
+    "kind": "number",
+    "value": 63676.45
+   },
+   "0!E148": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F148": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A149": {
+    "kind": "text",
+    "value": "B-148"
+   },
+   "0!B149": {
+    "kind": "text",
+    "value": "Meena "
+   },
+   "0!C149": {
+    "kind": "text",
+    "value": "2026-10-30"
+   },
+   "0!D149": {
+    "kind": "number",
+    "value": 249698.73
+   },
+   "0!E149": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F149": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A150": {
+    "kind": "text",
+    "value": "B-149"
+   },
+   "0!B150": {
+    "kind": "text",
+    "value": "Meena "
+   },
+   "0!C150": {
+    "kind": "text",
+    "value": "2026-10-01"
+   },
+   "0!D150": {
+    "kind": "number",
+    "value": 189036.27
+   },
+   "0!E150": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F150": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A151": {
+    "kind": "text",
+    "value": "B-150"
+   },
+   "0!B151": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C151": {
+    "kind": "text",
+    "value": "2026-10-02"
+   },
+   "0!D151": {
+    "kind": "number",
+    "value": 13378.57
+   },
+   "0!E151": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F151": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A152": {
+    "kind": "text",
+    "value": "B-151"
+   },
+   "0!B152": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C152": {
+    "kind": "text",
+    "value": "2026-10-03"
+   },
+   "0!D152": {
+    "kind": "number",
+    "value": 242774.13
+   },
+   "0!E152": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F152": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A153": {
+    "kind": "text",
+    "value": "B-152"
+   },
+   "0!B153": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C153": {
+    "kind": "text",
+    "value": "2026-10-04"
+   },
+   "0!D153": {
+    "kind": "number",
+    "value": 193409.32
+   },
+   "0!E153": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!A154": {
+    "kind": "text",
+    "value": "B-153"
+   },
+   "0!B154": {
+    "kind": "text",
+    "value": "Meena "
+   },
+   "0!C154": {
+    "kind": "text",
+    "value": "2026-10-05"
+   },
+   "0!D154": {
+    "kind": "number",
+    "value": 228399.26
+   },
+   "0!E154": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!A155": {
+    "kind": "text",
+    "value": "B-154"
+   },
+   "0!B155": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C155": {
+    "kind": "text",
+    "value": "2026-10-06"
+   },
+   "0!D155": {
+    "kind": "number",
+    "value": 233399.61
+   },
+   "0!E155": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F155": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A156": {
+    "kind": "text",
+    "value": "B-155"
+   },
+   "0!B156": {
+    "kind": "text",
+    "value": "Dr. S. Iyer"
+   },
+   "0!C156": {
+    "kind": "text",
+    "value": "2026-10-07"
+   },
+   "0!D156": {
+    "kind": "number",
+    "value": 188290.67
+   },
+   "0!E156": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F156": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A157": {
+    "kind": "text",
+    "value": "B-156"
+   },
+   "0!B157": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C157": {
+    "kind": "text",
+    "value": "2026-10-08"
+   },
+   "0!D157": {
+    "kind": "number",
+    "value": 228020.36
+   },
+   "0!E157": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F157": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A158": {
+    "kind": "text",
+    "value": "B-157"
+   },
+   "0!B158": {
+    "kind": "text",
+    "value": "Meena "
+   },
+   "0!C158": {
+    "kind": "text",
+    "value": "2026-10-09"
+   },
+   "0!D158": {
+    "kind": "number",
+    "value": 104009.23
+   },
+   "0!E158": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F158": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A159": {
+    "kind": "text",
+    "value": "B-158"
+   },
+   "0!B159": {
+    "kind": "text",
+    "value": " Ravi"
+   },
+   "0!C159": {
+    "kind": "text",
+    "value": "2026-10-10"
+   },
+   "0!D159": {
+    "kind": "number",
+    "value": 184888.61
+   },
+   "0!E159": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F159": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A160": {
+    "kind": "text",
+    "value": "B-159"
+   },
+   "0!B160": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C160": {
+    "kind": "text",
+    "value": "2026-10-11"
+   },
+   "0!D160": {
+    "kind": "number",
+    "value": 75558.65
+   },
+   "0!E160": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!A161": {
+    "kind": "text",
+    "value": "B-160"
+   },
+   "0!B161": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C161": {
+    "kind": "text",
+    "value": "2026-10-12"
+   },
+   "0!D161": {
+    "kind": "number",
+    "value": 160979.66
+   },
+   "0!E161": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F161": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A162": {
+    "kind": "text",
+    "value": "B-161"
+   },
+   "0!B162": {
+    "kind": "text",
+    "value": "Dr. S. Iyer"
+   },
+   "0!C162": {
+    "kind": "text",
+    "value": "2026-10-13"
+   },
+   "0!D162": {
+    "kind": "number",
+    "value": 226537
+   },
+   "0!E162": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F162": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A163": {
+    "kind": "text",
+    "value": "B-162"
+   },
+   "0!B163": {
+    "kind": "text",
+    "value": "Meena "
+   },
+   "0!C163": {
+    "kind": "text",
+    "value": "2026-10-14"
+   },
+   "0!D163": {
+    "kind": "number",
+    "value": 226611.72
+   },
+   "0!E163": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F163": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A164": {
+    "kind": "text",
+    "value": "B-163"
+   },
+   "0!B164": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C164": {
+    "kind": "text",
+    "value": "2026-10-15"
+   },
+   "0!D164": {
+    "kind": "number",
+    "value": 137172.43
+   },
+   "0!E164": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!A165": {
+    "kind": "text",
+    "value": "B-164"
+   },
+   "0!B165": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C165": {
+    "kind": "text",
+    "value": "2026-10-16"
+   },
+   "0!D165": {
+    "kind": "number",
+    "value": 85817.83
+   },
+   "0!E165": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F165": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A166": {
+    "kind": "text",
+    "value": "B-165"
+   },
+   "0!B166": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C166": {
+    "kind": "text",
+    "value": "2026-10-17"
+   },
+   "0!D166": {
+    "kind": "number",
+    "value": 92392.18
+   },
+   "0!E166": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!A167": {
+    "kind": "text",
+    "value": "B-166"
+   },
+   "0!B167": {
+    "kind": "text",
+    "value": "Meena "
+   },
+   "0!C167": {
+    "kind": "text",
+    "value": "2026-10-18"
+   },
+   "0!D167": {
+    "kind": "number",
+    "value": 96018.05
+   },
+   "0!E167": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F167": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A168": {
+    "kind": "text",
+    "value": "B-167"
+   },
+   "0!B168": {
+    "kind": "text",
+    "value": " Ravi"
+   },
+   "0!C168": {
+    "kind": "text",
+    "value": "2026-10-19"
+   },
+   "0!D168": {
+    "kind": "number",
+    "value": 84881.67
+   },
+   "0!E168": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F168": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A169": {
+    "kind": "text",
+    "value": "B-168"
+   },
+   "0!B169": {
+    "kind": "text",
+    "value": " Ravi"
+   },
+   "0!C169": {
+    "kind": "text",
+    "value": "2026-10-20"
+   },
+   "0!D169": {
+    "kind": "number",
+    "value": 143783.05
+   },
+   "0!E169": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F169": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A170": {
+    "kind": "text",
+    "value": "B-169"
+   },
+   "0!B170": {
+    "kind": "text",
+    "value": "Dr. S. Iyer"
+   },
+   "0!C170": {
+    "kind": "text",
+    "value": "2026-10-21"
+   },
+   "0!D170": {
+    "kind": "number",
+    "value": 132541.81
+   },
+   "0!E170": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!A171": {
+    "kind": "text",
+    "value": "B-170"
+   },
+   "0!B171": {
+    "kind": "text",
+    "value": " Ravi"
+   },
+   "0!C171": {
+    "kind": "text",
+    "value": "2026-10-22"
+   },
+   "0!D171": {
+    "kind": "number",
+    "value": 224249.14
+   },
+   "0!E171": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F171": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A172": {
+    "kind": "text",
+    "value": "B-171"
+   },
+   "0!B172": {
+    "kind": "text",
+    "value": "Meena "
+   },
+   "0!C172": {
+    "kind": "text",
+    "value": "2026-10-23"
+   },
+   "0!D172": {
+    "kind": "number",
+    "value": 108243.25
+   },
+   "0!E172": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!A173": {
+    "kind": "text",
+    "value": "B-172"
+   },
+   "0!B173": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C173": {
+    "kind": "text",
+    "value": "2026-10-24"
+   },
+   "0!D173": {
+    "kind": "number",
+    "value": 8544.75
+   },
+   "0!E173": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F173": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A174": {
+    "kind": "text",
+    "value": "B-173"
+   },
+   "0!B174": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C174": {
+    "kind": "text",
+    "value": "2026-10-25"
+   },
+   "0!D174": {
+    "kind": "number",
+    "value": 18747.9
+   },
+   "0!E174": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F174": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A175": {
+    "kind": "text",
+    "value": "B-174"
+   },
+   "0!B175": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C175": {
+    "kind": "text",
+    "value": "2026-10-26"
+   },
+   "0!D175": {
+    "kind": "number",
+    "value": 195885.24
+   },
+   "0!E175": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F175": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A176": {
+    "kind": "text",
+    "value": "B-175"
+   },
+   "0!B176": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C176": {
+    "kind": "text",
+    "value": "2026-10-27"
+   },
+   "0!D176": {
+    "kind": "number",
+    "value": 130830.22
+   },
+   "0!E176": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F176": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A177": {
+    "kind": "text",
+    "value": "B-176"
+   },
+   "0!B177": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C177": {
+    "kind": "text",
+    "value": "2026-10-28"
+   },
+   "0!D177": {
+    "kind": "number",
+    "value": 138099.48
+   },
+   "0!E177": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!A178": {
+    "kind": "text",
+    "value": "B-177"
+   },
+   "0!B178": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C178": {
+    "kind": "text",
+    "value": "2026-10-29"
+   },
+   "0!D178": {
+    "kind": "number",
+    "value": 58527.92
+   },
+   "0!E178": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F178": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A179": {
+    "kind": "text",
+    "value": "B-178"
+   },
+   "0!B179": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C179": {
+    "kind": "text",
+    "value": "2026-10-30"
+   },
+   "0!D179": {
+    "kind": "number",
+    "value": 156804.95
+   },
+   "0!E179": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!A180": {
+    "kind": "text",
+    "value": "B-179"
+   },
+   "0!B180": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C180": {
+    "kind": "text",
+    "value": "2026-10-01"
+   },
+   "0!D180": {
+    "kind": "number",
+    "value": 18052.8
+   },
+   "0!E180": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F180": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A181": {
+    "kind": "text",
+    "value": "B-180"
+   },
+   "0!B181": {
+    "kind": "text",
+    "value": " Ravi"
+   },
+   "0!C181": {
+    "kind": "text",
+    "value": "2026-10-02"
+   },
+   "0!D181": {
+    "kind": "number",
+    "value": 56283.97
+   },
+   "0!E181": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!A182": {
+    "kind": "text",
+    "value": "B-181"
+   },
+   "0!B182": {
+    "kind": "text",
+    "value": "Dr. S. Iyer"
+   },
+   "0!C182": {
+    "kind": "text",
+    "value": "2026-10-03"
+   },
+   "0!D182": {
+    "kind": "number",
+    "value": 75729.56
+   },
+   "0!E182": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F182": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A183": {
+    "kind": "text",
+    "value": "B-182"
+   },
+   "0!B183": {
+    "kind": "text",
+    "value": " Ravi"
+   },
+   "0!C183": {
+    "kind": "text",
+    "value": "2026-10-04"
+   },
+   "0!D183": {
+    "kind": "number",
+    "value": 161321.62
+   },
+   "0!E183": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F183": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A184": {
+    "kind": "text",
+    "value": "B-183"
+   },
+   "0!B184": {
+    "kind": "text",
+    "value": "Dr. S. Iyer"
+   },
+   "0!C184": {
+    "kind": "text",
+    "value": "2026-10-05"
+   },
+   "0!D184": {
+    "kind": "number",
+    "value": 59074.64
+   },
+   "0!E184": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!A185": {
+    "kind": "text",
+    "value": "B-184"
+   },
+   "0!B185": {
+    "kind": "text",
+    "value": "Meena "
+   },
+   "0!C185": {
+    "kind": "text",
+    "value": "2026-10-06"
+   },
+   "0!D185": {
+    "kind": "number",
+    "value": 176311.09
+   },
+   "0!E185": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!A186": {
+    "kind": "text",
+    "value": "B-185"
+   },
+   "0!B186": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C186": {
+    "kind": "text",
+    "value": "2026-10-07"
+   },
+   "0!D186": {
+    "kind": "number",
+    "value": 48931.75
+   },
+   "0!E186": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!A187": {
+    "kind": "text",
+    "value": "B-186"
+   },
+   "0!B187": {
+    "kind": "text",
+    "value": " Ravi"
+   },
+   "0!C187": {
+    "kind": "text",
+    "value": "2026-10-08"
+   },
+   "0!D187": {
+    "kind": "number",
+    "value": 57346.21
+   },
+   "0!E187": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F187": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A188": {
+    "kind": "text",
+    "value": "B-187"
+   },
+   "0!B188": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C188": {
+    "kind": "text",
+    "value": "2026-10-09"
+   },
+   "0!D188": {
+    "kind": "number",
+    "value": 123489.39
+   },
+   "0!E188": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F188": {
+    "kind": "text",
+    "value": "ICU → ward"
+   },
+   "0!A189": {
+    "kind": "text",
+    "value": "B-188"
+   },
+   "0!B189": {
+    "kind": "text",
+    "value": " Ravi"
+   },
+   "0!C189": {
+    "kind": "text",
+    "value": "2026-10-10"
+   },
+   "0!D189": {
+    "kind": "number",
+    "value": 170800.39
+   },
+   "0!E189": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!A190": {
+    "kind": "text",
+    "value": "B-189"
+   },
+   "0!B190": {
+    "kind": "text",
+    "value": " Ravi"
+   },
+   "0!C190": {
+    "kind": "text",
+    "value": "2026-10-11"
+   },
+   "0!D190": {
+    "kind": "number",
+    "value": 184912.74
+   },
+   "0!E190": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F190": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A191": {
+    "kind": "text",
+    "value": "B-190"
+   },
+   "0!B191": {
+    "kind": "text",
+    "value": "Meena "
+   },
+   "0!C191": {
+    "kind": "text",
+    "value": "2026-10-12"
+   },
+   "0!D191": {
+    "kind": "number",
+    "value": 242479.75
+   },
+   "0!E191": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F191": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A192": {
+    "kind": "text",
+    "value": "B-191"
+   },
+   "0!B192": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C192": {
+    "kind": "text",
+    "value": "2026-10-13"
+   },
+   "0!D192": {
+    "kind": "number",
+    "value": 116545.96
+   },
+   "0!E192": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F192": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A193": {
+    "kind": "text",
+    "value": "B-192"
+   },
+   "0!B193": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C193": {
+    "kind": "text",
+    "value": "2026-10-14"
+   },
+   "0!D193": {
+    "kind": "number",
+    "value": 238005.76
+   },
+   "0!E193": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F193": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A194": {
+    "kind": "text",
+    "value": "B-193"
+   },
+   "0!B194": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C194": {
+    "kind": "text",
+    "value": "2026-10-15"
+   },
+   "0!D194": {
+    "kind": "number",
+    "value": 121520.66
+   },
+   "0!E194": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F194": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A195": {
+    "kind": "text",
+    "value": "B-194"
+   },
+   "0!B195": {
+    "kind": "text",
+    "value": "Meena "
+   },
+   "0!C195": {
+    "kind": "text",
+    "value": "2026-10-16"
+   },
+   "0!D195": {
+    "kind": "number",
+    "value": 14062.42
+   },
+   "0!E195": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F195": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A196": {
+    "kind": "text",
+    "value": "B-195"
+   },
+   "0!B196": {
+    "kind": "text",
+    "value": "Meena "
+   },
+   "0!C196": {
+    "kind": "text",
+    "value": "2026-10-17"
+   },
+   "0!D196": {
+    "kind": "number",
+    "value": 13434.22
+   },
+   "0!E196": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "0!F196": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A197": {
+    "kind": "text",
+    "value": "B-196"
+   },
+   "0!B197": {
+    "kind": "text",
+    "value": "Meena "
+   },
+   "0!C197": {
+    "kind": "text",
+    "value": "2026-10-18"
+   },
+   "0!D197": {
+    "kind": "number",
+    "value": 112685.67
+   },
+   "0!E197": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!A198": {
+    "kind": "text",
+    "value": "B-197"
+   },
+   "0!B198": {
+    "kind": "text",
+    "value": "Arun  Kumar"
+   },
+   "0!C198": {
+    "kind": "text",
+    "value": "2026-10-19"
+   },
+   "0!D198": {
+    "kind": "number",
+    "value": 232933.08
+   },
+   "0!E198": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F198": {
+    "kind": "text",
+    "value": "review"
+   },
+   "0!A199": {
+    "kind": "text",
+    "value": "B-198"
+   },
+   "0!B199": {
+    "kind": "text",
+    "value": "Lakshmi"
+   },
+   "0!C199": {
+    "kind": "text",
+    "value": "2026-10-20"
+   },
+   "0!D199": {
+    "kind": "number",
+    "value": 163290.83
+   },
+   "0!E199": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!A200": {
+    "kind": "text",
+    "value": "B-199"
+   },
+   "0!B200": {
+    "kind": "text",
+    "value": " Ravi"
+   },
+   "0!C200": {
+    "kind": "text",
+    "value": "2026-10-21"
+   },
+   "0!D200": {
+    "kind": "number",
+    "value": 166275.25
+   },
+   "0!E200": {
+    "kind": "text",
+    "value": "FALSE"
+   },
+   "0!F200": {
+    "kind": "text",
+    "value": "NPO after 10 pm"
+   },
+   "0!A201": {
+    "kind": "text",
+    "value": "B-200"
+   },
+   "0!B201": {
+    "kind": "text",
+    "value": " Ravi"
+   },
+   "0!C201": {
+    "kind": "text",
+    "value": "2026-10-22"
+   },
+   "0!D201": {
+    "kind": "number",
+    "value": 110887.57
+   },
+   "0!E201": {
+    "kind": "text",
+    "value": "TRUE"
+   },
+   "1!A1": {
+    "kind": "text",
+    "value": "Rows"
+   },
+   "1!B1": {
+    "kind": "number",
+    "value": 200
+   },
+   "1!A2": {
+    "kind": "text",
+    "value": "Ratio"
+   },
+   "1!B2": {
+    "kind": "number",
+    "value": 0.333333333333333
+   }
+  },
+  "empty": [
+   "0!G2"
+  ]
+ },
+ "discharge.docx": {
+  "paragraph_texts_in_order": [
+   "Discharge summary",
+   "Patient details",
+   "Name:\tArun  Shiva",
+   "Line one\nLine two after a break",
+   "Red 14pt Georgia",
+   "italic · underline · struck",
+   "  two leading spaces and  double  spaces  ",
+   "தமிழ்: நோயாளி விவரங்கள்",
+   "Centred",
+   "Medications",
+   "Paracetamol 500 mg",
+   "Pantoprazole 40 mg",
+   "Review in 7 days",
+   "CBC before review",
+   "Quoted advice",
+   "Third level"
+  ],
+  "table": [
+   [
+    "Test",
+    "Result",
+    "Range"
+   ],
+   [
+    "Hb",
+    "11.2",
+    "12–16"
+   ],
+   [
+    "WBC",
+    "9 800",
+    "4 000–11 000"
+   ]
+  ],
+  "header": "Apulki Medical Center · Confidential",
+  "footer": "Page footer text"
+ },
+ "landscape.docx": {
+  "paragraph_texts_in_order": [
+   "Landscape report",
+   "Wide table follows."
+  ],
+  "landscape": true,
+  "images": 1
+ }
+}

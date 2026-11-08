@@ -11,7 +11,9 @@
 .xv-colhdr { top: 0; z-index: 2; min-width: 90px; padding: 4px 8px; }
 .xv-rowhdr { left: 0; z-index: 1; min-width: 40px; padding: 4px 8px; }
 .xv-corner { top: 0; left: 0; z-index: 3; }
-.xv-cell { padding: 3px 8px; background: var(--chvd-page); max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* D-136: a cell's text as the file holds it: leading, trailing and repeated spaces kept (pre), no wrapping
+   unless the cell asks for it (then pre-wrap). The browser's default collapses spaces. */
+.xv-cell { padding: 3px 8px; background: var(--chvd-page); max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: pre; }
 .xv-cell.frozen-row { position: sticky; top: 26px; z-index: 1; font-weight: 600; }
 .xv-cell.hit { box-shadow: inset 0 0 0 2px var(--chvd-marigold); background-color: rgba(196, 116, 22, .18) !important; }
 

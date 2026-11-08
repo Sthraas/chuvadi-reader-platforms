@@ -13,8 +13,8 @@ public static class AppInfo
     public static readonly IReadOnlyList<Library> Libraries = new[]
     {
         new Library("PDF engine", "chuvadi-pdf", VersionOf(typeof(Chuvadi.Pdf.Documents.PdfDocument))),
-        new Library("Word", "Chuvadi.Docs", VersionOf(typeof(Chuvadi.Docs.Word.Document))),
-        new Library("Excel", "Chuvadi.Sheets", VersionOf(typeof(Chuvadi.Sheets.Excel.Workbook))),
+        new Library("Word", "Chuvadi.Docs", VersionOf(typeof(Chuvadi.Docs.Model.Document))),
+        new Library("Excel", "Chuvadi.Sheets", VersionOf(typeof(Chuvadi.Sheets.Model.Workbook))),
         new Library("Icons", "LiPicons.Blazor", VersionOf(typeof(LiPicons.Blazor.LipiIcon))),
     };
 

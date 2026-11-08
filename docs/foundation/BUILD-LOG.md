@@ -148,3 +148,16 @@
 
 ### 25. Eighth combined patch, part 2 (9 Nov)
 - The Linux chat's shared diff (B-02, B-03, B-07, B-08, B-09/B-10, B-11, B-19, B-23) without its D-101 hunks (already here), Linux host files and uitest.py. D-120 fixes WT-02, WT-09, WT-10/B-11b, B-08b, B-16 in the kit, B-22 (D-123). Mobile UI D-112 and D-114 (H-16). 295/295; Windows-layout screens identical apart from the intended Print-card text. `COMBINED-HOOKS-8.md`.
+
+### 26. Ninth combined patch (9 Nov)
+- B-07 through the library's `PasswordSupplied`; unlock card in the Password card's language; B-11a repair already shared via `RecoveryService` → `PdfRepairer.Repair`; Sheets 1.1.2 has no `XlsxReaderOptions.CancellationToken` (waits for the Sheets move). 297/297; 27/27 identical. `COMBINED-HOOKS-9.md`.
+- Open questions to the coordinator: (a) `RequiresPassword` measured at the cost of a plain open, so not on the open path; (b) `PdfOpenOptions.Password` would mean the stream overload, which buffers the file, while the path overload already takes the password.
+
+### 27. Tenth combined patch (9 Nov, D-130)
+- B-24: the PDF open (existence check included) moved off the Reader's thread with a per-tab cancel; closing frees the slot at once; late results disposed; queued opens load side by side. Tests with a thread-blocking reader and a real FIFO (the old path hangs on them). 299/299; 26/27 + Home artefact. `COMBINED-HOOKS-10.md`.
+
+### 28. Tenth combined patch, part 2 (9 Nov)
+- Chuvadi.Zip 1.0.0 (release asset of `zip-v1.0.0`, commit 170bc40) into `ci/packages`, SHA-256 recorded (`PACKAGES-ZIP-1.0.0.md`), notices regenerated. Web UI Upload wording and Q-3 "this session" wording, with tests. 305/305; 27/27.
+
+### 29. Eleventh combined patch (9 Nov, D-136)
+- Chuvadi.Docs 2.0.0 and Chuvadi.Sheets 2.0.2 (release assets of docs-v2.0.0 / sheets-v2.0.2, SHA-256 in `PACKAGES-DOCS-SHEETS-2.md`), namespaces to `.Model`, table cells from `TableCell.Blocks`, whitespace shown as in the file. Library limits (Docs 20 MB / 64 MB; Sheets ForUntrustedInput) and cancellation (token, 60 s) replace Core's guard; viewers stop waiting at once. Corpus with independent expected values: old 18 wrong, new 0. 313/313; 24/27 + About (versions). `COMBINED-HOOKS-11.md`.
