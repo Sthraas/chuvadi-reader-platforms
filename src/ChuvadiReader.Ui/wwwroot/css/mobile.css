@@ -172,7 +172,25 @@ html[data-shell="tablet"], html[data-shell="phone"] { scrollbar-width: none; }
 html[data-shell="tablet"] *, html[data-shell="phone"] * { scrollbar-width: none; }
 html[data-shell="tablet"] ::-webkit-scrollbar, html[data-shell="phone"] ::-webkit-scrollbar { width: 0; height: 0; }
 html[data-shell="tablet"] .rcurl, html[data-shell="phone"] .rcurl { display: none; }
+/* The desk's ··· menu holds the desk actions on touch (H-16): 44 px rows, a full-width size choice. */
+html[data-shell="tablet"] .desk-menu > button, html[data-shell="phone"] .desk-menu > button { min-height: 44px; font-size: 13.5px; }
+html[data-shell="tablet"] .desk-menu-size, html[data-shell="phone"] .desk-menu-size {
+    min-height: 44px; margin: 2px 0; padding: 0 10px; border: var(--chvd-stroke) solid var(--chvd-border);
+    border-radius: 8px; background: var(--chvd-surface-hi); color: var(--chvd-ink); font: 13.5px var(--chvd-sans-display);
+}
 html[data-shell="tablet"] .srail .rtext[title="Zoom"] { display: none; }
+/* 12e: the rail's primary action (Mark: Save as new; Protect: Save redacted copy; Arrange: Bind)
+   stays at the foot of the visible rail. The Reader's rails already end with it, but a long rail
+   scrolls it out of view on a tablet; touch users have no Ctrl S. */
+html[data-shell="tablet"] .srail-tools .rb.primary {
+    position: sticky; bottom: 0; z-index: 1; flex: none;
+    box-shadow: 0 -12px 0 0 var(--chvd-surface-hi), 0 12px 0 0 var(--chvd-surface-hi);   /* covers icons scrolling past */
+}
+/* Disabled ("nothing to save") as a solid paler fill, not transparency, so nothing shows through. */
+html[data-shell="tablet"] .srail-tools .rb.primary:disabled {
+    opacity: 1; color: var(--chvd-on-accent);
+    background: color-mix(in srgb, var(--chvd-binding) 45%, var(--chvd-surface-hi));
+}
 
 /* ════════════════════════════════════════════════════════════════════════════
    Phone — 12g (Read), 12h (Mark), 12i (Arrange), 12j (Protect + View sheet)
@@ -387,7 +405,7 @@ html[data-shell="phone"] .desk-ord,
 html[data-shell="phone"] .desk-dup,
 html[data-shell="phone"] .desk-clear,
 html[data-shell="phone"] .desk-del,
-html[data-shell="phone"] .desk-foot { display: none; }
+/* (The desk footer isn't rendered on touch: its actions are in the desk's ··· menu, H-16.) */
 html[data-shell="phone"] .desk-name { font-size: 17px; }
 html[data-shell="phone"] .desk-count { font-family: var(--chvd-mono); font-size: 10.5px; color: var(--chvd-ink-muted); }
 html[data-shell="phone"] .desk-more { width: 44px; height: 44px; }

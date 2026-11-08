@@ -328,3 +328,16 @@ Evidence:
   - 39 gesture and platform checks pass; 0 console errors.
 - Four decisions for the coordinator (FOR-FOUNDATION.md): the TOOLS heading, Save at the Mark rail's
   foot, the More view options button, the tablet-portrait desk toolbar.
+
+### 8 Nov, 20:30: D-111 to D-114
+- D-112 (Save on the tablet Mark rail): the rail already ends with Save / Save as new; it scrolled out of
+  view. mobile.css pins a tools rail's primary action at the foot on the tablet (solid when disabled).
+  No Reader diff.
+- D-114 → **H-16** (Bench): desk actions in the ··· menu on touch; footer not rendered there. Fixes my own
+  session-1 gap (the phone hid the footer, so its actions were unreachable). shoot.py `-deskmenu`
+  scenario.
+- `mobile-ui-hooks-5.patch` = H-14 + H-16, which applies to 9fbed93.
+- Results:
+  - 274 tests; desktop Read / Mark identical, Read 990 clock only, Arrange / Home 1-level noise as A/A.
+  - 39 touch checks pass; 0 console errors.
+- D-111 (keep the mode-name heading) and D-113 (keep More view options) recorded.

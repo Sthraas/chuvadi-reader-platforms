@@ -3,7 +3,7 @@
 # touch emulation and saves screenshots, plus any browser console error, for comparison with the
 # design frames. Usage:
 #   shoot.py <url> <outdir> <scenario> [width height]
-# Scenarios: phone-read, phone-mark, phone-protect, phone-arrange, phone-viewsheet, phone-menu,
+# Scenarios: (…-deskmenu: Arrange + a desk's ··· menu) phone-read, phone-mark, phone-protect, phone-arrange, phone-viewsheet, phone-menu,
 #            phone-tabs, phone-redact,
 #            tablet-read, tablet-mark, tablet-arrange, desktop-read
 import asyncio, json, sys
@@ -40,6 +40,10 @@ async def main():
         elif scen.endswith("-arrange"):
             await tap(pg, ".ph-nav-b:nth-child(3), .lb-mode:nth-of-type(3)")
             await pg.wait_for_timeout(1500)
+        elif scen.endswith("-deskmenu"):   # Arrange, then the first desk's ··· (H-16: desk actions on touch)
+            await tap(pg, ".ph-nav-b:nth-child(3), .lb-mode:nth-of-type(3)")
+            await pg.wait_for_timeout(1500)
+            await tap(pg, ".desk-more")
         elif scen.endswith("-viewsheet"):
             await tap(pg, ".ph-nav-b:nth-child(4)")
             await tap(pg, ".ph-bar .ph-ib[aria-label='More']")

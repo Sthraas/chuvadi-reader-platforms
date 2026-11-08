@@ -1,5 +1,5 @@
 DIFFERS desktop-arrange-1440x900.png (398, 301, 1428, 892)
-DIFFERS desktop-home-1440x900.png (1047, 191, 1428, 892)
-CLOCK ONLY desktop-mark-1440x900.png (1422, 883, 1428, 892)
-CLOCK ONLY desktop-read-1440x900.png (1422, 883, 1428, 892)
+DIFFERS desktop-home-1440x900.png (1047, 191, 1055, 379)
+IDENTICAL desktop-mark-1440x900.png
+IDENTICAL desktop-read-1440x900.png
 CLOCK ONLY desktop-read-990x700.png (972, 683, 978, 692)

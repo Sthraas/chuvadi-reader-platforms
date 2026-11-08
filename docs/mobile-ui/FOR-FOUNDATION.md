@@ -1,26 +1,47 @@
 # Mobile app UI → Foundation: hooks and hand-off (updated 8 Nov, 18:51 IST)
 
-## Outstanding for Foundation: H-14 only (`proposal/mobile-ui-hooks-5.patch`)
-H-13 landed in the seventh combined patch (cd9b72d, exactly as written); merged here with 9fbed93.
+## Outstanding for Foundation: H-14 and H-16 (`proposal/mobile-ui-hooks-5.patch`)
+Coordinator decisions D-111 to D-114 (8 Nov 20:22). `mobile-ui-hooks-5.patch` = H-14 + H-16, which
+applies cleanly to 9fbed93.
 
-**H-14: the phone opens a document fitted to the width, edge to edge as in 12g–12j**
-(`Ui/Pages/Reader.razor` + `Ui/wwwroot/js/reader.js`, +7 / −3; applies cleanly to 9fbed93)
+### H-14: the phone opens a document fitted to the width, edge to edge (12g–12j)
+(`Ui/Pages/Reader.razor` + `Ui/wwwroot/js/reader.js`, +7 / −3)
 - Reader: a new document's first fit is `Width` on a phone (`Page` elsewhere, unchanged), so the View
   sheet's check sits on **Fit width**, as in 12j.
 - reader.js `measureFit` reads its side padding from `--rfit-pad-x` on the desk (default **60 px**, as
-  today). mobile.css sets 24 px on the phone, so the page is 12 px from each edge, as in 12g.
-- **For:**
-  - It matches the handout's Read, Mark and Protect frames.
-  - On a tall phone, Fit page and Fit width were the same 0.444 because of the 60 px padding, so the
-    padding is what actually changes the picture.
-  - The desktop default is untouched: Read ×2 and Mark clock-only; Arrange and Home ≤ 8 pixels of 1-level
-    noise.
-- **Against:**
-  - One more CSS hook in reader.js.
-  - Phone landscape (no handout frame) also opens at Fit width, so the page scrolls rather than fitting
-    the short height.
-- **Alternative:** keep Fit page and only shrink the padding. The picture is the same in portrait, but
-  the View sheet would tick Fit page while 12j ticks Fit width.
+  today); mobile.css sets 24 px on the phone, so the page is 12 px from each edge, as in 12g.
+- **For:** matches 12g / 12h / 12j; the desktop default is untouched.
+- **Against:** one more CSS hook in reader.js; phone landscape (no frame) also opens at Fit width.
+
+### H-16: the desk's actions move into its ··· menu on touch (D-114; 12f, 12i)
+(`Ui/Pages/Bench.razor`, +47 / −0)
+- On Tablet and Phone the desk's ··· menu gains every footer action with its label: Image, Blank page,
+  Reverse, Sort into source order, Impose, Number pages, Size (original / A4 / Letter), Watermark,
+  Header / footer, Scatter, Export, Lift, Delete selected (when pages are selected), Bind desk.
+- The footer isn't rendered there, so a desk is its header and pages, as in 12f.
+- Each item closes the menu, then runs the same method the footer button runs (`DeskMenuDo`); no
+  logic is duplicated.
+- Desktop: the footer renders exactly as today (Arrange 1440×900: 2 pixels of 1-level noise, as in A/A
+  runs).
+- **Also fixes a gap of mine:** since session 1 the phone hid the footer with nothing in its place, so
+  these actions were unreachable on a phone. They're now in the ··· menu.
+- **For:** 12f as drawn; every action keeps its label; one file; desktop unchanged.
+- **Against:** one more tap to reach an action on touch; Bench gains an `IPlatformInfo` inject and
+  two small helpers.
+- Touch styling (44 px rows, a full-width Size choice) is in mobile.css.
+
+### D-112 Save on the tablet Mark rail: no Reader diff needed
+The Reader's Mark rail already ends with **Save** and the primary **Save as new PDF**, on every platform.
+On a tablet the rail is taller than the screen, so the foot was scrolled out of view, and that's why
+12e looked different. Fixed in mobile.css: on the tablet, a tools rail's primary action stays pinned at
+the foot of the visible rail (`position: sticky`), drawn solid when disabled so nothing shows through.
+That's Mark's Save as new, Protect's Save redacted copy and Arrange's Bind, all at the foot as drawn.
+On the phone the FAB is Mark's Save already (12h). Desktop unchanged; nothing for Foundation.
+
+### Decisions recorded
+- **D-111** rail heading: keep the mode name on all platforms (the Reader chat may switch Windows to
+  "TOOLS"; touch then follows).
+- **D-113** More view options on the tablet View rail: kept.
 
 ## Round 5/6 screenshots vs the handout (8 Nov) — what changed here, and what needs a decision
 Compared frame by frame (`screens/2026-11-08/handout-compare/`).
@@ -45,7 +66,7 @@ Checked and **not** a difference: View-sheet rows are 44 px in the handout too (
 handout); the tablet rails already scroll, so long rails are reachable; "/ row" is the Bench's own
 desks-per-row label; Mark's sub-line and greyed tools are state.
 
-**Needs a decision (existing files; nothing changed):**
+**Decided 8 Nov (D-111 to D-114)**: see the top of this file. Original options, kept for the record:
 1. **Rail heading "TOOLS".** Both handouts (Side Rails and 12d / 12e / 12f) label the tools rail
    "TOOLS"; the Reader and Bench write the mode name ("READ", "MARK", "ARRANGE") on every platform.
    - (a) Keep the mode name: no change.

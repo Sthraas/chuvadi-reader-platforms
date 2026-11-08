@@ -1,0 +1,86 @@
+diff --git a/src/ChuvadiReader.Ui/Pages/Bench.razor b/src/ChuvadiReader.Ui/Pages/Bench.razor
+index da9e45f..0c16e6c 100644
+--- a/src/ChuvadiReader.Ui/Pages/Bench.razor
++++ b/src/ChuvadiReader.Ui/Pages/Bench.razor
+@@ -9,6 +9,7 @@
+ @inject PressService Press
+ @inject DocumentPropertiesService DocProps
+ @inject SessionService Session
++@inject ChuvadiReader.Platform.IPlatformInfo Platform
+ @inject RedactRequestService RedactReq
+ @inject BenchDropService BenchDrop
+ @inject ChuvadiReader.Platform.IFileWriteBack WriteBack
+@@ -240,6 +241,34 @@
+                         <div class="desk-menu">
+                             <button @onclick="() => OpenDeskInReader(deskId)" disabled="@(_busy || desk.IsEmpty)"><Icon Name="reader" Size="13" /> Open in Reader</button>
+                             <button @onclick="() => SendDeskToRedact(deskId)" disabled="@(_busy || desk.IsEmpty)"><Icon Name="redact" Size="13" /> Send to Redact</button>
++                            @if (TouchDesks)
++                            {
++                                @* Touch (Portal & Android 12f / 12i): the desk's footer actions live here, with their
++                                   labels, instead of a toolbar under every desk. *@
++                                <div class="desk-menu-sep"></div>
++                                <button @onclick="() => DeskMenuDo(() => FetchImageToDesk(deskId))"><Icon Name="file-image" Size="13" /> Image</button>
++                                <button @onclick="() => DeskMenuDo(() => AddBlank(deskId))"><Icon Name="file" Size="13" /> Blank page</button>
++                                <button @onclick="() => DeskMenuDo(() => ReverseDesk(deskId))" disabled="@(desk.Pages.Count < 2)"><Icon Name="rotate-ccw" Size="13" /> Reverse</button>
++                                <button @onclick="() => DeskMenuDo(() => SortDesk(deskId))" disabled="@(desk.Pages.Count < 2)"><Icon Name="menu" Size="13" /> Sort into source order</button>
++                                <button @onclick="() => DeskMenuDo(() => OpenImpose(deskId))" disabled="@(desk.IsEmpty || !BenchSvc.CanAddDesk)"><Icon Name="columns" Size="13" /> Impose</button>
++                                <button @onclick="() => DeskMenuDo(() => OpenNumbering(deskId))" disabled="@desk.IsEmpty"><Icon Name="hash" Size="13" /> Number pages</button>
++                                <select class="desk-menu-size" title="Normalise every page to this size at Bind / Export" @onchange="e => SetDeskSize(deskId, e.Value?.ToString())">
++                                    <option value="" selected="@string.IsNullOrEmpty(desk.NormalizeSize)">Size: original</option>
++                                    <option value="A4" selected="@(desk.NormalizeSize == "A4")">Size: A4</option>
++                                    <option value="Letter" selected="@(desk.NormalizeSize == "Letter")">Size: Letter</option>
++                                </select>
++                                <div class="desk-menu-sep"></div>
++                                <button @onclick="() => DeskMenuDo(() => OpenWatermark(deskId))"><Icon Name="watermark" Size="13" /> Watermark</button>
++                                <button @onclick="() => DeskMenuDo(() => OpenHeaderFooter(deskId))"><Icon Name="text-box" Size="13" /> Header / footer</button>
++                                <button @onclick="() => DeskMenuDo(() => OpenScatter(deskId))" disabled="@desk.IsEmpty"><Icon Name="split" Size="13" /> Scatter</button>
++                                <button @onclick="() => DeskMenuDo(() => OpenExport(deskId))" disabled="@desk.IsEmpty"><Icon Name="download" Size="13" /> Export</button>
++                                <button @onclick="() => DeskMenuDo(() => LiftDesk(deskId))" disabled="@(_busy || sel == 0)"><Icon Name="upload" Size="13" /> Lift@(sel > 0 ? $" ({sel})" : " selected")</button>
++                                @if (sel > 0)
++                                {
++                                    <button @onclick="() => DeskMenuDo(() => DeleteSelected(deskId))"><Icon Name="trash" Size="13" /> Delete selected (@sel)</button>
++                                }
++                                <button @onclick="() => DeskMenuDo(() => BindDesk(deskId))" disabled="@(_busy || desk.IsEmpty)"><Icon Name="save" Size="13" /> Bind desk</button>
++                            }
+                             <div class="desk-menu-sep"></div>
+                             <button @onclick="() => SaveDeskAsTemplate(deskId)" disabled="@_busy">Save as template…</button>
+                             @if (_templates.Count == 0)
+@@ -352,6 +381,8 @@
+                         }
+                     </div>
+ 
++                    @if (!TouchDesks)
++                    {
+                     <div class="desk-foot">
+                         <div class="desk-foot-acts">
+                             <button class="bt sm" @onclick="() => FetchImageToDesk(deskId)" title="Fetch image"><Icon Name="file-image" Size="13" /><span class="btxt">Image</span></button>
+@@ -381,6 +412,7 @@
+                             <button class="bt sm bt-bind" @onclick="() => BindDesk(deskId)" disabled="@(_busy || desk.IsEmpty)" title="Bind desk"><Icon Name="save" Size="13" /><span class="btxt">Bind</span></button>
+                         </div>
+                     </div>
++                    }
+                 </div>
+             }
+ 
+@@ -1593,6 +1625,21 @@
+         _status = $"Applied template \"{template.Name}\" to the desk.";
+     }
+ 
++    // Tablet and phone: the desk footer's actions are in the desk's ··· menu (TouchDesks).
++    private bool TouchDesks => Platform.FormFactor != ChuvadiReader.Platform.FormFactor.Desktop;
++
++    private void DeskMenuDo(Action act)
++    {
++        _deskMenu = null;
++        act();
++    }
++
++    private Task DeskMenuDo(Func<Task> act)
++    {
++        _deskMenu = null;
++        return act();
++    }
++
+     private async Task OpenDeskInReader(Guid deskId) => await BindDeskAndRoute(deskId, toRedact: false);
+ 
+     private async Task SendDeskToRedact(Guid deskId) => await BindDeskAndRoute(deskId, toRedact: true);
