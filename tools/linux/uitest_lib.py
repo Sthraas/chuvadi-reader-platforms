@@ -51,8 +51,10 @@ class App:
         for line in self.proc.stdout:
             self.replies.put(line.rstrip("\n"))
 
-    def restart(self):
-        """A fresh app process with a fresh profile, on the same display and session bus."""
+    def restart(self, gtk_settings=None, log_name="app-2.log"):
+        """A fresh app process with a fresh profile, on the same display and session bus. gtk_settings:
+        lines for GTK's own settings file ($XDG_CONFIG_HOME/gtk-4.0/settings.ini), e.g. the desktop's
+        window-button layout — what GNOME/KDE hand to GTK on a real desktop."""
         try:
             self.proc.terminate()
             self.proc.wait(10)
@@ -61,8 +63,12 @@ class App:
         self.home = tempfile.mkdtemp(prefix="chvd-home-")
         os.makedirs(os.path.join(self.home, "Documents"), exist_ok=True)
         self.env.update(HOME=self.home, XDG_CONFIG_HOME=os.path.join(self.home, ".config"))
+        if gtk_settings:
+            os.makedirs(os.path.join(self.home, ".config", "gtk-4.0"))
+            with open(os.path.join(self.home, ".config", "gtk-4.0", "settings.ini"), "w") as f:
+                f.write("[Settings]\n" + "\n".join(gtk_settings) + "\n")
         self.replies = queue.Queue()
-        self.log_path = os.path.join(self.out, "app-2.log")
+        self.log_path = os.path.join(self.out, log_name)
         self.launch()
 
     def stop(self):

@@ -641,6 +641,59 @@ def close_tabs():
 
 step("34-close-all-tabs", close_tabs)
 
+# The desktop's window-button layout, followed exactly (any subset, any order, either end) — the
+# setting GNOME (button-layout) and KDE hand to GTK, written to GTK's settings file for a fresh launch.
+LAYOUTS = [
+    ("appmenu:close", [], ["close"]),                                   # vanilla GNOME
+    (":minimize,maximize,close", [], ["min", "max", "close"]),          # Ubuntu
+    ("close,minimize,maximize:", ["close", "min", "max"], []),          # macOS-like, left
+    ("close:maximize", ["close"], ["max"]),                             # split across both ends
+    ("minimize:close", ["min"], ["close"]),
+    (":close,minimize", [], ["close", "min"]),                          # any order
+    ("appmenu:", [], []),                                               # no buttons at all
+    ("close,minimize", ["close", "min"], []),                           # no ':' → all on the left
+]
+
+
+def shown_buttons():
+    js = ("var f=s=>[...document.querySelectorAll(s+' .tl')].map(b=>b.className.match(/tl-(min|max|close)/)[1]);"
+          "return {left:f('.tb-left'), right:f('.tb-right')}")
+    return app.js(js)
+
+
+def button_layouts():
+    seen = []
+    for i, (layout, left, right) in enumerate(LAYOUTS):
+        app.restart([f"gtk-decoration-layout={layout}"], log_name=f"app-layout-{i}.log")
+        got = shown_buttons()
+        if got != {"left": left, "right": right}:
+            raise AssertionError(f"{layout!r}: expected left {left} right {right}, got {got}")
+        # Each button shown does its job (close is checked by the window-close step).
+        if "max" in left + right:
+            # A fresh profile may open maximised: read the state, then each press must flip it.
+            label = lambda: app.js("return document.querySelector('.tl-max').getAttribute('aria-label')")
+            first = label()
+            other = {"Maximize": "Restore", "Restore": "Maximize"}[first]
+            app.click(".tl-max")
+            app.wait(lambda: label() == other and ("_NET_WM_STATE_MAXIMIZED" in wm_state()[1]) == (other == "Restore"), 10, other)
+            app.click(".tl-max")
+            app.wait(lambda: label() == first and ("_NET_WM_STATE_MAXIMIZED" in wm_state()[1]) == (first == "Restore"), 10, first)
+        if "min" in left + right:
+            app.click(".tl-min")
+            app.wait(lambda: "Iconic" in wm_state()[1], 10, "minimised")
+            subprocess.run(["xdotool", "windowactivate", "--sync", wm_state()[0]], env=app.env, capture_output=True)
+            app.wait(lambda: "Iconic" not in wm_state()[1], 10, "back from minimised")
+        app.shot(f"35-layout-{i}")
+        seen.append(f"{layout or '(empty)'} → {'/'.join(left) or '-'} | {'/'.join(right) or '-'}")
+    # The window-close step runs under vanilla GNOME's close-only layout.
+    app.restart(["gtk-decoration-layout=appmenu:close"], log_name="app-3.log")
+    if shown_buttons() != {"left": [], "right": ["close"]}:
+        raise AssertionError("close-only layout not shown for the window-close step")
+    return f"{len(LAYOUTS)} layouts exact: " + "; ".join(seen)
+
+
+step("35-button-layouts", button_layouts)
+
 
 def window_close():
     app.click_real(".tl-close")
@@ -650,9 +703,9 @@ def window_close():
 
 baseline_close = errors_in_log()
 try:
-    results.append({"step": "35-window-close", "ok": True, "detail": window_close(), "s": 0})
+    results.append({"step": "36-window-close", "ok": True, "detail": window_close(), "s": 0})
 except Exception as ex:
-    results.append({"step": "35-window-close", "ok": False, "detail": str(ex), "s": 0})
+    results.append({"step": "36-window-close", "ok": False, "detail": str(ex), "s": 0})
 app.stop()
 
 passed = sum(r["ok"] for r in results)

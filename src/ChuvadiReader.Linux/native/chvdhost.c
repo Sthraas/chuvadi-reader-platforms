@@ -869,23 +869,30 @@ CHVD_EXPORT void chvd_clipboard_set_text(const char *text)
     gdk_clipboard_set_text(gdk_display_get_clipboard(gdk_display_get_default()), text ? text : "");
 }
 
-/* The desktop's window-button layout (GtkSettings gtk-decoration-layout, which GTK reads from
- * GNOME's button-layout setting or KDE's GTK settings), e.g. "appmenu:minimize,maximize,close".
- * Returns 1 when the close button is on the left, 0 when on the right. Main thread, after init. */
-CHVD_EXPORT int chvd_buttons_on_left(void)
+/* The desktop's window-button layout as GTK sees it (gtk-decoration-layout: GNOME's button-layout,
+ * KDE's GTK settings), e.g. "appmenu:minimize,maximize,close" or "close:" — copied into buf
+ * (NUL-terminated, cut at size - 1). The .NET side parses it the way GTK's header bar does. Returns
+ * the full length, or -1 when the setting is unset. Main thread, after chvd_init. */
+CHVD_EXPORT int chvd_button_layout(char *buf, int size)
 {
     char *layout = NULL;
     g_object_get(gtk_settings_get_default(), "gtk-decoration-layout", &layout, NULL);
-    int left = 0;
-    if (layout)
+    if (!layout)
     {
-        const char *colon = strchr(layout, ':');
-        const char *close = strstr(layout, "close");
-        left = close && colon && close < colon;
-        g_free(layout);
+        if (buf && size > 0)
+        {
+            buf[0] = 0;
+        }
+        return -1;
     }
 
-    return left;
+    int len = (int)strlen(layout);
+    if (buf && size > 0)
+    {
+        g_strlcpy(buf, layout, (gsize)size);
+    }
+    g_free(layout);
+    return len;
 }
 
 /* "Show in folder": asks the desktop's file manager to open the folder with the file selected

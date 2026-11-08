@@ -435,3 +435,23 @@ CI is back. Run 42314276500 (workflow_dispatch on `eb65770`, the head that was g
 
 Build, all tests, ReadyToRun publish, launch test, both `.deb` packages, install + launch of the installed
 app, CUPS queue: green on both.
+
+## 2026-11-08 — Session 4: window buttons follow the desktop's layout exactly
+
+### 35. Bug (D-93): close-only and every other layout
+The design note says to honour the GNOME/KDE button layout. Linux took only the *side*; the Ui then drew
+all three buttons, so vanilla GNOME (`appmenu:close`) showed minimise and maximise, and layouts such as
+`close:maximize` couldn't be shown. Fixed — details and the shared-file diff in
+`PROPOSAL-window-button-layout.md`:
+- Contract: `ShellChrome.ButtonLayout` (ordered buttons at each end; null = today's behaviour elsewhere).
+- Ui: `WindowButtons` draws a given list in order; `MainLayout` uses it at both ends when set.
+- Linux: the shim returns GTK's whole `gtk-decoration-layout`; `GtkButtonLayout.Parse` reads it exactly as
+  GTK 4.14's header bar does — checked against Ubuntu's GTK 4.14.5 source (`gtkwindowcontrols.c`): split
+  at the first ':', exact names (strcmp), non-button names skipped, duplicates drawn twice, no ':' = left.
+- Tests: new `tests/ChuvadiReader.Linux.Tests` (25 parser cases, in the workflow); new UI step
+  `35-button-layouts` — the real app under 8 layouts set through GTK's own settings file, buttons and order
+  at both ends checked, minimise / maximise checked against the window manager's state; the window-close
+  step now runs under vanilla GNOME's close-only layout.
+- Test-harness fix on the way: a fresh profile can open maximised, so the step reads the state first.
+- Local (x64): all tests incl. Web and Mobile Ui (shared Ui changed); full UI pass **108 / 108**.
+- Not built: following a layout *change* while the app runs (read at start-up) — option B in the proposal.

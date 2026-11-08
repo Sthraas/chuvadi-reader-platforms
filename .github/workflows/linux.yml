@@ -55,10 +55,11 @@ jobs:
       - name: Build (warnings are errors)
         run: dotnet build src/ChuvadiReader.Linux -c Release -warnaserror
 
-      - name: Run the Reader's and the host kit's tests
+      - name: Run the Reader's, the host kit's and the Linux host's tests
         run: |
           dotnet test tests/ChuvadiReader.Tests -c Release
           dotnet test tests/ChuvadiReader.Hosting.Tests -c Release
+          dotnet test tests/ChuvadiReader.Linux.Tests -c Release
 
       - name: Publish (ReadyToRun)
         run: dotnet publish src/ChuvadiReader.Linux -c Release -r linux-${{ matrix.arch }} --self-contained false -o publish

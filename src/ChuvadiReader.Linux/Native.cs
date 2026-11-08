@@ -81,8 +81,37 @@ internal static unsafe partial class Native
     [LibraryImport(Lib, EntryPoint = "chvd_clipboard_set_text", StringMarshalling = StringMarshalling.Utf8)]
     public static partial void ClipboardSetText(string text);
 
-    [LibraryImport(Lib, EntryPoint = "chvd_buttons_on_left")]
-    public static partial int ButtonsOnLeft();
+    [LibraryImport(Lib, EntryPoint = "chvd_button_layout")]
+    private static partial int ButtonLayout(byte* buf, int size);
+
+    /// <summary>GTK's gtk-decoration-layout (the desktop's window-button layout), or null when unset.</summary>
+    public static string? ButtonLayout()
+    {
+        Span<byte> buf = stackalloc byte[256];
+        int len;
+        fixed (byte* p = buf)
+        {
+            len = ButtonLayout(p, buf.Length);
+        }
+
+        if (len < 0)
+        {
+            return null;
+        }
+
+        if (len >= buf.Length)
+        {
+            var big = new byte[len + 1];
+            fixed (byte* p = big)
+            {
+                ButtonLayout(p, big.Length);
+            }
+
+            return System.Text.Encoding.UTF8.GetString(big, 0, len);
+        }
+
+        return System.Text.Encoding.UTF8.GetString(buf[..len]);
+    }
 
     [LibraryImport(Lib, EntryPoint = "chvd_reveal", StringMarshalling = StringMarshalling.Utf8)]
     public static partial int Reveal(string path);

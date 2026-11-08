@@ -63,7 +63,27 @@ public sealed record ShellChrome(
     bool NativeMenuBar,
     bool AccountMenu,
     bool TitleBarDrag,
-    int CornerRadiusPx);
+    int CornerRadiusPx)
+{
+    /// <summary>
+    /// The desktop's own button layout, followed exactly: which buttons, in which order, on which side
+    /// (Linux: GNOME/KDE via GTK's <c>gtk-decoration-layout</c>, e.g. close only, or close on the left and
+    /// maximise on the right). Null: the platform's usual set on the side <see cref="Buttons"/> names
+    /// (Windows, macOS).
+    /// </summary>
+    public WindowButtonLayout? ButtonLayout { get; init; }
+}
+
+/// <summary>One window button.</summary>
+public enum WindowButton
+{
+    Minimize,
+    Maximize,
+    Close,
+}
+
+/// <summary>Window buttons in order at each end of the top bar (either list may be empty).</summary>
+public sealed record WindowButtonLayout(IReadOnlyList<WindowButton> Left, IReadOnlyList<WindowButton> Right);
 
 /// <summary>
 /// What this host can do. The Ui hides or locks a control whose capability is false

@@ -9,18 +9,23 @@ namespace ChuvadiReader.Linux.Platform;
 /// desktop's own button layout puts them (GNOME/KDE setting), 12 px window corners (handout).</summary>
 internal static class LinuxPlatformInfo
 {
-    /// <summary>Main thread, after GTK init (reads GtkSettings).</summary>
-    public static IPlatformInfo Create() => new FixedPlatformInfo(
-        PlatformKind.Linux,
-        InputKinds.Mouse | InputKinds.Keyboard,
-        new ShellChrome(
-            Native.ButtonsOnLeft() != 0 ? WindowButtons.Left : WindowButtons.Right,
-            NativeMenuBar: false,
-            AccountMenu: false,
-            TitleBarDrag: true,
-            CornerRadiusPx: 12),
-        FixedPlatformInfo.DesktopCapabilities,
-        new CtrlKeyLabels());
+    /// <summary>Main thread, after GTK init (reads GtkSettings). The window buttons follow the desktop's
+    /// layout exactly (<see cref="GtkButtonLayout"/>).</summary>
+    public static IPlatformInfo Create()
+    {
+        var layout = GtkButtonLayout.Parse(Native.ButtonLayout());
+        return new FixedPlatformInfo(
+            PlatformKind.Linux,
+            InputKinds.Mouse | InputKinds.Keyboard,
+            new ShellChrome(
+                GtkButtonLayout.SideOf(layout),
+                NativeMenuBar: false,
+                AccountMenu: false,
+                TitleBarDrag: true,
+                CornerRadiusPx: 12) { ButtonLayout = layout },
+            FixedPlatformInfo.DesktopCapabilities,
+            new CtrlKeyLabels());
+    }
 }
 
 /// <summary>Text and image clipboard through GdkClipboard (the desktop converts formats on paste).</summary>
