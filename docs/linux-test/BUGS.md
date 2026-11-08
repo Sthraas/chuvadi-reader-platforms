@@ -16,7 +16,7 @@ Every bug gets fixed; I re-verify on the fixing commit and mark it here.
 | B-06 | S2 | Linux | Window drop of several files opens only the first (**confirmed live** on db28319 with a real drag) | **verified fixed f3d5978** — real 2-file drag (GTK 4 file list) → 2 tabs |
 | B-07 | S2 | **shared Ui/Core** | Password-protected PDF can't be opened: no password prompt | **verified fixed e468d1a** (Foundation 8th patch) — password card; wrong → "That password doesn't open this file."; right → page; password in memory only, nothing in `/tmp` |
 | B-08a | S1 | **library** | Zip-bomb `.docx` → 4.5 GB RAM, 10 min+: Chuvadi.Docs has no input limits | open — library (Chuvadi.Docs limits); app-side guard now refuses at once: "too large to open: its contents unpack to more than 1,024 MB", RSS flat ~287 MB |
-| B-08b | S2 | **shared Ui/Core** | "Opening…" has no cancel and no timeout (B-08a, B-09a) | ⚠️ Cancel lives in `SlowOpenNote` (e468d1a) — **not triggerable here**: the size guard refuses even a 900 MB docx immediately, so no open is slow enough to show it. Accept on code + the guard, or give me a slow fixture |
+| B-08b | S2 | **shared Ui/Core** | "Opening…" has no cancel and no timeout (B-08a, B-09a) | ❌ **not passing (e468d1a)** — `far-cell.xlsx` now opens in ~1 s (grid fix), so it can't show the note (appears after 10 s, `SlowOpenNote.SlowAfter`); a 400k-row xlsx opens in 4.2 s. Forced a real stall (named pipe = hung network share): xlsx — "Opening…" for 40 s, no Cancel (Excel view has no `SlowOpenNote`; comes with the Sheets move); PDF — see **B-24** |
 | B-09a | S1 | **library** | `.xlsx` with a cell at XFD1048576 → 1.7 GB, never opens: Chuvadi.Sheets materialises to the sheet's extent | open — library (layout of the full range); **app side fixed e468d1a**: far-cell opens as a grid in ~2 s, RSS ~370 MB |
 | B-10 | S2 | **shared Ui/Core** | One stuck open silently blocks every later open (no tab, no message) | **verified fixed e468d1a** (Foundation 8th patch) — five-pages opens within ~10 s while far-cell loads |
 | B-11a | S3 | **library** | Damaged PDF (bad `startxref` offset) not repaired — chuvadi-pdf needs xref rebuild | open — library (chuvadi-pdf) |
@@ -33,13 +33,14 @@ Every bug gets fixed; I re-verify on the fixing commit and mark it here.
 | B-21 | S3 | Linux | Show in folder: 5 s D-Bus timeout → `xdg-open` fallback → two file-manager windows | **verified fixed f3d5978** — cold Nautilus: one window; `xdg-open` fallback never called (logging stub) |
 | B-22 | S4 | shared Ui/Core | No designed keyboard-focus style: each engine draws its own (GTK blue on Linux) | **verified fixed e468d1a** (Foundation 8th patch) — focus ring 2 px solid in the theme accent (#8a3a1c in light) |
 | B-23 | S4 | shared Ui/Core | Tab order starts with one "Send page N to a desk" button per page | **verified fixed e468d1a** (Foundation 8th patch) — Tab starts on the current page's strip (rotate, send, snapshot, bookmark), not one button per page |
+| B-24 | S2 | **shared Ui/Core** | A stalled read (hung network share) shows a blank Reader with no "Opening…" or Cancel, and blocks every later open | open — e468d1a |
 | K-01 | — | Linux | GNOME close-only layout showed all three buttons (known, 7 Nov) | **verified fixed f7d0034, re-verified f3d5978** (6 layouts) |
 
 Routing (coordinator, 8 Nov): **Linux** → the Linux chat. **shared Ui/Core** → Foundation's combined patch, as exact diffs from the Linux chat or Foundation. **library** → the coordinator compiles them for Arun (library coordinator).
 | Route | Bugs |
 |---|---|
 | Linux chat | B-01, B-04, B-05, B-06, B-12, B-13, B-14, B-15, B-17, B-19, B-20, B-21, and the Linux stanzas of B-02 |
-| shared Ui/Core | B-03, B-07, B-08b, B-10, B-11b, B-16, B-18, B-22, B-23, and the OFL texts next to the fonts in B-02 |
+| shared Ui/Core | B-03, B-07, B-08b, B-10, B-11b, B-16, B-18, B-22, B-23, B-24, and the OFL texts next to the fonts in B-02 |
 | library | B-08a (Chuvadi.Docs input limits), B-09a (Chuvadi.Sheets: don't materialise to the sheet's extent), B-11a (chuvadi-pdf: rebuild the xref on a bad `startxref`) |
 B-09's "no cancel / no timeout" half is the same fix as B-08b.
 
@@ -205,3 +206,10 @@ Each fix has a test in `.github/workflows/linux.yml` / `tools/linux` (details: `
 | B-23 | Foundation 839d39d | UI step 34b3: no per-page buttons in the first Tab stops |
 
 B-18 goes to the Reader chat's desktop revamp (it changes Windows too).
+
+## B-24 — A stalled read gives a blank Reader, no Cancel, and blocks later opens (S2, shared Ui/Core) — e468d1a
+**Steps.** `mkfifo /tmp/fifo/slow.pdf` (a source that never delivers data — the real-world case is a hung SMB/NFS/sshfs mount or an unplugged USB drive); `open /tmp/fifo/slow.pdf`; after 5 s open `five-pages.pdf`.
+**Expected.** "Opening…" at once; after 10 s the `SlowOpenNote` with Cancel; Cancel closes the tab; the second file opens regardless (B-08b / B-10).
+**Actual.** A `slow.pdf` tab and a **blank Reader** — no "Opening…", no rails, no Cancel — for 25 s+. The second open never happens (driver `open` doesn't return in 20 s; still one tab). Same stall as `.xlsx`: "Opening…" shows, no Cancel (the Excel view has no `SlowOpenNote` yet). The UI itself stays responsive (JS answers throughout).
+**Likely cause.** The file is read before the viewer (and its `SlowOpenNote`) is mounted, inside the serial open path — so the 10 s timer never starts and the queue waits on the read. Fix: mount the viewer with "Opening…" + `SlowOpenNote` first, read the file off the open queue with the cancellation token, and let the next open proceed.
+Screenshot: `screenshots/B-24-stalled-pdf-blank.png`. Tools: `tools/t_cancel_pdf.py`, `tools/t_cancel_fifo.py`.
