@@ -1,0 +1,63 @@
+{
+ "summary": {
+  "people": 1,
+  "engine": "chromium",
+  "pdf": "text-500.pdf",
+  "succeeded": 1,
+  "wall_ms": 3892,
+  "ttfb_ms": {
+   "median": 700,
+   "p90": 700,
+   "max": 700,
+   "min": 700
+  },
+  "fcp_ms": {
+   "median": 1252,
+   "p90": 1252,
+   "max": 1252,
+   "min": 1252
+  },
+  "ready_ms": {
+   "median": 1632,
+   "p90": 1632,
+   "max": 1632,
+   "min": 1632
+  },
+  "first_page_ms": {
+   "median": 664,
+   "p90": 664,
+   "max": 664,
+   "min": 664
+  },
+  "jump_ms": {
+   "median": 919,
+   "p90": 919,
+   "max": 919,
+   "min": 919
+  },
+  "next_ms": {
+   "median": 353,
+   "p90": 353,
+   "max": 353,
+   "min": 353
+  },
+  "peak_workers": 4,
+  "peak_gateway_mb": 381,
+  "peak_workers_total_mb": 828,
+  "peak_largest_worker_mb": 216,
+  "per_worker_mb_at_peak": 207,
+  "errors": []
+ },
+ "people": [
+  {
+   "person": 0,
+   "error": null,
+   "ttfb_ms": 700,
+   "fcp_ms": 1252,
+   "ready_ms": 1632,
+   "first_page_ms": 664,
+   "jump_ms": 919,
+   "next_ms": 353
+  }
+ ]
+}

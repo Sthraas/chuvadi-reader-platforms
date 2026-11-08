@@ -1,0 +1,253 @@
+{
+ "summary": {
+  "people": 20,
+  "engine": "chromium",
+  "pdf": "text-13.pdf",
+  "succeeded": 20,
+  "wall_ms": 40897,
+  "ttfb_ms": {
+   "median": 10426,
+   "p90": 12059,
+   "max": 12694,
+   "min": 8720
+  },
+  "fcp_ms": {
+   "median": 16236,
+   "p90": 20092,
+   "max": 20116,
+   "min": 13976
+  },
+  "ready_ms": {
+   "median": 16578,
+   "p90": 20390,
+   "max": 20496,
+   "min": 14263
+  },
+  "first_page_ms": {
+   "median": 11532,
+   "p90": 14031,
+   "max": 16060,
+   "min": 7767
+  },
+  "jump_ms": {
+   "median": 5410,
+   "p90": 7084,
+   "max": 7285,
+   "min": 2801
+  },
+  "next_ms": {
+   "median": 368,
+   "p90": 1897,
+   "max": 2067,
+   "min": 152
+  },
+  "peak_workers": 20,
+  "peak_gateway_mb": 204,
+  "peak_workers_total_mb": 3234,
+  "peak_largest_worker_mb": 165,
+  "per_worker_mb_at_peak": 162,
+  "errors": []
+ },
+ "people": [
+  {
+   "person": 0,
+   "error": null,
+   "ttfb_ms": 11659,
+   "fcp_ms": 18192,
+   "ready_ms": 18504,
+   "first_page_ms": 16060,
+   "jump_ms": 3817,
+   "next_ms": 152
+  },
+  {
+   "person": 1,
+   "error": null,
+   "ttfb_ms": 9394,
+   "fcp_ms": 15276,
+   "ready_ms": 15479,
+   "first_page_ms": 8237,
+   "jump_ms": 3701,
+   "next_ms": 400
+  },
+  {
+   "person": 2,
+   "error": null,
+   "ttfb_ms": 9071,
+   "fcp_ms": 16188,
+   "ready_ms": 16447,
+   "first_page_ms": 11973,
+   "jump_ms": 3780,
+   "next_ms": 2067
+  },
+  {
+   "person": 3,
+   "error": null,
+   "ttfb_ms": 9140,
+   "fcp_ms": 16236,
+   "ready_ms": 16559,
+   "first_page_ms": 8822,
+   "jump_ms": 7084,
+   "next_ms": 198
+  },
+  {
+   "person": 4,
+   "error": null,
+   "ttfb_ms": 12059,
+   "fcp_ms": 15580,
+   "ready_ms": 15683,
+   "first_page_ms": 7767,
+   "jump_ms": 6214,
+   "next_ms": 337
+  },
+  {
+   "person": 5,
+   "error": null,
+   "ttfb_ms": 9800,
+   "fcp_ms": 16592,
+   "ready_ms": 16597,
+   "first_page_ms": 12960,
+   "jump_ms": 6277,
+   "next_ms": 176
+  },
+  {
+   "person": 6,
+   "error": null,
+   "ttfb_ms": 10144,
+   "fcp_ms": 16040,
+   "ready_ms": 16303,
+   "first_page_ms": 12553,
+   "jump_ms": 5496,
+   "next_ms": 306
+  },
+  {
+   "person": 7,
+   "error": null,
+   "ttfb_ms": 8720,
+   "fcp_ms": 13976,
+   "ready_ms": 14263,
+   "first_page_ms": 8637,
+   "jump_ms": 2801,
+   "next_ms": 167
+  },
+  {
+   "person": 8,
+   "error": null,
+   "ttfb_ms": 10996,
+   "fcp_ms": 17720,
+   "ready_ms": 17877,
+   "first_page_ms": 10326,
+   "jump_ms": 7014,
+   "next_ms": 508
+  },
+  {
+   "person": 9,
+   "error": null,
+   "ttfb_ms": 9506,
+   "fcp_ms": 14612,
+   "ready_ms": 15074,
+   "first_page_ms": 8748,
+   "jump_ms": 5154,
+   "next_ms": 587
+  },
+  {
+   "person": 10,
+   "error": null,
+   "ttfb_ms": 11266,
+   "fcp_ms": 16660,
+   "ready_ms": 17184,
+   "first_page_ms": 14031,
+   "jump_ms": 4307,
+   "next_ms": 276
+  },
+  {
+   "person": 11,
+   "error": null,
+   "ttfb_ms": 11807,
+   "fcp_ms": 20116,
+   "ready_ms": 20390,
+   "first_page_ms": 12533,
+   "jump_ms": 3948,
+   "next_ms": 221
+  },
+  {
+   "person": 12,
+   "error": null,
+   "ttfb_ms": 10427,
+   "fcp_ms": 14692,
+   "ready_ms": 15022,
+   "first_page_ms": 9578,
+   "jump_ms": 5346,
+   "next_ms": 851
+  },
+  {
+   "person": 13,
+   "error": null,
+   "ttfb_ms": 9360,
+   "fcp_ms": 16904,
+   "ready_ms": 17154,
+   "first_page_ms": 11989,
+   "jump_ms": 7285,
+   "next_ms": 761
+  },
+  {
+   "person": 14,
+   "error": null,
+   "ttfb_ms": 12694,
+   "fcp_ms": 20092,
+   "ready_ms": 20496,
+   "first_page_ms": 12564,
+   "jump_ms": 4718,
+   "next_ms": 223
+  },
+  {
+   "person": 15,
+   "error": null,
+   "ttfb_ms": 10962,
+   "fcp_ms": 15976,
+   "ready_ms": 16246,
+   "first_page_ms": 9806,
+   "jump_ms": 6143,
+   "next_ms": 605
+  },
+  {
+   "person": 16,
+   "error": null,
+   "ttfb_ms": 10424,
+   "fcp_ms": 16948,
+   "ready_ms": 17099,
+   "first_page_ms": 13166,
+   "jump_ms": 5964,
+   "next_ms": 434
+  },
+  {
+   "person": 17,
+   "error": null,
+   "ttfb_ms": 11360,
+   "fcp_ms": -1,
+   "ready_ms": 18596,
+   "first_page_ms": 12552,
+   "jump_ms": 5474,
+   "next_ms": 184
+  },
+  {
+   "person": 18,
+   "error": null,
+   "ttfb_ms": 10143,
+   "fcp_ms": 15256,
+   "ready_ms": 16093,
+   "first_page_ms": 10000,
+   "jump_ms": 4387,
+   "next_ms": 1897
+  },
+  {
+   "person": 19,
+   "error": null,
+   "ttfb_ms": 10683,
+   "fcp_ms": 17512,
+   "ready_ms": 17908,
+   "first_page_ms": 11090,
+   "jump_ms": 5946,
+   "next_ms": 400
+  }
+ ]
+}

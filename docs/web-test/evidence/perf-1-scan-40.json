@@ -1,0 +1,58 @@
+{
+ "summary": {
+  "people": 1,
+  "engine": "chromium",
+  "pdf": "scan-40.pdf",
+  "succeeded": 1,
+  "wall_ms": 2899,
+  "ttfb_ms": {
+   "median": 23,
+   "p90": 23,
+   "max": 23,
+   "min": 23
+  },
+  "fcp_ms": null,
+  "ready_ms": {
+   "median": 360,
+   "p90": 360,
+   "max": 360,
+   "min": 360
+  },
+  "first_page_ms": {
+   "median": 1247,
+   "p90": 1247,
+   "max": 1247,
+   "min": 1247
+  },
+  "jump_ms": {
+   "median": 826,
+   "p90": 826,
+   "max": 826,
+   "min": 826
+  },
+  "next_ms": {
+   "median": 231,
+   "p90": 231,
+   "max": 231,
+   "min": 231
+  },
+  "peak_workers": 4,
+  "peak_gateway_mb": 382,
+  "peak_workers_total_mb": 1143,
+  "peak_largest_worker_mb": 497,
+  "per_worker_mb_at_peak": 286,
+  "errors": []
+ },
+ "people": [
+  {
+   "person": 0,
+   "error": null,
+   "ttfb_ms": 23,
+   "fcp_ms": -1,
+   "ready_ms": 360,
+   "first_page_ms": 1247,
+   "jump_ms": 826,
+   "next_ms": 231
+  }
+ ]
+}
