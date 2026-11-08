@@ -27,4 +27,4 @@ Chuvadi Reader works on your device. Your documents never leave it: no account, 
 Chuvadi Reader opens, edits, signs and protects your documents on your own device. Your files are not uploaded anywhere, and the app has no accounts, analytics, advertising or crash reporting — it does not send us any personal data. Settings and recent files stay in the app's folder on your device. Chuvadi is free to use. See the Chuvadi Privacy Notice for details.
 
 **Web portal (if listed anywhere):**
-On the Chuvadi web portal you sign in with your Sangam ID. Your documents are processed in an encrypted area only your session can use and are deleted when you sign out or the session ends.
+On the Chuvadi web portal you sign in with your Sangam ID. Your documents are processed in a working area only your session can use, kept in memory only and never written to disk, and are deleted when you sign out or the session ends.

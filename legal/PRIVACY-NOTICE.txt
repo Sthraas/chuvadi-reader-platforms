@@ -35,7 +35,7 @@ B4. Who we share it with. We do not sell your personal data or use it for advert
 
 B5. Where it is processed. On servers in India.
 
-B6. Security. Connections are encrypted (HTTPS). Each signed-in person's session runs in its own isolated process, and its working files are kept in an encrypted area that only that session can use. If a personal data breach happens, we will inform you and the Data Protection Board of India as the DPDP Act and Rules require.
+B6. Security. Connections are encrypted (HTTPS). Each signed-in person's session runs in its own isolated process, and its working files are kept in a working area that only that session can use: in memory only, never written to disk. If a personal data breach happens, we will inform you and the Data Protection Board of India as the DPDP Act and Rules require.
 
 B7. Children. The portal is not meant for anyone under 18 unless a parent or lawful guardian has given verifiable consent. [Process for verifiable parental consent - to be confirmed by counsel.]
 

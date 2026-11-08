@@ -52,7 +52,11 @@
     {
     <header class="topbar @(_leftOpen ? "lb-open" : null)" @onmousedown="StartDrag">
         <div class="tb-left">
-            @if (Platform.Chrome.Buttons == ChuvadiReader.Platform.WindowButtons.Left)
+            @if (Platform.Chrome.ButtonLayout is { } layoutL)
+            {
+                <WindowButtons Side="ChuvadiReader.Platform.WindowButtons.Left" Items="layoutL.Left" />
+            }
+            else if (Platform.Chrome.Buttons == ChuvadiReader.Platform.WindowButtons.Left)
             {
                 <WindowButtons Side="ChuvadiReader.Platform.WindowButtons.Left" />
             }
@@ -147,7 +151,11 @@
                 <Icon Name="search" Size="13" /><span class="tb-cmd-t">Find or do anything…</span><span class="kbd">@Platform.Keys.Format("Ctrl K")</span>
             </button>
             <button class="tb-icon" @onclick="ToggleTheme" title="@(Theme.Current.IsDark() ? "Switch to Cream paper" : "Switch to Night paper")" aria-label="Toggle light and dark"><Icon Name="@(Theme.Current.IsDark() ? "shift-day" : "shift-night")" Size="16" /></button>
-            @if (Platform.Chrome.Buttons == ChuvadiReader.Platform.WindowButtons.Right)
+            @if (Platform.Chrome.ButtonLayout is { } layoutR)
+            {
+                <WindowButtons Side="ChuvadiReader.Platform.WindowButtons.Right" Items="layoutR.Right" />
+            }
+            else if (Platform.Chrome.Buttons == ChuvadiReader.Platform.WindowButtons.Right)
             {
                 <div class="traffic">
                     <button class="tl tl-min" @onclick="() => Win.Minimize()" aria-label="Minimize"><Icon Name="minus" Size="10" /></button>
@@ -194,7 +202,7 @@
     </div>
 
     <footer class="statusbar">
-        <span class="sb-item"><span class="status-dot@(Platform.Capabilities.ServerSide ? " server" : null)"></span>@(Platform.Capabilities.ServerSide ? "processed on the server · encrypted at rest · only you can see it" : "offline · on this device")</span>
+        <span class="sb-item"><span class="status-dot@(Platform.Capabilities.ServerSide ? " server" : null)"></span>@(Platform.Capabilities.ServerSide ? "processed on the server · kept in memory only · only you can see it" : "offline · on this device")</span>
         <span class="sb-div"></span>
         @if (IsPortal)
         {
@@ -446,7 +454,15 @@
 
     // A file dropped on the window (handled WPF-side) sets a pending open; bring
     // the reader forward so it consumes it.
-    private void OnOpenRequested() => InvokeAsync(() => Nav.NavigateTo("/reader"));
+    // Already on the Reader: it takes the request live (OnOpenRequestedLive), so navigating again would
+    // only add another "/reader" history entry — a Back press that does nothing visible on Android (P-07).
+    private void OnOpenRequested() => InvokeAsync(() =>
+    {
+        if (!Nav.ToBaseRelativePath(Nav.Uri).StartsWith("reader", StringComparison.OrdinalIgnoreCase))
+        {
+            Nav.NavigateTo("/reader");
+        }
+    });
 
     private async Task SwitchTab(string id)
     {

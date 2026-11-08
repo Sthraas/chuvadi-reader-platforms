@@ -53,24 +53,8 @@
                 <button type="submit" class="psi-submit" disabled="@(Busy || !CanSubmit)">Sign in</button>
             }
             <span class="psi-foot">Prefer to keep files on your computer? <a href="@Links.DesktopAppUrl" target="_blank" rel="noopener">Download the desktop app</a> — no sign-in needed to read.</span>
-            @if (Links.TermsUrl is not null || Links.PrivacyUrl is not null)
-            {
-                @* Legal links (U-13 a; D-86): the Foundation's drafts, served before sign-in by the Web host. *@
-                <span class="psi-foot psi-terms">
-                    @if (Links.TermsUrl is { } terms)
-                    {
-                        <a href="@terms" target="_blank" rel="noopener">Terms of use</a>
-                    }
-                    @if (Links.TermsUrl is not null && Links.PrivacyUrl is not null)
-                    {
-                        <span aria-hidden="true"> · </span>
-                    }
-                    @if (Links.PrivacyUrl is { } privacy)
-                    {
-                        <a href="@privacy" target="_blank" rel="noopener">Privacy</a>
-                    }
-                </span>
-            }
+            @* Legal links (U-13 a; D-86): the Foundation's drafts, served before sign-in by the Web host. *@
+            <div class="psi-terms"><PortalLegalLinks /></div>
         </form>
     </section>
 </div>
@@ -94,9 +78,10 @@
     /// <summary>Short, user-facing reason the last sign-in failed, or null.</summary>
     [Parameter] public string? Error { get; set; }
 
-    // 12a text. Pitch as designed (true with D-28: tmpfs + LUKS). Promises 1 and 3 reworded by D-31
+    // 12a text. Pitch: "encrypted at rest" → "kept in memory only" (D-98 / D-103: under D-28 documents live
+    // only in memory, which is not encrypted). Promises 1 and 3 reworded by D-31
     // because the portal keeps no per-user storage this release; promise 2 and the icons as designed.
-    private const string Pitch = "The same Read, Mark, Arrange and Protect as the desktop app. On the portal, files are processed on our server, encrypted at rest, and visible only to you.";
+    private const string Pitch = "The same Read, Mark, Arrange and Protect as the desktop app. On the portal, files are processed on our server, kept in memory only, and visible only to you.";
 
     private static readonly (string Icon, string Text)[] Promises =
     [
@@ -104,6 +89,9 @@
         ("user", "Only your Sangam identity can open your files"),
         ("trash", "Sign out and your files are gone from the server"),
     ];
+
+    /// <summary>The pitch paragraph, for tests.</summary>
+    public static string PitchText => Pitch;
 
     /// <summary>The three promise lines, for tests.</summary>
     public static IReadOnlyList<string> PromiseTexts { get; } = Promises.Select(p => p.Text).ToArray();

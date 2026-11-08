@@ -41,6 +41,8 @@
 .acct-item:hover { color: var(--chvd-binding); }
 .acct-out, .acct-out:hover { color: var(--chvd-danger); }
 .acct-item:disabled { opacity: .5; cursor: default; }
+.acct-legal { border-top: var(--chvd-stroke) solid var(--chvd-border-soft); padding-top: 8px; margin-top: -2px; }
+.acct-legal:empty { display: none; }
 
 /* Tablet-sized touch browsers (D-32): 40 px chip like the other top-bar controls (mobile.css), 48 px rows. */
 html[data-shell="tablet"] .acct-chip { height: 40px; border-radius: 20px; padding: 0 10px 0 5px; font-size: 13.5px; }

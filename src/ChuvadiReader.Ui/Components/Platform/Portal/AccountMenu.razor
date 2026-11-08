@@ -44,6 +44,8 @@
             <button class="acct-item acct-out" role="menuitem" @onclick="SignOut" disabled="@_signingOut">
                 <Icon Name="log-out" Size="15" />Sign out
             </button>
+            @* U-15 (a) / D-97: legal links as a small footer, not menu rows. *@
+            <div class="acct-legal"><PortalLegalLinks OnClick="Close" /></div>
         </div>
     }
 </span>

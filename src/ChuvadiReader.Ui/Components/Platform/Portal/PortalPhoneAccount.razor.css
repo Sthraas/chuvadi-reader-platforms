@@ -14,3 +14,5 @@
 html[data-theme="dark"] .ppa-server .status-dot { background: #8fa3e6; }
 a.ph-row { text-decoration: none; color: var(--chvd-ink); }
 .ppa-out, .ppa-out:hover { color: var(--chvd-danger); }
+.ppa-legal { padding: 10px 0 4px; }
+.ppa-legal:empty { display: none; }

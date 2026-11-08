@@ -9,7 +9,7 @@ public static class PlatformText
     /// <summary>Replaces the device-only privacy lines (About, Settings, Library) on the Web portal.
     /// The status bar keeps the handout's own 12b text (see StatusLocation).</summary>
     public const string ServerPrivacy =
-        "Processed on the Chuvadi server · encrypted · only you can see it. Your files are removed when you sign out.";
+        "Processed on the Chuvadi server · kept in memory only · only you can see it. Your files are removed when you sign out."; // D-106 (D-98, D-28): not "encrypted"
 
     /// <summary>End of the Home summary line on the Web portal (U-11); desktop says "nothing leaves this device.".</summary>
     public const string HomeServerLine = "processed on the Chuvadi server · removed when you sign out.";
