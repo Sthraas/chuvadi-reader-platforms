@@ -13,12 +13,20 @@ namespace ChuvadiReader.Mac.Platform;
 internal static class WebKitPrewarm
 {
     private static WKWebView? _warm;
+    private static IDisposable? _warmMarks;
+
+    /// <summary>Startup marks for a WebView's page loads: "{prefix}-loading" when a load starts
+    /// (WebKit's "loading" turns true) and "{prefix}-loaded" when it ends.</summary>
+    public static IDisposable MarkLoading(WKWebView view, string prefix)
+        => view.AddObserver("loading", NSKeyValueObservingOptions.Initial | NSKeyValueObservingOptions.New,
+            _ => StartupTimeline.Mark(prefix + (view.IsLoading ? "-loading" : "-loaded")));
 
     public static void Start()
     {
         try
         {
             _warm = new WKWebView(CoreGraphics.CGRect.Empty, new WKWebViewConfiguration());
+            _warmMarks = MarkLoading(_warm, "wk-warm");
             _warm.LoadHtmlString("<!doctype html><title></title>", new NSUrl("about:blank"));
             StartupTimeline.Mark("webkit-prewarm");
         }
@@ -32,6 +40,8 @@ internal static class WebKitPrewarm
     {
         var w = _warm;
         _warm = null;
+        _warmMarks?.Dispose();
+        _warmMarks = null;
         if (w is not null)
         {
             w.StopLoading();
