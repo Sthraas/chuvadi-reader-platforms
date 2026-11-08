@@ -56,6 +56,11 @@ startup timings: `~/Library/Logs/Chuvadi`.
 The last two form the **.NET runtime** tab on Settings › About › Licences (`MacHostNotices`, D-84). The build
 fails if either can't be found in the resolved packs.
 
+## Error log (D-132)
+Warnings and errors go to `~/Library/Logs/Chuvadi/chuvadi.log` (Console.app › Log Reports), rolled at 512 KB to
+`chuvadi.1.log` — about 1 MB in all, never sent anywhere. File names appear only as extension + short hash, quoted values
+as a hash, links as scheme and host (`Platform/LogScrubber.cs`). To diagnose a failure, ask for these two files.
+
 ## Signing and notarisation (later — not done)
 Needed for a normal double-click install with no warning:
 - **Apple Developer Program** membership (organisation account for Sthraas / imagiQa: D-U-N-S number,

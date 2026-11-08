@@ -410,3 +410,15 @@ Shared patches for Foundation (tested on 839d39d): `docs/mac/foundation/M-08-M-0
   after it; checks no longer assume an empty session. Run 42527099579: launch file and running hand-over ✔, one process ✔.
 - Run 42527099579 (31dfe67): everything passes except File › Open… ⌘O (M-01/M-15) and Settings… (M-11), which wait on
   the shared global-commands patch.
+
+### 2026-11-09 (04:00) — D-132: error log on the Mac
+`Platform/MacErrorLog.cs` + `Platform/LogScrubber.cs` (6b7eeb2): warnings, errors and unhandled exceptions go to
+`~/Library/Logs/Chuvadi/chuvadi.log`; at 512 KB it rolls to `chuvadi.1.log` (the older one is replaced) — about 1 MB in
+all. Never sent anywhere. Every message is scrubbed: paths and file names → extension + 8-hex HMAC (per-Mac random salt in
+the app's data folder, `log-salt`), quoted values (where an exception would quote document text or a password) → `<text
+#hash>`, links → scheme and host, messages capped at 400 characters; stack traces keep code names and lose file paths.
+Shared code logs nothing itself, so what lands here is framework errors and unhandled exceptions.
+Tests: `tests/ChuvadiReader.Mac.Tests` (12, any OS, in the Mac workflow) and the smoke run reads the real file on macOS 26:
+written, rolled over after 1.3 MB of warnings, 995 352 bytes total, none of the six opened fixtures' names, no `/Users/`,
+no planted secret (run 42528878885). Privacy-notice wording for Foundation:
+`docs/mac/foundation/D-132-privacy-notice-mac-log.patch` (new A2a under Part A; A1's "no crash reporting" stays true).
