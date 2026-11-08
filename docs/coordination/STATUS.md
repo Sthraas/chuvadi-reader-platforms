@@ -1,6 +1,6 @@
 # Programme status
 
-_Last updated: 9 Nov 2026, 02:10 IST. All chats running._
+_Last updated: 9 Nov 2026, 02:15 IST. All chats running._
 
 **All chats running in parallel (D-125, Arun).**
 
@@ -16,7 +16,7 @@ _Last updated: 9 Nov 2026, 02:10 IST. All chats running._
 | Android | Rebased on 839d39d; smoke check; waiting for Android Test bugs |
 | Web | Rebased; WT-01, 07, 08, 11–13 and D-117/118 done; standby for Web Test re-verify |
 | Mobile app UI | Handout comparison 12d–12j done (nine fixes), H-14; D-111..D-114 answered |
-| Linux Test | Sign-off written: every Linux-side fix re-verified (lintian clean, vector print incl. landscape, first launch 2.9→1.1 s, warm ~1.0 s); waiting to re-verify shared items after Linux pushes its rebase; B-18 waits on Arun; six manual real-machine items listed |
+| Linux Test | All fixes re-verified on e468d1a except B-08b (testing with far-cell); open: B-18 (Arun), library items, CAD PDF, real-machine checks |
 | Mac Test | Round 3 running |
 | Web Test | Round 1 done: WT-01..WT-13 filed (BUGS.md on platform/web-test); options decided (D-117..D-119) |
 | Android Test | Running its test plan (design frames 12d–12j) |
