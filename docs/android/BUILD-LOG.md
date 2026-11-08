@@ -611,3 +611,11 @@ capitalises on Enter (the search found 1/4).
 WebView gate 4/4 (update screen with version 124.0.6367.219; button → Play page in Chrome; back in, same process,
 same screen; no crash), smoke pass. With round 6 (API 36 phone and tablet, all checks) and round 7 (API 35 tablet,
 4/4), **every emulator is green** on Foundation 9fbed93 + Mobile UI a20f6d1 + this host (cd485ef).
+
+### 53. Rebase onto Foundation 839d39d (eighth combined patch) — coordinator, 9 Nov 01:30 IST
+- Composition: Foundation `839d39d` + Mobile UI `95b9d79` merged (clean); hooks-5 (H-14, H-16), P-06 and P-07 all
+  found already in Foundation. Android 0 warnings; Platforms `-warnaserror` 0 warnings; tests 187 + 59 + 33 + 16 pass.
+- New dispatch input `suite`: `full` (default) or `smoke` (install, start, Ui, rotation, no crash) — a rebase check
+  without a full round. This rebase: one emulator, phone API 36, smoke.
+- Note for the next full round: H-14 makes the phone open at Fit width (not Fit page); gestures.py's swipe and
+  double-tap read the fit from the page, so they will show it.

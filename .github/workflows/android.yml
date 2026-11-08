@@ -18,12 +18,18 @@ on:
         description: "Emulators to run: all, none (build only), or a comma list of phone-35, phone-36, tablet-35, tablet-36"
         required: true
         default: all
+      suite:
+        description: "full (smoke, then gestures + platform, or the WebView gate) or smoke (install, start, Ui, rotation, no crash)"
+        required: true
+        default: full
+        type: choice
+        options: [full, smoke]
 
 env:
-  # platform/foundation: seventh combined patch part 2a (P-07), part 1 (H-13), sixth (Mobile UI H-5 to H-12), P-06.
-  FOUNDATION_REF: 9fbed936965641e69e80b60c46908cb66879ce64
-  # platform/mobile-ui: hooks-4 = H-13 (reader.js: zoom anchor on the visible page, API 35 fit).
-  MOBILEUI_REF: a20f6d1e9ad1d385ae08e722999bb242d1674654
+  # platform/foundation: eighth combined patch (Test chats' shared fixes, H-14 phone Fit width, U-17), P-06, P-07.
+  FOUNDATION_REF: 839d39d9b68fb6f1afa99d1375b00e1b6e03dff9
+  # platform/mobile-ui: D-112 Save at the tablet rail's foot, H-16 desk actions in the desk menu on touch (all hooks in Foundation).
+  MOBILEUI_REF: 95b9d799349c6e83d11d8ab77c8b81c219de4f7a
   DOTNET_NOLOGO: '1'
   DOTNET_CLI_TELEMETRY_OPTOUT: '1'
 
@@ -164,7 +170,7 @@ jobs:
             sed -i '/^hw.keyboard=/d' ~/.android/avd/test.avd/config.ini 2>/dev/null || true
             echo 'hw.keyboard=no' >> ~/.android/avd/test.avd/config.ini
             grep hw.keyboard ~/.android/avd/test.avd/config.ini
-          script: bash docs/android/ci/emulator-tests.sh out/chuvadi-reader-debug-x64.apk results/${{ matrix.device }}-api${{ matrix.api }}
+          script: SUITE=${{ inputs.suite }} bash docs/android/ci/emulator-tests.sh out/chuvadi-reader-debug-x64.apk results/${{ matrix.device }}-api${{ matrix.api }}
 
       - uses: actions/upload-artifact@v4
         if: always()

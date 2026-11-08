@@ -8,7 +8,7 @@
 #   older:
 #     webview_gate.py    — the update screen instead of the Reader; its button leaves for Google Play
 #
-#   emulator-tests.sh <apk> <results-dir>
+#   [SUITE=smoke] emulator-tests.sh <apk> <results-dir>
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 APK="$1"
@@ -17,6 +17,12 @@ OUT="$2"
 bash "$HERE/smoke-test.sh" "$APK" "$OUT/smoke"
 smoke=$?
 word() { [ "$1" -eq 0 ] && echo pass || echo FAIL; }
+
+# SUITE=smoke: a quick check after a rebase, without spending a full round.
+if [ "${SUITE:-full}" = smoke ]; then
+    echo "smoke test: $(word $smoke) (suite: smoke only)"
+    exit $smoke
+fi
 
 VERSION="$(adb shell dumpsys webviewupdate | sed -n 's/.*Current WebView package (name, version): ([^,]*, \([0-9][0-9]*\)\..*/\1/p' | head -1)"
 echo "Android System WebView major version: ${VERSION:-unknown}"
