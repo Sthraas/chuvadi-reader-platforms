@@ -318,5 +318,7 @@ Options considered:
 | — | Answers back to the library | Print: the app calls CupsQueues.List(cancellationToken) (localhost only). Desktops use local CUPS with network browsing, and offices may point at a separate server via client.conf / CUPS_SERVER; ask: List() honours client.conf and CUPS_SERVER by default, as lpstat does. Sheets extent: Core uses Workbook.Load with its own grid (not SheetsLayout); test files committed by Linux Test under docs/linux-test/fixtures/ |
 | — | Pending Arun | Who moves Docs (1.1.0 → 1.2.0/2.0.0, for zip-bomb limits and cancel) and Sheets (1.1.2 → 2.0.2): Foundation inside PR #11, or the Reader chat (D-87). Layout.Pdf pin PR [3.31.2, 4.0) is in Arun's queue to merge |
 
+| D-127 | Mac Test: how to time first render for the Windows comparison | A: measure on the test side (no app change, no existing file touched); the method is noted next to the numbers. B (a first-render mark in the Windows startup log) would change a Reader-owned file |
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).
