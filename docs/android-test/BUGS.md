@@ -54,7 +54,11 @@ basis describes the package accurately.
 **Actual:** the Release app ships 29 binding assemblies with their Java code in `classes.dex` / `classes2.dex` (15.6 MB):
 `Xamarin.AndroidX.*` (Activity, AppCompat, Core, Fragment, Lifecycle, Navigation, RecyclerView, ViewPager2, SwipeRefreshLayout,
 CoordinatorLayout, DrawerLayout, CardView, …), `Xamarin.Google.Android.Material`, `Xamarin.Kotlin.StdLib`,
-`Xamarin.KotlinX.Coroutines.Core.Jvm`, `Xamarin.KotlinX.Serialization.Core.Jvm`. They come in as MAUI's own dependencies.
+`Xamarin.KotlinX.Coroutines.Core.Jvm`, `Xamarin.KotlinX.Serialization.Core.Jvm`. They come in as MAUI's own dependencies. The dex listing (R1c › audit › dex-packages.txt) adds Java libraries
+with no .NET binding of their own: **Google Tink** (`com/google/crypto`, 2,152 classes, via AndroidX Security for Essentials'
+SecureStorage), **Glide** (`com/bumptech/glide`, 655 classes, MAUI's image loader), **Gson** (`com/google/gson`), AndroidX
+ConstraintLayout, Window, Emoji2, Browser (custom tabs), ProfileInstaller, JetBrains annotations — about 11,000 third-party
+classes in all.
 Neither `legal/THIRD-PARTY-NOTICES.txt` nor the two bundled .NET notices (`assets/notices/dotnet-runtime.txt`,
 `dotnet-android.txt`) mention AndroidX, Material Components, Kotlin or kotlinx (checked against dotnet/android's
 THIRD-PARTY-NOTICES.TXT). `legal/store/PLAY-DATA-SAFETY.md` says "The only libraries are Chuvadi's own and Microsoft's .NET/MAUI".
