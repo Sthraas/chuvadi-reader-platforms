@@ -23,10 +23,6 @@ public static class MauiProgram
 
         var services = builder.Services;
         services.AddMauiBlazorWebView();
-        if (MacSmoke.Enabled)
-        {
-            builder.Logging.AddProvider(new SmokeLoggerProvider()); // CI smoke only: Ui exceptions to stdout
-        }
 #if DEBUG
         services.AddBlazorWebViewDeveloperTools();
 #endif
@@ -37,6 +33,15 @@ public static class MauiProgram
         // Folders: asked of macOS itself (the kit's desktop default can't tell Mac Catalyst is macOS).
         var paths = new MacAppPaths();
         services.AddSingleton<IAppPaths>(paths);
+
+        // D-132: warnings and errors to ~/Library/Logs/Chuvadi, scrubbed, about 1 MB, never sent anywhere.
+        var errorLog = new MacErrorLog(paths.AppDataFolder);
+        errorLog.WatchUnhandled();
+        builder.Logging.AddProvider(errorLog);
+        if (MacSmoke.Enabled)
+        {
+            builder.Logging.AddProvider(new SmokeLoggerProvider()); // CI smoke only: Ui exceptions to stdout
+        }
 
         var storage = new FileAppStorage(paths.AppDataFolder);
         services.AddSingleton<IAppStorage>(storage);

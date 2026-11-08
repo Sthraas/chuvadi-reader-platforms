@@ -58,10 +58,13 @@ jobs:
       - name: Restore
         run: |
           dotnet restore tests/ChuvadiReader.Tests/ChuvadiReader.Tests.csproj --configfile ci/nuget.config
+          dotnet restore tests/ChuvadiReader.Mac.Tests/ChuvadiReader.Mac.Tests.csproj --configfile ci/nuget.config
           dotnet restore src/ChuvadiReader.Mac/ChuvadiReader.Mac.csproj --configfile ci/nuget.config
 
       - name: Test (Core, on macOS)
-        run: dotnet test tests/ChuvadiReader.Tests/ChuvadiReader.Tests.csproj -c Release --no-restore --logger "trx;LogFileName=test-results.trx"
+        run: |
+          dotnet test tests/ChuvadiReader.Tests/ChuvadiReader.Tests.csproj -c Release --no-restore --logger "trx;LogFileName=test-results.trx"
+          dotnet test tests/ChuvadiReader.Mac.Tests/ChuvadiReader.Mac.Tests.csproj -c Release --no-restore --logger "trx;LogFileName=mac-test-results.trx"
 
       - name: Build universal app
         run: dotnet build src/ChuvadiReader.Mac/ChuvadiReader.Mac.csproj -c Release --no-restore
@@ -183,5 +186,6 @@ jobs:
             smoke.log
             smoke-files.log
             smoke-open-panel.log
+            chuvadi-logs/
             smoke-checks.txt
           if-no-files-found: ignore
