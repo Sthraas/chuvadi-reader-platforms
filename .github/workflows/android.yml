@@ -21,9 +21,9 @@ on:
 
 env:
   # platform/foundation: fourth combined patch (P-06), single instance, host notices, D-89 seam and wording.
-  FOUNDATION_REF: a73a898ecd2cd563045818c0f2a55e4a00702a55
-  # platform/mobile-ui: hooks-3 (H-5 to H-11, H-9 first-fit fix for the phone over-wide page), D-88.
-  MOBILEUI_REF: ac8e84c6153d9d617fa28ca973e5af482061a294
+  FOUNDATION_REF: 4819d6623c0094ad289c14dd78c3f11606385b02
+  # platform/mobile-ui: hooks-3 (H-5 to H-12; H-9 first fit after render, H-12 no samples on Android), D-88.
+  MOBILEUI_REF: 2678dd22189406bd73e3606f119bdb4d7257d5ea
   DOTNET_NOLOGO: '1'
   DOTNET_CLI_TELEMETRY_OPTOUT: '1'
 

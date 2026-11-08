@@ -484,3 +484,13 @@ capitalises on Enter (the search found 1/4).
   the second double-tap returns to 2 / 6 (`round3-gestures-phone.png`). The zoom keeps no anchor on the tapped page.
 - Phone API 35 Fit page is far too small: page box 147.6 px in a 402 px desk (`overwide.json`: the visible
   `.rpage-wrap`); phone API 36 is 341.9 px. Sideways overflow is 0 on all four emulators, so H-9 fixed that.
+
+### 44. Round 4 set-up (coordinator, 8 Nov 18:15 IST)
+- Script bugs from round 3 already fixed in d9854bc (tab count from `.rtab` only; saved PDF path split on lines, so
+  "chuvadi-share (1).pdf" survives; script renamed `platform_checks.py`; find case; page under the desk centre;
+  over-wide probe names the element itself).
+- Composition: Foundation `4819d66` (CI-only change) + Mobile UI `2678dd2` (hooks-3 now H-5 to H-12; H-12: no
+  sample recents/pins on Android, so a fresh install shows the first-run box) + host. Android 0 warnings;
+  Platforms `-warnaserror` 0 warnings; tests 171 + 48 + 31 + 16 pass.
+- Note on "58 % → 200 % → 58 %": that is double-tap working as designed (zoom in, then back). The bug for Mobile UI
+  is the page it lands on (phone: page 2 → 1 / 6 or 6 / 6; tablet stays on 2 / 6), see step 43.
