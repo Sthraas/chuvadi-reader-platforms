@@ -506,3 +506,12 @@ and the open router are the kit's. The Print card now locks itself for a no-prin
   179/179, host kit 54/54, Linux 25/25, Web Ui 33/33, Mobile Ui 16/16; full UI pass 114/114 (step 35: 8 layouts
   exact, B-19 divider within 1.5 px, three live changes; step 34b3: B-23 Tab order).
 - BUGS.md on `platform/linux-test` (14b1c43) lists each fix's commit and test for the Test chat to re-verify.
+
+### 40. Foundation's eighth combined patch merged (839d39d, 9 Nov)
+No conflicts. Foundation now carries the shared fixes (D-101 contract and top bar, B-02 Ui OFL, B-03, B-07 to
+B-11, B-19, B-22, B-23), so the Linux chat's local shared branch is retired; its Linux-only part lands here:
+GTK's `gtk-decoration-layout` changes raise `ChromeChanged` (D-101, live), with the `set-layout` test verb.
+B-16 now uses the kit's `FileAppStorage` (keeps settings in memory, `CannotSave`); `ResilientAppStorage` is
+deleted. Results: Reader 187/187, host kit 59/59, Linux 25/25, Web Ui 33/33, Mobile Ui 16/16; full UI pass
+115/115 (step 35: 8 layouts + live changes, B-19 divider; 34b3 B-23; 34b4 B-22 accent ring in all five themes);
+B-16 read-only home as an ordinary user: PASS.
