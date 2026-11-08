@@ -104,6 +104,9 @@ for f in $PICKS; do
     fail "M-16 Open panel $f: ${line:-no Ui report}"
   fi
 done
+hl=$(grep "CHUVADI ui " "$LOG" | sed -n "4p")
+[[ "$hl" == *'frame="Page'* && "$hl" == *"An HTML file"* ]] && pass "HTML viewer shows the document in its frame" \
+  || fail "HTML viewer frame: ${hl:-no Ui report}"
 if grep -qE 'CHUVADI log (Error|Critical)' "$LOG"; then
   fail "M-16 the Ui logged errors on the Open-panel path"; grep -E 'CHUVADI log (Error|Critical)' "$LOG" | head -5 | tr '⏎' '\n' | head -80
 fi
@@ -114,14 +117,14 @@ sleep 2
 REPORTS=("$HOME/Library/Logs/DiagnosticReports" "/Library/Logs/DiagnosticReports")
 before=$(ls "${REPORTS[@]}" 2>/dev/null | grep -c "^$EXE" || true)
 
-# --- M-02 (a): launched with a file ---------------------------------------------------------------
+# --- M-02 (a): launched with a file (tabs saved by the run above come back first; the file is added) ---------------------------------------------------------------
 rm -f "$LOG"
 open -n --env CHUVADI_SMOKE=1 --stdout "$LOG" --stderr "$LOG" -a "$APP" "$DOCS/one.pdf"
-if wait_for 'CHUVADI tabs 1: one\.pdf' 90; then pass "M-02 a file given at launch opens as a tab"; else fail "M-02 launch file did not open"; fi
+if wait_for 'CHUVADI tabs [0-9]+: (.*, )?one\.pdf$' 90; then pass "M-02 a file given at launch opens as a tab"; else fail "M-02 launch file did not open"; fi
 
 # --- M-02 (b): two more files while running — same process, two more tabs ----------------------------
 open -a "$APP" "$DOCS/two.pdf" "$DOCS/three.pdf"
-if wait_for 'CHUVADI tabs 3: ' 60; then pass "M-02 files opened while running become tabs"; else fail "M-02 running-app files did not open"; fi
+if wait_for 'CHUVADI tabs [0-9]+: .*one\.pdf, two\.pdf, three\.pdf$' 60; then pass "M-02 files opened while running become tabs"; else fail "M-02 running-app files did not open"; fi
 n=$(pgrep -f "$APP/Contents/MacOS/$EXE" | wc -l | tr -d ' ')
 [ "$n" = "1" ] && pass "single instance ($n process)" || fail "single instance: $n processes"
 sleep 4   # the menu is dumped 1.5 s after the tabs change
