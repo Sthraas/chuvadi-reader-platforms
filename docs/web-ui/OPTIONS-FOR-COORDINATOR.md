@@ -175,5 +175,9 @@ Handout references: **Walkthrough "Drop to open"** (drag-over state) and **State
 ## D-54 (chuvadi-pdf 3.31.2)
 Landed on `platform/foundation` (be4498a) during this session; `platform/web-ui` is rebased onto it and re-checked (BUILD-LOG session 2 §7).
 
-## ✔ decided (c) — Q-3 (Web Test) Home's Storage map and Library shelf on the portal, D-119
-Confirmed: **no layout change is needed**, so (c) applies. Diff: `proposal/web-ui-home-session-note.patch`, which adds " · this session" to the two counts ("0 pdfs · this session"). Proofs in HOOKS. I left "Your shelves are empty — open the Library" as it is: it's true for the session, and the count above it now says "this session".
+## Q-3 / D-119 — the example shelf wording needs a layout change (coordinator 9 Nov 02:30)
+"Files in this session" fits. "Your shelves for this session are empty — open the Library" wraps to two lines at every size, making the Library card 19 px taller. Following the instruction, that would mean hiding both blocks, so here are the two choices:
+- **(a) Keep both blocks, with "Files in this session" and "Nothing shelved this session — open the Library".** Pros: it's (c) with no layout change (measured: 0 of 9 cases change size); one Home design; honest. Cons: the shelf line isn't your example's words.
+- **(b) Hide the Storage map and the Library shelf on the Web** (your stated fallback). Pros: nothing that looks like storage. Cons: Home's right column is left with only Pinned, so the portal Home differs from the desktop's.
+
+**Recommendation: (a).** Both diffs are ready and proven (HOOKS). Nothing is sent as decided until you choose.

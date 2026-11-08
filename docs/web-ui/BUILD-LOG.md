@@ -256,3 +256,14 @@ Build `-warnaserror` 0 warnings (with and without the patch); tests 16 + 59 + 33
 
 ### 6. "Upload" in Arrange and Redact (coordinator 01:42)
 Branches re-checked first: `platform/web` has moved to 1b32ad8, `platform/android-test` is new, and the Foundation is still at 839d39d. Diff: `proposal/web-ui-upload-wording.patch`. It uses a `PlatformText.FetchOrUpload` helper with the desktop text kept character for character, and covers 7 labels in Arrange and Redact. Proofs are in HOOKS: no "Fetch" left on the portal at any size in any of the three browsers, no overflow, and Windows text and pixels unchanged. Build `-warnaserror` 0 warnings; tests 295 pass.
+
+## 2026-11-09 — session 13 (coordinator 02:30: Q-3 wording; Web rebased)
+
+### 1. Checked all branches
+`platform/foundation` f1e4126 (ninth combined patch: open-password prompt), merged in. `platform/web` 1b32ad8 (rebased), `platform/web-test` 86b9587, `main` 6b7051b (D-125 to D-128). My Upload-wording diff hasn't been applied yet and still applies to f1e4126.
+
+### 2. Q-3 with the coordinator's wording
+"Files in this session" fits, but "Your shelves for this session are empty — open the Library" wraps to two lines (the Library card grows 19 px) in all three browsers at all three sizes. So I built both (a) a shorter line that fits, "Nothing shelved this session — open the Library", with no size change in any of the 9 cases and Windows pixel-identical, and (b) hide on the Web. Waiting for the choice (OPTIONS). The first Q-3 diff is withdrawn.
+
+### 3. Build and tests
+Build `-warnaserror` 0 warnings with each diff applied and with neither; tests **297 pass**.

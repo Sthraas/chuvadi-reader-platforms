@@ -1,0 +1,40 @@
+diff --git a/src/ChuvadiReader.Ui/Pages/Dashboard.razor b/src/ChuvadiReader.Ui/Pages/Dashboard.razor
+index a765999..bd52da5 100644
+--- a/src/ChuvadiReader.Ui/Pages/Dashboard.razor
++++ b/src/ChuvadiReader.Ui/Pages/Dashboard.razor
+@@ -148,6 +148,9 @@
+             </section>
+         }
+ 
++        @* Q-3 / D-119 (b): no server storage on the portal (D-31), so no Storage map. *@
++        @if (!IsPortal)
++        {
+         <section class="block smap">
+             <h2 class="eye smap-head">
+                 <span>Storage map</span>
+@@ -170,6 +173,7 @@
+             </div>
+             <button type="button" class="link" @onclick='() => Nav.NavigateTo("/library")'>Open library <Icon Name="chevron-right" Size="13" /></button>
+         </section>
++        }
+     </div>
+ 
+     <aside class="side">
+@@ -199,6 +203,9 @@
+             }
+         </section>
+ 
++        @* Q-3 / D-119 (b): no Library shelf on the portal either. *@
++        @if (!IsPortal)
++        {
+         <button type="button" class="shelf" @onclick='() => Nav.NavigateTo("/library")'>
+             <span class="eye shelf-head">
+                 <Icon Name="library" Size="12" /> Library
+@@ -232,6 +239,7 @@
+             </span>
+             <span class="shelf-go">@(Books.Count == 0 ? "Your shelves are empty — open the Library" : "Open the shelves") <Icon Name="chevron-right" Size="13" /></span>
+         </button>
++        }
+ 
+         @if (Platform.Capabilities.WatchFolders)
+         {

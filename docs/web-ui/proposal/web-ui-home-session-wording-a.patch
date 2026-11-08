@@ -1,0 +1,41 @@
+diff --git a/src/ChuvadiReader.Ui/Components/Platform/PlatformText.cs b/src/ChuvadiReader.Ui/Components/Platform/PlatformText.cs
+index 9e37a3a..11a242e 100644
+--- a/src/ChuvadiReader.Ui/Components/Platform/PlatformText.cs
++++ b/src/ChuvadiReader.Ui/Components/Platform/PlatformText.cs
+@@ -14,6 +14,14 @@ public static class PlatformText
+     /// <summary>End of the Home summary line on the Web portal (U-11); desktop says "nothing leaves this device.".</summary>
+     public const string HomeServerLine = "processed on the Chuvadi server · removed when you sign out.";
+ 
++    /// <summary>Home's "Storage map" heading on the Web portal (Q-3, D-119 c): no server storage (D-31), so the
++    /// map shows only this session's files.</summary>
++    public const string HomeStorageMapTitle = "Files in this session";
++
++    /// <summary>Home's empty Library shelf line on the Web portal (Q-3, D-119 c); desktop says
++    /// "Your shelves are empty — open the Library".</summary>
++    public const string HomeShelvesEmpty = "Nothing shelved this session — open the Library";
++
+     /// <summary>"phone" on an Android phone, "device" on an Android tablet, "computer" everywhere else.</summary>
+     public static string DeviceNoun(IPlatformInfo platform) =>
+         platform.Kind != PlatformKind.Android ? "computer"
+diff --git a/src/ChuvadiReader.Ui/Pages/Dashboard.razor b/src/ChuvadiReader.Ui/Pages/Dashboard.razor
+index a765999..f67007c 100644
+--- a/src/ChuvadiReader.Ui/Pages/Dashboard.razor
++++ b/src/ChuvadiReader.Ui/Pages/Dashboard.razor
+@@ -150,7 +150,7 @@
+ 
+         <section class="block smap">
+             <h2 class="eye smap-head">
+-                <span>Storage map</span>
++                <span>@(IsPortal ? ChuvadiReader.Ui.Components.Platform.PlatformText.HomeStorageMapTitle : "Storage map")</span>
+                 @if (Platform.Capabilities.RevealInFolder)
+                 {
+                     <span class="smap-folder" title="@Categories.BaseFolder">@Categories.BaseFolder</span>
+@@ -230,7 +230,7 @@
+                 </span>
+                 <span class="plank"></span>
+             </span>
+-            <span class="shelf-go">@(Books.Count == 0 ? "Your shelves are empty — open the Library" : "Open the shelves") <Icon Name="chevron-right" Size="13" /></span>
++            <span class="shelf-go">@(Books.Count == 0 ? (IsPortal ? ChuvadiReader.Ui.Components.Platform.PlatformText.HomeShelvesEmpty : "Your shelves are empty — open the Library") : "Open the shelves") <Icon Name="chevron-right" Size="13" /></span>
+         </button>
+ 
+         @if (Platform.Capabilities.WatchFolders)
