@@ -25,6 +25,28 @@ No layout change, measured (preview; Chromium / Firefox / WebKit; desktop 1280×
 - Windows profile: same text, and the Home screenshot is pixel-identical with and without the patch in all three browsers (clock masked).
 - Screenshots: `screenshots/chromium-q3-home-session.png`, `screenshots/webkit-q3-phone-home-session.png`.
 
+## Still to apply — "Upload" in Arrange and Redact on the portal (coordinator 9 Nov 01:42, same bug as WT-10)
+**`proposal/web-ui-upload-wording.patch`**, against foundation **839d39d** (applies cleanly). It touches four of the Foundation's files and adds no new injects, because both pages already inject `IPlatformInfo Platform`:
+- `Components/Platform/PlatformText.cs` (+6): `FetchOrUpload(platform, desktop, portal)` returns the portal text when `Kind == Web` and the desktop text otherwise (Android included), character for character.
+- `Pages/Bench.razor` (+5/−5), `Pages/Bench.Shell.cs` (+1/−1), `Pages/Redact.razor` (+2/−2): every "Fetch" label goes through it, with the desktop text left exactly as it was:
+
+| Where | Desktop / Android (unchanged) | Portal |
+|---|---|---|
+| Arrange shelf, empty | Fetch a PDF to start. · Fetch a file | Upload a PDF to start. · Upload a file |
+| Arrange shelf "Add a file" tooltip | Fetch another PDF onto the shelf | Upload another PDF onto the shelf |
+| Arrange Tools rail | Fetch file | Upload file |
+| Arrange desk "Image" tooltip | Fetch image | Upload image |
+| Arrange command (Ctrl K) | Fetch a file onto the shelf | Upload a file onto the shelf |
+| Redact, empty and error states | Fetch a document… | Upload a document… |
+
+Icons are unchanged, since this is a wording change only. Redact's "Redact another file…" has no "Fetch" in it, so I left it.
+
+Proofs (preview; Chromium / Firefox / WebKit; desktop 1280×720, tablet 1024×768 touch, phone 390×844 touch, Windows 1280×720). I scanned every text node, `title` and `aria-label` on `/bench` and `/redact`:
+- Portal: no "Fetch" left at any size and nothing overflows. "Upload a PDF to start." stays one line (17 px), the button stays 32 px tall, and the rail label stays inside its 120 px slot.
+- Windows: the same strings as without the patch, and pixel-identical screenshots of both pages in all three browsers (clock masked).
+- The Ctrl K command label goes through the same helper; I checked it in the source, not on screen.
+- Screenshots: `screenshots/chromium-upload-arrange.png`, `screenshots/webkit-upload-phone-redact.png`.
+
 ## Applied by the Foundation (eighth combined patch part 1, foundation 63f37b1) — Home's drop zone during a drag (U-17 b, D-109)
 Checked on 839d39d: `git apply -R --check` succeeds; behaviour as below.
 

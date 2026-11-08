@@ -253,3 +253,6 @@ No layout change is needed → `proposal/web-ui-home-session-note.patch` ("0 pdf
 
 ### 5. Build and tests
 Build `-warnaserror` 0 warnings (with and without the patch); tests 16 + 59 + 33 + 187 = **295 pass**.
+
+### 6. "Upload" in Arrange and Redact (coordinator 01:42)
+Branches re-checked first: `platform/web` has moved to 1b32ad8, `platform/android-test` is new, and the Foundation is still at 839d39d. Diff: `proposal/web-ui-upload-wording.patch`. It uses a `PlatformText.FetchOrUpload` helper with the desktop text kept character for character, and covers 7 labels in Arrange and Redact. Proofs are in HOOKS: no "Fetch" left on the portal at any size in any of the three browsers, no overflow, and Windows text and pixels unchanged. Build `-warnaserror` 0 warnings; tests 295 pass.

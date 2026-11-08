@@ -1,0 +1,89 @@
+diff --git a/src/ChuvadiReader.Ui/Components/Platform/PlatformText.cs b/src/ChuvadiReader.Ui/Components/Platform/PlatformText.cs
+index 9e37a3a..51b5e1f 100644
+--- a/src/ChuvadiReader.Ui/Components/Platform/PlatformText.cs
++++ b/src/ChuvadiReader.Ui/Components/Platform/PlatformText.cs
+@@ -41,4 +41,10 @@ public static class PlatformText
+     /// form factor, not the input (an Android tablet reports a keyboard). Both layouts show the same
+     /// "Find or do anything…" control.</summary>
+     public const string TouchFindTip = "Tip: tap “Find or do anything” to reach any file or action. Try typing “merge”.";
++
++    /// <summary>Arrange and Redact (coordinator 9 Nov 01:42, like WT-10: one word for one action): choosing a
++    /// file is "Fetch" on the desktop and "Upload" on the portal, as on Home and in the Reader. Desktop and
++    /// Android get <paramref name="desktop"/>, character for character.</summary>
++    public static string FetchOrUpload(IPlatformInfo platform, string desktop, string portal) =>
++        platform.Kind == PlatformKind.Web ? portal : desktop;
+ }
+diff --git a/src/ChuvadiReader.Ui/Pages/Bench.Shell.cs b/src/ChuvadiReader.Ui/Pages/Bench.Shell.cs
+index e5b0023..77a26ed 100644
+--- a/src/ChuvadiReader.Ui/Pages/Bench.Shell.cs
++++ b/src/ChuvadiReader.Ui/Pages/Bench.Shell.cs
+@@ -94,7 +94,7 @@ public partial class Bench
+     {
+         Func<Task> T(Action a) => () => { a(); StateHasChanged(); return Task.CompletedTask; };
+         var empty = BenchSvc.IsEmpty ? "The bench is empty" : null;
+-        yield return new("a.fetch", "Fetch a file onto the shelf", "Arrange", "folder", null, FetchFile);
++        yield return new("a.fetch", ChuvadiReader.Ui.Components.Platform.PlatformText.FetchOrUpload(Platform, "Fetch a file onto the shelf", "Upload a file onto the shelf"), "Arrange", "folder", null, FetchFile);
+         yield return new("a.desk", "Add desk", "Arrange", "plus", null, T(AddDesk), BenchSvc.CanAddDesk ? null : "30-desk limit reached");
+         yield return new("a.blank", "Add a blank page", "Arrange", "page-add", null, T(AddBlankToFocused), FocusDeskId is null ? "No desk yet" : null);
+         yield return new("a.shelf", _shelfHidden ? "Show the shelf" : "Hide the shelf", "Arrange", "shelf", null, T(() => _shelfHidden = !_shelfHidden));
+diff --git a/src/ChuvadiReader.Ui/Pages/Bench.razor b/src/ChuvadiReader.Ui/Pages/Bench.razor
+index 0c16e6c..054140f 100644
+--- a/src/ChuvadiReader.Ui/Pages/Bench.razor
++++ b/src/ChuvadiReader.Ui/Pages/Bench.razor
+@@ -60,13 +60,13 @@
+             {
+                 <div class="shelf-empty">
+                     <Icon Name="folder" Size="20" />
+-                    <span>Fetch a PDF to start.</span>
+-                    <button class="bt bt-fetch" @onclick="FetchFile" disabled="@_fetching"><Icon Name="folder" Size="14" /> Fetch a file</button>
++                    <span>@ChuvadiReader.Ui.Components.Platform.PlatformText.FetchOrUpload(Platform, "Fetch a PDF to start.", "Upload a PDF to start.")</span>
++                    <button class="bt bt-fetch" @onclick="FetchFile" disabled="@_fetching"><Icon Name="folder" Size="14" /> @ChuvadiReader.Ui.Components.Platform.PlatformText.FetchOrUpload(Platform, "Fetch a file", "Upload a file")</button>
+                 </div>
+             }
+             else if (BenchSvc.HasSources)
+             {
+-                <button class="shelf-add" @onclick="FetchFile" disabled="@_fetching" title="Fetch another PDF onto the shelf">
++                <button class="shelf-add" @onclick="FetchFile" disabled="@_fetching" title="@(ChuvadiReader.Ui.Components.Platform.PlatformText.FetchOrUpload(Platform, "Fetch another PDF onto the shelf", "Upload another PDF onto the shelf"))">
+                     <Icon Name="folder" Size="14" /><span>Add a file</span>
+                 </button>
+                 <div class="shelf-zoom" title="Thumbnail size">
+@@ -385,7 +385,7 @@
+                     {
+                     <div class="desk-foot">
+                         <div class="desk-foot-acts">
+-                            <button class="bt sm" @onclick="() => FetchImageToDesk(deskId)" title="Fetch image"><Icon Name="file-image" Size="13" /><span class="btxt">Image</span></button>
++                            <button class="bt sm" @onclick="() => FetchImageToDesk(deskId)" title="@(ChuvadiReader.Ui.Components.Platform.PlatformText.FetchOrUpload(Platform, "Fetch image", "Upload image"))"><Icon Name="file-image" Size="13" /><span class="btxt">Image</span></button>
+                             <button class="bt sm" @onclick="() => AddBlank(deskId)" title="Add blank page"><Icon Name="file" Size="13" /><span class="btxt">Blank</span></button>
+                             <button class="bt sm" @onclick="() => ReverseDesk(deskId)" disabled="@(desk.Pages.Count < 2)" title="Reverse page order"><Icon Name="rotate-ccw" Size="13" /><span class="btxt">Reverse</span></button>
+                             <button class="bt sm" @onclick="() => SortDesk(deskId)" disabled="@(desk.Pages.Count < 2)" title="Sort pages into source order"><Icon Name="menu" Size="13" /><span class="btxt">Sort</span></button>
+@@ -1126,7 +1126,7 @@
+     <div class="mview-rails">
+         <SideRail Kind="tools" Heading="ARRANGE">
+             <RailButton Icon="shelf" Label="Shelf" Active="!_shelfHidden" OnClick="() => _shelfHidden = !_shelfHidden" />
+-            <RailButton Icon="folder" Label="Fetch file" Disabled="@(_busy || _fetching)" OnClick="FetchFile" />
++            <RailButton Icon="folder" Label="@(ChuvadiReader.Ui.Components.Platform.PlatformText.FetchOrUpload(Platform, "Fetch file", "Upload file"))" Disabled="@(_busy || _fetching)" OnClick="FetchFile" />
+             <RailButton Icon="plus" Label="Add desk" Disabled="@(_busy || !BenchSvc.CanAddDesk)" DisabledReason="@(BenchSvc.CanAddDesk ? null : "30-desk limit reached")" OnClick="AddDesk" />
+             <RailButton Icon="page-add" Label="Blank page" Disabled="@(_busy || FocusDeskId is null)" OnClick="AddBlankToFocused" />
+             <RailSep />
+diff --git a/src/ChuvadiReader.Ui/Pages/Redact.razor b/src/ChuvadiReader.Ui/Pages/Redact.razor
+index a6944c1..97a2db0 100644
+--- a/src/ChuvadiReader.Ui/Pages/Redact.razor
++++ b/src/ChuvadiReader.Ui/Pages/Redact.razor
+@@ -61,7 +61,7 @@
+             <Icon Name="redact" Size="40" />
+             <div class="rd-empty-t">Send a document here to redact it</div>
+             <div class="rd-empty-sub">Redaction permanently removes the content under each box and always writes a new file.</div>
+-            <button class="rd-empty-btn" @onclick="Fetch">Fetch a document…</button>
++            <button class="rd-empty-btn" @onclick="Fetch">@ChuvadiReader.Ui.Components.Platform.PlatformText.FetchOrUpload(Platform, "Fetch a document…", "Upload a document…")</button>
+         </div>
+     }
+     else if (_loading)
+@@ -76,7 +76,7 @@
+         <div class="rd-empty">
+             <Icon Name="warning" Size="40" />
+             <div class="rd-empty-t">@_error</div>
+-            <button class="rd-empty-btn" @onclick="Fetch">Fetch a document…</button>
++            <button class="rd-empty-btn" @onclick="Fetch">@ChuvadiReader.Ui.Components.Platform.PlatformText.FetchOrUpload(Platform, "Fetch a document…", "Upload a document…")</button>
+         </div>
+     }
+     else if (_session is not null)
