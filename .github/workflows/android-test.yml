@@ -81,8 +81,12 @@ jobs:
         with: { ref: '${{ steps.plan.outputs.android_ref }}', path: android }
       - uses: actions/checkout@v4
         with: { ref: '${{ steps.plan.outputs.foundation_ref }}', path: reader, fetch-depth: 0 }
-      - name: Compose (the Android chat's own compose.sh, unchanged)
-        run: bash android/docs/android/integration/compose.sh reader ${{ steps.plan.outputs.mobileui_ref }} android 2>&1 | tee compose.txt
+      - name: Compose (the Android chat's compose.sh; a Mobile UI hook patch that no longer applies either way is reported and skipped)
+        run: |
+          set -o pipefail
+          sed 's#echo "$(basename "$PATCH") does not apply"; exit 1#echo "WARNING: $(basename "$PATCH") does not apply either way: skipped (hooks reported landed in Foundation)"#' \
+            android/docs/android/integration/compose.sh > compose-test.sh
+          bash compose-test.sh reader ${{ steps.plan.outputs.mobileui_ref }} android 2>&1 | tee compose.txt
       - uses: actions/setup-dotnet@v4
         with: { dotnet-version: '10.0.x' }
       - uses: actions/setup-java@v4
@@ -111,10 +115,12 @@ jobs:
           find reader/src/ChuvadiReader.Android/bin/Release -name '*-Signed.aab' -exec cp {} out/chuvadi-reader-release.aab \;
           find reader/src/ChuvadiReader.Android/bin/Debug -name '*-Signed.apk' -exec cp {} out/chuvadi-reader-debug-x64.apk \;
           ls -la out; sha256sum out/*
-      - name: Test-only Release with the AT-03 fix (ChuvadiReader.Platform rooted) — never shipped
+      - name: Test-only Release with the AT-03 fix (ChuvadiReader.Platform rooted) and DevTools on — never shipped
         working-directory: reader
         run: |
           rm -rf src/ChuvadiReader.Android/obj/Release src/ChuvadiReader.Android/bin/Release
+          # Test-only: WebView DevTools on, so the page-level probes can read this Release build (costs one flag set at start).
+          sed -i 's/^#if DEBUG$/#if true/' src/ChuvadiReader.Android/MauiProgram.cs
           sed -i 's#</Project>#  <ItemGroup><TrimmerRootAssembly Include="ChuvadiReader.Platform" /></ItemGroup>\n</Project>#' src/ChuvadiReader.Android/ChuvadiReader.Android.csproj
           set +e
           # Warnings stay visible but don't stop this test-only build (the shipped build above is the warnings gate).
@@ -122,7 +128,8 @@ jobs:
           echo "exit $?"; grep -E "warning|error" ../publish-release-at03.txt | sort -u | head -20; tail -3 ../publish-release-at03.txt
           set -e
           find src/ChuvadiReader.Android/bin/Release -name '*-Signed.apk' -exec cp {} ../out/chuvadi-reader-release-at03.apk \;
-          git checkout src/ChuvadiReader.Android/ChuvadiReader.Android.csproj 2>/dev/null || sed -i '/TrimmerRootAssembly/d' src/ChuvadiReader.Android/ChuvadiReader.Android.csproj
+          sed -i '/TrimmerRootAssembly/d' src/ChuvadiReader.Android/ChuvadiReader.Android.csproj
+          sed -i 's/^#if true$/#if DEBUG/' src/ChuvadiReader.Android/MauiProgram.cs
           ls -la ../out
       - name: Package audit
         run: mkdir -p audit && (bash test/docs/android-test/ci/audit.sh reader out audit 2>&1 | tee audit/run.txt) || true

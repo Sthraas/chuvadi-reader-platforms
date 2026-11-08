@@ -1,5 +1,5 @@
 {
-  "round": 2,
+  "round": "2b",
   "emulators": "all",
   "suites": "startup,design,function",
   "foundation_ref": "053e8e4f5102a312da75a876329f6b393dfe8f76",
