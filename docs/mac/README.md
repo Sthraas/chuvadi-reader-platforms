@@ -19,6 +19,10 @@ CI pins: workload set `10.0.401` (Mac Catalyst 26.5.10318) and `/Applications/Xc
 
 Without a Mac: run the **Mac** workflow by hand (Actions → Mac → Run workflow, branch `platform/mac`) — it
 builds, tests, verifies the bundle layout, smoke-launches and uploads `Chuvadi-mac-universal-unsigned.zip`.
+The smoke step (`.github/scripts/mac-smoke.sh`) runs the app with `CHUVADI_SMOKE=1` and checks the Mac Test fixes on
+the runner: files handed over at launch and while running, single instance, the Reader rendering with no Ui error, the
+real menu bar, window size and position, the page reaching the top edge, .NET message text, a clean quit, and the
+startup breakdown. `CHUVADI_SMOKE` is never set for a person; without it the app prints nothing extra.
 Both Mac workflows are manual only (D-90: macOS minutes cost 10× Linux).
 
 ## Installing the unsigned test build on a Mac
