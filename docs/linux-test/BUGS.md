@@ -8,31 +8,31 @@ Every bug gets fixed; I re-verify on the fixing commit and mark it here.
 
 | ID | Sev | Owner | Title | Status |
 |---|---|---|---|---|
-| B-01 | S3 | Linux | `.deb` fails lintian: 21 errors, 373 warnings | open |
-| B-02 | S2 (legal) | Linux + Shared | Copyright file claims third-party OFL fonts for Sthraas; OFL texts not shipped | open |
-| B-03 | S3 (security) | Shared | `nuget.config` has no package source mapping (dependency-confusion risk) | open |
-| B-04 | S2 | Linux | Several files on the command line / `%F` open only the first | open |
-| B-05 | S2 | Linux | Single instance missing: a second launch opens a second window (Foundation contract + router already on `platform/foundation`) | open — retest when Linux lands it |
-| B-06 | S2 | Linux | Window drop of several files opens only the first (**confirmed live** on db28319 with a real drag) | open |
-| B-07 | S2 | **shared Ui/Core** | Password-protected PDF can't be opened: no password prompt | open |
-| B-08a | S1 | **library** | Zip-bomb `.docx` → 4.5 GB RAM, 10 min+: Chuvadi.Docs has no input limits | open |
-| B-08b | S2 | **shared Ui/Core** | "Opening…" has no cancel and no timeout (B-08a, B-09a) | open |
-| B-09a | S1 | **library** | `.xlsx` with a cell at XFD1048576 → 1.7 GB, never opens: Chuvadi.Sheets materialises to the sheet's extent | open |
-| B-10 | S2 | **shared Ui/Core** | One stuck open silently blocks every later open (no tab, no message) | open |
-| B-11a | S3 | **library** | Damaged PDF (bad `startxref` offset) not repaired — chuvadi-pdf needs xref rebuild | open |
-| B-11b | S3 | **shared Ui/Core** | Raw parser text shown to the user instead of the handout's damaged-file message | open |
-| B-12 | S3 (perf) | Linux | First launch per user on a GPU-less machine: ~1.7 s of blank window (WebKit GL compositing) | open — **D-110: option A** |
-| B-13 | S4 | Linux | Stray XML doc files shipped in `/usr/lib/chuvadi-reader` | open |
-| B-14 | S3 | Linux | Landscape pages print shrunk onto portrait paper (orientation forced to portrait) | open |
-| B-15 | S3 | Linux | No user namespaces → app aborts with a GLib ERROR, no message | open — **D-110: option A** (never switch the sandbox off) |
-| B-16 | S2 | **shared Ui/Core** | Read-only home → unhandled exception at startup, no window | open |
-| B-17 | S3 | Linux | **D-110: option A** — `UseSystemResourceKeys=true` → users see resource keys (`UnauthorizedAccess_IODenied_Path`, `EOCDNotFound`) instead of messages | open |
-| B-18 | S3 (design) | **shared Ui/Core** | Left bar at rest is the expanded 208 px labelled list; handout: 62 px icon rail, labels on hover | open |
-| B-19 | S4 | Linux | **D-110: option A** — Buttons on the left: top-bar brand cell widens past the left bar; divider no longer lines up (f7d0034) | open |
-| B-20 | S4 | Linux | No printer / CUPS down: empty print dialog, no explanation | open |
-| B-21 | S3 | Linux | Show in folder: 5 s D-Bus timeout → `xdg-open` fallback → two file-manager windows | open |
-| B-22 | S4 | shared Ui/Core | No designed keyboard-focus style: each engine draws its own (GTK blue on Linux) | open — suggestion |
-| B-23 | S4 | shared Ui/Core | Tab order starts with one "Send page N to a desk" button per page | open |
+| B-01 | S3 | Linux | `.deb` fails lintian: 21 errors, 373 warnings | **fixed 043e490** — re-verify |
+| B-02 | S2 (legal) | Linux + Shared | Copyright file claims third-party OFL fonts for Sthraas; OFL texts not shipped | Linux part **fixed 043e490**; OFL texts in the Ui → Foundation (proposal) — re-verify |
+| B-03 | S3 (security) | Shared | `nuget.config` has no package source mapping (dependency-confusion risk) | → Foundation (exact diff in `docs/linux/PROPOSAL-shared-fixes-8nov.md`) |
+| B-04 | S2 | Linux | Several files on the command line / `%F` open only the first | **fixed 606d01b** (kit router) — re-verify |
+| B-05 | S2 | Linux | Single instance missing: a second launch opens a second window (Foundation contract + router already on `platform/foundation`) | **fixed 606d01b** (kit L-A + F-1) — re-verify |
+| B-06 | S2 | Linux | Window drop of several files opens only the first (**confirmed live** on db28319 with a real drag) | **fixed 606d01b** (kit router) — re-verify with a live drag |
+| B-07 | S2 | **shared Ui/Core** | Password-protected PDF can't be opened: no password prompt | → Foundation (exact diff, tested on Linux) |
+| B-08a | S1 | **library** | Zip-bomb `.docx` → 4.5 GB RAM, 10 min+: Chuvadi.Docs has no input limits | library ask (listed in the proposal) |
+| B-08b | S2 | **shared Ui/Core** | "Opening…" has no cancel and no timeout (B-08a, B-09a) | → Foundation: zip-bomb guard before the library (exact diff); cancel needs the library (ask) |
+| B-09a | S1 | **library** | `.xlsx` with a cell at XFD1048576 → 1.7 GB, never opens: Chuvadi.Sheets materialises to the sheet's extent | → Foundation: grid draws only visible rows (exact diff); library ask for the extent |
+| B-10 | S2 | **shared Ui/Core** | One stuck open silently blocks every later open (no tab, no message) | → Foundation (same grid fix; measured 0.3 s to the next open) |
+| B-11a | S3 | **library** | Damaged PDF (bad `startxref` offset) not repaired — chuvadi-pdf needs xref rebuild | library ask; meanwhile "Try to repair" rebuilds it (tested) |
+| B-11b | S3 | **shared Ui/Core** | Raw parser text shown to the user instead of the handout's damaged-file message | → Foundation (exact diff: the handout's damaged-file state) |
+| B-12 | S3 (perf) | Linux | First launch per user on a GPU-less machine: ~1.7 s of blank window (WebKit GL compositing) | **fixed e8ca522** (D-110 A) — re-verify |
+| B-13 | S4 | Linux | Stray XML doc files shipped in `/usr/lib/chuvadi-reader` | **fixed 043e490** — re-verify |
+| B-14 | S3 | Linux | Landscape pages print shrunk onto portrait paper (orientation forced to portrait) | **fixed 4e9e244** — re-verify |
+| B-15 | S3 | Linux | No user namespaces → app aborts with a GLib ERROR, no message | **fixed e8ca522** (D-110 A) — re-verify |
+| B-16 | S2 | **shared Ui/Core** | Read-only home → unhandled exception at startup, no window | **fixed e8ca522** (Linux needs no shared change) — re-verify |
+| B-17 | S3 | Linux | **D-110: option A** — `UseSystemResourceKeys=true` → users see resource keys (`UnauthorizedAccess_IODenied_Path`, `EOCDNotFound`) instead of messages | **fixed 4e9e244** (D-110 A) — re-verify |
+| B-18 | S3 (design) | **shared Ui/Core** | Left bar at rest is the expanded 208 px labelled list; handout: 62 px icon rail, labels on hover | Reader chat's desktop revamp (changes Windows too) — routed via the coordinator |
+| B-19 | S4 | Linux | **D-110: option A** — Buttons on the left: top-bar brand cell widens past the left bar; divider no longer lines up (f7d0034) | → Foundation (exact diff, D-110 A; tested on Linux) |
+| B-20 | S4 | Linux | No printer / CUPS down: empty print dialog, no explanation | **fixed 606d01b** — re-verify |
+| B-21 | S3 | Linux | Show in folder: 5 s D-Bus timeout → `xdg-open` fallback → two file-manager windows | **fixed c9f5500** — re-verify |
+| B-22 | S4 | shared Ui/Core | No designed keyboard-focus style: each engine draws its own (GTK blue on Linux) | design option for the coordinator (pros/cons in the proposal) |
+| B-23 | S4 | shared Ui/Core | Tab order starts with one "Send page N to a desk" button per page | → Foundation (exact diff, tested on Linux) |
 | K-01 | — | Linux | GNOME close-only layout showed all three buttons (known, 7 Nov) | **fixed f7d0034 — verified** |
 
 Routing (coordinator, 8 Nov): **Linux** → the Linux chat. **shared Ui/Core** → Foundation's combined patch, as exact diffs from the Linux chat or Foundation. **library** → the coordinator compiles them for Arun (library coordinator).
@@ -179,3 +179,25 @@ Second instance: a non-zip `.xlsx` shows "Couldn't open this workbook: **EOCDNot
 **Steps.** Open `five-pages.pdf`; focus the window; Tab.
 **Actual.** Tab 1–5 are `button.rpage-send` "Send page N to a desk" (hover-only controls), one per page, before the rails. A 300-page document = 300 Tab presses to reach anything else.
 **Fix.** `tabindex="-1"` on the per-page hover buttons (reach them via the page strip / keyboard shortcut), or make only the current page's strip tabbable.
+
+---
+
+## Linux chat — fixes for re-verification (8 Nov, `platform/linux` ffb2823)
+Each fix has a test in `.github/workflows/linux.yml` / `tools/linux` (details: `docs/linux/BUILD-LOG.md` §37).
+| Bug | Commit | Test |
+|---|---|---|
+| B-01, B-13 | 043e490 | `check-deb.py`: lintian --pedantic reports nothing un-overridden (both packages), file modes, no XML / unused precompressed files |
+| B-02 (Linux) | 043e490 | `check-deb.py`: each font file in its own stanza naming the holder from the font's metadata; full OFL-1.1 text |
+| B-04, B-06 | 606d01b | UI steps 34b (three files on the command line → three tabs, in order), 34c (two dropped → two tabs) |
+| B-05 | 606d01b | UI step 34c2: a second launch hands over and exits 0 in ~0.1 s, one window, a new tab. Uses the kit's `DesktopSingleInstance` (L-A, F-1) |
+| B-12 | e8ca522 | UI step 34b2 (no GPU → compositing off); `first-launch.py` records the time (here: 4.7 s → 1.0 s on a fresh profile) |
+| B-14 | 4e9e244 | UI step 30: printed landscape page 4 has rotation 90 (fills the sheet) |
+| B-15 | e8ca522 | `no-userns-test.sh` (seccomp rule refusing user namespaces): message window, exit 2 |
+| B-16 | e8ca522 | `readonly-home-test.py` as an ordinary user: starts, opens the file, one notice |
+| B-17 | 4e9e244 | `check-deb.py` (runtimeconfig); UI step 34d as a non-root user (chmod 000 file → "Access to the path … is denied") |
+| B-20 | 606d01b (test in CI: ffb2823) | `no-printer-test.py` with CUPS stopped: plain message, no dialog |
+| B-21 | c9f5500 (test: ffb2823) | `reveal-test.py`: a file manager answering after 8 s → one ShowItems, no xdg-open; none → one xdg-open |
+
+Shared (B-02 Ui part, B-03, B-07, B-08b, B-09a app part, B-10, B-11b, B-19, B-23) and D-101 are exact diffs in
+`docs/linux/PROPOSAL-shared-fixes-8nov.md` on `platform/linux`, tested on Linux with the diff applied; B-22 is a design option there (not in the diff); B-18 goes to the Reader chat's desktop revamp. They reach
+`platform/linux` with Foundation's next combined patch.
