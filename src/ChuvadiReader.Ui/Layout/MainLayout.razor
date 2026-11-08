@@ -306,6 +306,7 @@
         if (Platform.Kind != ChuvadiReader.Platform.PlatformKind.Windows)
         {
             Platform.FormFactorChanged += OnFormFactorChanged;
+            Platform.ChromeChanged += OnChromeChanged;
         }
 
     }
@@ -780,11 +781,15 @@
         StateHasChanged();
     });
 
+    // D-101: the desktop's window-button layout changed (Linux: GTK's setting); redraw the top bar.
+    private void OnChromeChanged() => _ = InvokeAsync(StateHasChanged);
+
     public async ValueTask DisposeAsync()
     {
         if (Platform.Kind != ChuvadiReader.Platform.PlatformKind.Windows)
         {
             Platform.FormFactorChanged -= OnFormFactorChanged;
+            Platform.ChromeChanged -= OnChromeChanged;
         }
 
         Theme.Changed -= OnThemeChanged;

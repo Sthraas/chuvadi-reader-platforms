@@ -18,8 +18,19 @@
 
 Proof: Windows 27/27 identical (before `cd9b72d`); portal drag-and-drop checks 1–7 pass with the overlay; build 0 warnings; tests 274/274.
 
-## Part 2b (waiting)
-- **D-101** live "chrome changed" event (the Linux proposal's option B: `IPlatformInfo.ChromeChanged`, MainLayout re-renders the buttons) — no diff yet.
+## Part 2b (applied; written by the Foundation, D-101, coordinator 20:22)
+| Item | From | Where |
+|---|---|---|
+| `IPlatformInfo.ChromeChanged`: raised after `Chrome` changes. It has a default body that does nothing, so every existing `IPlatformInfo` compiles unchanged | Foundation (the Linux proposal's option B) | `PlatformInfo.cs` |
+| The top bar redraws on it: MainLayout listens on non-Windows platforms only, like `FormFactorChanged` | Foundation | `MainLayout.razor` (+5 lines) |
+| Tests: contract test; live redraw of the real Ui under 6 layouts | Foundation | `ChromeChangedTests.cs`; `tools/PixelProof/chrome-changed.js` with the preview's Linux mode (`CHVD_FF=linux`) |
+
+The Linux chat wires its GTK settings watcher to it (`PLATFORM-INTERFACE.md`, "Live chrome changes").
+
+Proof:
+- Windows 27/27 identical vs `9fbed93`. On the first run Home and Library at 1× showed 28 px and 14 px of difference; both were identical on two re-runs (the known first-screenshot artefacts).
+- Live redraw passes 6/6 with no page errors.
+- Build 0 warnings (`-warnaserror`); tests 276/276.
 
 ## Proof (part 1)
 - Windows pixel-identical: 9 screens × 3 scales, before `f6607a3` vs after — **27/27 identical**.

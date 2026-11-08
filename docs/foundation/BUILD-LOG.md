@@ -138,3 +138,7 @@
 
 ### 22. Seventh combined patch, part 2a (8 Nov)
 - Portal privacy line "kept in memory only" (D-106), Android P-07, Web UI D-104 drop overlay and D-103 pitch. 27/27 desktop identical; drop checks pass; 274/274. D-101 still awaited.
+
+### 23. Seventh combined patch, part 2b (8 Nov)
+- D-101 written here (coordinator 20:22): `IPlatformInfo.ChromeChanged` (default does nothing), MainLayout redraws the top bar on non-Windows platforms. Contract test, plus the preview's Linux mode with a live-layout endpoint and `tools/PixelProof/chrome-changed.js` (6/6). 27/27 desktop identical; 276/276.
+- Lesson: start the preview with `ASPNETCORE_ENVIRONMENT=Development`. Otherwise static web assets are off, `blazor.web.js` is served empty and the page never becomes interactive. Only prerender runs, so a live event finds no listener.
