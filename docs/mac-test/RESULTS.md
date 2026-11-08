@@ -86,10 +86,30 @@ First launch after install (LaunchServices registration, WebKit first run), prob
 
 **Windows, same CI class** (`windows-latest`, `scripts/measure-startup.ps1 -ReadyToRun`, "window shown", 10 runs):
 median 618 / 508 / 597 ms in three runs, worst (the first, cold) 3.7–5.3 s. That metric stops at the window, before
-WebView2 paints; the Mac "window" mark (warm 385–945 ms probe) is the comparable figure. Round 3 ran a Windows probe with the
-same first-painted-frame rule (`tests/mac/win_firstframe.ps1`): median 615 ms, worst 1 805 — but the WPF window's own
-native title bar already has ≥ 40 colours, so on Windows that rule fires when the window appears, not when WebView2
-paints. Not comparable yet; a content-area-only rule is the next step (O-3).
+WebView2 paints; the Mac "window" mark (warm 385–945 ms probe) is the comparable figure. **Windows first render, same rule as the Mac (D-127, test side only — no app change).** `tests/mac/win_firstframe.ps1`
+on `windows-latest`, run 42521735970, ReadyToRun publish, 10 back-to-back launches:
+
+| | Window shown | First painted frame of the Ui |
+|---|---|---|
+| Windows (WPF + WebView2), warm | median **436** ms (worst 491) | median **1 141** ms (worst 1 301) |
+| Mac, macos-15 arm64, warm (round 2 / round 1) | 385 / 573 ms | 2 080 / 2 647 ms |
+| Mac, macos-26 arm64, warm (round 1 / round 2) | 545 / 944 ms | 2 381 / 3 542 ms |
+
+**Method, so the comparison is fair.**
+- **Same clock start.** Both probes start timing at the launch call: `Start-Process` on Windows, `NSWorkspace` on Mac.
+- **Same rule.** Both count the first captured frame of the app's own content showing ≥ 40 distinct colours. On Windows
+  that is the client area only, below the WPF title bar. The Mac has no native title bar.
+- **Same scope.** Both measure Home on an empty state with the light theme.
+- **Different capture rate.** Windows captures with `PrintWindow(PW_RENDERFULLCONTENT)`, which takes 150–250 ms per
+  frame on the runner, so the Windows figure can be up to about 0.2 s late. The Mac captures every 10–30 ms.
+- **Fixes along the way.** An earlier screen-copy version counted a window still covered by the console as painted.
+  The version before that counted the WPF title bar's own colours. Both are corrected; those numbers are discarded.
+- **Runners differ.** The Windows and Mac runners are different VMs, so treat the ratio, not the absolute numbers, as
+  the finding.
+
+**Reading:** Windows paints Home about 0.7 s after its window appears. The Mac takes 1.5–2.6 s from window to first
+paint (2–3× Windows) on every Apple Silicon runner and round. That is the Blazor-in-WKWebView start-up gap behind M-06.
+
 **Linux:** Linux Test reports Blazor first render ≈ 1.25 s on its 2-core sandbox (B-12).
 
 **Reading.** Hosted macOS runners are virtual machines without a GPU and vary 2× between runs (same build, round 1 vs
@@ -102,7 +122,5 @@ render"). Options are in M-06.
 - Retina sharpness, Gatekeeper first-open flow, a real printer, trackpad gestures — unchanged 🖥 items.
 - Startup on real hardware: the runners can't give a meaningful absolute number (see above).
 
-## Open options for the coordinator
-**O-3 Windows first-render comparison.** A: crop the probe to the WebView2 content area (below the WPF title bar) —
-cheap, same rule as Mac; B: ask the Reader chat for a `first-render` mark in the Windows host's startup log like the
-Mac's — exact, but a change to an existing file in chuvadi-reader. **Recommendation: A** (test-side only).
+## Decided
+- **O-3 → A (D-127, 9 Nov):** Windows first render measured on the test side only; results and method above.
