@@ -7,5 +7,8 @@ chuvadi-reader: font-in-non-font-package [usr/lib/chuvadi-reader/wwwroot/*]
 # LiPi Sans's licence stays next to the font, as the SIL Open Font License asks; it's also in copyright.
 chuvadi-reader: extra-license-file [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/lipi-sans/LICENSE.txt]
 chuvadi-reader: package-contains-documentation-outside-usr-share-doc [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/lipi-sans/LICENSE.txt]
+# The full OFL 1.1 texts next to the Ui's fonts (B-02): the licence travels with the fonts, as it asks.
+chuvadi-reader: package-contains-documentation-outside-usr-share-doc [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/OFL.txt]
+chuvadi-reader: package-contains-documentation-outside-usr-share-doc [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/lipi-sans/OFL.txt]
 # The app's own start page (the web view loads it), not documentation.
 chuvadi-reader: package-contains-documentation-outside-usr-share-doc [usr/lib/chuvadi-reader/wwwroot/index.html]
