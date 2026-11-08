@@ -89,7 +89,10 @@ echo "$GEO"; echo "$WEB"
 read -r ww wh wx wy sw sh sx sy <<<"$(echo "$GEO" | sed -E 's/.*window=([0-9]+)x([0-9]+)@(-?[0-9]+),(-?[0-9]+) screen=([0-9]+)x([0-9]+)@(-?[0-9]+),(-?[0-9]+).*/\1 \2 \3 \4 \5 \6 \7 \8/')"
 # 1100×720, clamped to the screen's visible area (the runner's screen is 1024×768, visible 1024×677).
 ew=$(( ${sw:-0} < 1100 ? ${sw:-0} : 1100 )); eh=$(( ${sh:-0} < 720 ? ${sh:-0} : 720 ))
-if [ -n "${ww:-}" ] && [ "$ww" = "$ew" ] && [ "$wh" = "$eh" ]; then pass "M-07 window ${ww}×${wh} (1100×720 clamped to ${sw}×${sh})"; else fail "M-07 window ${ww:-?}×${wh:-?}, expected ${ew}×${eh}"; fi
+# Exact when the screen has room; when clamped, AppKit may shave a couple of points off the visible frame.
+tol=0; { [ "$ew" -lt 1100 ] || [ "$eh" -lt 720 ]; } && tol=4
+dw=$(( ${ww:-0} - ew )); dw=${dw#-}; dh=$(( ${wh:-0} - eh )); dh=${dh#-}
+if [ -n "${ww:-}" ] && [ "$dw" -le "$tol" ] && [ "$dh" -le "$tol" ]; then pass "M-07 window ${ww}×${wh} (1100×720 clamped to ${sw}×${sh})"; else fail "M-07 window ${ww:-?}×${wh:-?}, expected ${ew}×${eh}"; fi
 cy=$(( sy + (sh - wh) / 2 - wy )); cy=${cy#-}
 [ -n "${wh:-}" ] && [ "$cy" -le 2 ] && pass "M-07 centred vertically" || fail "M-07 not centred vertically (y off by ${cy:-?})"
 if [ -n "${ww:-}" ] && [ -n "${sw:-}" ]; then
