@@ -182,5 +182,6 @@ jobs:
             **/test-results.trx
             smoke.log
             smoke-files.log
+            smoke-open-panel.log
             smoke-checks.txt
           if-no-files-found: ignore

@@ -1,3 +1,4 @@
+using Foundation;
 using System.Runtime.InteropServices;
 using ObjCRuntime;
 
@@ -67,6 +68,18 @@ internal static class AppKitBridge
         SendVoidBool(panel, Sel("setCanCreateDirectories:"), o.Folders);
         SendVoidBool(panel, Sel("setAllowsMultipleSelection:"), o.Multiple);
         SetAllowedTypes(panel, o.Extensions);
+
+        // CI smoke (M-16): the real panel runs modally, is closed by a timer in the modal run loop, and a
+        // fixture file stands in for the person's choice — the Ui's whole Open path runs as it does for a person.
+        var smokePick = MacSmoke.NextPick();
+        if (smokePick is not null)
+        {
+            var timer = NSTimer.CreateTimer(1.0, false, _ => SendVoidIntPtr(panel, Sel("cancel:"), IntPtr.Zero));
+            NSRunLoop.Main.AddTimer(timer, NSRunLoopMode.Common);
+            SendLong(panel, Sel("runModal"));
+            MacSmoke.Log("picked " + System.IO.Path.GetFileName(smokePick));
+            return new[] { smokePick };
+        }
 
         if (SendLong(panel, Sel("runModal")) != ModalOk)
         {

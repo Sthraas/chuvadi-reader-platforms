@@ -1,5 +1,6 @@
 #!/bin/bash
 # Mac smoke test — checks the Mac Test fixes on a real macOS runner. Usage: mac-smoke.sh /path/to/Chuvadi.app
+#   M-16  the left bar's Open button → the real Open panel → the Reader, for PDF, Markdown, text, HTML, Word, Excel
 #   M-02  files handed over by macOS open as tabs: at launch, and while running (single instance)
 #   M-01  the menu bar carries Chuvadi's commands (File, View, Document), ⌘ shortcuts, no AppKit Enter Full Screen
 #   M-11  Settings… ⌘, in the Chuvadi menu
@@ -41,6 +42,74 @@ for name in ("one", "two", "three"):
     out += b"trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n" % (len(objs) + 1, x)
     open(os.path.join(sys.argv[1], name + ".pdf"), "wb").write(out)
 EOF
+
+# Open-panel fixtures (M-16): five-page PDF, Markdown, text, HTML, Word, Excel — minimal but valid.
+python3 - "$DOCS" <<'EOF'
+import sys, os, zipfile
+d = sys.argv[1]
+kids = " ".join("%d 0 R" % (3 + i) for i in range(5))
+objs = [b"<< /Type /Catalog /Pages 2 0 R >>", ("<< /Type /Pages /Kids [%s] /Count 5 >>" % kids).encode()]
+objs += [b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] >>"] * 5
+out = bytearray(b"%PDF-1.4\n"); offs = []
+for i, o in enumerate(objs, 1):
+    offs.append(len(out)); out += b"%d 0 obj\n" % i + o + b"\nendobj\n"
+x = len(out)
+out += b"xref\n0 %d\n0000000000 65535 f \n" % (len(objs) + 1)
+for o in offs: out += b"%010d 00000 n \n" % o
+out += b"trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n" % (len(objs) + 1, x)
+open(os.path.join(d, "five-pages.pdf"), "wb").write(out)
+open(os.path.join(d, "notes.md"), "w").write("# Notes\n\nA *Markdown* file.\n\n- one\n- two\n")
+open(os.path.join(d, "plain.txt"), "w").write("A plain text file.\nSecond line.\n")
+open(os.path.join(d, "page.html"), "w").write("<!doctype html><html><body><h1>Page</h1><p>An HTML file.</p></body></html>\n")
+ct = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>%s</Types>'
+rel = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="%s"/></Relationships>'
+with zipfile.ZipFile(os.path.join(d, "letter.docx"), "w", zipfile.ZIP_DEFLATED) as z:
+    z.writestr("[Content_Types].xml", ct % '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>')
+    z.writestr("_rels/.rels", rel % "word/document.xml")
+    z.writestr("word/document.xml", '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>A Word file.</w:t></w:r></w:p><w:sectPr><w:pgSz w:w="11906" w:h="16838"/></w:sectPr></w:body></w:document>')
+with zipfile.ZipFile(os.path.join(d, "table.xlsx"), "w", zipfile.ZIP_DEFLATED) as z:
+    z.writestr("[Content_Types].xml", ct % ('<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+        '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'))
+    z.writestr("_rels/.rels", rel % "xl/workbook.xml")
+    z.writestr("xl/workbook.xml", '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Sheet1" sheetId="1" r:id="rId1"/></sheets></workbook>')
+    z.writestr("xl/_rels/workbook.xml.rels", '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>')
+    z.writestr("xl/worksheets/sheet1.xml", '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="1"><c r="A1" t="inlineStr"><is><t>Name</t></is></c><c r="B1"><v>42</v></c></row></sheetData></worksheet>')
+EOF
+
+quit_app() {
+  cat > "$RUNNER_TEMP/quit.swift" <<SW
+import AppKit
+for app in NSRunningApplication.runningApplications(withBundleIdentifier: "$BUNDLE_ID") { _ = app.terminate() }
+SW
+  xcrun swift "$RUNNER_TEMP/quit.swift"
+  local end=$((SECONDS + 40)); while pgrep -f "$APP/Contents/MacOS/$EXE" >/dev/null && [ $SECONDS -lt $end ]; do sleep 0.5; done
+  ! pgrep -f "$APP/Contents/MacOS/$EXE" >/dev/null
+}
+
+# --- M-16: the left bar's Open button → the real Open panel → the Reader, for every format --------------
+PICKS="five-pages.pdf notes.md plain.txt page.html letter.docx table.xlsx"
+PICK_ENV=$(for f in $PICKS; do printf '%s;' "$DOCS/$f"; done)
+rm -f "$LOG"
+open -n --env CHUVADI_SMOKE=1 --env "CHUVADI_SMOKE_PICK=$PICK_ENV" --stdout "$LOG" --stderr "$LOG" -a "$APP"
+wait_for 'CHUVADI tabs 6: ' 150 || true
+sleep 3   # the last Ui report comes 1.5 s after the tab
+grep -E 'CHUVADI (open-button|picked|tabs|ui) ' "$LOG"
+i=0
+for f in $PICKS; do
+  i=$((i + 1))
+  line=$(grep "CHUVADI ui " "$LOG" | sed -n "${i}p")
+  if grep -q "CHUVADI tabs $i: .*$f" "$LOG" && [[ "$line" == *"route=/reader"* && "$line" == *"reader=1"* && "$line" == *"errorbar=none"* ]]; then
+    pass "M-16 Open button → panel → $f shows in the Reader"
+  else
+    fail "M-16 Open panel $f: ${line:-no Ui report}"
+  fi
+done
+if grep -qE 'CHUVADI log (Error|Critical)' "$LOG"; then
+  fail "M-16 the Ui logged errors on the Open-panel path"; grep -E 'CHUVADI log (Error|Critical)' "$LOG" | head -5 | tr '⏎' '\n' | head -80
+fi
+cp "$LOG" "$PWD/smoke-open-panel.log"
+quit_app || fail "Open-panel run did not quit"
+sleep 2
 
 REPORTS=("$HOME/Library/Logs/DiagnosticReports" "/Library/Logs/DiagnosticReports")
 before=$(ls "${REPORTS[@]}" 2>/dev/null | grep -c "^$EXE" || true)

@@ -17,6 +17,34 @@ internal static class MacSmoke
 {
     public static readonly bool Enabled = Environment.GetEnvironmentVariable("CHUVADI_SMOKE") == "1";
 
+    private static readonly Queue<string> Picks = new(
+        (Environment.GetEnvironmentVariable("CHUVADI_SMOKE_PICK") ?? string.Empty)
+            .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+
+    /// <summary>Smoke only: the next fixture file the Open panel "chooses" (CHUVADI_SMOKE_PICK, ';'-separated).</summary>
+    public static string? NextPick() => Enabled && Picks.Count > 0 ? Picks.Dequeue() : null;
+
+    /// <summary>Smoke only: presses the left bar's Open button, as a person does (M-16).</summary>
+    private static async Task PressOpenAsync(WKWebView view)
+    {
+        const string script = """
+            (function () {
+              var b = Array.prototype.find.call(document.querySelectorAll('button.lb-btn'),
+                function (x) { return (x.getAttribute('title') || '').indexOf('Open') === 0; });
+              if (!b) { return 'no-open-button'; }
+              b.click(); return 'pressed';
+            })()
+            """;
+        try
+        {
+            Log("open-button " + (await view.EvaluateJavaScriptAsync(script))?.ToString());
+        }
+        catch (Exception ex)
+        {
+            Log("open-button failed: " + ex.Message);
+        }
+    }
+
     public static void Log(string line)
     {
         if (Enabled)
@@ -51,6 +79,10 @@ internal static class MacSmoke
                 if (view is not null)
                 {
                     _ = UiStateAsync(view);
+                    if (Picks.Count > 0)
+                    {
+                        Later(1.0, () => _ = PressOpenAsync(view)); // next format through the Open panel
+                    }
                 }
             });
         }
@@ -58,6 +90,10 @@ internal static class MacSmoke
         Log("dotnet-text " + new ObjectDisposedException("IServiceProvider").Message.Replace('\n', ' ')); // M-14
         tabs.Changed += () => UIApplication.SharedApplication.BeginInvokeOnMainThread(ReportTabs);
         ReportTabs();
+        if (Picks.Count > 0 && view is not null)
+        {
+            Later(2.0, () => _ = PressOpenAsync(view)); // first file through the Open panel, from Home
+        }
 
         Later(1.0, () =>
         {
