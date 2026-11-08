@@ -1,6 +1,6 @@
 # Programme status
 
-_Last updated: 9 Nov 2026, 01:35 IST._
+_Last updated: 9 Nov 2026, 01:45 IST. All chats running._
 
 **All chats running in parallel (D-125, Arun).**
 
@@ -11,13 +11,13 @@ _Last updated: 9 Nov 2026, 01:35 IST._
 | Chat | State |
 |---|---|
 | Foundation | Eighth patch landed: platform/foundation 839d39d (green on 6); PR #11 at 50182a4 (green). Footer lines need deleting again by Arun. B-18 waits on Arun (D-121) |
-| Mac | Fixing Mac Test's M-01..M-12 (crash on quit, empty menu bar, files from macOS never open, startup ~2 s gap, icon, …) |
-| Linux | Rebasing onto 839d39d, full Xvfb pass, then hand head to Linux Test |
-| Android | All four emulators green (rounds 6–7); fixing what Android Test finds |
-| Web | Rebase, then WT-01 (CSP), WT-07/08/11–13, Sangam timeouts (D-117, D-118) |
+| Mac | Working through M-01..M-12 |
+| Linux | Merged Foundation 839d39d (bad60d7); full Xvfb pass running, then push |
+| Android | Rebased on 839d39d; smoke check; waiting for Android Test bugs |
+| Web | Rebased; WT-01, 07, 08, 11–13 and D-117/118 done; standby for Web Test re-verify |
 | Mobile app UI | Handout comparison 12d–12j done (nine fixes), H-14; D-111..D-114 answered |
-| Linux Test | Re-verifying Linux fixes (B-20 in progress) |
-| Mac Test | Round 2 running on macOS runners; M-01..M-12 filed (⌘Tab, F11 label, quit exception, small items) |
+| Linux Test | Sign-off written: every Linux-side fix re-verified (lintian clean, vector print incl. landscape, first launch 2.9→1.1 s, warm ~1.0 s); waiting to re-verify shared items after Linux pushes its rebase; B-18 waits on Arun; six manual real-machine items listed |
+| Mac Test | Round 3 running |
 | Web Test | Round 1 done: WT-01..WT-13 filed (BUGS.md on platform/web-test); options decided (D-117..D-119) |
-| Android Test | Opened 20:58 IST (b4b95b1d), D-122 |
+| Android Test | Running its test plan (design frames 12d–12j) |
 | Web portal UI | U-17 (b) diff ready; pushing without force (D-115) |
