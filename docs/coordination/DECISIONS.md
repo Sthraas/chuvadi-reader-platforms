@@ -299,5 +299,12 @@ Options considered:
 | — | PR #11 | Eighth patch part 1 (H-14, U-17) joins part 2 (Mobile UI D-112/D-114 diffs plus D-120 shared bugs) before the PR moves — one head for Arun |
 | — | Android open items for release | Final app ID on chuvadi.in; Play upload key; Docs 2.0 / Sheets 2.0.x / Layout updates; save-in-place (waits on shared write-back) |
 
+## 9 Nov 2026 00:50 — coordinator (second usage-limit stop, ~20:45 IST 8 Nov)
+| # | Item | Decision |
+|---|---|---|
+| D-123 | Linux B-22 keyboard focus style | A: one keyboard-only :focus-visible outline using the theme's accent token from tokens.css (no new colour; follows all five themes). Accessibility need the handout doesn't forbid. Changes Windows, so it goes through Foundation and PR #11 for Arun. B (engine defaults) looks different per platform and clashes with Palm and Indigo |
+| D-124 | Running eleven chats at once hit the account's usage limit twice | Finish one platform at a time. Now: Foundation + Linux Test only (Linux is closest: build complete, most bugs fixed). Then Android + Android Test, then Web + Web Test (+ Web portal UI), then Mac + Mac Test. Pros: steady progress without stops; earliest first release (Linux). Cons: the other platforms wait |
+| — | Library list addition | Chuvadi.Print's printer list ignores a remote CUPS server (prints through one show "No printers"); also print orientation automatic, cancel a long open |
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).

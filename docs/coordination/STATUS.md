@@ -1,6 +1,8 @@
 # Programme status
 
-_Last updated: 8 Nov 2026, 21:00 IST. Check-ins every 15 minutes._
+_Last updated: 9 Nov 2026, 00:55 IST._
+
+**Usage limit hit again ~20:45 IST 8 Nov.** From now on one platform at a time (D-124): Foundation + Linux Test running; the rest paused.
 
 **Restarted 18:15–18:40 IST 8 Nov** after the usage-limit stop and paused subscription (Arun paid). All build chats running; Mac Test and Web Test chats open next.
 
