@@ -239,5 +239,13 @@ Options considered:
 | — | Android | Round 4 done (e34d237); round 5 started (Back closes cards, double-tap on API 35, WebView version) |
 | — | PR #11 | Green at 03406f0 on Windows, Ubuntu and macOS; waiting for Arun's Windows checks |
 
+## 8 Nov 2026 19:15 check-in — coordinator
+| # | Item | Decision |
+|---|---|---|
+| D-103 | Web UI U-16: 12a sign-in pitch says "encrypted at rest" | (a) "…processed on our server, kept in memory only, and visible only to you." Same untrue claim D-98 fixed. (b) drop the clause loses the privacy promise; (c) keep it is false |
+| D-104 | Portal drop overlay | (b) show the handout's "Drop to open" state on the portal during a file drag, without the file-name line (browsers don't expose it during the drag). The handout is final. (a) invisible leaves the designed state out; (c) desktop belongs to the Reader chat's Windows host — noted for Arun |
+| — | Seventh combined patch | Foundation takes Mobile UI H-13 (fit/zoom jump, API 35 sizing), Web UI H7 (D-98 status text), the D-104 overlay diff and the Linux D-101 event |
+| — | Web Test chat | Opened 19:13 IST (db2f7f00) |
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).

@@ -1,6 +1,6 @@
 # Programme status
 
-_Last updated: 8 Nov 2026, 19:00 IST. Check-ins every 15 minutes._
+_Last updated: 8 Nov 2026, 19:15 IST. Check-ins every 15 minutes._
 
 **Restarted 18:15–18:40 IST 8 Nov** after the usage-limit stop and paused subscription (Arun paid). All build chats running; Mac Test and Web Test chats open next.
 
@@ -13,7 +13,8 @@ _Last updated: 8 Nov 2026, 19:00 IST. Check-ins every 15 minutes._
 | Linux | Fixing Linux Test bugs B-01..B-13; live button layout (D-101) |
 | Android | Round 4 done; round 5 running |
 | Web | Done: D-86, D-89 host side (drag-and-drop), TEST-PLAN.md; 142/142, CI green on 31b063e. Standing by for Web Test bugs (D-100) |
-| Mobile app UI | CI green; H-12 approved (sample data bug); next: gesture bugs |
+| Mobile app UI | H-13 (fit/zoom jump, API 35 sizing) done with tests; waiting for Foundation's seventh patch and round 5 |
 | Linux Test | BUGS.md pushed (B-01..B-13); now printing/vector checks |
 | Mac Test | Opened 19:00 IST (2b4979a2), D-99: test plan on macOS runners |
-| Web portal UI | U-15 = footer line (D-97); waits on Foundation for PhoneShell slot, H5, H6, drop overlay |
+| Web Test | Opened 19:13 IST (db2f7f00), D-100: starts from docs/web/TEST-PLAN.md |
+| Web portal UI | U-15 footer and D-98 wording done; U-16 (D-103) and drop overlay (D-104) next; ready for Web Test bugs |
