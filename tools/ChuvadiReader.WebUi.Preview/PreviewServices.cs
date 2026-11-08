@@ -42,6 +42,20 @@ internal sealed class NoClipboard : IImageClipboard, IClipboard
     public Task SetImageAsync(byte[] pngBytes, CancellationToken ct = default) => Task.CompletedTask;
 }
 
+/// <summary>Accepts drops (so the portal's drop catcher renders); records names, opens nothing.</summary>
+internal sealed class PreviewDroppedFiles : IDroppedFiles
+{
+    public bool IsAvailable => true;
+    public long MaxFileBytes => 50L * 1024 * 1024;
+    public List<string> Received { get; } = [];
+
+    public Task<IReadOnlyList<string>> ReceiveAsync(IReadOnlyList<DroppedFile> files, CancellationToken ct = default)
+    {
+        Received.AddRange(files.Select(f => f.Name));
+        return Task.FromResult<IReadOnlyList<string>>([]);
+    }
+}
+
 /// <summary>A signed-in Sangam person, as in the handout (12b).</summary>
 internal sealed class FakeSangamAccount : IAccount
 {

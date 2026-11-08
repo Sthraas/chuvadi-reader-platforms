@@ -204,3 +204,17 @@ Foundation's `PortalDropCatcher` behaviour matches the check list; it is invisib
 
 ### 5. Verification
 Build `-warnaserror` 0 warnings; tests 16 + 54 + 32 + 171 = **273 pass**. With H7 applied locally: Chromium / Firefox / WebKit — desktop status bar shows the D-98 text; account card footer shows "Terms of use · Privacy" and using a link closes the card; phone (390×844, on the Foundation's real slot + H5) shows the memory line and the footer under Sign out; no console errors.
+
+## 2026-11-08 — session 10 (coordinator 19:15: U-16 a / D-103; drop overlay b / D-104)
+
+### 1. Checked all branches
+`platform/foundation` f6607a3 (legal drafts reworded for D-98; H7 not yet), `platform/mobile-ui` a20f6d1, `platform/web` 31b063e, `main` d034fb8. Test branch present: `platform/linux-test` (no web-test branch yet). Rebased onto f6607a3: clean.
+
+### 2. U-16 (a)
+12a pitch: "…processed on our server, kept in memory only, and visible only to you." Test pins it (no "encrypted at rest"). No other "encrypted at rest" left in my files; the status bar's is MainLayout's (H7, sent).
+
+### 3. D-104 (b) — "Drop to open"
+Diff for the Foundation: `proposal/web-ui-drop-overlay.patch` (catcher markup + CSS only). Preview gains `PreviewDroppedFiles` (Web profile) so the catcher renders. Proofs in HOOKS. Found U-17 (overlap with Home's own drop zone) — options raised.
+
+### 4. Build and tests
+Build `-warnaserror` 0 warnings; tests 16 + 54 + 33 + 171 = **274 pass**.
