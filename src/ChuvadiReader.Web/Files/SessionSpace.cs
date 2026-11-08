@@ -155,12 +155,17 @@ public static class SpaceLayout
         return full.StartsWith(baseDir, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
     }
 
-    /// <summary>A file name safe to store and to show: no folders, no control characters, no
-    /// reserved names, at most 120 characters, extension kept.</summary>
+    /// <summary>A file name safe to store and to show: no folders, no control characters, no bidi
+    /// controls (WT-08: U+202E would show "fdp.exe" reversed), no reserved names, at most 120 characters,
+    /// extension kept. Joiners (U+200C, U+200D) stay: Malayalam and Tamil names need them.</summary>
+    /// <summary>Unicode's bidirectional formatting characters (UAX #9): marks, embeddings, overrides, isolates.</summary>
+    public static bool IsBidiControl(char c)
+        => c is '\u061C' or '\u200E' or '\u200F' or (>= '\u202A' and <= '\u202E') or (>= '\u2066' and <= '\u2069');
+
     public static string SafeFileName(string? name, string fallback)
     {
         var n = Path.GetFileName((name ?? string.Empty).Replace('\\', '/'));
-        var chars = n.Where(c => !char.IsControl(c) && c != '/' && c != '\\' && c != ':' && c != '*' && c != '?'
+        var chars = n.Where(c => !char.IsControl(c) && !IsBidiControl(c) && c != '/' && c != '\\' && c != ':' && c != '*' && c != '?'
                                  && c != '"' && c != '<' && c != '>' && c != '|').ToArray();
         n = new string(chars).Trim().Trim('.').Trim();
         if (n.Length == 0)

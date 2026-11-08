@@ -85,7 +85,7 @@ public class DroppedFilesTests
             File("huge.pdf", Pdf, announced: 1024 * 1024),               // over the limit
             File("empty.pdf", [], announced: 0),
             File("short.pdf", Pdf, announced: Pdf.Length + 100),         // the browser sent less than it said
-            File("../../etc/passwd.pdf", Pdf),                            // folders stripped from the name
+            File("../../etc/passwd\u202Efdp.pdf", Pdf),                  // folders and bidi controls stripped (WT-08)
         ]);
 
         Assert.Equal(5, problems.Count);
@@ -98,6 +98,7 @@ public class DroppedFilesTests
         var opened = Assert.Single(Opened());                             // only the cleaned-name PDF
         Assert.True(_space.Contains(opened.Path));
         Assert.DoesNotContain("..", opened.Path);
+        Assert.Equal("passwdfdp.pdf", Path.GetFileName(opened.Path));
         var kept = Directory.EnumerateFiles(_space.Uploads, "*", SearchOption.AllDirectories).ToList();
         Assert.Equal([opened.Path], kept);                                // refused files leave nothing behind
     }

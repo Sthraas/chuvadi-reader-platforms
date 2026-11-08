@@ -109,6 +109,7 @@ public static class StaticPages
             "<link rel=\"stylesheet\" href=\"_content/ChuvadiReader.Ui/css/app.css\" />" +
             "<link rel=\"stylesheet\" href=\"_content/ChuvadiReader.Ui/css/shell.css\" />" +
             "<link rel=\"stylesheet\" href=\"_content/ChuvadiReader.Ui/css/prefs.css\" />" +
+            "<link rel=\"stylesheet\" href=\"_content/ChuvadiReader.Ui/css/mobile.css\" />" +
             "<link rel=\"stylesheet\" href=\"ChuvadiReader.Web.styles.css\" />" +
             "<link rel=\"stylesheet\" href=\"css/portal.css\" />" +
             "</head><body " + data.Name + "=\"" + WebUtility.HtmlEncode(data.Value) + "\">" +

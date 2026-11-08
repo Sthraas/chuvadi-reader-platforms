@@ -48,6 +48,14 @@ public sealed class FakeSangam : IAsyncDisposable
 
     public List<string> TokenRequests { get; } = new();
 
+    /// <summary>How long the token endpoint waits before answering (a hanging Sangam, O-1).</summary>
+    public TimeSpan TokenDelay { get; set; }
+
+    /// <summary>Discovery requests seen (the portal's probe uses the same address, O-2).</summary>
+    public int DiscoveryRequests => Volatile.Read(ref _discoveryRequests);
+
+    private int _discoveryRequests;
+
     private sealed record CodeGrant(string RedirectUri, string Challenge, string Nonce, string ClientId);
 
     public async Task StartAsync()
@@ -56,6 +64,15 @@ public sealed class FakeSangam : IAsyncDisposable
         b.Logging.ClearProviders();
         b.WebHost.UseUrls("http://127.0.0.1:0");
         _app = b.Build();
+        _app.Use((c, next) =>
+        {
+            if (c.Request.Path == "/.well-known/openid-configuration")
+            {
+                Interlocked.Increment(ref _discoveryRequests);
+            }
+
+            return next(c);
+        });
         _app.MapGet("/.well-known/openid-configuration", () => Results.Json(new Dictionary<string, object>
         {
             ["issuer"] = Issuer,
@@ -91,6 +108,11 @@ public sealed class FakeSangam : IAsyncDisposable
         });
         _app.MapPost("/connect/token", async (HttpContext c) =>
         {
+            if (TokenDelay > TimeSpan.Zero)
+            {
+                await Task.Delay(TokenDelay, c.RequestAborted);
+            }
+
             var form = await c.Request.ReadFormAsync();
             TokenRequests.Add(string.Join("&", form.Select(kv => kv.Key)));
             if (!ClientAuthenticated(c, form))

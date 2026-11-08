@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Sockets;
 using ChuvadiReader.Web.Auth;
 using ChuvadiReader.Web.Files;
+using ChuvadiReader.Web.Hosting;
 using ChuvadiReader.Web.Hosting.Workers;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting.Server;
@@ -295,6 +296,49 @@ public class GatewayTests(GatewayFixture gateway) : IClassFixture<GatewayFixture
         var css = await c.GetAsync("/css/portal.css");
         Assert.Equal(HttpStatusCode.OK, css.StatusCode);
         Assert.DoesNotContain(gateway.Pool.Running, w => w.Key == UserKey.FromSub("gw-static"));
+    }
+
+    [Fact]
+    public async Task A_relayed_reader_page_keeps_the_portals_full_content_policy()
+    {
+        // WT-01: Blazor adds "frame-ancestors 'self'" to interactive pages; relayed, it must add to the
+        // gateway's policy, not replace it.
+        using var c = gateway.Client("gw-csp");
+        var r = await c.GetAsync("/");
+        Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+        var policies = r.Headers.GetValues("Content-Security-Policy").ToList();
+        Assert.Contains(SecurityHeaders.ContentSecurityPolicy, policies);
+        Assert.All(policies, p => Assert.Contains("frame-ancestors 'self'", p, StringComparison.Ordinal));
+        Assert.Equal("nosniff", r.Headers.GetValues("X-Content-Type-Options").Single());
+    }
+
+    [Fact]
+    public async Task The_circuit_opens_only_from_the_portals_own_pages()
+    {
+        // WT-07: a foreign Origin (a sibling sub-domain counts as same-site for the cookie) is refused.
+        using var own = gateway.Client("gw-origin");
+        using var ok = await own.PostAsync("/_blazor/negotiate?negotiateVersion=1", null);
+        Assert.Equal(HttpStatusCode.OK, ok.StatusCode);
+
+        foreach (var origin in new[] { "https://evil.example", "null" })
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Post, "/_blazor/negotiate?negotiateVersion=1");
+            req.Headers.Remove("Origin");
+            req.Headers.TryAddWithoutValidation("Origin", origin);
+            using var foreign = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { BaseAddress = gateway.Base };
+            foreign.DefaultRequestHeaders.Add("X-Dev-User", "gw-origin");
+            Assert.Equal(HttpStatusCode.Forbidden, (await foreign.SendAsync(req)).StatusCode);
+        }
+
+        using var bare = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { BaseAddress = gateway.Base };
+        bare.DefaultRequestHeaders.Add("X-Dev-User", "gw-origin");
+        Assert.Equal(HttpStatusCode.Forbidden, (await bare.PostAsync("/_blazor/negotiate?negotiateVersion=1", null)).StatusCode); // opening needs an Origin
+
+        // A closing page's beacon (Safari sends no usable Origin) still ends its circuit; a foreign one doesn't.
+        Assert.NotEqual(HttpStatusCode.Forbidden, (await bare.PostAsync("/_blazor/disconnect", new StringContent("circuitId=x"))).StatusCode);
+        using var evil = new HttpRequestMessage(HttpMethod.Post, "/_blazor/disconnect") { Content = new StringContent("circuitId=x") };
+        evil.Headers.TryAddWithoutValidation("Origin", "https://evil.example");
+        Assert.Equal(HttpStatusCode.Forbidden, (await bare.SendAsync(evil)).StatusCode);
     }
 }
 

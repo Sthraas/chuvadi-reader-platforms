@@ -21,7 +21,18 @@ Test tooling (Playwright, its browsers, PostgreSQL for the local Sangam) is used
 | Production rehearsal | `ASPNETCORE_ENVIRONMENT=Production`, gateway mode, data root on tmpfs (`/dev/shm/...`), TLS from a test PEM on 8443, `ASPNETCORE_HTTPS_PORT`, `--insecure` in the e2e | Start-up checks, redirects, headers, cookies as in production |
 | Staging VM | Same size as production (runbook §2), before go-live | Load at real size, real Let's Encrypt staging, real Sangam |
 
-The whole shared solution must pass before any push: `dotnet build ChuvadiReader.Platforms.slnx -c Release -warnaserror` and `dotnet test ChuvadiReader.Platforms.slnx`, plus the Web tests.
+From a clean clone, restore from the committed feed first (WT-12; the root `nuget.config` points at a local folder that isn't in git):
+
+```
+dotnet restore ChuvadiReader.Platforms.slnx --configfile ci/nuget.config
+dotnet restore tests/ChuvadiReader.Web.Tests/ChuvadiReader.Web.Tests.csproj --configfile ci/nuget.config
+```
+
+Before any push, both must pass:
+- the whole shared solution: `dotnet build ChuvadiReader.Platforms.slnx -c Release -warnaserror` and `dotnet test ChuvadiReader.Platforms.slnx -c Release`;
+- the Web portal: `dotnet build tests/ChuvadiReader.Web.Tests -c Release -warnaserror` (builds the portal too) and `dotnet test tests/ChuvadiReader.Web.Tests -c Release`.
+
+The Web projects aren't in `ChuvadiReader.Platforms.slnx` on purpose: that solution runs on every runner the hosts use (Linux x64 and Arm, macOS, Windows), and the Web tests need Linux (Unix sockets, `/proc`, per-person worker processes). CI builds Web in `web.yml` with `-warnaserror`, and checks the published package (`tests/web-e2e/check-package.sh`, WT-11).
 
 ## 1. Flows
 
@@ -60,14 +71,14 @@ The whole shared solution must pass before any push: `dotnet build ChuvadiReader
 | S-3 | Sign-in protocol | PKCE S256, state, nonce, RFC 9207 `iss`; ID token signature, `alg` allow-list (no `none`, no HS*), `iss`, `aud`, `azp`, expiry, nonce, unknown `kid`; flow cookie bound to the browser, 10 min | U `SangamSignInTests` (refusal cases) |
 | S-4 | Open redirect | `returnUrl` only local (`//evil`, `/\\evil`, absolute URLs, CR/LF refused) — on `/signin`, the page's link and the callback | U |
 | S-5 | Back-channel logout | Only a valid `logout+jwt` (signature, `aud`, events, no nonce, `jti`, `sid` or `sub`) ends anything; replay does nothing; a copied cookie stops working at once | U |
-| S-6 | Cross-site requests | Uploads, activity reports and sign-out refuse other origins (`Origin` / `Sec-Fetch-Site`); custom header on activity | U `EndpointTests`, `ActivityEndpointTests` |
+| S-6 | Cross-site requests | Uploads, activity reports, sign-out and the circuit (`/_blazor` negotiate and WebSocket, WT-07) refuse other origins (`Origin` / `Sec-Fetch-Site`); custom header on activity | U `EndpointTests`, `GatewayTests.The_circuit_opens_only_from_the_portals_own_pages`, `ActivityEndpointTests` |
 | S-7 | Upload validation | Allowed types per chooser (desktop dialog list), content must match the extension (magic bytes), size and count limits, chunk limit, chunks in order and within the announced size, names cleaned (no folders, control characters, reserved names), same names don't overwrite, incomplete files discarded, tickets owner-only and expiring | U `UploadTests`, `TicketTests`, `EndpointTests` |
 | S-8 | Downloads and print links | Unguessable, single-use (downloads), owner-only, expiring; print serves the PDF inline only to its owner | U `TicketTests`, `EndpointTests` |
 | S-9 | Isolation between people (D-24) | One worker process per person; a worker answers only its gateway (secret on stdin) and only its person; browser `X-Chvd-*` headers stripped; `/_worker/*` 404 to browsers; gateway cookies never reach a worker; socket and worker folders 0700; no `Sangam__`/TLS settings or secrets in a worker's environment; memory cap; no crash dumps | U `GatewayTests` |
 | S-10 | File wiping | A person's files go when: the tab closes (after the 3-min reconnect window), they sign out, Sangam signs them out, the session expires, the worker is idle-stopped, the worker crashes, the gateway stops, or the portal starts after a crash (sweep) | U `GatewayTests` (end, crash, stop), `SpaceLayoutTests` (sweep); E `expiry.py --data-root`; E `load.py` + listing (all workers gone after everyone left) |
 | S-11 | Expiry (D-30) | 30 min idle, 8 h absolute; warning 5 min before in every open tab; "I'm still here", any input or a page load takes the idle warning down; only real activity counts (not the circuit's keep-alive, not static files); at the end the cookie stops working and files go | U `SessionClockTests`; E `expiry.py` (short limits) |
 | S-12 | Working copies at rest (D-28) | Outside Development, start-up refused unless `DataRoot` is on tmpfs and swap is off, dm-crypt or zram; Data Protection keys never on disk | U `StorageCheckTests`; M (rehearsal: refusal on a disk data root) |
-| S-13 | Transport and headers | HTTPS redirect (307 to the public port), HSTS, CSP (`script-src 'self'`, `frame-ancestors 'self'`), `nosniff`, frame and referrer policy, no `Server` header; TLS 1.2/1.3 only | U `Every_response_carries_the_security_headers`; M (rehearsal, `curl -vk`) |
+| S-13 | Transport and headers | HTTPS redirect (307 to the public port), HSTS, CSP (in gateway mode too: a relayed Reader page carries the full policy, WT-01) (`script-src 'self'`, `frame-ancestors 'self'`), `nosniff`, frame and referrer policy, no `Server` header; TLS 1.2/1.3 only | U `Every_response_carries_the_security_headers`; M (rehearsal, `curl -vk`) |
 | S-14 | Certificates | Let's Encrypt via our ACME client: order, renew in window, keep working certificate on failure, hot swap without restart | U `Acme*Tests`, `CertificateSourceTests`; **V-2** on staging |
 | S-15 | Error handling | Unexpected failures show `/error` (anonymous; never loops through sign-in); no stack traces outside Development | U `The_error_page_needs_no_sign_in…`; M |
 | S-16 | Logs | No document content, tokens, passwords or cookies in logs; worker log lines carry a key hash, not the person's id | M (`journalctl` review during staging) |
@@ -80,7 +91,8 @@ The whole shared solution must pass before any push: `dotnet build ChuvadiReader
 |---|---|---|---|
 | G-1 | Sangam down at "Continue with Sangam" | Sign-in page with "Sangam can't be reached right now…" (503) | U `SangamUnreachableTests` |
 | G-2 | Sangam down at sign-out | Portal session ended anyway; signed-out page | U |
-| G-3 | Sangam down at the callback (token endpoint) | Same message on the sign-in page | U (same filter); M (stop Sangam between authorize and callback) |
+| G-3 | Sangam down at the callback (token endpoint) | Same message on the sign-in page | U `SangamTimeoutTests` (a token call that hangs gives up at 10 s, O-1); M (stop Sangam between authorize and callback) |
+| G-3a | Sangam stops after discovery is cached (O-2) | "Continue with Sangam" probes Sangam (2 s limit, answer reused 30 s) and shows the same message instead of sending the browser to a dead Sangam | U `SangamTimeoutTests`; M (stop the local Sangam, wait 30 s, press "Continue with Sangam") |
 | G-4 | Discovery document wrong (bad JSON, wrong issuer, missing endpoint) | Same message; reason in the log | U (filter covers it); M |
 | G-5 | Key rotation (new `kid`) | Keys refreshed once (rate-limited), sign-in works | U (`kid` refusal when truly unknown); M (rotate keys on the local Sangam) |
 | G-6 | Person denies consent (`access_denied`) | Signed-out page | U (callback path); M |
@@ -192,6 +204,12 @@ Found and fixed while running this plan:
 - Shared solution `-warnaserror`, 0 warnings; tests Reader 171, Hosting 48, Mobile UI 15, Web UI 31.
 - Web 142/142 (new: `DroppedFilesTests`).
 - `flows.py` with the D-89 A drop checks, gateway mode: Chrome, Firefox, WebKit and Chromium 9/9.
+
+**8 Nov, evening (on `platform/foundation` @ `63f37b1`; fixes for WT-01, 07, 08, 11, 12, 13 and O-1, O-2):**
+- Shared solution `-warnaserror`, 0 warnings, and its tests; Web tests (new: relayed CSP, circuit origin, bidi names, Sangam timeouts and probe).
+- `flows.py` in gateway mode: Chrome, Firefox, WebKit and Chromium 9/9, no 403s in the server log.
+- `load.py` (3 people, own browser each): 3/3, times in ms from draws.
+- `check-package.sh` on a fresh publish: pass (and fails on the old package).
 
 ## 8. Known gaps
 - The legal texts are drafts and say not to publish until counsel has reviewed them: V-7 blocks go-live until the DRAFT lines are gone.

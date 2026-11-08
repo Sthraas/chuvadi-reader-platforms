@@ -95,6 +95,7 @@ public sealed class SangamSignInTests : IAsyncLifetime
         Assert.Contains("js/signin.js", html);
         Assert.Contains("href=\"/terms\"", html); // "Terms of use" (D-86)
         Assert.Contains("Terms of use", html);
+        Assert.Contains("href=\"/privacy\"", html); // "Privacy" beside it (D-86, D-97)
         Assert.DoesNotContain("blazor.web.js", html); // no circuit before sign-in
 
         // An unsafe return address never reaches the page.

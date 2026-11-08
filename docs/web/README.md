@@ -17,14 +17,15 @@ Blazor Server portal for Chuvadi Reader: the unchanged `ChuvadiReader.Ui` render
 - Printing works in Safari and in browsers without a PDF viewer (an "Open the PDF to print" link the person clicks). The browser flows, sign-in and expiry e2e run in Chrome, Firefox and WebKit.
 - Test plan for the Web Test chat: `TEST-PLAN.md`.
 - On `platform/foundation` @ `4819d66`. D-89 A: documents dropped on the portal stream into the session's working copy through the upload's own checks and open in the Reader (`WebDroppedFiles`, `DropFiles = true`).
-- Next: domain and E2E stay last (Arun). CI runs again (D-93).
+- On `platform/foundation` @ `63f37b1` (seventh and eighth patches: phone shell, D-98 wording, legal links in the account menu). Fixes for the Web Test chat's WT-01, 07, 08, 11, 12, 13 and O-1, O-2 (BUILD-LOG step 25).
+- Next: the Web Test chat's re-checks. Domain and E2E stay last (Arun).
 
 ## Build and test
 Requires the .NET 10 SDK (10.0.403 or later). Packages come from the committed `ci/packages` feed.
 ```
 dotnet restore src/ChuvadiReader.Web/ChuvadiReader.Web.csproj --configfile ci/nuget.config
 dotnet restore tests/ChuvadiReader.Web.Tests/ChuvadiReader.Web.Tests.csproj --configfile ci/nuget.config
-dotnet build src/ChuvadiReader.Web/ChuvadiReader.Web.csproj -c Release --no-restore
+dotnet build tests/ChuvadiReader.Web.Tests/ChuvadiReader.Web.Tests.csproj -c Release --no-restore -warnaserror
 dotnet test tests/ChuvadiReader.Web.Tests/ChuvadiReader.Web.Tests.csproj -c Release
 ```
 
@@ -51,7 +52,10 @@ Session files go to `src/ChuvadiReader.Web/.portal-data` (git-ignored) and are d
 | `MaxUploadBytes`, `MaxFilesPerPick`, `UploadChunkBytes` | Upload limits (200 MB, 50 files, 4 MB chunks) |
 | `PickTimeout`, `DownloadLinkLifetime`, `SaveWaitLimit` | 30 min, 10 min, 30 min |
 | `AllowCertificateUpload` | Off (D-27) |
-| `TermsUrl` | "Terms of use" under the sign-in card; default `/terms` (served before sign-in, D-86). Empty hides it |
+| `TermsUrl` | "Terms of use" on the sign-in page and in the account menu; default `/terms` (served before sign-in, D-86). Empty hides it |
+| `PrivacyUrl` | "Privacy" beside it (D-97); default `/privacy`. Empty hides it |
+| `Sangam:CallTimeout` | Longest any call to Sangam may take (discovery, keys, token); default 10 s (O-1) |
+| `Sangam:ProbeTimeout`, `Sangam:ProbeCacheFor` | "Continue with Sangam" first checks Sangam answers within 2 s; the answer is reused for 30 s (O-2) |
 | `DesktopAppUrl` | "Get the desktop app" in the account menu (D-35); placeholder `https://chuvadi.in/download` |
 | `AccountSettingsUrl` | "Account settings" → Sangam's self-service site (D-35); empty hides the item until its address is known |
 | `Tls:CertificatePath`, `Tls:KeyPath`, `Tls:ReloadCheck` | PEM pair served by Kestrel (with ACME off: re-read every 5 min when changed; with ACME on: where issued certificates are stored) |

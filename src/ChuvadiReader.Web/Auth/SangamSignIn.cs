@@ -62,10 +62,11 @@ public static class SangamSignIn
 
     // ── 1. leave for Sangam ─────────────────────────────────────────────────────────
 
-    private static async Task<IResult> SignInAsync(HttpContext http, SangamMetadata metadata, IOptions<SangamOptions> options,
+    private static async Task<IResult> SignInAsync(HttpContext http, SangamMetadata metadata, SangamProbe probe, IOptions<SangamOptions> options,
         IDataProtectionProvider dp, TimeProvider time, string? returnUrl)
     {
         var o = options.Value;
+        await probe.EnsureReachableAsync(http.RequestAborted).ConfigureAwait(false); // O-2: a down Sangam shows our message
         var flow = new Flow(Random(32), Random(32), Random(48), SafeReturnUrl(returnUrl), time.GetUtcNow().ToUnixTimeSeconds());
         var protector = dp.CreateProtector(Purpose);
         http.Response.Cookies.Append(FlowCookiePrefix + flow.State[..16], protector.Protect(JsonSerializer.Serialize(flow)), new CookieOptions
@@ -122,7 +123,7 @@ public static class SangamSignIn
     // ── 2. back from Sangam ─────────────────────────────────────────────────────────
 
     private static async Task<IResult> CallbackAsync(HttpContext http, SangamMetadata metadata, JwtVerifier verifier, IOptions<SangamOptions> options,
-        IDataProtectionProvider dp, Hosting.Acme.IHttpClientFactoryLite httpFactory, ClientAuthentication clientAuth, TimeProvider time, ILoggerFactory logs)
+        IDataProtectionProvider dp, ClientAuthentication clientAuth, TimeProvider time, ILoggerFactory logs)
     {
         var log = logs.CreateLogger("ChuvadiReader.Web.Auth.SangamSignIn");
         var o = options.Value;
@@ -190,7 +191,7 @@ public static class SangamSignIn
         clientAuth.Apply(req, form);
         req.Content = new FormUrlEncodedContent(form);
         req.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-        using var client = httpFactory.Create();
+        using var client = metadata.Client(); // O-1: the call time limit
         using var resp = await client.SendAsync(req, http.RequestAborted).ConfigureAwait(false);
         var body = await resp.Content.ReadAsStringAsync(http.RequestAborted).ConfigureAwait(false);
         if (!resp.IsSuccessStatusCode)

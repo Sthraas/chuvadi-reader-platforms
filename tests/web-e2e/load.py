@@ -2,18 +2,30 @@
 the machine's Chrome); run against a gateway with the Development sign-in, where each simulated
 person is told apart by the X-Dev-User header.
 
-Each person, all at once: opens the portal (their worker starts), uploads the PDF, waits for the page
-to render, pages through it, prints the current page (the server assembles a PDF), then goes on paging
-for a while. Measures each step, counts failures, and samples the memory of the gateway and every
-worker process (from /proc) while everyone is active.
+Each person, all at once: opens the portal (their worker starts), uploads the PDF, waits for page 1 to
+be drawn, pages through it (each step timed until the next page is drawn and in view, no fixed waits),
+prints the current page (the server assembles a PDF), then goes on paging for a while. Measures each
+step, counts failures, and samples the memory of the gateway and every worker process (from /proc).
 
-Usage: python3 load.py <portal base> <some.pdf> <out folder> <people> [--server-dir <publish folder>]
+Each person gets their own browser process by default (WT-13), so one person's page work doesn't slow
+another's in the client and get counted as server time. `--browsers N` shares N processes between
+everyone, for big runs on a small client machine. The PDF needs at least 8 pages. Times are in ms.
+
+Usage: python3 load.py <portal base> <some.pdf> <out folder> <people> [--browsers N] [--server-dir <publish folder>]
 """
 import asyncio, json, os, statistics, sys, time
 from playwright.async_api import async_playwright
 
 base, pdf, out, people = sys.argv[1].rstrip('/'), sys.argv[2], sys.argv[3], int(sys.argv[4])
 server_dir = sys.argv[sys.argv.index("--server-dir") + 1] if "--server-dir" in sys.argv else None
+browsers = int(sys.argv[sys.argv.index("--browsers") + 1]) if "--browsers" in sys.argv else people
+os.makedirs(out, exist_ok=True)  # WT-13: the results file and failure screenshots go here
+
+# Page i (0-based) is drawn (its SVG has content) and at least partly in view.
+DRAWN = """(i) => { const w = document.querySelector('.rpage-wrap[data-page="' + i + '"]');
+  if (!w) return false; const s = w.querySelector('.rpage svg'); if (!s || s.childElementCount === 0) return false;
+  const r = w.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight; }"""
+NEXT = "button.tb-pg-btn[aria-label='Next page']"
 
 
 def rss_mb(pid):
@@ -75,9 +87,14 @@ async def person(browser, n, results):
     page.on("pageerror", lambda e: page_errors.append(str(e)))
 
     async def step(name, coro):
-        t0 = time.time()
+        t0 = time.perf_counter()
         await coro
-        r["steps"][name] = round(time.time() - t0, 2)
+        r["steps"][name] = round((time.perf_counter() - t0) * 1000)
+
+    async def next_page(i):
+        """Next page, until page i (0-based) is drawn and in view."""
+        await page.locator(NEXT).first.click()
+        await page.wait_for_function(DRAWN, arg=i, timeout=60000, polling="raf")
 
     try:
         await step("open", page.goto(base + "/"))
@@ -85,33 +102,39 @@ async def person(browser, n, results):
         async with page.expect_file_chooser(timeout=30000) as fc:
             await page.click("nav.leftbar >> text=Upload")
         chooser = await fc.value
-        t0 = time.time()
+        t0 = time.perf_counter()
         await chooser.set_files(pdf)
-        await page.wait_for_selector(".page svg, svg text", timeout=120000)
-        r["steps"]["upload+render"] = round(time.time() - t0, 2)
+        await page.wait_for_function(DRAWN, arg=0, timeout=120000, polling="raf")
+        r["steps"]["upload+render"] = round((time.perf_counter() - t0) * 1000)
 
-        t0 = time.time()
-        for _ in range(6):
-            await page.keyboard.press("PageDown")
-            await page.wait_for_timeout(250)
-        r["steps"]["paging"] = round(time.time() - t0, 2)
+        turns = []  # one value per page turn
+        for i in range(1, 7):
+            t0 = time.perf_counter()
+            await next_page(i)
+            turns.append(round((time.perf_counter() - t0) * 1000))
+        r["steps"]["page_turn"] = round(statistics.median(turns))
+        r["page_turns"] = turns
 
         await page.add_init_script("window.print = function () {};")
         await page.evaluate("window.print = function () {}")
-        t0 = time.time()
+        t0 = time.perf_counter()
         async with page.expect_response(lambda resp: "/portal/print/" in resp.url, timeout=60000) as pr:
             await page.keyboard.press("Control+p")
             await page.wait_for_selector("button.primary:has-text('Print')", timeout=30000)
             await page.click("button:has-text('Current')")
             await page.click("button.primary:has-text('Print')")
         resp = await pr.value
-        r["steps"]["print"] = round(time.time() - t0, 2)
+        r["steps"]["print"] = round((time.perf_counter() - t0) * 1000)
         if resp.status != 200:
             raise RuntimeError(f"print answered {resp.status}")
 
-        for _ in range(10):  # stay busy while the others work
-            await page.keyboard.press("PageDown")
-            await page.wait_for_timeout(500)
+        await page.keyboard.press("Escape")
+        for i in range(7, 7 + 10):  # stay busy while the others work (not timed)
+            try:
+                await next_page(i)
+            except Exception:  # noqa: BLE001 - past the last page: go back to the start
+                await page.locator("input.tb-pg-box").first.fill("1")
+                await page.locator("input.tb-pg-box").first.press("Enter")
         if page_errors:
             raise RuntimeError("page errors: " + "; ".join(page_errors[:2]))
     except Exception as e:  # noqa: BLE001 - a test tool reports every failure
@@ -128,21 +151,22 @@ async def main():
     results = []
     stop = asyncio.Event()
     async with async_playwright() as p:
-        browser = await p.chromium.launch(channel="chrome", args=["--no-sandbox", "--disable-gpu"])
+        pool = [await p.chromium.launch(channel="chrome", args=["--no-sandbox", "--disable-gpu"]) for _ in range(max(1, min(browsers, people)))]
         sampling = asyncio.create_task(sampler(stop))
-        t0 = time.time()
-        await asyncio.gather(*(person(browser, n, results) for n in range(people)))
-        wall = time.time() - t0
+        t0 = time.perf_counter()
+        await asyncio.gather(*(person(pool[n % len(pool)], n, results) for n in range(people)))
+        wall = time.perf_counter() - t0
         stop.set()
         await sampling
-        await browser.close()
+        for b in pool:
+            await b.close()
 
     ok = [r for r in results if not r["error"]]
-    summary = {"people": people, "succeeded": len(ok), "failed": len(results) - len(ok), "wall_s": round(wall, 1)}
-    for name in ["ready", "upload+render", "paging", "print"]:
+    summary = {"people": people, "browsers": len(pool), "succeeded": len(ok), "failed": len(results) - len(ok), "wall_ms": round(wall * 1000)}
+    for name in ["ready", "upload+render", "page_turn", "print"]:
         values = [r["steps"][name] for r in ok if name in r["steps"]]
         if values:
-            summary[name] = {"median_s": round(statistics.median(values), 2), "max_s": max(values)}
+            summary[name] = {"median_ms": round(statistics.median(values)), "max_ms": max(values)}
     if samples:
         peak = max(samples, key=lambda s: s["gateway_mb"] + s["workers_mb"])
         summary["peak"] = {"workers": peak["workers"], "gateway_mb": round(peak["gateway_mb"]), "workers_mb": round(peak["workers_mb"]),

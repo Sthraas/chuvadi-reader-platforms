@@ -358,6 +358,7 @@ public sealed class WorkerPool : ITabControl, IAsyncDisposable
         env["Portal__DesktopAppUrl"] = _portal.DesktopAppUrl;
         env["Portal__AccountSettingsUrl"] = _portal.AccountSettingsUrl ?? string.Empty;
         env["Portal__TermsUrl"] = _portal.TermsUrl ?? string.Empty;
+        env["Portal__PrivacyUrl"] = _portal.PrivacyUrl ?? string.Empty;
         return psi;
     }
 

@@ -112,7 +112,19 @@ public static class GatewayRelay
             http.Response.StatusCode = (int)response.StatusCode;
             foreach (var (name, values) in response.Headers.Concat(response.Content.Headers))
             {
-                if (!HopByHop.Contains(name))
+                if (HopByHop.Contains(name))
+                {
+                    continue;
+                }
+
+                if (string.Equals(name, "Content-Security-Policy", StringComparison.OrdinalIgnoreCase))
+                {
+                    // WT-01: the gateway's own policy is already set; a worker's (Blazor adds
+                    // "frame-ancestors 'self'" to interactive pages) must add to it, never replace it.
+                    // The browser enforces every policy it gets, so the result is the stricter of the two.
+                    http.Response.Headers.Append(name, values.ToArray());
+                }
+                else
                 {
                     http.Response.Headers[name] = values.ToArray();
                 }

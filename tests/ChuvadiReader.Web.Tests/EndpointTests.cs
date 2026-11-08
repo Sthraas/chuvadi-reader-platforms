@@ -179,10 +179,26 @@ public class EndpointTests : IClassFixture<PortalFixture>
     }
 
     [Fact]
+    public async Task The_circuit_refuses_a_foreign_origin_in_single_mode_too()
+    {
+        using var own = _portal.Client("alice");
+        Assert.Equal(HttpStatusCode.OK, (await own.PostAsync("/_blazor/negotiate?negotiateVersion=1", null)).StatusCode);
+        using var foreign = _portal.Client("alice", withOrigin: false);
+        foreign.DefaultRequestHeaders.Add("Origin", "https://evil.example");
+        Assert.Equal(HttpStatusCode.Forbidden, (await foreign.PostAsync("/_blazor/negotiate?negotiateVersion=1", null)).StatusCode);
+        using var none = _portal.Client("alice", withOrigin: false);
+        Assert.Equal(HttpStatusCode.Forbidden, (await none.PostAsync("/_blazor/negotiate?negotiateVersion=1", null)).StatusCode);
+    }
+
+    [Fact]
     public async Task The_ui_assets_are_served()
     {
         using var c = _portal.Client("alice");
-        foreach (var path in new[] { "/_content/ChuvadiReader.Ui/css/shell.css", "/js/portal.js", "/_content/ChuvadiReader.Ui/js/theme.js", "/_framework/blazor.web.js" })
+        var page = await (await c.GetAsync("/")).Content.ReadAsStringAsync();
+        var shell = page.IndexOf("css/shell.css", StringComparison.Ordinal);
+        var mobile = page.IndexOf("css/mobile.css", StringComparison.Ordinal);
+        Assert.True(shell >= 0 && mobile > shell, "mobile.css is linked after shell.css (WT-03: the phone look)");
+        foreach (var path in new[] { "/_content/ChuvadiReader.Ui/css/shell.css", "/_content/ChuvadiReader.Ui/css/mobile.css", "/js/portal.js", "/_content/ChuvadiReader.Ui/js/theme.js", "/_framework/blazor.web.js" })
         {
             Assert.Equal(HttpStatusCode.OK, (await c.GetAsync(path)).StatusCode);
         }

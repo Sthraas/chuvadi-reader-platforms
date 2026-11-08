@@ -60,6 +60,10 @@ public sealed class PortalOptions
     /// Empty hides the line.</summary>
     public string? TermsUrl { get; set; } = "/terms";
 
+    /// <summary>"Privacy" beside "Terms of use" on the sign-in page and in the account menu: the portal's
+    /// privacy notice, served before sign-in (D-86, D-97). Empty hides it.</summary>
+    public string? PrivacyUrl { get; set; } = "/privacy";
+
     /// <summary>"Account settings" in the account menu: Sangam's own self-service page (D-35). Empty hides the item.</summary>
     public string? AccountSettingsUrl { get; set; }
 

@@ -21,6 +21,30 @@
     <ProjectReference Include="..\ChuvadiReader.Core\ChuvadiReader.Core.csproj" />
   </ItemGroup>
 
+  <!--
+    WT-11: the published package holds only what runs on the Linux server. No IIS web.config, no
+    development settings, no symbols, no API docs. Builds and tests keep their symbols, so stack
+    traces in tests still carry line numbers.
+  -->
+  <PropertyGroup>
+    <IsTransformWebConfigDisabled>true</IsTransformWebConfigDisabled>
+    <IsWebConfigTransformDisabled>true</IsWebConfigTransformDisabled>
+    <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
+    <PublishReferencesDocumentationFiles>false</PublishReferencesDocumentationFiles>
+    <PublishDocumentationFile>false</PublishDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Update="appsettings.Development.json" CopyToPublishDirectory="Never" />
+  </ItemGroup>
+
+  <!-- Project references bring their own .pdb and .xml as related files; leave them out of the package. -->
+  <Target Name="LeaveSymbolsAndDocsOutOfPublish" AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="('%(Extension)' == '.pdb' or '%(Extension)' == '.xml') and !$([System.String]::Copy('%(RelativePath)').StartsWith('wwwroot'))" />
+    </ItemGroup>
+  </Target>
+
   <ItemGroup>
     <InternalsVisibleTo Include="ChuvadiReader.Web.Tests" />
   </ItemGroup>

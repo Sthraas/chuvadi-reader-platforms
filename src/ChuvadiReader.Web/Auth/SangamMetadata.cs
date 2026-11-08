@@ -40,6 +40,16 @@ public sealed class SangamOptions
     /// <summary>How long a started sign-in may take before it must be restarted.</summary>
     public TimeSpan SignInTimeLimit { get; set; } = TimeSpan.FromMinutes(10);
 
+    /// <summary>O-1: longest any call to Sangam may take (discovery, keys, token). A Sangam that hangs then
+    /// gives "Sangam can't be reached right now" instead of a page that never loads.</summary>
+    public TimeSpan CallTimeout { get; set; } = TimeSpan.FromSeconds(10);
+
+    /// <summary>O-2: before sending someone to Sangam, the portal checks it answers within this time.</summary>
+    public TimeSpan ProbeTimeout { get; set; } = TimeSpan.FromSeconds(2);
+
+    /// <summary>O-2: how long a probe's answer (up or down) is reused, so Sangam isn't asked on every sign-in.</summary>
+    public TimeSpan ProbeCacheFor { get; set; } = TimeSpan.FromSeconds(30);
+
     /// <summary>Absolute portal session lifetime (D-30).</summary>
     public TimeSpan AbsoluteSessionLifetime { get; set; } = TimeSpan.FromHours(8);
 
@@ -73,6 +83,14 @@ public sealed class SangamMetadata
         _time = time;
     }
 
+    /// <summary>An HTTP client for Sangam, with the call time limit (O-1).</summary>
+    public HttpClient Client()
+    {
+        var client = _http.Create();
+        client.Timeout = _options.CallTimeout;
+        return client;
+    }
+
     public async Task<JsonObject> DiscoveryAsync(CancellationToken ct)
     {
         if (_discovery is not null)
@@ -85,7 +103,7 @@ public sealed class SangamMetadata
         {
             if (_discovery is null)
             {
-                using var client = _http.Create();
+                using var client = Client();
                 var text = await client.GetStringAsync(new Uri(new Uri(_options.Issuer), ".well-known/openid-configuration"), ct).ConfigureAwait(false);
                 var d = JsonNode.Parse(text) as JsonObject ?? throw new SecurityTokenException("Sangam's discovery document isn't JSON.");
                 if ((string?)d["issuer"] != _options.Issuer)
@@ -140,7 +158,7 @@ public sealed class SangamMetadata
         {
             if (_time.GetUtcNow() - _keysFetched >= MinRefresh || _keys.Count == 0)
             {
-                using var client = _http.Create();
+                using var client = Client();
                 var set = JsonNode.Parse(await client.GetStringAsync(uri, ct).ConfigureAwait(false)) as JsonObject
                     ?? throw new SecurityTokenException("Sangam's key set isn't JSON.");
                 _keys = (set["keys"] as JsonArray ?? []).OfType<JsonObject>().Select(JsonWebKey.From).Where(k => k is not null).Cast<JsonWebKey>().ToList();
@@ -157,4 +175,80 @@ public sealed class SangamMetadata
 
     private static IReadOnlyList<JsonWebKey> Match(IReadOnlyList<JsonWebKey> keys, string? kid)
         => kid is null ? keys : keys.Where(k => k.Kid == kid).ToList();
+}
+
+/// <summary>
+/// O-2: whether Sangam answers right now. The discovery document is cached, so without this a down Sangam
+/// would only show as the browser failing to open Sangam's page; with it, "Continue with Sangam" says
+/// "Sangam can't be reached right now" on our own sign-in page. One quick request (the discovery address,
+/// <see cref="SangamOptions.ProbeTimeout"/>), its answer reused for <see cref="SangamOptions.ProbeCacheFor"/>.
+/// Singleton.
+/// </summary>
+public sealed class SangamProbe
+{
+    private readonly SangamOptions _options;
+    private readonly Hosting.Acme.IHttpClientFactoryLite _http;
+    private readonly TimeProvider _time;
+    private readonly SemaphoreSlim _gate = new(1, 1);
+    private (DateTimeOffset At, bool Up)? _last;
+
+    public SangamProbe(IOptions<SangamOptions> options, Hosting.Acme.IHttpClientFactoryLite http, TimeProvider time)
+    {
+        _options = options.Value;
+        _http = http;
+        _time = time;
+    }
+
+    /// <summary>Returns when Sangam answers; throws <see cref="HttpRequestException"/> when it doesn't.</summary>
+    public async Task EnsureReachableAsync(CancellationToken ct)
+    {
+        if (!await IsUpAsync(ct).ConfigureAwait(false))
+        {
+            throw new HttpRequestException("Sangam didn't answer the probe.");
+        }
+    }
+
+    public async Task<bool> IsUpAsync(CancellationToken ct)
+    {
+        if (Fresh() is { } known)
+        {
+            return known;
+        }
+
+        await _gate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            if (Fresh() is { } again)
+            {
+                return again; // someone else probed while we waited
+            }
+
+            var up = await ProbeAsync(ct).ConfigureAwait(false);
+            _last = (_time.GetUtcNow(), up);
+            return up;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    private bool? Fresh()
+        => _last is { } l && _time.GetUtcNow() - l.At < _options.ProbeCacheFor ? l.Up : null;
+
+    private async Task<bool> ProbeAsync(CancellationToken ct)
+    {
+        using var client = _http.Create();
+        client.Timeout = _options.ProbeTimeout;
+        try
+        {
+            using var resp = await client.GetAsync(new Uri(new Uri(_options.Issuer), ".well-known/openid-configuration"),
+                HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
+            return resp.IsSuccessStatusCode;
+        }
+        catch (Exception ex) when (ex is HttpRequestException || ex is TaskCanceledException && !ct.IsCancellationRequested)
+        {
+            return false;
+        }
+    }
 }

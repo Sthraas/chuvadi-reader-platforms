@@ -16,6 +16,9 @@ public class SpaceLayoutTests
     [InlineData("CON.pdf", "_CON.pdf")]
     [InlineData("com1.txt", "_com1.txt")]
     [InlineData("we<i>rd:na|me?.pdf", "weirdname.pdf")]
+    [InlineData("rtl\u202Efdp.exe.pdf", "rtlfdp.exe.pdf")]                     // WT-08: no reversed display
+    [InlineData("\u202Ba\u202Ab\u202Cc\u202Dd\u2066e\u2067f\u2068g\u2069h\u200Ei\u200Fj\u061Ck.pdf", "abcdefghijk.pdf")]
+    [InlineData("\u0D15\u0D4D\u200D\u0D37.pdf", "\u0D15\u0D4D\u200D\u0D37.pdf")] // Malayalam joiner kept
     public void SafeFileName_strips_folders_and_unsafe_characters(string input, string expected)
         => Assert.Equal(expected, SpaceLayout.SafeFileName(input, "document"));
 

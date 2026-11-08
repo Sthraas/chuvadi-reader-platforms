@@ -54,7 +54,7 @@ public static class Program
         builder.Services.AddSingleton(sp =>
         {
             var o = sp.GetRequiredService<IOptions<PortalOptions>>().Value;
-            return new ChuvadiReader.Ui.Components.Platform.Portal.PortalLinks(o.DesktopAppUrl, NullIfEmpty(o.AccountSettingsUrl), NullIfEmpty(o.TermsUrl));
+            return new ChuvadiReader.Ui.Components.Platform.Portal.PortalLinks(o.DesktopAppUrl, NullIfEmpty(o.AccountSettingsUrl), NullIfEmpty(o.TermsUrl), NullIfEmpty(o.PrivacyUrl));
         });
 
         // D-28: outside Development, working copies must be in RAM and never paged to disk in the clear.
@@ -125,6 +125,7 @@ public static class Program
             app.UseWebSockets();
         }
 
+        app.UseCircuitOriginCheck();
         app.UseAuthentication();
         app.UseActivityTracking();
         app.UseAuthorization();
@@ -226,6 +227,7 @@ public static class Program
         {
             // Sangam sign-in: our own OpenID Connect client (Auth/), the framework's cookie for the portal session.
             builder.Services.AddSingleton<SangamMetadata>();
+            builder.Services.AddSingleton<SangamProbe>();
             builder.Services.AddSingleton<JwtVerifier>();
             builder.Services.AddSingleton<ClientAuthentication>();
             builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
