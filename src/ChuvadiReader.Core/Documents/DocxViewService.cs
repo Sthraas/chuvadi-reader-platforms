@@ -1,4 +1,4 @@
-using Chuvadi.Docs.Word;
+using Chuvadi.Docs.Model;
 
 namespace ChuvadiReader.Core.Documents;
 
@@ -35,13 +35,28 @@ public sealed record WordRun(
 /// <summary>Loads a .docx into a <see cref="WordView"/> via <c>Chuvadi.Docs</c>.</summary>
 public sealed class DocxViewService
 {
-    public WordView Load(string path, string? password = null)
+    /// <summary>B-08 (D-136): the library's own limits for a file the Reader didn't create. A part may unpack to
+    /// at most 20 MB and the whole package to 64 MB; the library checks both against the declared sizes and
+    /// the bytes actually inflated (declared sizes can lie), so zip bombs never reach memory.</summary>
+    public static DocxReaderOptions ReadOptions() => new()
+    {
+        MaxPartBytes = 20L * 1024 * 1024,
+        MaxTotalUncompressedBytes = 64L * 1024 * 1024,
+    };
+
+    /// <param name="cancellationToken">Stops the read (B-08b): "Stop opening", a closed tab, or the viewer's
+    /// time limit. The library checks it on every XML node, so it takes effect within a moment.</param>
+    public WordView Load(string path, string? password = null, CancellationToken cancellationToken = default)
     {
         Document doc;
-        OfficePackageGuard.Check(path, "Word document"); // B-08: no zip bombs into the library
         try
         {
-            doc = string.IsNullOrEmpty(password) ? Document.Load(path) : Document.Load(path, password);
+            doc = Document.Load(path, string.IsNullOrEmpty(password) ? null : password, ReadOptions(), cancellationToken);
+        }
+        catch (DocxSecurityLimitException ex)
+        {
+            throw new DocumentViewException(ViewErrorReason.TooLarge,
+                "This Word document is too large to open: its contents unpack to more than Chuvadi allows. It may be damaged.", ex);
         }
         catch (DocxPasswordRequiredException ex)
         {
@@ -144,8 +159,14 @@ public sealed class DocxViewService
             var cells = new List<WordCell>(row.Cells.Count);
             foreach (var c in row.Cells)
             {
-                var content = new List<WordBlock>(c.Paragraphs.Count);
-                foreach (var cp in c.Paragraphs) content.Add(MapParagraph(cp));
+                // D-136: a loaded cell's content is TableCell.Blocks (paragraphs and nested tables, in order);
+                // Paragraphs stayed empty for loaded files, so cells showed blank.
+                var content = new List<WordBlock>(c.Blocks.Count);
+                foreach (var cb in c.Blocks)
+                {
+                    if (cb is Paragraph cp) content.Add(MapParagraph(cp));
+                    else if (cb is DocTable nested) content.Add(MapTable(nested));
+                }
                 cells.Add(new WordCell(content, Math.Max(1, c.ColumnSpan), Hex(c.ShadeHex)));
             }
             rows.Add(new WordRow(row.IsHeader, cells));

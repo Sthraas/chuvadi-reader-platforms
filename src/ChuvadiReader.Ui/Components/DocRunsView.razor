@@ -8,11 +8,11 @@
     }
     else if (!string.IsNullOrEmpty(r.Href))
     {
-        <a class="wv-link" href="@r.Href" target="_blank" rel="noopener" style="@RunStyle(r)">@r.Text</a>
+        <a class="wv-link wv-run" href="@r.Href" target="_blank" rel="noopener" style="@RunStyle(r)">@r.Text</a>
     }
     else
     {
-        <span style="@RunStyle(r)">@r.Text</span>
+        <span class="wv-run" style="@RunStyle(r)">@r.Text</span>
     }
 }
 
