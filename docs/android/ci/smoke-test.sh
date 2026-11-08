@@ -13,7 +13,8 @@ set -uo pipefail
 APK="$1"
 OUT="$2"
 PKG="in.chuvadi.reader"
-MARKERS='text="(Read|Mark|Arrange|Protect)( [0-9])?"|text="Settings"'
+# The Ui's mode labels, or (WebView older than 128, D-105) the host's update screen.
+MARKERS='text="(Read|Mark|Arrange|Protect)( [0-9])?"|text="Settings"|text="One small update first"'
 mkdir -p "$OUT"
 fail=0
 

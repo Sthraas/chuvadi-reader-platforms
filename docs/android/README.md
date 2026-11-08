@@ -64,6 +64,11 @@ list of `phone-35`, `phone-36`, `tablet-35`, `tablet-36`.
    - platform: Open with .docx/.xlsx while running (new tab, same activity), Share to, rotation with
      a document, keyboard and on-screen keyboard, printing (PrintManager → saved PDF; range; L-8
      no-print file locked), Back, split screen.
+   - **WebView older than 128** (the API 35 image ships 124; D-105): the app shows its "update Android System
+     WebView" screen instead of the Reader, so that emulator runs `webview_gate.py` (the screen, its Play button,
+     coming back) and the Reader checks are reported "not applicable". API 36 covers phone and tablet in full.
+     A Google Play image doesn't help: its WebView updates only after a Play sign-in, and Play images have no
+     `adb root`, which the real-touch input needs.
    Screenshots, UI dumps, logs and the JSON results are uploaded.
 
 ## Signing for Play (Arun only — never commit a key)
@@ -99,6 +104,8 @@ keytool -genkeypair -v -keystore chuvadi-upload.jks -alias chuvadi-upload \
 - [ ] **Data safety**: no data collected, no data shared; files processed on the device. Network
       permission: none (printing goes through Android's own print framework, A-04 (a), which needs no
       app permission).
+- [ ] Minimum WebView (D-105): the app needs Android System WebView 128+ and shows an update screen below it.
+      Nothing to declare on Play; mention it in the listing's FAQ if support questions come in.
 - [ ] Content rating questionnaire; target audience (adults / general); no ads.
 - [ ] **Licence (Arun, 7 Nov): proprietary, free for everyone, not open source.** Price: Free. The
       Foundation adds `LICENSE` and an EULA draft; use the EULA as the listing's custom licence /

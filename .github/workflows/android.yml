@@ -20,8 +20,8 @@ on:
         default: all
 
 env:
-  # platform/foundation: sixth combined patch (Mobile UI H-5 to H-12, PhoneShell slot), P-06, host notices, D-89.
-  FOUNDATION_REF: 8098695a59a6a46fe5edb975cc2774e1d5c85c4b
+  # platform/foundation: seventh combined patch part 1 (H-13 zoom/fit), sixth (Mobile UI H-5 to H-12), P-06.
+  FOUNDATION_REF: cd9b72da2aeb5ad006ee6db0fe806f4e328491f7
   # platform/mobile-ui: hooks-4 = H-13 (reader.js: zoom anchor on the visible page, API 35 fit).
   MOBILEUI_REF: a20f6d1e9ad1d385ae08e722999bb242d1674654
   DOTNET_NOLOGO: '1'

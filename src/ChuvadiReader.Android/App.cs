@@ -6,8 +6,23 @@ namespace ChuvadiReader.Android;
 /// <summary>The MAUI application: one window holding one full-screen BlazorWebView.</summary>
 public sealed class App : Microsoft.Maui.Controls.Application
 {
+    private Microsoft.Maui.Controls.Window? _window;
+
     protected override Microsoft.Maui.Controls.Window CreateWindow(IActivationState? activationState)
-        => new(new MainPage()) { Title = "Chuvadi Reader" };
+        => _window = new(StartPage()) { Title = "Chuvadi Reader" };
+
+    /// <summary>The Reader, or the "update Android System WebView" screen when the WebView is too old (D-105).</summary>
+    private static Page StartPage()
+        => Platform.WebViewSupport.IsSupported(out var version) ? new MainPage() : Platform.WebViewSupport.UpdatePage(version);
+
+    /// <summary>Back from Google Play with a new enough WebView: swap the update screen for the Reader.</summary>
+    public void RecheckWebView()
+    {
+        if (_window is { Page: not ChuvadiReader.Android.MainPage } && Platform.WebViewSupport.IsSupported(out _))
+        {
+            _window.Page = new MainPage();
+        }
+    }
 }
 
 /// <summary>Hosts ChuvadiReader.Ui.App — the same root component the Windows host uses.</summary>

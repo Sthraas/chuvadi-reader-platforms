@@ -86,6 +86,7 @@ public sealed class MainActivity : MauiAppCompatActivity
     {
         base.OnResume();
         PutBackFirst();
+        (Microsoft.Maui.Controls.Application.Current as App)?.RecheckWebView();
         Service<AndroidLifecycle>()?.RaiseResumed();
     }
 

@@ -561,3 +561,19 @@ capitalises on Enter (the search found 1/4).
    nothing: one per file opened while on the Reader (DOCX, XLSX, Share, no-print). Cause: `MainLayout.OnOpenRequested`
    navigates to `/reader` even when already there. **P-07** (Ui, for Foundation's combined patch) navigates only when
    the Reader isn't showing; the composition applies it in round 6.
+
+### 48. D-105 (a): WebView 128+ required; round 6 set-up
+- **Host:** `Platform/WebViewSupport.cs`. At start the app reads the WebView provider's version
+  (`WebView.CurrentWebViewPackage`). Below 128, or with no WebView, it shows one native screen instead of the
+  Reader: "One small update first", why (the version found), "nothing leaves this device", and an
+  **Update Android System WebView** button that opens its Google Play page (falling back to the Play web page).
+  On every resume it checks again and swaps in the Reader once the update is in. Cost on a supported device: one
+  package-info read before the first page.
+- **CI (coordinator: try a Play image first):** not possible for these tests. A Play image's WebView updates
+  only after a Play sign-in, and Play images are locked builds without `adb root`, which the real-touch input
+  needs. So: emulators below 128 run `webview_gate.py` (update screen shown, version named, Reader absent;
+  button leaves the app; back in, same process, same screen; no crash). Smoke markers accept the update screen.
+  At 128+ (API 36) the full gesture and platform suites run.
+- **P-07** stays applied by the composition until Foundation takes it (coordinator has asked).
+- Composition: Foundation `cd9b72d` (seventh combined patch part 1: H-13 in Foundation) + Mobile UI `a20f6d1` + P-07
+  + host. Android 0 warnings; Platforms `-warnaserror` 0 warnings; tests 171 + 54 + 32 + 16 pass.
