@@ -1,0 +1,12 @@
+cold-home-installed-sc 1 map=525 content=1779 settled=1779 colours=274 polls=217 maxgap=53 shown=469.4 pageloaded=834.7 firstrender=1437.9
+cold-home-installed-sc 2 map=426 content=1619 settled=1665 colours=274 polls=215 maxgap=40 shown=386.2 pageloaded=737.6 firstrender=1315.5
+cold-home-installed-sc 3 map=441 content=1611 settled=1716 colours=274 polls=217 maxgap=39 shown=384.0 pageloaded=738.7 firstrender=1298.9
+cold-home-installed-sc 4 map=456 content=1610 settled=1695 colours=274 polls=223 maxgap=50 shown=403.4 pageloaded=744.3 firstrender=1310.8
+cold-home-installed-sc 5 map=379 content=1522 settled=1625 colours=274 polls=220 maxgap=48 shown=343.0 pageloaded=690.7 firstrender=1243.3
+cold-home-installed-sc 6 map=467 content=1631 settled=1735 colours=274 polls=218 maxgap=39 shown=374.5 pageloaded=763.9 firstrender=1322.2
+cold-home-installed-sc 7 map=445 content=1666 settled=1757 colours=274 polls=215 maxgap=54 shown=408.1 pageloaded=781.8 firstrender=1360.6
+cold-home-installed-sc 8 map=428 content=1637 settled=1733 colours=274 polls=224 maxgap=33 shown=396.1 pageloaded=763.9 firstrender=1322.6
+cold-home-installed-sc 9 map=514 content=1558 settled=1655 colours=274 polls=217 maxgap=42 shown=444.2 pageloaded=792.5 firstrender=1328.3
+cold-home-installed-sc 10 map=473 content=1654 settled=1738 colours=274 polls=221 maxgap=47 shown=443.0 pageloaded=795.9 firstrender=1371.6
+cold-home-installed-sc 11 map=467 content=1782 settled=1844 colours=274 polls=228 maxgap=35 shown=405.7 pageloaded=863.6 firstrender=1440.9
+cold-home-installed-sc 12 map=445 content=1630 settled=1680 colours=274 polls=214 maxgap=54 shown=415.1 pageloaded=755.3 firstrender=1322.9

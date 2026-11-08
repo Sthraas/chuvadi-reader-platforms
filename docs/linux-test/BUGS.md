@@ -24,11 +24,14 @@ Every bug gets fixed; I re-verify on the fixing commit and mark it here.
 | B-14 | S3 | Linux | Landscape pages print shrunk onto portrait paper (orientation forced to portrait) | open |
 | B-15 | S3 | Linux | No user namespaces → app aborts with a GLib ERROR, no message | open — options |
 | B-16 | S2 | Linux + Shared | Read-only home → unhandled exception at startup, no window | open |
-| B-17 | S3 | Linux | `UseSystemResourceKeys=true` → users see resource keys (`UnauthorizedAccess_IODenied_Path`) instead of messages | open |
+| B-17 | S3 | Linux | `UseSystemResourceKeys=true` → users see resource keys (`UnauthorizedAccess_IODenied_Path`, `EOCDNotFound`) instead of messages | open |
+| B-18 | S3 (design) | Shared | Left bar at rest is the expanded 208 px labelled list; handout: 62 px icon rail, labels on hover | open |
+| B-19 | S4 | Linux | Buttons on the left: top-bar brand cell widens past the left bar; divider no longer lines up (f7d0034) | open |
+| K-01 | — | Linux | GNOME close-only layout showed all three buttons (known, 7 Nov) | **fixed f7d0034 — verified** |
 
 Known and already tracked (not re-filed): sample recent files / watched folder on a fresh profile (D-94 H-12);
 `.xlsx` shared-string index shown as a value — `bad-sst.xlsx` shows `99` (Sheets 2.0.2 move, D-87);
-GNOME close-only button layout shows minimise/maximise (Linux chat fixing, 7 Nov check-in).
+GNOME close-only button layout — now K-01, fixed and verified.
 
 ---
 
@@ -128,4 +131,16 @@ Evidence: `screenshots/B-14-five-pages-page4-shrunk.png`, `screenshots/B-14-a3-l
 **Steps.** Non-root user; `chmod 000 locked.pdf`; `chuvadi-reader locked.pdf`.
 **Expected.** "Could not open this document. Access to the path '/home/tester/locked.pdf' is denied." (what Windows shows).
 **Actual.** "Could not open this document. **UnauthorizedAccess_IODenied_Path**, /home/tester/locked.pdf". Cause: `ChuvadiReader.Linux.csproj:19 <UseSystemResourceKeys>true</UseSystemResourceKeys>` strips the BCL's message strings; the shared Ui shows `ex.Message` in 65 places (disk full, access denied on save, etc. are all affected). Screenshot: `screenshots/B-17-resource-key-message.png`.
+Second instance: a non-zip `.xlsx` shows "Couldn't open this workbook: **EOCDNotFound**".
 **Fix.** Remove `UseSystemResourceKeys` (cost: a few hundred KB) — or map exceptions to own messages before display (bigger change, shared).
+
+## B-18 — Left bar at rest is expanded, not the icon rail (S3 design, Shared)
+**Steps.** Fresh profile, open any PDF.
+**Expected.** Handout README / `Reader Side Rails`: "Left bar (62 px, fixed): … icons … On hover it expands over the canvas to show labels and shortcuts."
+**Actual.** 208 px labelled list at rest (`MainLayout.razor:648` — `leftbar.open` defaults to open); hover-expand over the canvas not used. DESIGN-NOTE already says the Ui implements D-10 partly — filing so it's tracked to done. Same on every desktop.
+
+## B-19 — Left-side buttons push the brand cell out of line (S4, Linux) — on f7d0034
+**Steps.** `~/.config/gtk-4.0/settings.ini`: `gtk-decoration-layout=close,minimize,maximize:` (or `close:`); launch.
+**Expected.** Buttons on the left, and the top bar's left cell still lines up with the left bar's edge (the handout's column), or a stated alternative.
+**Actual.** Buttons correct ✅, but the brand cell widens (≈ 210 → 245 px with one button, ≈ 292 px with three) while the left bar stays 210 px, so the top-bar divider sits 35–80 px right of the left-bar edge. Evidence: `screenshots/B-19-buttons-right.png` vs `screenshots/B-19-buttons-left.png`.
+**Options.** A. buttons overlay the left bar's top cell and the wordmark shifts within it (cell keeps 210 px; wordmark may truncate with three buttons). B. Accept a wider cell but widen the left bar to match while buttons are left. C. Accept as is. Recommendation: **A** — keeps the handout's column, the only cost is the wordmark sliding right.

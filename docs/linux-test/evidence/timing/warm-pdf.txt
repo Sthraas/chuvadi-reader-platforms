@@ -1,0 +1,12 @@
+warm-pdf 1 map=260 content=1595 settled=2969 colours=432 polls=313 maxgap=37 shown=234.3 pageloaded=523.4 firstrender=1022.0
+warm-pdf 2 map=296 content=1932 settled=2342 colours=432 polls=259 maxgap=90 shown=251.6 pageloaded=530.5 firstrender=1057.6
+warm-pdf 3 map=290 content=1498 settled=1866 colours=432 polls=229 maxgap=61 shown=262.6 pageloaded=518.9 firstrender=1029.6
+warm-pdf 4 map=293 content=1676 settled=2101 colours=432 polls=232 maxgap=99 shown=256.7 pageloaded=587.2 firstrender=1189.8
+warm-pdf 5 map=300 content=1234 settled=1809 colours=432 polls=218 maxgap=42 shown=237.0 pageloaded=495.4 firstrender=995.2
+warm-pdf 6 map=278 content=1593 settled=1937 colours=432 polls=232 maxgap=41 shown=241.0 pageloaded=513.4 firstrender=1086.3
+warm-pdf 7 map=298 content=1576 settled=1993 colours=432 polls=222 maxgap=74 shown=266.8 pageloaded=519.5 firstrender=1085.9
+warm-pdf 8 map=290 content=1536 settled=1992 colours=432 polls=224 maxgap=51 shown=240.4 pageloaded=543.6 firstrender=1092.8
+warm-pdf 9 map=303 content=1538 settled=1946 colours=432 polls=224 maxgap=53 shown=246.2 pageloaded=480.3 firstrender=998.9
+warm-pdf 10 map=321 content=1643 settled=2023 colours=432 polls=226 maxgap=39 shown=301.3 pageloaded=630.0 firstrender=1132.6
+warm-pdf 11 map=285 content=1522 settled=1896 colours=432 polls=228 maxgap=34 shown=254.3 pageloaded=553.5 firstrender=1059.5
+warm-pdf 12 map=306 content=1578 settled=2050 colours=432 polls=228 maxgap=85 shown=244.4 pageloaded=588.7 firstrender=1130.7
