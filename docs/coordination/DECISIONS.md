@@ -262,5 +262,14 @@ Options considered:
 | D-108 | PR #11 timing | Move PR #11 now to 9fbed93 (seventh patch part 2a, green on all 6) so Arun can start his Windows checks; D-101 (Linux live button layout) follows as part 2b in a later small update. Pros: Arun isn't kept waiting on a Linux-only change. Cons: one more small PR update. Windows stays pixel-identical, so his checks remain valid |
 | D-109 | Web UI U-17: Home drop zone shows through the "Drop to open" wash | (b) while a drag is on, Home's zone hides its contents and keeps its frame. Handout panel unchanged, desktop untouched. (a) doubled text where most drops happen; (c) no overlay on Home is inconsistent with where the drop is caught |
 
+## 8 Nov 2026 20:05 check-in — coordinator
+| # | Item | Decision |
+|---|---|---|
+| D-110 | Linux Test recommendations | Approved: B-12 GPU compositing off only when no GPU (first launch 2.9 s → 1.1 s); B-15 clear message and clean exit when WebKit's sandbox namespaces are blocked (never disable the sandbox); B-17 remove UseSystemResourceKeys; B-19 top-bar left cell aligned with the left bar, wordmark slides when buttons are on the left. Also bugs for Linux: B-14 (landscape printed at half size on portrait paper) and lintian 21 errors / 373 warnings |
+| — | Linux Test results | Printing is vector (original PDF byte-for-byte to CUPS, zero images, even a 120,000-stroke A3); no-print files refused before CUPS; redaction removes text from extracted text and raw bytes; startup warm 1,255 ms / cold 1,538 ms median to real content |
+| — | Routing | Shared Ui/Core bugs (among B-07..B-11, B-16, B-18) → Foundation combined patch; library bugs → compiled for Arun to send to the library coordinator |
+| — | PR #11 | Moved to b1caddc (D-108), green on Windows, Ubuntu and macOS |
+| — | Android | Round 6: API 36 phone and tablet fully green; D-105 update screen works on API 35; round 7 (API 35 only) started |
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).
