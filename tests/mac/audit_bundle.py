@@ -21,7 +21,7 @@ R = {"checks": [], "files": {}, "unknown": [], "machos": {}}
 
 
 def run(*cmd):
-    p = subprocess.run(cmd, capture_output=True, text=True)
+    p = subprocess.run(cmd, capture_output=True, text=True, errors="replace")
     return p.returncode, (p.stdout + p.stderr).strip()
 
 

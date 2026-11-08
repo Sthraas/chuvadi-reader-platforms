@@ -451,6 +451,32 @@ case "firstframe":
     if args.count == 2 { firstFrame(app: arg(0), file: nil, outDir: arg(1), label: label, timeout: timeout) }
     else { firstFrame(app: arg(0), file: arg(1), outDir: arg(2), label: label, timeout: timeout) }
 
+case "waitpage":
+    // waitpage <name|pid> <out-dir> <label> [--key combo] [--timeout S]: optionally send a key, then capture the
+    // window until a white page with dark glyphs is on screen; prints the elapsed ms (from the key).
+    let pid = pidOf(arg(0))
+    let outDir = arg(1), label = arg(2)
+    let key = option("--key")
+    let timeout = Double(option("--timeout") ?? "30") ?? 30
+    guard let w = mainWindow(pid: pid) else { fail("no window") }
+    if let key { sendKey(key) }
+    let t0 = now()
+    var result: [String: Any] = ["label": label]
+    while now() - t0 < timeout * 1000 {
+        guard let img = captureWindow(w.id) else { break }
+        let st = analyse(img)
+        if st.whiteFrac >= 0.08 && st.darkInWhite >= 150 {
+            let ms = now() - t0
+            result["first_page"] = ms
+            savePNG(img, "\(outDir)/\(label)-first-page.png")
+            break
+        }
+    }
+    if result["first_page"] == nil, let img = captureWindow(w.id) { savePNG(img, "\(outDir)/\(label)-timeout.png") }
+    let data = try! JSONSerialization.data(withJSONObject: result, options: [.sortedKeys])
+    FileManager.default.createFile(atPath: "\(outDir)/\(label).json", contents: data)
+    print(String(data: data, encoding: .utf8)!)
+
 case "windows":
     for w in windows() { print("\(w.owner)\tpid=\(w.pid)\tid=\(w.id)\tlayer=\(w.layer)\t\(Int(w.bounds.minX)),\(Int(w.bounds.minY)) \(Int(w.bounds.width))x\(Int(w.bounds.height))\t\(w.name)") }
 
@@ -522,6 +548,19 @@ case "find":
 
 case "click":
     clickAt(CGPoint(x: Double(arg(0))!, y: Double(arg(1))!), double: flag("--double"))
+case "drag":
+    // drag x1 y1 x2 y2 (screen points), left button
+    let a = CGPoint(x: Double(arg(0))!, y: Double(arg(1))!), b = CGPoint(x: Double(arg(2))!, y: Double(arg(3))!)
+    CGEvent(mouseEventSource: nil, mouseType: .mouseMoved, mouseCursorPosition: a, mouseButton: .left)?.post(tap: .cghidEventTap)
+    usleep(80_000)
+    CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: a, mouseButton: .left)?.post(tap: .cghidEventTap)
+    for i in 1...20 {
+        let t = Double(i) / 20
+        let p = CGPoint(x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t)
+        CGEvent(mouseEventSource: nil, mouseType: .leftMouseDragged, mouseCursorPosition: p, mouseButton: .left)?.post(tap: .cghidEventTap)
+        usleep(20_000)
+    }
+    CGEvent(mouseEventSource: nil, mouseType: .leftMouseUp, mouseCursorPosition: b, mouseButton: .left)?.post(tap: .cghidEventTap)
 case "rclick":
     clickAt(CGPoint(x: Double(arg(0))!, y: Double(arg(1))!), right: true)
 case "move":

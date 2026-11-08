@@ -265,7 +265,7 @@ jobs:
         working-directory: app
         run: |
           dotnet restore tests/ChuvadiReader.MobileUi.Preview/ChuvadiReader.MobileUi.Preview.csproj --configfile ci/nuget.config
-          CHVD_FF=desktop ASPNETCORE_URLS=http://127.0.0.1:5077 nohup dotnet run --project tests/ChuvadiReader.MobileUi.Preview -c Release --no-restore > ../preview.log 2>&1 &
+          CHVD_FF=desktop ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS=http://127.0.0.1:5077 nohup dotnet run --project tests/ChuvadiReader.MobileUi.Preview -c Release --no-restore > ../preview.log 2>&1 &
           for i in $(seq 1 120); do curl -sf http://127.0.0.1:5077/ >/dev/null && break; sleep 2; done
           CH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
           for p in "" library settings reader; do
