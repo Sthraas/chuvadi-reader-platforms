@@ -439,17 +439,20 @@ def t2(runs):
     reset_state({"theme": "light"})
     first = timing_runs("first-launch", 1, cold=True)
     summary = {"first_launch": first[0]}
-    sets = {"cold": timing_runs("cold", runs, cold=True), "warm": timing_runs("warm", runs, cold=False)}
+    sets = {"cold": timing_runs("cold", runs, cold=True), "warm": timing_runs("warm", runs, cold=False),
+            "pdf-cold": timing_runs("pdf-cold", runs, cold=True, file=f"{FX}/five-pages.pdf"),
+            "pdf-warm": timing_runs("pdf-warm", runs, cold=False, file=f"{FX}/five-pages.pdf")}
     for k, rs in sets.items():
         summary[k] = {
             "probe_window": stats([r["marks"].get("window") for r in rs]),
             "probe_first_render": stats([r["marks"].get("first_render") for r in rs]),
+            "probe_first_page": stats([r["marks"].get("first_page") for r in rs]),
             "probe_process_start": stats([r["marks"].get("process_start") for r in rs]),
             "app_first_render": stats([r["app"].get("first-render") for r in rs]),
             "app_webview_ready": stats([r["app"].get("webview-ready") for r in rs]),
             "app_maui_built": stats([r["app"].get("maui-built") for r in rs]),
             "app_main": stats([r["app"].get("main") for r in rs]),
-            "missing": sum(1 for r in rs if r["marks"].get("first_render") is None),
+            "missing": sum(1 for r in rs if r["marks"].get("first_page" if k.startswith("pdf") else "first_render") is None),
         }
     # T2.3 launch with a file (Finder double-click): does the page appear at all?
     reset_state({"theme": "light"})
@@ -466,7 +469,7 @@ def t2(runs):
     summary["open_panel_first_page"] = stats(pages)
     with open(f"{OUT}/timing/summary.json", "w") as f:
         json.dump(summary, f, indent=1)
-    missing = sum(v["missing"] for k, v in summary.items() if k in ("cold", "warm"))
+    missing = sum(v["missing"] for k, v in summary.items() if k in ("cold", "warm", "pdf-cold", "pdf-warm"))
     lwp = sum(1 for m in summary["launch_with_pdf"] if m.get("first_page"))
     record("T2 startup", "info" if missing == 0 else "fail",
            f"{missing} launches without a first frame; launch-with-PDF showed the page in {lwp}/2; "
