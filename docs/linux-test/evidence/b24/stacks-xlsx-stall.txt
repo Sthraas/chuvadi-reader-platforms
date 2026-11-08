@@ -1,0 +1,103 @@
+Thread (0xCCF):
+  [Native Frames]
+  ?!?
+  chuvadi-reader!ChuvadiReader.Linux.Program.Main(class System.String[])
+
+Thread (0xCDA):
+  [Native Frames]
+  System.Private.CoreLib!System.Threading.LowLevelLifoSemaphore.WaitNative(class Microsoft.Win32.SafeHandles.SafeWaitHandle,int32)
+  System.Private.CoreLib!System.Threading.LowLevelLifoSemaphore.WaitForSignal(int32)
+  System.Private.CoreLib!System.Threading.PortableThreadPool+WorkerThread.WorkerThreadStart()
+  System.Private.CoreLib!System.Threading.Thread.StartCallback()
+
+Thread (0xCDB):
+  [Native Frames]
+  System.Private.CoreLib!System.Threading.WaitHandle.WaitOneNoCheck(int32,bool,class System.Object,value class WaitHandleWaitSourceMap)
+  System.Private.CoreLib!System.Threading.PortableThreadPool+GateThread.GateThreadStart()
+  System.Private.CoreLib!System.Threading.Thread.StartCallback()
+
+Thread (0xCDC):
+  [Native Frames]
+  System.Private.CoreLib!Interop+Sys.Open(class System.String,value class OpenFlags,int32)
+  System.Private.CoreLib!Microsoft.Win32.SafeHandles.SafeFileHandle.Open(class System.String,value class OpenFlags,int32,bool,bool&,class System.Func`4<value class ErrorInfo,value class OpenFlags,class System.String,class System.Exception>)
+  System.Private.CoreLib!Microsoft.Win32.SafeHandles.SafeFileHandle.Open(class System.String,value class System.IO.FileMode,value class System.IO.FileAccess,value class System.IO.FileShare,value class System.IO.FileOptions,int64,value class System.IO.UnixFileMode,int64&,value class System.IO.UnixFileMode&,bool,bool&,class System.Func`4<value class ErrorInfo,value class OpenFlags,class System.String,class System.Exception>)
+  System.Private.CoreLib!System.IO.Strategies.OSFileStreamStrategy..ctor(class System.String,value class System.IO.FileMode,value class System.IO.FileAccess,value class System.IO.FileShare,value class System.IO.FileOptions,int64,value class System.Nullable`1<value class System.IO.UnixFileMode>)
+  System.Private.CoreLib!System.IO.FileStream..ctor(class System.String,value class System.IO.FileMode,value class System.IO.FileAccess,value class System.IO.FileShare,int32,value class System.IO.FileOptions,int64)
+  System.Private.CoreLib!System.IO.FileStream..ctor(class System.String,value class System.IO.FileMode,value class System.IO.FileAccess,value class System.IO.FileShare)
+  Chuvadi.Pdf.Documents!Chuvadi.Pdf.Documents.PdfDocument.Open(class System.String)
+  ChuvadiReader.Core!ChuvadiReader.Core.Documents.FlattenService.Probe(class System.String)
+  ChuvadiReader.Ui!ChuvadiReader.Ui.Pages.Reader.RefreshDocKind(class System.String)
+  ChuvadiReader.Ui!ChuvadiReader.Ui.Pages.Reader.SyncActive()
+  ChuvadiReader.Ui!ChuvadiReader.Ui.Pages.Reader.OnTabsChanged()
+  ChuvadiReader.Core!ChuvadiReader.Core.Reader.TabsService+<OpenAsync>d__16.MoveNext()
+  System.Private.CoreLib!System.Runtime.CompilerServices.AsyncMethodBuilderCore.Start(!!0&)
+  System.Private.CoreLib!System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1[System.__Canon].Start(!!0&)
+  ChuvadiReader.Core!ChuvadiReader.Core.Reader.TabsService.OpenAsync(class System.String,class System.String,value class ChuvadiReader.Core.Documents.DocumentFormat,value class System.Threading.CancellationToken)
+  ChuvadiReader.Ui!ChuvadiReader.Ui.Pages.Reader+<OpenPendingAsync>d__446.MoveNext()
+  System.Private.CoreLib!System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1+AsyncStateMachineBox`1[System.Threading.Tasks.VoidTaskResult,ChuvadiReader.Ui.Pages.Reader+<OpenPendingAsync>d__446].ExecutionContextCallback(class System.Object)
+  System.Private.CoreLib!System.Threading.ExecutionContext.RunInternal(class System.Threading.ExecutionContext,class System.Threading.ContextCallback,class System.Object)
+  System.Private.CoreLib!System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1+AsyncStateMachineBox`1[System.Threading.Tasks.VoidTaskResult,ChuvadiReader.Ui.Pages.Reader+<OpenPendingAsync>d__446].MoveNext(class System.Threading.Thread)
+  System.Private.CoreLib!System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1+AsyncStateMachineBox`1[System.Threading.Tasks.VoidTaskResult,ChuvadiReader.Ui.Pages.Reader+<OpenPendingAsync>d__446].MoveNext()
+  Microsoft.AspNetCore.Components!Microsoft.AspNetCore.Components.Rendering.RendererSynchronizationContext+<PostAsync>d__14`1[System.ValueTuple`2[System.__Canon,System.__Canon]].MoveNext()
+  System.Private.CoreLib!System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1+AsyncStateMachineBox`1[System.Threading.Tasks.VoidTaskResult,Microsoft.AspNetCore.Components.Rendering.RendererSynchronizationContext+<PostAsync>d__14`1[System.ValueTuple`2[System.__Canon,System.__Canon]]].ExecutionContextCallback(class System.Object)
+  System.Private.CoreLib!System.Threading.ExecutionContext.RunFromThreadPoolDispatchLoop(class System.Threading.Thread,class System.Threading.ExecutionContext,class System.Threading.ContextCallback,class System.Object)
+  System.Private.CoreLib!System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1+AsyncStateMachineBox`1[System.Threading.Tasks.VoidTaskResult,Microsoft.AspNetCore.Components.Rendering.RendererSynchronizationContext+<PostAsync>d__14`1[System.ValueTuple`2[System.__Canon,System.__Canon]]].MoveNext(class System.Threading.Thread)
+  System.Private.CoreLib!System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1+AsyncStateMachineBox`1[System.Threading.Tasks.VoidTaskResult,Microsoft.AspNetCore.Components.Rendering.RendererSynchronizationContext+<PostAsync>d__14`1[System.ValueTuple`2[System.__Canon,System.__Canon]]].ExecuteFromThreadPool(class System.Threading.Thread)
+  System.Private.CoreLib!System.Threading.ThreadPoolWorkQueue.Dispatch()
+  System.Private.CoreLib!System.Threading.PortableThreadPool+WorkerThread.WorkerThreadStart()
+  System.Private.CoreLib!System.Threading.Thread.StartCallback()
+
+Thread (0xD00):
+  [Native Frames]
+  System.Console!Interop+Sys.Read(class System.Runtime.InteropServices.SafeHandle,unsigned int8*,int32)
+  System.Console!System.ConsolePal.Read(class Microsoft.Win32.SafeHandles.SafeFileHandle,value class System.Span`1<unsigned int8>)
+  System.Console!System.IO.ConsoleStream.Read(unsigned int8[],int32,int32)
+  System.Private.CoreLib!System.IO.StreamReader.ReadBuffer()
+  System.Private.CoreLib!System.IO.StreamReader.ReadLine()
+  System.Console!System.IO.SyncTextReader.ReadLine()
+  chuvadi-reader!ChuvadiReader.Linux.UiTestDriver.Loop(class System.IServiceProvider,class ChuvadiReader.Linux.LinuxWebViewManager)
+  System.Private.CoreLib!System.Threading.Thread.StartCallback()
+
+Thread (0xD33):
+  [Native Frames]
+  System.Private.CoreLib!System.Threading.WaitHandle.WaitOneNoCheck(int32,bool,class System.Object,value class WaitHandleWaitSourceMap)
+  System.Private.CoreLib!System.Threading.TimerQueue.TimerThread()
+  System.Private.CoreLib!System.Threading.Thread.StartCallback()
+
+Thread (0xD35):
+  [Native Frames]
+  System.Private.CoreLib!Interop+Sys.Open(class System.String,value class OpenFlags,int32)
+  System.Private.CoreLib!Microsoft.Win32.SafeHandles.SafeFileHandle.Open(class System.String,value class OpenFlags,int32,bool,bool&,class System.Func`4<value class ErrorInfo,value class OpenFlags,class System.String,class System.Exception>)
+  System.Private.CoreLib!Microsoft.Win32.SafeHandles.SafeFileHandle.Open(class System.String,value class System.IO.FileMode,value class System.IO.FileAccess,value class System.IO.FileShare,value class System.IO.FileOptions,int64,value class System.IO.UnixFileMode,int64&,value class System.IO.UnixFileMode&,bool,bool&,class System.Func`4<value class ErrorInfo,value class OpenFlags,class System.String,class System.Exception>)
+  System.Private.CoreLib!System.IO.Strategies.OSFileStreamStrategy..ctor(class System.String,value class System.IO.FileMode,value class System.IO.FileAccess,value class System.IO.FileShare,value class System.IO.FileOptions,int64,value class System.Nullable`1<value class System.IO.UnixFileMode>)
+  System.Private.CoreLib!System.IO.FileStream..ctor(class System.String,value class System.IO.FileMode,value class System.IO.FileAccess,value class System.IO.FileShare,int32,value class System.IO.FileOptions,int64)
+  System.Private.CoreLib!System.IO.FileStream..ctor(class System.String,value class System.IO.FileMode,value class System.IO.FileAccess,value class System.IO.FileShare)
+  Chuvadi.Sheets!Chuvadi.Sheets.Model.Workbook.Load(class System.String,class System.String,class Chuvadi.Sheets.Model.XlsxReaderOptions)
+  ChuvadiReader.Core!ChuvadiReader.Core.Documents.XlsxViewService.Load(class System.String,class System.String,value class System.Threading.CancellationToken)
+  System.Private.CoreLib!System.Threading.Tasks.Task`1[System.__Canon].InnerInvoke()
+  System.Private.CoreLib!System.Threading.ExecutionContext.RunFromThreadPoolDispatchLoop(class System.Threading.Thread,class System.Threading.ExecutionContext,class System.Threading.ContextCallback,class System.Object)
+  System.Private.CoreLib!System.Threading.Tasks.Task.ExecuteWithThreadLocal(class System.Threading.Tasks.Task&,class System.Threading.Thread)
+  System.Private.CoreLib!System.Threading.ThreadPoolWorkQueue.Dispatch()
+  System.Private.CoreLib!System.Threading.PortableThreadPool+WorkerThread.WorkerThreadStart()
+  System.Private.CoreLib!System.Threading.Thread.StartCallback()
+
+Thread (0xD36):
+  [Native Frames]
+  System.IO.FileSystem.Watcher!Interop+Sys.Read(class System.Runtime.InteropServices.SafeHandle,unsigned int8*,int32)
+  System.IO.FileSystem.Watcher!System.IO.FileSystemWatcher+RunningInstance.TryReadEvent(value class NotifyEvent&)
+  System.IO.FileSystem.Watcher!System.IO.FileSystemWatcher+RunningInstance.ProcessEvents()
+  System.Private.CoreLib!System.Threading.Thread.StartCallback()
+
+Thread (0xD38):
+  [Native Frames]
+  ?!?
+  System.Net.Sockets!System.Net.Sockets.SocketAsyncEngine.EventLoop()
+  System.Private.CoreLib!System.Threading.Thread.StartCallback()
+
+Thread (0xD58):
+  [Native Frames]
+  System.Private.CoreLib!System.Threading.LowLevelLifoSemaphore.WaitNative(class Microsoft.Win32.SafeHandles.SafeWaitHandle,int32)
+  System.Private.CoreLib!System.Threading.LowLevelLifoSemaphore.WaitForSignal(int32)
+  System.Private.CoreLib!System.Threading.PortableThreadPool+WorkerThread.WorkerThreadStart()
+  System.Private.CoreLib!System.Threading.Thread.StartCallback()
+

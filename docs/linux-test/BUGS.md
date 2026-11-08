@@ -16,7 +16,7 @@ Every bug gets fixed; I re-verify on the fixing commit and mark it here.
 | B-06 | S2 | Linux | Window drop of several files opens only the first (**confirmed live** on db28319 with a real drag) | **verified fixed f3d5978** — real 2-file drag (GTK 4 file list) → 2 tabs |
 | B-07 | S2 | **shared Ui/Core** | Password-protected PDF can't be opened: no password prompt | **verified fixed e468d1a** (Foundation 8th patch) — password card; wrong → "That password doesn't open this file."; right → page; password in memory only, nothing in `/tmp` |
 | B-08a | S1 | **library** | Zip-bomb `.docx` → 4.5 GB RAM, 10 min+: Chuvadi.Docs has no input limits | open — library (Chuvadi.Docs limits); app-side guard now refuses at once: "too large to open: its contents unpack to more than 1,024 MB", RSS flat ~287 MB |
-| B-08b | S2 | **shared Ui/Core** | "Opening…" has no cancel and no timeout (B-08a, B-09a) | **accepted on code (D-130)** — `SlowOpenNote` Cancel in e468d1a; couldn't be shown (opens are now fast; a forced stall hits B-24). Re-verify Cancel together with B-24 |
+| B-08b | S2 | **shared Ui/Core** | "Opening…" has no cancel and no timeout (B-08a, B-09a) | ❌ **not passing on 1016987** (Linux build merged locally, not pushed) — stalled `.xlsx`: "Opening…" at 0.4 s but no Cancel in 16 s; UI thread blocked by B-24's root cause, so the note never renders |
 | B-09a | S1 | **library** | `.xlsx` with a cell at XFD1048576 → 1.7 GB, never opens: Chuvadi.Sheets materialises to the sheet's extent | open — library (layout of the full range); **app side fixed e468d1a**: far-cell opens as a grid in ~2 s, RSS ~370 MB |
 | B-10 | S2 | **shared Ui/Core** | One stuck open silently blocks every later open (no tab, no message) | **verified fixed e468d1a** (Foundation 8th patch) — five-pages opens within ~10 s while far-cell loads |
 | B-11a | S3 | **library** | Damaged PDF (bad `startxref` offset) not repaired — chuvadi-pdf needs xref rebuild | open — library (chuvadi-pdf) |
@@ -33,15 +33,16 @@ Every bug gets fixed; I re-verify on the fixing commit and mark it here.
 | B-21 | S3 | Linux | Show in folder: 5 s D-Bus timeout → `xdg-open` fallback → two file-manager windows | **verified fixed f3d5978** — cold Nautilus: one window; `xdg-open` fallback never called (logging stub) |
 | B-22 | S4 | shared Ui/Core | No designed keyboard-focus style: each engine draws its own (GTK blue on Linux) | **verified fixed e468d1a** (Foundation 8th patch) — focus ring 2 px solid in the theme accent (#8a3a1c in light) |
 | B-23 | S4 | shared Ui/Core | Tab order starts with one "Send page N to a desk" button per page | **verified fixed e468d1a** (Foundation 8th patch) — Tab starts on the current page's strip (rotate, send, snapshot, bookmark), not one button per page |
-| B-24 | S2 | **shared Ui/Core** | A stalled read (hung network share) shows a blank Reader with no "Opening…" or Cancel, and blocks every later open | open — **D-130: Foundation's next combined patch** (shared PDF open path); repro `fixtures/stalled-source.sh` |
-| B-25 | S4 | **shared Ui/Core** | Excel viewer errors still use the old one-line wording (no WT-10 sentence + Details) | open — faffa10 |
+| B-24 | S2 | **shared Ui/Core** | A stalled read (hung network share) shows a blank Reader with no "Opening…" or Cancel, and blocks every later open | ❌ **reopened — not fixed in the running app on 1016987** (tenth patch d70590a included). Root cause from a managed stack dump: `TabsService.OpenAsync` → `Reader.OnTabsChanged` → `SyncActive` → **`RefreshDocKind` → `FlattenService.Probe` → `PdfDocument.Open(path)`** on the UI thread → `open(2)` blocks (for `.xlsx` too). Foundation's tests drive `TabsService` without the Reader page, so they don't hit it. Fix: run `Probe` off-thread with the tab's token, or after the load; and skip it for non-PDFs |
+| B-25 | S4 | **shared Ui/Core** | Excel viewer errors still use the old one-line wording (no WT-10 sentence + Details) | **verified fixed 1016987** — "This file couldn't be read as an Excel workbook." (Excel · couldn't open) |
+| B-26 | S3 | **shared Ui/Core** | Excel number formats not applied: `"₹"#,##0.00` shows `1234.5`, `0.00%` shows `0.125` (values unaltered) — Sheets 2.0.2 now has `Cell.GetDisplayText` | open — 1016987 |
 | K-01 | — | Linux | GNOME close-only layout showed all three buttons (known, 7 Nov) | **verified fixed f7d0034, re-verified f3d5978** (6 layouts) |
 
 Routing (coordinator, 8 Nov): **Linux** → the Linux chat. **shared Ui/Core** → Foundation's combined patch, as exact diffs from the Linux chat or Foundation. **library** → the coordinator compiles them for Arun (library coordinator).
 | Route | Bugs |
 |---|---|
 | Linux chat | B-01, B-04, B-05, B-06, B-12, B-13, B-14, B-15, B-17, B-19, B-20, B-21, and the Linux stanzas of B-02 |
-| shared Ui/Core | B-03, B-07, B-08b, B-10, B-11b, B-16, B-18, B-22, B-23, B-24, B-25, and the OFL texts next to the fonts in B-02 |
+| shared Ui/Core | B-03, B-07, B-08b, B-10, B-11b, B-16, B-18, B-22, B-23, B-24, B-25, B-26, and the OFL texts next to the fonts in B-02 |
 | library | B-08a (Chuvadi.Docs input limits), B-09a (Chuvadi.Sheets: don't materialise to the sheet's extent), B-11a (chuvadi-pdf: rebuild the xref on a bad `startxref`) |
 B-09's "no cancel / no timeout" half is the same fix as B-08b.
 
@@ -219,3 +220,21 @@ Screenshot: `screenshots/B-24-stalled-pdf-blank.png`. Tools: `tools/t_cancel_pdf
 **Steps.** Open `notzip.xlsx` (bytes that aren't a zip).
 **Expected.** WT-10 wording as the PDF path now has: a plain sentence, with .NET's message under a collapsed **Details**.
 **Actual.** "Couldn't open this workbook: End of Central Directory record could not be found." — the technical text inline, no Details. Readable (not a resource key), so cosmetic. Screenshot: `screenshots/B-25-xlsx-old-wording.png`.
+
+## B-24 — reopened on 1016987: the Reader's tab-changed handler probes the file on the UI thread
+**Build.** `platform/linux` faffa10 + `platform/foundation` 1016987 merged locally (test only, not pushed); d70590a (B-24's fix) included. Fixture: `fixtures/stalled-source.sh`.
+**Actual.** Stalled `.pdf`: blank Reader (no "Opening…", no Cancel), later opens blocked — as before. Stalled `.xlsx`: "Opening…" at 0.4 s, then no Cancel in 16 s, later opens blocked.
+**Root cause** (managed stacks, `dotnet-stack`, `evidence/b24/stacks-xlsx-stall.txt`):
+```
+Interop+Sys.Open ← FileStream..ctor ← Chuvadi.Pdf.Documents.PdfDocument.Open(string)
+ ← ChuvadiReader.Core.Documents.FlattenService.Probe(string)
+ ← ChuvadiReader.Ui.Pages.Reader.RefreshDocKind(string) ← Reader.SyncActive() ← Reader.OnTabsChanged()
+ ← ChuvadiReader.Core.Reader.TabsService.OpenAsync(...)   [UI thread]
+```
+The tenth patch moved the load off-thread, but adding the tab raises `TabsChanged` synchronously and the Reader probes the file (as a PDF, even for `.xlsx`) on the UI thread. The library load itself (`XlsxViewService.Load` → `Workbook.Load`) correctly sits on a pool thread.
+**Fix.** In `RefreshDocKind`, don't open the file on the UI thread: run `FlattenService.Probe` on a pool thread with the tab's cancellation token (or after the load completes), and only for PDFs. Add a Reader-level test (the page + `TabsService`), not only `TabsService`.
+
+## B-26 — Excel number formats not applied (S3, shared Ui/Core) — 1016987
+**Steps.** Open `fixtures/exact.xlsx`.
+**Expected.** Displayed text as Excel shows it, value untouched: B23 `1234.5` with `"₹"#,##0.00` → `₹1,234.50`; B24 `0.125` with `0.00%` → `12.50%`; B22 `45000` with built-in 14 → the locale's short date (en-IN `15-03-2023`); B21 General → `1.23457E+19`.
+**Actual.** `1234.5`, `0.125`, `2023-03-15`, `1.2345678901234567E+19`. `XlsxViewService.FormatValue` shows values as-is by design, waiting for "Chuvadi.Sheets [to expose] a formatted display string per cell" — Sheets 2.0.2 now has `Cell.GetDisplayText(NumberFormatOptions)` and `NumberFormatter.FormatDetailed(...)`. All text cells come through exactly (see RESULTS).
