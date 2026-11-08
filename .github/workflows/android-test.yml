@@ -7,7 +7,13 @@ name: Android Test
 # Every tool here (setup actions, emulator runner, bundletool, reportlab/pypdf, websocket-client) is test
 # tooling only; nothing from it ships (programme rule 3).
 
+# A run starts only when started by hand, or when docs/android-test/ci/run.json is pushed on this branch
+# (the file holds the same inputs; editing it is the hand start — GitHub only lists a dispatchable
+# workflow once it exists on main, which this chat never pushes to).
 on:
+  push:
+    branches: [platform/android-test]
+    paths: [docs/android-test/ci/run.json]
   workflow_dispatch:
     inputs:
       emulators:
@@ -45,29 +51,38 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       emulators: ${{ steps.plan.outputs.emulators }}
+      suites: ${{ steps.plan.outputs.suites }}
+      api35: ${{ steps.plan.outputs.api35 }}
     steps:
-      - name: Plan
+      - uses: actions/checkout@v4
+        with: { path: test }
+      - name: Plan (dispatch inputs, else run.json)
         id: plan
         env:
-          WANT: ${{ inputs.emulators }}
+          IN: ${{ toJSON(inputs) }}
         run: |
           python3 - <<'PY' >> "$GITHUB_OUTPUT"
           import json, os
+          cfg = json.loads(os.environ.get("IN") or "null") or {}
+          if not cfg.get("emulators"):
+              cfg = json.load(open("test/docs/android-test/ci/run.json"))
+          for k in ("suites", "foundation_ref", "mobileui_ref", "android_ref"):
+              print(f"{k}={cfg[k]}")
+          os.environ["WANT"] = cfg["emulators"]
           profiles = {"phone": "pixel_7", "tablet": "pixel_tablet"}
           every = [f"{d}-{a}" for d in ("phone", "tablet") for a in (35, 36)]
           want = os.environ["WANT"].replace(" ", "").lower()
           names = every if want == "all" else [] if want in ("", "none") else want.split(",")
           assert all(n in every for n in names), names
+          print("api35=" + ("true" if any(n.endswith("-35") for n in names) else "false"))
           print("emulators=" + json.dumps([{"device": n.split("-")[0], "api": int(n.split("-")[1]), "profile": profiles[n.split("-")[0]]} for n in names]))
           PY
       - uses: actions/checkout@v4
-        with: { path: test }
+        with: { ref: '${{ steps.plan.outputs.android_ref }}', path: android }
       - uses: actions/checkout@v4
-        with: { ref: '${{ inputs.android_ref }}', path: android }
-      - uses: actions/checkout@v4
-        with: { ref: '${{ inputs.foundation_ref }}', path: reader, fetch-depth: 0 }
+        with: { ref: '${{ steps.plan.outputs.foundation_ref }}', path: reader, fetch-depth: 0 }
       - name: Compose (the Android chat's own compose.sh, unchanged)
-        run: bash android/docs/android/integration/compose.sh reader ${{ inputs.mobileui_ref }} android 2>&1 | tee compose.txt
+        run: bash android/docs/android/integration/compose.sh reader ${{ steps.plan.outputs.mobileui_ref }} android 2>&1 | tee compose.txt
       - uses: actions/setup-dotnet@v4
         with: { dotnet-version: '10.0.x' }
       - uses: actions/setup-java@v4
@@ -100,7 +115,7 @@ jobs:
         run: mkdir -p audit && (bash test/docs/android-test/ci/audit.sh reader out audit 2>&1 | tee audit/run.txt) || true
       - name: Keep build evidence
         if: always()
-        run: mkdir -p audit && cp compose.txt restore.txt publish-release.txt build-debug.txt sdk.txt release.binlog audit/ 2>/dev/null; git -C reader log -1 --format='foundation %H' >> audit/refs.txt; echo "mobileui ${{ inputs.mobileui_ref }} android ${{ inputs.android_ref }}" >> audit/refs.txt
+        run: mkdir -p audit && cp compose.txt restore.txt publish-release.txt build-debug.txt sdk.txt release.binlog audit/ 2>/dev/null; git -C reader log -1 --format='foundation %H' >> audit/refs.txt; echo "mobileui ${{ steps.plan.outputs.mobileui_ref }} android ${{ steps.plan.outputs.android_ref }}" >> audit/refs.txt
       - uses: actions/upload-artifact@v4
         with: { name: android-packages, path: out/, if-no-files-found: error }
       - uses: actions/upload-artifact@v4
@@ -111,7 +126,8 @@ jobs:
     name: WebView donor (API 36 image's WebView, for the API 35 emulators)
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    if: contains(inputs.emulators, '35') || inputs.emulators == 'all'
+    needs: build
+    if: needs.build.outputs.api35 == 'true'
     steps:
       - uses: actions/checkout@v4
       - name: Enable KVM
@@ -164,7 +180,7 @@ jobs:
           pre-emulator-launch-script: |
             sed -i '/^hw.keyboard=/d' ~/.android/avd/test.avd/config.ini 2>/dev/null || true
             echo 'hw.keyboard=no' >> ~/.android/avd/test.avd/config.ini
-          script: bash docs/android-test/ci/run-emulator.sh out donor results/${{ matrix.device }}-api${{ matrix.api }} "${{ inputs.suites }}"
+          script: bash docs/android-test/ci/run-emulator.sh out donor results/${{ matrix.device }}-api${{ matrix.api }} "${{ needs.build.outputs.suites }}"
       - uses: actions/upload-artifact@v4
         if: always()
         with: { name: 'results-${{ matrix.device }}-api${{ matrix.api }}', path: results/ }

@@ -1,0 +1,8 @@
+{
+  "round": 1,
+  "emulators": "all",
+  "suites": "startup,design",
+  "foundation_ref": "839d39d9b68fb6f1afa99d1375b00e1b6e03dff9",
+  "mobileui_ref": "95b9d799349c6e83d11d8ab77c8b81c219de4f7a",
+  "android_ref": "7ec801764b791ba7d5881060baa579edd76c43cd"
+}
