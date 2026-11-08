@@ -150,3 +150,14 @@ Clean cache, documented restore, `-warnaserror`: shared solution 0 warnings — 
 **Hostile-file regression on 1b32ad8** (`sec_browser.py`, Chrome): 19/21. All hostile names contained as before (`passwd.pdf`, `win.pdf`, `_CON.pdf`, 120-char stems, HTML stripped, U+202E removed, CJK kept); no script ran; every damaged/hostile document refused with one message, worker survived, the other person paged at 67–99 ms. Messages are now plain: damaged PDF → "…Chuvadi can try to rebuild it as a new copy." with "Try to repair (new copy)" and "Details"; zip bombs → "This Word document / Excel workbook is too large to open: its contents unpack to more than 2,048 MB. It may be damaged." The 2 fails are the known harness artefact (Playwright pushing 210 MB through the one shared browser); re-checked with separate browsers: refusal in 0.1 s, the other person 83–167 ms ✅.
 
 **New in 1b32ad8 — password-protected PDFs open** (was a known gap): "This PDF is password-protected · Enter its password to view it here. The password stays in memory for this tab only." Wrong password → "That password doesn't open this file."; right password → page 1 drawn; the password never appears in the page HTML — ✅ Chromium, Firefox, WebKit.
+
+## Re-verification on `platform/web` @ **d180f2e** (9 Nov 03:20–03:50 IST)
+Rebased head: 3548bdd (= the 1b32ad8 fixes, rebased) + d180f2e (WT-14, WT-15).
+
+- **Build from clean** (empty cache, documented restore, `-warnaserror`): shared solution 0 warnings — Reader **191**, Hosting **59**, Mobile UI **16**, Web UI **33**; Web + Web.Tests 0 warnings, Web **156/156**; publish: 0 third-party assemblies, `check-package.sh` PASS.
+- **Browser checks** (`verify_fixes.py`, Chromium/Firefox/WebKit): WT-02 (print p1/p5 in Chromium and Firefox; Measure card "page 5" in all three), WT-03 (phone shell, all three), WT-04, WT-06, WT-08, WT-09, WT-10 failed-open screen — ✅. Arrange "Fetch…" (WT-10 addendum) and Q-3 still open, as expected (not in Web yet).
+- **Curl checks:** WT-01 full CSP on the gateway Reader page ✅; WT-07 foreign Origin 403 / own 200 ✅.
+- **WT-15:** Production + `http://` Sangam → refuses to start with "Sangam:Authority must be an https address outside Development." (the process exits on an unhandled options-validation exception, exit 134 — the message is clear; a tidier one-line refusal like the other start-up checks would be nicer, not a bug); Production + https → starts ✅.
+- **WT-14:** `sangam_signin.py` (real Sangam rc.16) WebKit **13/13 × 5 runs**, Chrome 13/13, Firefox 13/13 (one Firefox run printed 12 lines; re-run 13/13).
+- **WT-13:** `load.py` 5 people: output folder created, results in ms, no errors (print median 834 ms on this 2-vCPU sandbox), peak 179 MB per worker.
+- **Regression:** `flows.py` 9/9 × Chrome, Firefox, WebKit.

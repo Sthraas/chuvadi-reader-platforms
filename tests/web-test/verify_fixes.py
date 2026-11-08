@@ -58,7 +58,9 @@ with sync_playwright() as p:
     pg.locator("body").press("1"); pg.wait_for_timeout(300)
     try:
         pg.click("button[aria-label='Measure']", timeout=5000); pg.wait_for_timeout(800)
-        mt = text(pg); lab = re.findall(r"[Pp]age \d+", mt)
+        mt = pg.evaluate("""() => { const h = [...document.querySelectorAll('*')].find(e => e.children.length === 0 && e.textContent.trim() === 'Measure' && e.getBoundingClientRect().x > 900);
+            let n = h; for (let i = 0; i < 4 && n; i++) n = n.parentElement; return n ? n.innerText : ''; }""")
+        lab = re.findall(r"[Pp]age \d+", mt)
         pg.screenshot(path=os.path.join(out, f"measure-{engine}.png"))
         check("WT-02 Measure card names the page shown (5)", any(x.endswith(" 5") for x in lab) and not any(x.endswith(" 6") for x in lab), lab[:6])
         pg.keyboard.press("Escape")
@@ -104,7 +106,7 @@ with sync_playwright() as p:
         open_doc(pg, os.path.join(corpus, "text-13.pdf")); pg.wait_for_selector(".rpage svg", timeout=60000); pg.wait_for_timeout(1200)
     except Exception as e: check("WT-03 phone: open a PDF", False, str(e).splitlines()[0])
     pg.screenshot(path=os.path.join(out, f"phone-read-{engine}.png"))
-    shell = pg.evaluate("""() => ({ phone: !!document.querySelector('[class*=phone-shell],[class*=pshell],.phone, [class*=phone]'),
+    shell = pg.evaluate("""() => ({ phone: ['Read','Mark','Arrange','Protect'].every(w => [...document.querySelectorAll('*')].some(e => e.children.length === 0 && e.textContent.trim() === w && e.getBoundingClientRect().top > innerHeight - 90)),
         rails: [...document.querySelectorAll('.rail, [class*=rail]')].filter(e => e.offsetParent && e.getBoundingClientRect().width > 0).length,
         pageW: (document.querySelector('.rpage') || {getBoundingClientRect: () => ({width: 0})}).getBoundingClientRect().width,
         overflowX: document.documentElement.scrollWidth > innerWidth + 1 })""")
