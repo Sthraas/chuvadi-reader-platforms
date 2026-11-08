@@ -1,0 +1,427 @@
+diff --git a/src/ChuvadiReader.Ui/Layout/MainLayout.razor b/src/ChuvadiReader.Ui/Layout/MainLayout.razor
+index e0f06f0..4c2c616 100644
+--- a/src/ChuvadiReader.Ui/Layout/MainLayout.razor
++++ b/src/ChuvadiReader.Ui/Layout/MainLayout.razor
+@@ -35,7 +35,8 @@
+     @if (ShellLayout == ChuvadiReader.Platform.ShellLayout.Phone)
+     {
+         <ChuvadiReader.Ui.Components.Platform.Phone.PhoneShell RequestMode="RequestMode" ModeDisabledReason="ModeDisabledReason"
+-                                                               Open="AddTab" Find="FindNow" Go="Go" OnDocView="OnDocView">
++                                                               Open="AddTab" Find="FindNow" Go="Go" OnDocView="OnDocView"
++                                                               SwitchTab="SwitchTab" CloseTab="CloseTab">
+             @Body
+         </ChuvadiReader.Ui.Components.Platform.Phone.PhoneShell>
+     }
+diff --git a/src/ChuvadiReader.Ui/Pages/Settings.razor b/src/ChuvadiReader.Ui/Pages/Settings.razor
+index 594ebea..4ab482b 100644
+--- a/src/ChuvadiReader.Ui/Pages/Settings.razor
++++ b/src/ChuvadiReader.Ui/Pages/Settings.razor
+@@ -17,7 +17,7 @@
+     (each control calls its service). Unbuilt features stay visible, greyed out with a
+     "Coming soon" tooltip. Deep link: /settings?section=reading (ids in Sections below).
+ *@
+-<div class="settings">
++<div class="@(PhoneList ? "settings phone-list" : "settings")">
+     <nav class="snav" aria-label="Settings sections">
+         <h1 class="snav-title" tabindex="-1">Settings</h1>
+         @foreach (var s in Sections)
+@@ -136,7 +136,20 @@
+     }
+ 
+     // Changing section re-keys the scroll container, so it starts at the top.
+-    private void Show(string id) => _active = id;
++    private void Show(string id)
++    {
++        // Phone (D-45, Settings A): a section opens as its own screen, so Back returns to the list.
++        if (Platform.FormFactor == ChuvadiReader.Platform.FormFactor.Phone)
++        {
++            Nav.NavigateTo($"settings?section={id}");
++            return;
++        }
++
++        _active = id;
++    }
++
++    /// <summary>Phone with no section asked for: the section list alone (D-45).</summary>
++    private bool PhoneList => Platform.FormFactor == ChuvadiReader.Platform.FormFactor.Phone && string.IsNullOrEmpty(SectionQuery);
+ 
+     private void OnAnyChanged() => InvokeAsync(() =>
+     {
+diff --git a/src/ChuvadiReader.Ui/Pages/Redact.razor b/src/ChuvadiReader.Ui/Pages/Redact.razor
+index 01cacc9..a6944c1 100644
+--- a/src/ChuvadiReader.Ui/Pages/Redact.razor
++++ b/src/ChuvadiReader.Ui/Pages/Redact.razor
+@@ -10,6 +10,7 @@
+ @inject IEntitlements Entitlements
+ @inject IJSRuntime JS
+ @inject ChuvadiReader.Platform.IFileWriteBack WriteBack
++@inject ChuvadiReader.Platform.IPlatformInfo Platform
+ 
+ <div class="redact-root mview">
+     <div class="rd-col">
+@@ -418,6 +419,7 @@
+             try
+             {
+                 await _js.InvokeVoidAsync("init", _desk, _ref);
++                await FitWidthOnPhoneAsync();
+             }
+             catch { }
+         }
+@@ -428,6 +430,20 @@
+         }
+     }
+ 
++    // Phone (Portal & Android): open at fit width, not the desktop's 100 % (the page is wider than the
++    // screen). The width is measured by the phone's own script; tablets and desktops keep 100 %.
++    private async Task FitWidthOnPhoneAsync()
++    {
++        if (Platform.FormFactor != ChuvadiReader.Platform.FormFactor.Phone) return;
++        await using var mobile = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/ChuvadiReader.Ui/js/mobile.js");
++        var fit = await mobile.InvokeAsync<double>("fitWidthZoom", _desk);
++        if (fit > 0 && Math.Abs(fit - _zoom) > 0.005)
++        {
++            _zoom = fit;
++            StateHasChanged();
++        }
++    }
++
+     // ── Lazy render ─────────────────────────────────────────────────────────
+     [JSInvokable]
+     public Task RenderPage(int n)
+diff --git a/src/ChuvadiReader.Ui/Pages/Reader.Shell.cs b/src/ChuvadiReader.Ui/Pages/Reader.Shell.cs
+index 4b29bf9..9f6f978 100644
+--- a/src/ChuvadiReader.Ui/Pages/Reader.Shell.cs
++++ b/src/ChuvadiReader.Ui/Pages/Reader.Shell.cs
+@@ -402,14 +402,18 @@ public partial class Reader
+ 
+     private static ShellCommand Sep(string id) => new("sep." + id, "", "", "", null, () => Task.CompletedTask);
+ 
++    // A command that changes the Reader's own state re-renders it: commands run from MainLayout's Document
++    // menu, the command bar or the phone ⋮ sheet, whose click re-renders only the layout.
++    private Func<Task> T(Action a) => () => { a(); StateHasChanged(); return Task.CompletedTask; };
++
+     private IEnumerable<ShellCommand> DocumentMenuItems(ReaderTab tab)
+     {
+         var isPdf = !tab.Format.IsViewOnly();
+         var notPdf = isPdf ? null : "Convert to PDF first";
+         yield return new("doc.props", "Properties", "Document", "info", null, DocProperties, notPdf);
+-        yield return new("doc.export", "Export pages as images", "Document", "download", null, () => { DocExport(); return Task.CompletedTask; }, notPdf);
+-        yield return new("doc.press", "Reduce file size (Press)", "Document", "compress", null, () => { DocPress(); return Task.CompletedTask; }, notPdf, "compress");
+-        yield return new("doc.print", "Print", "Document", "print", "Ctrl P", () => { OpenCard("print"); return Task.CompletedTask; }, notPdf);
++        yield return new("doc.export", "Export pages as images", "Document", "download", null, T(DocExport), notPdf);
++        yield return new("doc.press", "Reduce file size (Press)", "Document", "compress", null, T(DocPress), notPdf, "compress");
++        yield return new("doc.print", "Print", "Document", "print", "Ctrl P", T(() => OpenCard("print")), notPdf);
+         yield return Sep("1");
+         yield return new("doc.flatten", "Flatten forms & marks", "Document", "compress", null, DocFlatten, notPdf ?? (_flattening ? "Flattening…" : null));
+         yield return new("doc.password", "Password-protect a copy", "Document", "doc-lock", null, () => { OpenProtectCard("password"); return Task.CompletedTask; }, notPdf);
+@@ -451,8 +455,6 @@ public partial class Reader
+             yield break;
+         }
+ 
+-        Func<Task> T(Action a) => () => { a(); StateHasChanged(); return Task.CompletedTask; };
+-
+         // Read
+         yield return new("r.pages", "Pages & outline", "Read", "page-single", null, T(TogglePagesDrawer), Keywords: "thumbnails bookmarks");
+         yield return new("r.bookmark", "Add bookmark", "Read", "bookmark", "Ctrl B", T(AddBookmarkHere));
+diff --git a/src/ChuvadiReader.Ui/Pages/Reader.razor b/src/ChuvadiReader.Ui/Pages/Reader.razor
+index 41cd124..ff0eb05 100644
+--- a/src/ChuvadiReader.Ui/Pages/Reader.razor
++++ b/src/ChuvadiReader.Ui/Pages/Reader.razor
+@@ -3523,8 +3523,14 @@
+         StateHasChanged();
+     }
+ 
++    // From reader.js (← / →). A JS call doesn't re-render the page, so the counter would lag behind
++    // (on a phone, one snapped page per screen, until the next tap).
+     [JSInvokable]
+-    public Task NavPage(int delta) => GoTo(CurPage + delta);
++    public async Task NavPage(int delta)
++    {
++        await GoTo(CurPage + delta);
++        StateHasChanged();
++    }
+ 
+     private async Task GoTo(int page)
+     {
+diff --git a/src/ChuvadiReader.Ui/wwwroot/js/reader.js b/src/ChuvadiReader.Ui/wwwroot/js/reader.js
+index 0716aec..ac3e00b 100644
+--- a/src/ChuvadiReader.Ui/wwwroot/js/reader.js
++++ b/src/ChuvadiReader.Ui/wwwroot/js/reader.js
+@@ -478,8 +478,16 @@ function notifyZoom(s) {
+ }
+ 
+ // Returns the absolute scale that fits the page width / whole page; 0 if not measurable.
+-export function measureFit(deskEl, mode) {
+-    const page = deskEl && deskEl.querySelector('.rpage');
++// A newly opened document is fitted right after init, often before any page has rendered. The
++// placeholder (.rpage-load) is sized in points (595 × 842), 3/4 of a rendered page (96/72 px per pt),
++// so measuring it fitted pages 4/3 too large on a slow device (Android emulator: Fit page 456 px on a
++// 411 px screen). Wait briefly for a rendered page and measure that; fall back to the placeholder.
++export async function measureFit(deskEl, mode) {
++    for (let i = 0; i < 40 && deskEl && !deskEl.querySelector('.rpage svg'); i++) {
++        await new Promise(r => setTimeout(r, 50));
++    }
++    const rendered = deskEl && deskEl.querySelector('.rpage svg');
++    const page = rendered ? rendered.closest('.rpage') : deskEl && deskEl.querySelector('.rpage');
+     if (!page) return 0;
+     const z = readZoom();
+     const rect = page.getBoundingClientRect();
+diff --git a/src/ChuvadiReader.Ui/Pages/Dashboard.razor b/src/ChuvadiReader.Ui/Pages/Dashboard.razor
+index 4b0ea9b..67fceaf 100644
+--- a/src/ChuvadiReader.Ui/Pages/Dashboard.razor
++++ b/src/ChuvadiReader.Ui/Pages/Dashboard.razor
+@@ -37,7 +37,7 @@
+             {
+             <p class="blurb">@LibCountText in your library · @Recents.EncryptedCount encrypted · nothing leaves this device.</p>
+             }
+-        </section>
++        </section>@* Phone: 4a's search under the count line (H-10); null elsewhere, renders nothing. *@@PhoneHomeSearch
+ 
+         @if (IsFirstRun)
+         {
+@@ -239,6 +239,10 @@
+ </div>
+ 
+ @code {
++    /// <summary>Phone (Portal & Android 4a): the shell's search button, placed under the count line.
++    /// Only the phone shell cascades it; elsewhere it is null and renders nothing.</summary>
++    [CascadingParameter(Name = "PhoneHomeSearch")] public RenderFragment? PhoneHomeSearch { get; set; }
++
+     private const int RecentCount = 4;
+     private static readonly int[] EmptyBooks = { 16, 22, 14, 26, 18, 20, 15, 24, 17 };
+ 
+diff --git a/src/ChuvadiReader.Ui/Pages/Settings.razor b/src/ChuvadiReader.Ui/Pages/Settings.razor
+index c5241a1..5f3de53 100644
+--- a/src/ChuvadiReader.Ui/Pages/Settings.razor
++++ b/src/ChuvadiReader.Ui/Pages/Settings.razor
+@@ -26,6 +26,10 @@
+             <button type="button" class="snav-item @(on ? "on" : null)" aria-current="@(on ? "page" : null)" @onclick="() => Show(s.Id)">
+                 <Icon Name="@s.Icon" Size="17" />
+                 <span class="snav-label">@s.Label</span>
++                @if (PhoneList)
++                {
++                    <span class="snav-sum">@s.Summary</span>
++                }
+                 @if (s.IsNew)
+                 {
+                     <span class="snav-note">new</span>
+@@ -80,20 +84,32 @@
+ </div>
+ 
+ @code {
+-    private sealed record Section(string Id, string Icon, string Label, bool IsNew);
++    // Summary: one line under the label in the phone's section list (Portal & Android, D-88); the
++    // desktop doesn't show it.
++    private sealed record Section(string Id, string Icon, string Label, bool IsNew, string Summary);
+ 
+     private static readonly IReadOnlyList<Section> Sections = new[]
+     {
+-        new Section("appearance", "sliders", "Appearance", false),
+-        new Section("reading", "reading-mode", "Reading", false),
+-        new Section("saving", "save", "Saving & files", false),
+-        new Section("library", "library", "Library & folders", false),
+-        new Section("account", "user", "Account & roles", true),
+-        new Section("kiosk", "lock", "Kiosk", true),
+-        new Section("language", "star", "Language", true),
+-        new Section("accessibility", "accessibility", "Accessibility", true),
+-        new Section("shortcuts", "menu", "Shortcuts", false),
+-        new Section("about", "info", "About", false),
++        new Section("appearance", "sliders", "Appearance", false,
++            "Theme · interface size · reduce motion"),
++        new Section("reading", "reading-mode", "Reading", false,
++            "Default zoom · layout"),
++        new Section("saving", "save", "Saving & files", false,
++            "Save folder · name new files · autosave drafts"),
++        new Section("library", "library", "Library & folders", false,
++            "Folder · default view · check every"),
++        new Section("account", "user", "Account & roles", true,
++            "Roles · lock after idle · audit trail"),
++        new Section("kiosk", "lock", "Kiosk", true,
++            "Allowed folder · exit PIN"),
++        new Section("language", "star", "Language", true,
++            "Language · dates · numbers · preferred name"),
++        new Section("accessibility", "accessibility", "Accessibility", true,
++            "Interface size · focus rings · larger touch targets"),
++        new Section("shortcuts", "menu", "Shortcuts", false,
++            "With a keyboard attached"),
++        new Section("about", "info", "About", false,
++            "Versions · licences · data folder"),
+     };
+ 
+     /// <summary>Optional deep link: /settings?section=reading.</summary>
+diff --git a/src/ChuvadiReader.Core/Documents/PinnedAndWatchedServices.cs b/src/ChuvadiReader.Core/Documents/PinnedAndWatchedServices.cs
+index be646ea..326fed6 100644
+--- a/src/ChuvadiReader.Core/Documents/PinnedAndWatchedServices.cs
++++ b/src/ChuvadiReader.Core/Documents/PinnedAndWatchedServices.cs
+@@ -13,11 +13,12 @@ public sealed class PinnedService
+ 
+     private readonly bool _samples;
+ 
+-    /// <param name="platform">The host. No Phase 0 samples on a server (Web H8). Desktop unchanged.</param>
++    /// <param name="platform">The host. No Phase 0 samples on a server (Web H8) or on Android (H-12).
++    /// Desktop unchanged.</param>
+     public PinnedService(IAppStorage storage, IPlatformInfo? platform = null)
+     {
+         _storage = storage;
+-        _samples = platform?.Capabilities.ServerSide != true;
++        _samples = platform?.Capabilities.ServerSide != true && platform?.Kind != PlatformKind.Android;
+     }
+ 
+     public IReadOnlyList<PinnedItem> Items => _items;
+@@ -64,7 +65,15 @@ public sealed class WatchedFolderService
+     private const string StorageKey = "watched-folder";
+     private readonly IAppStorage _storage;
+ 
+-    public WatchedFolderService(IAppStorage storage) => _storage = storage;
++    private readonly bool _samples;
++
++    /// <param name="platform">The host. No Phase 0 sample folder on Android (H-12): it doesn't exist on
++    /// the device. Desktop and server unchanged.</param>
++    public WatchedFolderService(IAppStorage storage, IPlatformInfo? platform = null)
++    {
++        _storage = storage;
++        _samples = platform?.Kind != PlatformKind.Android;
++    }
+ 
+     public string? FolderPath { get; private set; }
+ 
+@@ -78,7 +87,7 @@ public sealed class WatchedFolderService
+     {
+         FolderPath = await _storage.GetAsync(StorageKey, ct).ConfigureAwait(false);
+ 
+-        if (string.IsNullOrWhiteSpace(FolderPath))
++        if (string.IsNullOrWhiteSpace(FolderPath) && _samples)
+         {
+             FolderPath = "~/Documents/Chuvadi";
+             DocumentCount = 8;
+diff --git a/src/ChuvadiReader.Core/Documents/RecentFilesService.cs b/src/ChuvadiReader.Core/Documents/RecentFilesService.cs
+index 38b9f9e..4774bf1 100644
+--- a/src/ChuvadiReader.Core/Documents/RecentFilesService.cs
++++ b/src/ChuvadiReader.Core/Documents/RecentFilesService.cs
+@@ -18,11 +18,12 @@ public sealed class RecentFilesService
+     private readonly bool _samples;
+ 
+     /// <param name="platform">The host. No Phase 0 samples on a server (Web H8): every portal session
+-    /// starts empty and the sample files don't exist there. Desktop unchanged.</param>
++    /// starts empty and the sample files don't exist there. None on Android either (H-12): the files
++    /// don't exist on the device, and a fresh install must show the first-run box. Desktop unchanged.</param>
+     public RecentFilesService(IAppStorage storage, IPlatformInfo? platform = null)
+     {
+         _storage = storage;
+-        _samples = platform?.Capabilities.ServerSide != true;
++        _samples = platform?.Capabilities.ServerSide != true && platform?.Kind != PlatformKind.Android;
+     }
+ 
+     public IReadOnlyList<RecentItem> Items => _items;
+diff --git a/src/ChuvadiReader.Ui/wwwroot/js/reader.js b/src/ChuvadiReader.Ui/wwwroot/js/reader.js
+index ac3e00b..cfca028 100644
+--- a/src/ChuvadiReader.Ui/wwwroot/js/reader.js
++++ b/src/ChuvadiReader.Ui/wwwroot/js/reader.js
+@@ -52,6 +52,25 @@ let lastTapTime = 0, lastTapX = 0, lastTapY = 0;
+ let sawPinch = false;      // did the current finger-sequence involve 2 fingers?
+ let dblZoomedIn = false, dblBaseZoom = 1;
+ 
++// The page the reader is looking at: the one covering the most of the view, measured now from the
++// page boxes. (Ratios are kept by the observer only at threshold crossings and are relative to each
++// page's own height, so at a high zoom a page filling the view, ~1/3 of a tall page, lost to a stale
++// ratio of a page long gone: Android round 3, double-tap on page 2 showed "1 / 6".)
++function reportVisiblePage() {
++    if (!scrollTarget) return;
++    const dr = scrollTarget.getBoundingClientRect();
++    let best = -1, bestPx = 0;
++    for (const k in ratios) {
++        if (!(ratios[k] > 0)) continue;
++        const w = scrollTarget.querySelector('.rpage-wrap[data-page="' + k + '"]');
++        if (!w) continue;
++        const r = w.getBoundingClientRect();
++        const px = Math.min(r.bottom, dr.bottom) - Math.max(r.top, dr.top);
++        if (px > bestPx) { bestPx = px; best = parseInt(k, 10); }
++    }
++    if (best >= 0) invoke('OnPageVisible', best + 1);
++}
++
+ export function init(deskEl, dotnetRef) {
+     dotnet = dotnetRef;
+     teardownObservers();
+@@ -71,11 +90,7 @@ export function init(deskEl, dotnetRef) {
+     spy = new IntersectionObserver((entries) => {
+         for (const e of entries) ratios[pageOf(e.target)] = e.isIntersecting ? e.intersectionRatio : 0;
+         if (performance.now() < suppressUntil) return;
+-        let best = -1, bestRatio = -1;
+-        for (const k in ratios) {
+-            if (ratios[k] > bestRatio) { bestRatio = ratios[k]; best = parseInt(k, 10); }
+-        }
+-        if (best >= 0) invoke('OnPageVisible', best + 1);
++        reportVisiblePage();
+     }, { root: deskEl, threshold: [0, 0.25, 0.5, 0.75, 1] });
+ 
+     deskEl.querySelectorAll('[data-page]').forEach(el => { lazy.observe(el); spy.observe(el); });
+@@ -89,6 +104,9 @@ export function init(deskEl, dotnetRef) {
+         scrollTimer = setTimeout(() => {
+             scrollTimer = 0;
+             invoke('OnScroll', scrollTarget ? scrollTarget.scrollTop : 0);
++            // A zoomed-in page is taller than the view, so scrolling within it crosses no visibility
++            // threshold; re-check the page here too.
++            if (performance.now() >= suppressUntil) reportVisiblePage();
+         }, 200);
+     };
+     deskEl.addEventListener('scroll', scrollHandler, { passive: true });
+@@ -445,6 +463,24 @@ function setZoomVar(s) {
+ function clampZoom(s) { return Math.max(0.1, Math.min(8, Math.round(s * 1000) / 1000)); }
+ 
+ function anchorZoom(cx, cy, oldS, newS) {
++    // Keep the point under the finger / cursor on the same spot of the same page. Scaling the whole
++    // scroll offset (below) also scales the fixed gaps between pages, which drifts by a page or more
++    // at a high zoom (Android round 3: double-tap on page 2 zoomed into page 3). Vertically the page's
++    // .rpage-wrap is measured (not zoomed itself, so its box is right in every WebView); sideways the
++    // page itself, as zoomToRect does.
++    const hit = document.elementFromPoint(cx, cy);
++    const wrap = hit && hit.closest ? hit.closest('.rpage-wrap') : null;
++    const subj = wrap ? (wrap.querySelector('.rpage svg') || wrap.querySelector('.rpage')) : null;
++    if (wrap && subj && deskRef.contains(wrap)) {
++        const w1 = wrap.getBoundingClientRect(), p1 = subj.getBoundingClientRect();
++        const fy = w1.height ? (cy - w1.top) / w1.height : 0;
++        const fx = p1.width ? (cx - p1.left) / p1.width : 0;
++        setZoomVar(newS);
++        const w2 = wrap.getBoundingClientRect(), p2 = subj.getBoundingClientRect();
++        deskRef.scrollTop += (w2.top + fy * w2.height) - cy;
++        deskRef.scrollLeft += (p2.left + fx * p2.width) - cx;
++        return;
++    }
+     const r = deskRef.getBoundingClientRect();
+     const x = deskRef.scrollLeft + (cx - r.left);
+     const y = deskRef.scrollTop + (cy - r.top);
+@@ -478,6 +514,22 @@ function notifyZoom(s) {
+ }
+ 
+ // Returns the absolute scale that fits the page width / whole page; 0 if not measurable.
++// A page's size at 100 %. From the rendered SVG's own width / height (e.g. "595pt") when there is one,
++// else offsetWidth / offsetHeight (layout size, unzoomed). Never getBoundingClientRect ÷ zoom: older
++// WebViews (Android API 35) report a CSS-zoomed box unzoomed, which made Fit page 147 px wide on a
++// 402 px phone (round 3).
++function naturalSize(page) {
++    const svg = page.querySelector('svg');
++    const toPx = (v) => {
++        const m = /^\s*([\d.]+)\s*(pt|px)?\s*$/.exec(v || '');
++        return m ? parseFloat(m[1]) * (m[2] === 'pt' ? 96 / 72 : 1) : 0;
++    };
++    let natW = svg ? toPx(svg.getAttribute('width')) : 0;
++    let natH = svg ? toPx(svg.getAttribute('height')) : 0;
++    if (!natW || !natH) { natW = page.offsetWidth; natH = page.offsetHeight; }
++    return { natW, natH };
++}
++
+ // A newly opened document is fitted right after init, often before any page has rendered. The
+ // placeholder (.rpage-load) is sized in points (595 × 842), 3/4 of a rendered page (96/72 px per pt),
+ // so measuring it fitted pages 4/3 too large on a slow device (Android emulator: Fit page 456 px on a
+@@ -489,9 +541,7 @@ export async function measureFit(deskEl, mode) {
+     const rendered = deskEl && deskEl.querySelector('.rpage svg');
+     const page = rendered ? rendered.closest('.rpage') : deskEl && deskEl.querySelector('.rpage');
+     if (!page) return 0;
+-    const z = readZoom();
+-    const rect = page.getBoundingClientRect();
+-    const natW = rect.width / z, natH = rect.height / z;
++    const { natW, natH } = naturalSize(page);
+     if (!natW || !natH) return 0;
+     const cols = deskEl.classList.contains('two') ? 2 : 1;
+     const gap = 18, padX = 60, padY = 44;

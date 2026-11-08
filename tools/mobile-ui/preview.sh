@@ -26,7 +26,9 @@ case "$FF" in *-base)
 *)
   # Copy the working tree (tracked + new files), not .git.
   (cd "$ROOT" && git ls-files -co --exclude-standard -z | xargs -0 -I{} sh -c 'if [ -e "$1" ]; then cp --parents "$1" "$0"; fi' "$SCRATCH" {})
-  for p in "$ROOT"/docs/mobile-ui/proposal/mobile-ui-hooks-*.patch; do (cd "$SCRATCH" && git apply "$p"); done
+  # Each mobile-ui-hooks-N.patch is the full set; apply only the highest N (as Android's compose.sh does).
+  p=$(ls "$ROOT"/docs/mobile-ui/proposal/mobile-ui-hooks-*.patch | sort -V | tail -1)
+  (cd "$SCRATCH" && git apply "$p")
   export CHVD_FF="$FF"
   ;;
 esac

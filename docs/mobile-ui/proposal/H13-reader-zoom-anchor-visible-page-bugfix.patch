@@ -1,0 +1,112 @@
+diff --git a/src/ChuvadiReader.Ui/wwwroot/js/reader.js b/src/ChuvadiReader.Ui/wwwroot/js/reader.js
+index ac3e00b..cfca028 100644
+--- a/src/ChuvadiReader.Ui/wwwroot/js/reader.js
++++ b/src/ChuvadiReader.Ui/wwwroot/js/reader.js
+@@ -52,6 +52,25 @@ let lastTapTime = 0, lastTapX = 0, lastTapY = 0;
+ let sawPinch = false;      // did the current finger-sequence involve 2 fingers?
+ let dblZoomedIn = false, dblBaseZoom = 1;
+ 
++// The page the reader is looking at: the one covering the most of the view, measured now from the
++// page boxes. (Ratios are kept by the observer only at threshold crossings and are relative to each
++// page's own height, so at a high zoom a page filling the view, ~1/3 of a tall page, lost to a stale
++// ratio of a page long gone: Android round 3, double-tap on page 2 showed "1 / 6".)
++function reportVisiblePage() {
++    if (!scrollTarget) return;
++    const dr = scrollTarget.getBoundingClientRect();
++    let best = -1, bestPx = 0;
++    for (const k in ratios) {
++        if (!(ratios[k] > 0)) continue;
++        const w = scrollTarget.querySelector('.rpage-wrap[data-page="' + k + '"]');
++        if (!w) continue;
++        const r = w.getBoundingClientRect();
++        const px = Math.min(r.bottom, dr.bottom) - Math.max(r.top, dr.top);
++        if (px > bestPx) { bestPx = px; best = parseInt(k, 10); }
++    }
++    if (best >= 0) invoke('OnPageVisible', best + 1);
++}
++
+ export function init(deskEl, dotnetRef) {
+     dotnet = dotnetRef;
+     teardownObservers();
+@@ -71,11 +90,7 @@ export function init(deskEl, dotnetRef) {
+     spy = new IntersectionObserver((entries) => {
+         for (const e of entries) ratios[pageOf(e.target)] = e.isIntersecting ? e.intersectionRatio : 0;
+         if (performance.now() < suppressUntil) return;
+-        let best = -1, bestRatio = -1;
+-        for (const k in ratios) {
+-            if (ratios[k] > bestRatio) { bestRatio = ratios[k]; best = parseInt(k, 10); }
+-        }
+-        if (best >= 0) invoke('OnPageVisible', best + 1);
++        reportVisiblePage();
+     }, { root: deskEl, threshold: [0, 0.25, 0.5, 0.75, 1] });
+ 
+     deskEl.querySelectorAll('[data-page]').forEach(el => { lazy.observe(el); spy.observe(el); });
+@@ -89,6 +104,9 @@ export function init(deskEl, dotnetRef) {
+         scrollTimer = setTimeout(() => {
+             scrollTimer = 0;
+             invoke('OnScroll', scrollTarget ? scrollTarget.scrollTop : 0);
++            // A zoomed-in page is taller than the view, so scrolling within it crosses no visibility
++            // threshold; re-check the page here too.
++            if (performance.now() >= suppressUntil) reportVisiblePage();
+         }, 200);
+     };
+     deskEl.addEventListener('scroll', scrollHandler, { passive: true });
+@@ -445,6 +463,24 @@ function setZoomVar(s) {
+ function clampZoom(s) { return Math.max(0.1, Math.min(8, Math.round(s * 1000) / 1000)); }
+ 
+ function anchorZoom(cx, cy, oldS, newS) {
++    // Keep the point under the finger / cursor on the same spot of the same page. Scaling the whole
++    // scroll offset (below) also scales the fixed gaps between pages, which drifts by a page or more
++    // at a high zoom (Android round 3: double-tap on page 2 zoomed into page 3). Vertically the page's
++    // .rpage-wrap is measured (not zoomed itself, so its box is right in every WebView); sideways the
++    // page itself, as zoomToRect does.
++    const hit = document.elementFromPoint(cx, cy);
++    const wrap = hit && hit.closest ? hit.closest('.rpage-wrap') : null;
++    const subj = wrap ? (wrap.querySelector('.rpage svg') || wrap.querySelector('.rpage')) : null;
++    if (wrap && subj && deskRef.contains(wrap)) {
++        const w1 = wrap.getBoundingClientRect(), p1 = subj.getBoundingClientRect();
++        const fy = w1.height ? (cy - w1.top) / w1.height : 0;
++        const fx = p1.width ? (cx - p1.left) / p1.width : 0;
++        setZoomVar(newS);
++        const w2 = wrap.getBoundingClientRect(), p2 = subj.getBoundingClientRect();
++        deskRef.scrollTop += (w2.top + fy * w2.height) - cy;
++        deskRef.scrollLeft += (p2.left + fx * p2.width) - cx;
++        return;
++    }
+     const r = deskRef.getBoundingClientRect();
+     const x = deskRef.scrollLeft + (cx - r.left);
+     const y = deskRef.scrollTop + (cy - r.top);
+@@ -478,6 +514,22 @@ function notifyZoom(s) {
+ }
+ 
+ // Returns the absolute scale that fits the page width / whole page; 0 if not measurable.
++// A page's size at 100 %. From the rendered SVG's own width / height (e.g. "595pt") when there is one,
++// else offsetWidth / offsetHeight (layout size, unzoomed). Never getBoundingClientRect ÷ zoom: older
++// WebViews (Android API 35) report a CSS-zoomed box unzoomed, which made Fit page 147 px wide on a
++// 402 px phone (round 3).
++function naturalSize(page) {
++    const svg = page.querySelector('svg');
++    const toPx = (v) => {
++        const m = /^\s*([\d.]+)\s*(pt|px)?\s*$/.exec(v || '');
++        return m ? parseFloat(m[1]) * (m[2] === 'pt' ? 96 / 72 : 1) : 0;
++    };
++    let natW = svg ? toPx(svg.getAttribute('width')) : 0;
++    let natH = svg ? toPx(svg.getAttribute('height')) : 0;
++    if (!natW || !natH) { natW = page.offsetWidth; natH = page.offsetHeight; }
++    return { natW, natH };
++}
++
+ // A newly opened document is fitted right after init, often before any page has rendered. The
+ // placeholder (.rpage-load) is sized in points (595 × 842), 3/4 of a rendered page (96/72 px per pt),
+ // so measuring it fitted pages 4/3 too large on a slow device (Android emulator: Fit page 456 px on a
+@@ -489,9 +541,7 @@ export async function measureFit(deskEl, mode) {
+     const rendered = deskEl && deskEl.querySelector('.rpage svg');
+     const page = rendered ? rendered.closest('.rpage') : deskEl && deskEl.querySelector('.rpage');
+     if (!page) return 0;
+-    const z = readZoom();
+-    const rect = page.getBoundingClientRect();
+-    const natW = rect.width / z, natH = rect.height / z;
++    const { natW, natH } = naturalSize(page);
+     if (!natW || !natH) return 0;
+     const cols = deskEl.classList.contains('two') ? 2 : 1;
+     const gap = 18, padX = 60, padY = 44;
