@@ -37,6 +37,8 @@ public static class PlatformText
     /// <summary>Library with no PDFs on the portal, which has no category folders (W-1).</summary>
     public const string LibraryEmptyServer = "No PDFs here yet. Use Upload to open documents. Files are removed when you sign out.";
 
-    /// <summary>Home's first-run tip on the phone layout, which has no Ctrl key (W-4).</summary>
-    public const string PhoneFindTip = "Tip: tap “Find or do anything” to reach any file or action. Try typing “merge”.";
+    /// <summary>Home's first-run tip on the tablet and phone layouts (W-4, D-96): touch wording keyed on the
+    /// form factor, not the input (an Android tablet reports a keyboard). Both layouts show the same
+    /// "Find or do anything…" control.</summary>
+    public const string TouchFindTip = "Tip: tap “Find or do anything” to reach any file or action. Try typing “merge”.";
 }

@@ -37,6 +37,8 @@ Four commits: code (`src`, `tests`, `ChuvadiReader.Platforms.slnx`, `Directory.B
 - **Bug fix:** open requests queue instead of overwriting each other (only reachable with several at once, e.g. a multi-file upload).
 - **Single instance, tabbed:** opening a file while Chuvadi runs hands it to the running window as a new tab; Windows now opens the file it is started with (it ignored it before); every dropped file opens (before: only the first). A frozen running copy can't block a launch: after 1.5 s the new launch opens its own window.
 - Print results show as errors when printing failed or was refused (before: decided from the wording).
+- **Bug fixes (Mobile UI H-8, H-9):** the Reader re-renders correctly after a document change, and "fit" is computed after the page has rendered (it could measure a stale, over-wide page).
+- Phone and tablet layouts (tabs sheet, Settings on phone, Redact fit width, Home search) and the portal's phone account block — never shown on Windows. Phase 0 sample files appear only on Windows (other platforms start empty).
 - Web and Android wording for the Home summary, the drop zone, Appearance and the Preferred-name hint (Windows text unchanged).
 - Shared kit: the default save folder no longer falls back to the temp folder when Documents doesn't exist yet (Linux).
 - `ci/packages`: Chuvadi.Print and Chuvadi.Print.Ipp 1.0.0-rc.2 (used by the Linux host; nothing in this PR references them).

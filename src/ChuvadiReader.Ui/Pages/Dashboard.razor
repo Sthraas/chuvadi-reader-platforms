@@ -37,7 +37,7 @@
             {
             <p class="blurb">@LibCountText in your library · @Recents.EncryptedCount encrypted · nothing leaves this device.</p>
             }
-        </section>
+        </section>@* Phone: 4a's search under the count line (H-10); null elsewhere, renders nothing. *@@PhoneHomeSearch
 
         @if (IsFirstRun)
         {
@@ -66,9 +66,9 @@
                 </span>
                 }
             </div>
-            @if (ChuvadiReader.Platform.ShellLayouts.Shell(Platform) == ChuvadiReader.Platform.ShellLayout.Phone)
+            @if (ChuvadiReader.Platform.ShellLayouts.Shell(Platform) is ChuvadiReader.Platform.ShellLayout.Tablet or ChuvadiReader.Platform.ShellLayout.Phone)
             {
-                <p class="tip">@ChuvadiReader.Ui.Components.Platform.PlatformText.PhoneFindTip</p>
+                <p class="tip">@ChuvadiReader.Ui.Components.Platform.PlatformText.TouchFindTip</p>
             }
             else
             {
@@ -250,6 +250,10 @@
 </div>
 
 @code {
+    /// <summary>Phone (Portal & Android 4a): the shell's search button, placed under the count line.
+    /// Only the phone shell cascades it; elsewhere it is null and renders nothing.</summary>
+    [CascadingParameter(Name = "PhoneHomeSearch")] public RenderFragment? PhoneHomeSearch { get; set; }
+
     private const int RecentCount = 4;
     private static readonly int[] EmptyBooks = { 16, 22, 14, 26, 18, 20, 15, 24, 17 };
 

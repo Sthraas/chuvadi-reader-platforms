@@ -13,6 +13,7 @@ For every platform chat (Mac, Linux, Android, Web) and the UI chats (Mobile app 
 - **Single instance, tabbed** (W-A, L-A, F-1): `IAppInstance`, the `IncomingFiles` router and `DesktopSingleInstance` in the kit; Windows built. Linux, Mac and Android steps: `SINGLE-INSTANCE.md` (end).
 - **Host notices:** register an `IHostNotices` (tab title + text read on demand) to show your own bundled notices — Android, Linux and Mac: the .NET runtime's `ThirdPartyNotices`. Default: none.
 - Fourth combined patch (P-06, Print-card toast style, W-1–W-4): `COMBINED-HOOKS-4.md`.
+- Sixth combined patch (Mobile UI H-5–H-12, PhoneShell slot, Web UI H5/H6, touch tip; Phase 0 samples only on Windows): `COMBINED-HOOKS-6.md`.
 - **Portal drag-and-drop (D-89):** the Ui catches drops on the portal and hands them to `IDroppedFiles` (Web host implements it, then sets `DropFiles = true`); where `DropFiles` is false the Home wording has no "Drop". `COMBINED-HOOKS-5.md`.
 
 ## 2. Writing a host

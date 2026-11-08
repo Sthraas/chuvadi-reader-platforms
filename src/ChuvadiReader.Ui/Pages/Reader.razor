@@ -3524,8 +3524,14 @@
         StateHasChanged();
     }
 
+    // From reader.js (← / →). A JS call doesn't re-render the page, so the counter would lag behind
+    // (on a phone, one snapped page per screen, until the next tap).
     [JSInvokable]
-    public Task NavPage(int delta) => GoTo(CurPage + delta);
+    public async Task NavPage(int delta)
+    {
+        await GoTo(CurPage + delta);
+        StateHasChanged();
+    }
 
     private async Task GoTo(int page)
     {
