@@ -595,3 +595,14 @@ capitalises on Enter (the search found 1/4).
   P-06, P-07 and Mobile UI's hooks-4 already in Foundation. Mobile UI `a20f6d1` unchanged. Android 0 warnings;
   Platforms `-warnaserror` 0 warnings; tests 171 + 54 + 33 + 16 pass.
 - One run, `emulators=phone-35,tablet-35`: the WebView gate (update screen, Play button, back in) on WebView 124.
+
+### 51. Round 7 — run 42490699776 (API 35 only, WebView 124.0.6367.219)
+| WebView gate | Phone 35 | Tablet 35 |
+|---|---|---|
+| Update screen instead of the Reader, version named | FAIL¹ | PASS |
+| Update button leaves the app | FAIL¹ | PASS (opened Chrome: no Play Store on this image) |
+| Back in: same process, still the update screen | FAIL¹ | PASS |
+| No crash / ANR in the app | PASS | PASS |
+| Smoke | PASS | PASS |
+1. The emulator's own "Pixel Launcher isn't responding" dialog was over the screen (dump texts: only that dialog),
+   as in round 4. `webview_gate.py` now taps its "Wait" before reading the screen, like gestures.py does.

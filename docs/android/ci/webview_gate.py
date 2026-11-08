@@ -28,7 +28,20 @@ def shot(name):
 
 
 def dump():
-    return subprocess.run(["adb", "exec-out", "uiautomator", "dump", "/dev/tty"], capture_output=True, text=True).stdout
+    """UI tree, after tapping "Wait" on the emulator's own "<app> isn't responding" dialog if it shows
+    (round 7: Pixel Launcher's covered the update screen on phone API 35; emulator noise, not our app)."""
+    xml = ""
+    for _ in range(4):
+        xml = subprocess.run(["adb", "exec-out", "uiautomator", "dump", "/dev/tty"], capture_output=True, text=True).stdout
+        if not re.search(r"isn.t responding", xml):
+            return xml
+        m = re.search(r'text="Wait"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', xml)
+        if not m:
+            return xml
+        x1, y1, x2, y2 = map(int, m.groups())
+        adb("shell", "input", "tap", str((x1 + x2) // 2), str((y1 + y2) // 2))
+        time.sleep(2)
+    return xml
 
 
 def texts(xml):
