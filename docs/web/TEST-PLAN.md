@@ -79,6 +79,7 @@ The Web projects aren't in `ChuvadiReader.Platforms.slnx` on purpose: that solut
 | S-11 | Expiry (D-30) | 30 min idle, 8 h absolute; warning 5 min before in every open tab; "I'm still here", any input or a page load takes the idle warning down; only real activity counts (not the circuit's keep-alive, not static files); at the end the cookie stops working and files go | U `SessionClockTests`; E `expiry.py` (short limits) |
 | S-12 | Working copies at rest (D-28) | Outside Development, start-up refused unless `DataRoot` is on tmpfs and swap is off, dm-crypt or zram; Data Protection keys never on disk | U `StorageCheckTests`; M (rehearsal: refusal on a disk data root) |
 | S-13 | Transport and headers | HTTPS redirect (307 to the public port), HSTS, CSP (in gateway mode too: a relayed Reader page carries the full policy, WT-01) (`script-src 'self'`, `frame-ancestors 'self'`), `nosniff`, frame and referrer policy, no `Server` header; TLS 1.2/1.3 only | U `Every_response_carries_the_security_headers`; M (rehearsal, `curl -vk`) |
+| S-13a | Sangam address (WT-15) | Outside Development, start-up is refused unless `Sangam:Authority` is https (discovery, keys and the token call with the client secret never go over plain http) | U `StorageCheckTests.Production_refuses_a_sangam_address_that_isnt_https` |
 | S-14 | Certificates | Let's Encrypt via our ACME client: order, renew in window, keep working certificate on failure, hot swap without restart | U `Acme*Tests`, `CertificateSourceTests`; **V-2** on staging |
 | S-15 | Error handling | Unexpected failures show `/error` (anonymous; never loops through sign-in); no stack traces outside Development | U `The_error_page_needs_no_sign_in…`; M |
 | S-16 | Logs | No document content, tokens, passwords or cookies in logs; worker log lines carry a key hash, not the person's id | M (`journalctl` review during staging) |
@@ -210,6 +211,10 @@ Found and fixed while running this plan:
 - `flows.py` in gateway mode: Chrome, Firefox, WebKit and Chromium 9/9, no 403s in the server log.
 - `load.py` (3 people, own browser each): 3/3, times in ms from draws.
 - `check-package.sh` on a fresh publish: pass (and fails on the old package).
+
+**9 Nov, early (on `platform/foundation` @ `f1e4126`; WT-14, WT-15):**
+- Web 156/156 (new: http Sangam refused in Production, https starts).
+- `sangam_signin.py` in WebKit against a local Sangam: 5 runs, 13/13 each (WT-14 fix: waits for the signed-out page, not network idle).
 
 ## 8. Known gaps
 - The legal texts are drafts and say not to publish until counsel has reviewed them: V-7 blocks go-live until the DRAFT lines are gone.

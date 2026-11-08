@@ -267,3 +267,9 @@ dotnet test tests/ChuvadiReader.Web.Tests -c Release   # 123 passed, 0 warnings
 - **O-1:** every call to Sangam (discovery, keys, token) has `Sangam:CallTimeout`, 10 s; a hang gives the "can't be reached" message.
 - **O-2:** "Continue with Sangam" first probes Sangam (`Sangam:ProbeTimeout` 2 s, answer reused `Sangam:ProbeCacheFor` 30 s), so a Sangam that went down after discovery was cached shows our message instead of a dead page.
 - Not for Web: WT-02, WT-09, WT-10 (shared Ui, to the Foundation); WT-05 (decided D-103, in the Foundation's patch).
+
+### 26. WT-14 to WT-16 (D-129) — 9 Nov, early
+- Rebased onto `platform/foundation` @ `f1e4126` (ninth patch: opening password-protected PDFs through the library).
+- **WT-14:** `sangam_signin.py` now waits for the portal's signed-out page after sign-out, instead of network idle (WebKit could be idle on Sangam's end-session page before the redirect). WebKit 5 runs, 13/13 each.
+- **WT-15:** outside Development and the test suite, start-up is refused unless `Sangam:Authority` is https. It is checked when the options are built, so a misconfigured portal never serves a page. Tests: http refused, https starts (Production, data root on tmpfs).
+- **WT-16 / O-3 (one .zip for multi-file saves):** not built yet; it needs Chuvadi.Zip in `ci/packages`, which isn't there. The host side is ready to build: the Ui already commits a whole folder through `IFileWriteBack` after "Split to folder" and the like, so the host can zip the folder at that moment (two or more files → one `.zip`, one file → that file) and stop the outbox watcher delivering folder files one by one.

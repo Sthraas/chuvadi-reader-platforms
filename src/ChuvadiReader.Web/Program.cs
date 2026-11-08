@@ -47,7 +47,13 @@ public static class Program
             .Validate(o => o.Mode != PortalMode.Worker || !string.IsNullOrEmpty(o.WorkerSocket) && !string.IsNullOrEmpty(o.WorkerOwner),
                 "A worker is started by the gateway only.")
             .ValidateOnStart();
-        builder.Services.AddOptions<SangamOptions>().Bind(builder.Configuration.GetSection(SangamOptions.Section));
+        // WT-15: discovery, keys, the token call (with the client secret) and back-channel logouts never go
+        // over plain http, except against a local Sangam in Development and the test suite.
+        builder.Services.AddOptions<SangamOptions>().Bind(builder.Configuration.GetSection(SangamOptions.Section))
+            .Validate(o => devSignIn || string.IsNullOrWhiteSpace(o.Authority)
+                    || Uri.TryCreate(o.Authority, UriKind.Absolute, out var a) && a.Scheme == Uri.UriSchemeHttps,
+                "Sangam:Authority must be an https address outside Development.")
+            .ValidateOnStart();
         builder.Services.AddSingleton(TimeProvider.System);
 
         // Links of the portal chrome (D-35): the account menu in the Reader, and the sign-in page.

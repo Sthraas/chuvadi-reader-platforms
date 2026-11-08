@@ -145,8 +145,11 @@ with sync_playwright() as p:
             btn = page.query_selector(f"button:has-text('{label}')")
             if btn and not page.url.startswith(portal):
                 btn.click()
-                page.wait_for_load_state("networkidle")
                 break
+        try:  # WT-14: WebKit can be idle on Sangam's end-session page before its redirect back
+            page.wait_for_url(portal + "/signed-out**", timeout=30000)
+        except Exception:  # noqa: BLE001 - reported by the check below
+            pass
         check("sign-out ends on the portal's signed-out page", page.url.startswith(portal + "/signed-out"), page.url[:120])
         for _ in range(40):
             if tab2.url.startswith(portal + "/signed-out"):

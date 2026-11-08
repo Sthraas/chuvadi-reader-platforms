@@ -98,4 +98,53 @@ public class StorageCheckTests
         ]));
         Assert.Contains("D-28", ex.Message);
     }
+
+    [Theory]
+    [InlineData("http://sangam.example.in/", false)]
+    [InlineData("https://sangam.example.in/", true)]
+    public async Task Production_refuses_a_sangam_address_that_isnt_https(string authority, bool starts)
+    {
+        // WT-15: discovery, keys and the token call (with the client secret) never go over plain http.
+        if (!Directory.Exists("/dev/shm"))
+        {
+            return; // needs a RAM folder for the data root (D-28)
+        }
+
+        var root = Path.Combine("/dev/shm", "chvd-wt15-" + Guid.NewGuid().ToString("N"));
+
+        Directory.CreateDirectory(root);
+        try
+        {
+            string[] args =
+            [
+                "--environment", "Production",
+                "--urls", "http://127.0.0.1:0",
+                "--Portal:DataRoot", root,
+                "--Portal:PublicOrigin", "https://reader.example.in",
+                "--Portal:Storage:RequireEncryptedSwap", "false",
+                "--Sangam:Authority", authority,
+                "--Sangam:ClientId", "chuvadi-reader",
+                "--Logging:LogLevel:Default", "None",
+            ];
+            if (starts)
+            {
+                await using var app = Program.Build(args);
+                await app.StartAsync();
+                await app.StopAsync();
+            }
+            else
+            {
+                var ex = await Assert.ThrowsAsync<Microsoft.Extensions.Options.OptionsValidationException>(async () =>
+                {
+                    await using var app = Program.Build(args);
+                    await app.StartAsync();
+                });
+                Assert.Contains("Sangam:Authority must be an https address", ex.Message);
+            }
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
 }
