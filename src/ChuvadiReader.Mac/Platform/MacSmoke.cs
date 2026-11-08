@@ -127,7 +127,12 @@ internal static class MacSmoke
             (function () {
               var e = document.getElementById('blazor-error-ui');
               return 'route=' + location.pathname + ' reader=' + (document.querySelector('.reader') ? 1 : 0)
-                + ' errorbar=' + (e ? getComputedStyle(e).display : 'none');
+                + ' errorbar=' + (e ? getComputedStyle(e).display : 'none') + (function () {
+                  var f = document.querySelector('iframe.htv-frame');
+                  if (!f) { return ''; }
+                  var b = f.contentDocument && f.contentDocument.body;
+                  return ' frame=' + (b && b.innerText.trim() ? JSON.stringify(b.innerText.trim().slice(0, 40)) : 'empty');
+                })();
             })()
             """;
         try
