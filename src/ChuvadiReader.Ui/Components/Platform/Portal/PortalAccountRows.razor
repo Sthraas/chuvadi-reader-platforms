@@ -1,0 +1,49 @@
+@namespace ChuvadiReader.Ui.Components.Platform.Portal
+@using ChuvadiReader.Platform
+@using ChuvadiReader.Ui.Components.Settings
+@implements IDisposable
+@inject IAccount Account
+@inject PortalLinks Links
+
+@*
+    Settings › Account & roles › "Signed in" on the web portal (U-14 a, coordinator 7 Nov). Replaces the
+    two desktop placeholder rows ("User: Not signed in", "Sign in with Sangam") — on the portal everyone
+    is signed in with Sangam. The card's other rows (Role, Sign-in method, Lock after idle) stay as they are.
+    Rendered by AccountSection only when IPlatformInfo.Chrome.AccountMenu is true.
+*@
+<SettingRow Label="@Account.DisplayName" Hint="@IdLine">
+    <ValueChip Text="Sangam" Dot="var(--chvd-olive)" Title="Signed in with Sangam" />
+</SettingRow>
+@if (Links.AccountSettingsUrl is { } settings)
+{
+    <SettingRow Label="Account settings" Hint="Manage your Sangam account, on Sangam's own pages">
+        @* A link, not a RowButton: it must open a new tab (leaving the portal tab would end the session
+           and its working copies), and a script-opened tab after a server round trip is popup-blocked. *@
+        <a class="pacct-link" href="@settings" target="_blank" rel="noopener"><Icon Name="settings" Size="13" />Open</a>
+    </SettingRow>
+}
+<SettingRow Label="Sign out" Hint="Your working copies are removed from the server">
+    <RowButton IconName="log-out" OnClick="SignOut" Disabled="_signingOut">Sign out</RowButton>
+</SettingRow>
+
+@code {
+    private bool _signingOut;
+
+    private string? IdLine =>
+        string.IsNullOrEmpty(Account.Email) ? null
+        : string.IsNullOrEmpty(Account.Unit) ? Account.Email
+        : Account.Email + " · " + Account.Unit;
+
+    protected override void OnInitialized() => Account.Changed += OnChanged;
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    private async Task SignOut()
+    {
+        _signingOut = true;
+        try { await Account.SignOutAsync(); }
+        finally { _signingOut = false; }
+    }
+
+    public void Dispose() => Account.Changed -= OnChanged;
+}

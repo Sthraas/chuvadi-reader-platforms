@@ -43,6 +43,9 @@ public abstract class ViewerBase : ComponentBase, IAsyncDisposable
     /// <summary>One-line description for the status bar, e.g. "Markdown · rendered · 186 words".</summary>
     [Parameter] public EventCallback<string> OnStatus { get; set; }
 
+    /// <summary>"Stop opening" on a slow open (B-08b): the Reader closes the tab.</summary>
+    [Parameter] public EventCallback OnStopOpening { get; set; }
+
     /// <summary>Go to page / section / line / sheet <paramref name="index"/> (1-based).</summary>
     public abstract Task GoToAsync(int index);
 
@@ -141,8 +144,23 @@ public abstract class ViewerBase : ComponentBase, IAsyncDisposable
 
     protected virtual ValueTask DisposeCoreAsync() => ValueTask.CompletedTask;
 
+    private CancellationTokenSource? _loadCancel;
+
+    /// <summary>
+    /// B-08b (D-136): a token for one load, handed to the library. It is cancelled when the next load starts,
+    /// when the viewer goes away (the tab closed, "Stop opening"), and after <see cref="SlowOpenNote.GiveUpAfter"/>,
+    /// when the slow-open note gives up; the library then stops reading within a moment.
+    /// </summary>
+    protected CancellationToken NewLoadToken()
+    {
+        _loadCancel?.Cancel();
+        _loadCancel = new CancellationTokenSource(SlowOpenNote.GiveUpAfter);
+        return _loadCancel.Token;
+    }
+
     public async ValueTask DisposeAsync()
     {
+        _loadCancel?.Cancel();
         if (_disposed) return;
         try { await DisposeCoreAsync(); } catch { /* teardown */ }
         _disposed = true;

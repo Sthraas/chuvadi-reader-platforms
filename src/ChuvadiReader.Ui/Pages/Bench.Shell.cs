@@ -1,5 +1,6 @@
 using ChuvadiReader.Core.Reader;
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 
 namespace ChuvadiReader.Ui.Pages;
 
@@ -51,6 +52,7 @@ public partial class Bench
 
         var pages = BenchSvc.Desks.Sum(d => d.Pages.Count);
         var desks = BenchSvc.Desks.Count;
+        PublishDeskCounter(desks);
         var sel = BenchSvc.SelectedCount;
         Shell.SetActivity($"Arrange · {desks} desk{(desks == 1 ? "" : "s")} · {pages} page{(pages == 1 ? "" : "s")}{(sel > 0 ? $" · {sel} selected" : "")}");
         Shell.RegisterCommands(this, ArrangeCommands().ToList());
@@ -59,13 +61,40 @@ public partial class Bench
     private void ShellRelease()
     {
         Shell.UnregisterCommands(this);
+        if (ReferenceEquals(Shell.CounterHandler, _deskCounterHandler))
+        {
+            Shell.CounterHandler = null;
+        }
+    }
+
+    private Func<int, Task>? _deskCounterHandler;
+
+    /// <summary>Tablet layout only (design 12f, D-46): "‹ 2 desks ›" in the counter, ‹ › moving between
+    /// desks. Desktop and phone keep their Arrange top bar exactly as before (no counter).</summary>
+    private void PublishDeskCounter(int desks)
+    {
+        if (ChuvadiReader.Platform.ShellLayouts.Shell(Platform) != ChuvadiReader.Platform.ShellLayout.Tablet)
+        {
+            return;
+        }
+
+        _deskCounterHandler ??= async n =>
+        {
+            if (_module is null) return;
+            try { await _module.InvokeVoidAsync("scrollDeskTo", n - 1); }
+            catch (JSDisconnectedException) { }
+        };
+        Shell.CounterHandler = _deskCounterHandler;
+        var focus = FocusDeskId is { } id ? BenchSvc.Desks.ToList().FindIndex(d => d.Id == id) + 1 : 0;
+        Shell.SetCounter(desks == 0 ? 0 : Math.Max(1, focus), desks, "desk");
+        Shell.SetCounterStep(1);
     }
 
     private IEnumerable<ShellCommand> ArrangeCommands()
     {
         Func<Task> T(Action a) => () => { a(); StateHasChanged(); return Task.CompletedTask; };
         var empty = BenchSvc.IsEmpty ? "The bench is empty" : null;
-        yield return new("a.fetch", "Fetch a file onto the shelf", "Arrange", "folder", null, FetchFile);
+        yield return new("a.fetch", ChuvadiReader.Ui.Components.Platform.PlatformText.FetchOrUpload(Platform, "Fetch a file onto the shelf", "Upload a file onto the shelf"), "Arrange", "folder", null, FetchFile);
         yield return new("a.desk", "Add desk", "Arrange", "plus", null, T(AddDesk), BenchSvc.CanAddDesk ? null : "30-desk limit reached");
         yield return new("a.blank", "Add a blank page", "Arrange", "page-add", null, T(AddBlankToFocused), FocusDeskId is null ? "No desk yet" : null);
         yield return new("a.shelf", _shelfHidden ? "Show the shelf" : "Hide the shelf", "Arrange", "shelf", null, T(() => _shelfHidden = !_shelfHidden));

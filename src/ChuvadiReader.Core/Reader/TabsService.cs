@@ -23,10 +23,34 @@ public sealed class ReaderTab
 
     public bool IsLoading { get; set; }
 
+    /// <summary>Cancels this tab's PDF open while it is loading (B-24); closing the tab cancels it.</summary>
+    internal CancellationTokenSource? OpenCancel { get; set; }
+
     public string? Error { get; set; }
 
+    /// <summary>The PDF is password-protected and waits for its password (B-07).</summary>
+    public bool NeedsPassword { get; set; }
+
+    /// <summary>The password that opened this tab's PDF. Memory only, for this tab (as Word/Excel); never persisted.</summary>
+    public string? Password { get; set; }
+
+    /// <summary>Set when the last password tried didn't open the file.</summary>
+    public string? PasswordError { get; set; }
+
+    /// <summary>The PDF couldn't be parsed (damaged or not really a PDF) — B-11. <see cref="Error"/> holds the
+    /// plain message; <see cref="ErrorDetail"/> the library's own text, for "Details".</summary>
+    public bool IsDamaged { get; set; }
+
+    public string? ErrorDetail { get; set; }
+
     // Per-tab view-state, persisted so switching (and restarting) lands where you left off.
+    /// <summary>The page in view, 1-based as shown ("page 1 of 13").</summary>
     public int CurrentPage { get; set; } = 1;
+
+    /// <summary>The page in view as a zero-based index, for code that indexes pages (print "Current",
+    /// Measure, Layers, Signatures, Password cards). WT-02: passing <see cref="CurrentPage"/> there printed
+    /// the next page.</summary>
+    public int CurrentPageIndex => Math.Max(CurrentPage - 1, 0);
 
     public double Scale { get; set; } = 1.0;
 
@@ -118,7 +142,11 @@ public sealed class TabsService
         Changed?.Invoke();
 
         await EnsureLoadedAsync(tab, ct).ConfigureAwait(false);
-        DropOtherCaches(tab);
+        if (ReferenceEquals(Active, tab))
+        {
+            DropOtherCaches(tab); // B-24: opens can overlap now; never drop the newer active tab's cache
+        }
+
         await PersistAsync(ct).ConfigureAwait(false);
         return tab;
     }
@@ -186,7 +214,7 @@ public sealed class TabsService
         }
 
         var tab = _tabs[idx];
-        tab.Session?.Dispose();
+        Release(tab);
         _tabs.RemoveAt(idx);
 
         if (ReferenceEquals(Active, tab))
@@ -218,7 +246,7 @@ public sealed class TabsService
         {
             if (!ReferenceEquals(tab, keep))
             {
-                tab.Session?.Dispose();
+                Release(tab);
             }
         }
 
@@ -232,7 +260,7 @@ public sealed class TabsService
     {
         foreach (var tab in _tabs)
         {
-            tab.Session?.Dispose();
+            Release(tab);
         }
 
         _tabs.Clear();
@@ -362,6 +390,12 @@ public sealed class TabsService
 
         foreach (var d in dtos)
         {
+            // Bug fix (D-48): a host may open a tab before the first restore; never show a file twice.
+            if (_tabs.Any(t => string.Equals(t.Path, d.Path, StringComparison.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
+
             _tabs.Add(new ReaderTab
             {
                 Id = Guid.NewGuid().ToString("N"),
@@ -384,17 +418,39 @@ public sealed class TabsService
         }
     }
 
+    /// <summary>Drops a tab's document, and stops waiting for it if it is still opening (B-24).</summary>
+    private static void Release(ReaderTab tab)
+    {
+        try
+        {
+            tab.OpenCancel?.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // the open just finished
+        }
+
+        tab.Session?.Dispose();
+    }
+
+    /// <summary>An abandoned open may still complete later; its document is closed then, never shown.</summary>
+    private static void DisposeWhenDone(Task<IPdfSession> open) =>
+        _ = open.ContinueWith(
+            t => t.Result.Dispose(),
+            CancellationToken.None,
+            TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
+
+    /// <summary>Shown under the password field when the password given doesn't open the PDF (B-07).</summary>
+    public const string WrongPassword = "That password doesn't open this file.";
+
+    /// <summary>Shown when a document can't be opened for a reason other than damage, a password or access (WT-10).</summary>
+    public const string OpenFailed = "This file is damaged or isn't a PDF Chuvadi can read.";
+
     private async Task EnsureLoadedAsync(ReaderTab tab, CancellationToken ct)
     {
         if (tab.IsLoaded || tab.IsLoading)
         {
-            return;
-        }
-
-        if (!File.Exists(tab.Path))
-        {
-            tab.Error = $"File not found: {tab.Path}";
-            Changed?.Invoke();
             return;
         }
 
@@ -407,25 +463,109 @@ public sealed class TabsService
 
         tab.IsLoading = true;
         tab.Error = null;
-        Changed?.Invoke();
+        tab.ErrorDetail = null;
+        tab.IsDamaged = false;
+        using var cancel = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        tab.OpenCancel = cancel;
+        Changed?.Invoke(); // "Opening…" shows now, before anything touches the file
+
+        // B-24: the file is touched only on a pool thread. A source that never delivers data (a hung
+        // network mount, an unplugged USB stick, a FIFO) can block even File.Exists or open(2) — the
+        // library's open runs synchronously until its first await — and on the caller's thread that
+        // froze the Reader and every later open. Closing the tab cancels the wait at once; the stuck
+        // read finishes (or not) on its own, and anything it opens later is disposed (DisposeWhenDone).
+        var path = tab.Path;
+        var password = tab.Password;
+        var token = cancel.Token;
+        var open = Task.Run(
+            async () =>
+            {
+                if (!File.Exists(path))
+                {
+                    throw new FileNotFoundException(null, path);
+                }
+
+                return await _reader.OpenAsync(path, tab.FileName, password, token, transparentBackground: true).ConfigureAwait(false);
+            },
+            CancellationToken.None);
 
         try
         {
-            tab.Session = await _reader.OpenAsync(tab.Path, tab.FileName, null, ct, transparentBackground: true).ConfigureAwait(false);
+            var session = await open.WaitAsync(cancel.Token).ConfigureAwait(false);
+            if (!_tabs.Contains(tab))
+            {
+                session.Dispose(); // B-08b: the tab was closed ("Stop opening") while it opened
+                return;
+            }
+
+            tab.Session = session;
+            tab.NeedsPassword = false;
+            tab.PasswordError = null;
             if (tab.CurrentPage > tab.Session.Document.PageCount)
             {
                 tab.CurrentPage = 1;
                 tab.ScrollTop = 0;
             }
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) when (cancel.IsCancellationRequested)
         {
-            tab.Error = $"Could not open this document. {ex.Message}";
+            DisposeWhenDone(open); // B-24: stopped while the file was still being read
+        }
+        catch (FileNotFoundException)
+        {
+            tab.Error = $"File not found: {tab.Path}";
+        }
+        catch (Chuvadi.Pdf.Primitives.PdfPasswordRequiredException ex)
+        {
+            // B-07: ask for the password. The library says whether one was given (PasswordSupplied, 3.24+):
+            // none → just the prompt; a wrong one → say so. (No RequiresPassword pre-check: it costs as much
+            // as opening a plain PDF, and on a locked file more than this failed open.)
+            tab.PasswordError = ex.PasswordSupplied ? WrongPassword : null;
+            tab.Password = null;
+            tab.NeedsPassword = true;
+        }
+        catch (Exception ex) when (ex is Chuvadi.Pdf.Primitives.PdfParseException or Chuvadi.Pdf.Primitives.PdfCorruptionException)
+        {
+            // B-11: the handout's damaged-file state, not the parser's text (kept under Details).
+            tab.IsDamaged = true;
+            tab.Error = "This PDF is damaged";
+            tab.ErrorDetail = ex.Message;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // WT-10: a plain sentence; the system's own text stays under Details.
+            tab.Error = "Chuvadi couldn't read this file. It may be open in another app, or you may not have permission to read it.";
+            tab.ErrorDetail = ex.Message;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // WT-10 / B-11b: the parser's text (e.g. "Invalid integer '4294965240' at offset 3927…") is detail.
+            tab.Error = OpenFailed;
+            tab.ErrorDetail = ex.Message;
         }
         finally
         {
+            tab.OpenCancel = null;
             tab.IsLoading = false;
             Changed?.Invoke();
+        }
+    }
+
+    /// <summary>Opens a password-protected PDF tab with <paramref name="password"/> (kept in memory for this tab only).</summary>
+    public async Task UnlockAsync(string id, string password, CancellationToken ct = default)
+    {
+        var tab = _tabs.FirstOrDefault(t => t.Id == id);
+        if (tab is null || !tab.NeedsPassword)
+        {
+            return;
+        }
+
+        tab.Password = password;
+        await EnsureLoadedAsync(tab, ct).ConfigureAwait(false);
+        if (tab.Session is not null)
+        {
+            DropOtherCaches(tab);
+            await PersistAsync(ct).ConfigureAwait(false);
         }
     }
 

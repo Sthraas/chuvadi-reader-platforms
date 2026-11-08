@@ -18,7 +18,7 @@
     }
     else if (_wb is null)
     {
-        @if (!string.IsNullOrEmpty(Path)) { <ViewerMessage IconName="clock" Text="Opening…" /> }
+        @if (!string.IsNullOrEmpty(Path)) { <ViewerMessage IconName="clock" Text="Opening…" /><SlowOpenNote OnStop="OnStopOpening" /> }
     }
     else
     {
@@ -37,18 +37,16 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @for (int r = 1; r <= lastRow; r++)
+                    @* B-09/B-10: only the rows on screen are drawn (frozen header rows always), so a sheet's size
+                       — 5,000 rows × 256 columns is 1.28 million cells — can't stall the web view. *@
+                    @{ var frozen = Math.Min(s.FreezeRows, lastRow); }
+                    @for (int r = 1; r <= frozen; r++)
                     {
-                        <tr>
-                            <th class="xv-rowhdr">@r</th>
-                            @for (int c = 1; c <= lastCol; c++)
-                            {
-                                var cell = Cell(r, c);
-                                <td class="xv-cell @(cell is null ? "empty" : null) @(s.FreezeRows > 0 && r <= s.FreezeRows ? "frozen-row" : null) @(cell is not null && _hits.Contains((r, c)) ? "hit" : null)"
-                                    style="@CellStyle(cell)">@cell?.Text</td>
-                            }
-                        </tr>
+                        @Row(s, r, lastCol)
                     }
+                    <Virtualize Items="@RowsAfter(frozen, lastRow)" Context="r" ItemSize="RowPx" OverscanCount="30" SpacerElement="tr">
+                        @Row(s, r, lastCol)
+                    </Virtualize>
                 </tbody>
             </table>
         </div>
@@ -138,10 +136,11 @@
 
         var path = Path;
         var pw = _password;
+        var token = NewLoadToken();
         try
         {
             _busy = true;
-            var wb = await Task.Run(() => Xlsx.Load(path, pw));
+            var wb = await Task.Run(() => Xlsx.Load(path, pw, token)).WaitAsync(token); // B-24: never wait past a stop
             if (v != _version || Disposed) return;
             _locked = false;
             _unlockError = null;
@@ -155,6 +154,13 @@
             _locked = true;
             _unlockError = pw is null ? null : "That password didn't work. Try again.";
             _password = null;
+        }
+        catch (OperationCanceledException)
+        {
+            // B-08b: the time limit ran out (a stop or a new load also cancels; then nothing is shown).
+            if (v != _version || Disposed) return;
+            _locked = false;
+            _error = SlowOpenNote.GaveUp;
         }
         catch (Exception ex)
         {
@@ -250,6 +256,16 @@
         if (_scrollToHit && _wb is not null)
         {
             _scrollToHit = false;
+            // The hit's row may not be drawn yet (rows are virtualised): bring its row on screen first, then
+            // centre the cell once it is.
+            var first = _hits.Count == 0 ? 0 : _hits.Min(h => h.Item1);
+            var sheet = _wb.Sheets[_active];
+            if (first > sheet.FreezeRows)
+            {
+                await JsVoidAsync("scrollGridTo", _scroll, (first - sheet.FreezeRows - 1) * RowPx * Scale);
+                await Task.Delay(50);
+            }
+
             await JsVoidAsync("scrollToSelector", _scroll, "td.hit");
         }
     }
@@ -305,6 +321,35 @@
 
     private SheetCell? Cell(int r, int c) => _index.TryGetValue((r, c), out var v) ? v : null;
 
+    /// <summary>A body row's height at 100 % (padding 3 + line 15 + padding 3 + border 1), for virtualising.</summary>
+    private const float RowPx = 22f;
+
+    private int[] _rowsAfter = [];
+    private int _rowsFrom = -1, _rowsTo = -1;
+
+    /// <summary>Rows after the frozen ones (the same array while the range is the same, so Virtualize keeps its place).</summary>
+    private int[] RowsAfter(int frozen, int lastRow)
+    {
+        if (frozen != _rowsFrom || lastRow != _rowsTo)
+        {
+            _rowsFrom = frozen;
+            _rowsTo = lastRow;
+            _rowsAfter = lastRow > frozen ? Enumerable.Range(frozen + 1, lastRow - frozen).ToArray() : [];
+        }
+
+        return _rowsAfter;
+    }
+
+    private RenderFragment Row(SheetView s, int r, int lastCol) => @<tr>
+        <th class="xv-rowhdr">@r</th>
+        @for (int c = 1; c <= lastCol; c++)
+        {
+            var cell = Cell(r, c);
+            <td class="xv-cell @(cell is null ? "empty" : null) @(s.FreezeRows > 0 && r <= s.FreezeRows ? "frozen-row" : null) @(cell is not null && _hits.Contains((r, c)) ? "hit" : null)"
+                style="@CellStyle(cell)">@cell?.Text</td>
+        }
+    </tr>;
+
     private static string ColLetter(int col)
     {
         // 1 → A, 26 → Z, 27 → AA …
@@ -332,7 +377,7 @@
         if (c.Underline) sb.Append("text-decoration:underline;");
         if (c.FontName is { } fn) sb.Append($"font-family:'{fn}';");
         if (c.FontSizePt is { } fz) sb.Append($"font-size:{fz.ToString(System.Globalization.CultureInfo.InvariantCulture)}pt;");
-        if (c.Wrap) sb.Append("white-space:normal;");
+        if (c.Wrap) sb.Append("white-space:pre-wrap;");
         if (c.Color is { } col) sb.Append($"color:{col};");
         if (c.Fill is { } fill) sb.Append($"background-color:{fill};");
         return sb.ToString();

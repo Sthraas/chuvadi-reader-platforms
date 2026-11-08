@@ -1,14 +1,23 @@
 @namespace ChuvadiReader.Ui.Components.Settings
+@inject ChuvadiReader.Platform.IPlatformInfo Platform
 
 @* Sangam sign-in, roles and the audit trail are not built yet: every row is visible and greyed out. *@
 <SettingsSection Title="@SectionTitle" Sub="Who is using Chuvadi, and what they may do.">
     <SettingsCard Title="Signed in" IsNew="true">
+        @if (Platform.Chrome.AccountMenu)
+        {
+            @* Web portal (U-14 a): everyone is signed in with Sangam. *@
+            <ChuvadiReader.Ui.Components.Platform.Portal.PortalAccountRows />
+        }
+        else
+        {
         <SettingRow Label="User" Hint="Reading, marking, arranging and protecting stay free and local" Soon="true" SoonText="Coming soon — Sangam sign-in">
             <ValueChip Text="Not signed in" />
         </SettingRow>
         <SettingRow Soon="true" SoonText="Coming soon — Sangam sign-in">
             <RowButton IconName="log-in" Primary="true">Sign in with Sangam</RowButton>
         </SettingRow>
+        }
         <SettingRow Label="Role" Soon="true">
             <ValueChip Text="—" />
         </SettingRow>
