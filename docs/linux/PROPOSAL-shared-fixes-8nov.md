@@ -15,6 +15,7 @@ depend on the contract (D-101) are in the same diff and land on `platform/linux`
 | S6 | B-03 dependency confusion | `packageSourceMapping`: `Chuvadi.*` and `LiPicons.*` only from the local feed | nuget.config |
 | S8 | B-19 left-hand buttons misaligned | With the buttons on the left (`close,minimize,maximize:`), they sit inside `.tb-brandbox` next to the brand mark, so the brand stays on the top bar's centre line; `.tb-brandbox { gap: 10px; min-width: max-content; }` | Ui/Layout/MainLayout.razor, shell.css |
 | S9 | B-23 Tab order | The page's "send" hover button (`rpage-send`) is out of the Tab order (`tabindex="-1"`; the same action is in the page menu), so Tab goes from the toolbar to the page, not through every page's hidden button | Ui/Pages/Reader.razor |
+| S10 | B-22 keyboard focus (D-123: A) | One rule in app.css: `:where(:focus-visible) { outline: 2px solid var(--chvd-binding); outline-offset: 2px; }` — the theme's own accent, keyboard only, zero specificity so a component's own focus style still wins; changes Windows too (PR #11) | Ui/wwwroot/css/app.css |
 | S7 | B-02 font licences (shared) | The Ui ships the full OFL 1.1 text next to its fonts: `fonts/google/OFL.txt` (each family's holder from the font files) and `lipi-sans/OFL.txt` (LiPi's `LICENSE.txt` is an abridged text without the preamble and definitions; left as is) | Ui/wwwroot/fonts/google/OFL.txt, Ui/wwwroot/lipi-sans/OFL.txt (new) |
 
 ## Results on Linux with the diff applied
@@ -30,7 +31,7 @@ depend on the contract (D-101) are in the same diff and land on `platform/linux`
   - B-09 `far-cell.xlsx` (cell at XFD1048576): grid in 2.6 s, 26,112 cells drawn instead of 1.28 million;
     memory 372 MB (Test chat: 1.7 GB and "Opening…" for 185 s+).
   - B-10: a PDF opened right after it opens in 0.3 s.
-- Full UI pass on the shared build (rebased on ffb2823): 114/114. Step 35: all 8 layouts exact, the brand cell's divider within 1.5 px of the left bar's edge in each (B-19), and three live changes followed without a restart (D-101); step 34b3: the first Tab stops are brand, tab closes, new tab, tab menu — no per-page buttons (B-23).
+- Full UI pass on the shared build (rebased on ffb2823): 115/115 (with S10; step 34b4 checks B-22). Step 35: all 8 layouts exact, the brand cell's divider within 1.5 px of the left bar's edge in each (B-19), and three live changes followed without a restart (D-101); step 34b3: the first Tab stops are brand, tab closes, new tab, tab menu — no per-page buttons (B-23).
 
 ## Options
 **S1 (D-101), how the change reaches the Ui.** A. An event on `IPlatformInfo` with a no-op default (built).
@@ -49,14 +50,7 @@ it as a new copy." — the handout's title and actions unchanged. The handout al
 circle with "Try to repair" as the primary button; the built state uses the Reader's existing empty-state
 style. Foundation can match the handout's styling exactly when applying.
 
-**B-22, a designed keyboard-focus style (not in the diff; a design decision).** Today each engine draws its own
-focus ring (GTK blue on Linux, Chromium's on Windows), and only `.tb-pg-box` and `.ph-pager-in` define one.
-A. One rule in tokens.css: `:focus-visible { outline: 2px solid var(--chvd-binding); outline-offset: 2px; }`.
-Pros: the same ring on every platform, in the theme's colour; keyboard-only (`:focus-visible`), so mouse clicks
-draw nothing. Cons: a visible design change the handout doesn't specify; a few tight controls (tabs, pager)
-may need their own offset. B. Leave the engines' default. Pros: no change. Cons: focus looks different per
-platform and clashes with the Palm and Indigo themes. **Recommendation: A, once the designer confirms the colour
-and offset** — the design is final, so it isn't in this diff.
+**B-22 (D-123: A, now S10).** Tested in all five themes: the Tab ring is the theme's `--chvd-binding` (light, dark, Palm, Indigo, contrast); a mouse click draws none.
 
 **B-18 routing.** The rail at rest (62 px icons, labels on hover) changes Windows too, so it belongs to the Reader
 chat's desktop revamp rather than this patch.
@@ -727,6 +721,22 @@ index 9d18587..2128436 100644
  .rempty-btn {
      font-size: 13px;
      color: var(--chvd-ink);
+diff --git a/src/ChuvadiReader.Ui/wwwroot/css/app.css b/src/ChuvadiReader.Ui/wwwroot/css/app.css
+index df896dd..03a3cae 100644
+--- a/src/ChuvadiReader.Ui/wwwroot/css/app.css
++++ b/src/ChuvadiReader.Ui/wwwroot/css/app.css
+@@ -2,6 +2,11 @@
+ 
+ * { box-sizing: border-box; }
+ 
++/* Keyboard focus (B-22, D-123): one ring in the theme's accent on every platform, instead of each web engine's
++   own (GTK blue, Chromium's). Keyboard only (:focus-visible); :where() keeps it at zero specificity, so a
++   component's own focus style still wins. */
++:where(:focus-visible) { outline: 2px solid var(--chvd-binding); outline-offset: 2px; }
++
+ html, body {
+     margin: 0;
+     padding: 0;
 diff --git a/src/ChuvadiReader.Ui/wwwroot/css/shell.css b/src/ChuvadiReader.Ui/wwwroot/css/shell.css
 index 88764b0..eeec756 100644
 --- a/src/ChuvadiReader.Ui/wwwroot/css/shell.css
@@ -1133,10 +1143,10 @@ index 0000000..fd6fd40
 +    }
 +}
 diff --git a/tools/linux/uitest.py b/tools/linux/uitest.py
-index b46c64c..70b0713 100644
+index b46c64c..92c7526 100644
 --- a/tools/linux/uitest.py
 +++ b/tools/linux/uitest.py
-@@ -694,6 +694,21 @@ def render_choice():
+@@ -694,6 +694,52 @@ def render_choice():
  step("34b2-render-choice-without-gpu", render_choice)
  
  
@@ -1155,10 +1165,41 @@ index b46c64c..70b0713 100644
 +step("34b3-tab-order-skips-per-page-buttons", tab_order)
 +
 +
++def focus_ring():
++    """B-22: keyboard focus draws the theme's accent ring (--chvd-binding) in every theme; a mouse click draws none."""
++    ensure_reader(0)
++    ring = ("var e=document.activeElement, c=getComputedStyle(e), r=getComputedStyle(document.documentElement);"
++            "return [e.className || e.tagName, c.outlineStyle, c.outlineWidth, c.outlineColor,"
++            " (function(){var d=document.createElement('i'); d.style.color=r.getPropertyValue('--chvd-binding');"
++            " document.body.appendChild(d); var v=getComputedStyle(d).color; d.remove(); return v;})()]")
++    seen = []
++    try:
++        for theme in ("light", "dark", "palm", "indigo", "contrast"):
++            app.js(f"document.documentElement.setAttribute('data-theme','{theme}'); document.activeElement.blur(); return 1")
++            app.key("Tab")
++            time.sleep(0.3)
++            el, style, width, colour, accent = app.js(ring)
++            if style != "solid" or width != "2px" or colour != accent:
++                raise AssertionError(f"{theme}: Tab focus on {el} drew {style} {width} {colour}, accent is {accent}")
++            seen.append(f"{theme} {colour}")
++        app.click_real(".tb-pg-btn", 1)  # next page with a real pointer click
++        time.sleep(0.4)
++        clicked = app.js("var e=document.activeElement; return [e.className || e.tagName, getComputedStyle(e).outlineStyle]")
++        app.click(".tb-pg-btn", 0)  # back to page 1
++        if clicked[1] != "none":
++            raise AssertionError(f"a mouse click drew a focus ring: {clicked}")
++    finally:
++        app.js("document.documentElement.setAttribute('data-theme','light'); return 1")
++    return "accent ring on Tab: " + "; ".join(seen) + f"; none on a mouse click (focus on {str(clicked[0]).split()[0]})"
++
++
++step("34b4-focus-ring-theme-accent", focus_ring)
++
++
  def drop_several():
      """B-06: several files dropped on the window — each in its own tab (the window's drop handler, as GTK
      calls it; a real drag from a file manager is checked by hand)."""
-@@ -807,12 +822,24 @@ def button_layouts():
+@@ -807,12 +853,24 @@ def button_layouts():
              app.wait(lambda: "Iconic" in wm_state()[1], 10, "minimised")
              subprocess.run(["xdotool", "windowactivate", "--sync", wm_state()[0]], env=app.env, capture_output=True)
              app.wait(lambda: "Iconic" not in wm_state()[1], 10, "back from minimised")
