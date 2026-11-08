@@ -411,6 +411,9 @@ public sealed class TabsService
         }
     }
 
+    /// <summary>Shown under the password field when the password given doesn't open the PDF (B-07).</summary>
+    public const string WrongPassword = "That password doesn't open this file.";
+
     /// <summary>Shown when a document can't be opened for a reason other than damage, a password or access (WT-10).</summary>
     public const string OpenFailed = "This file is damaged or isn't a PDF Chuvadi can read.";
 
@@ -459,10 +462,12 @@ public sealed class TabsService
                 tab.ScrollTop = 0;
             }
         }
-        catch (Chuvadi.Pdf.Primitives.PdfPasswordRequiredException)
+        catch (Chuvadi.Pdf.Primitives.PdfPasswordRequiredException ex)
         {
-            // B-07: ask for the password (the library throws this for a missing and for a wrong one).
-            tab.PasswordError = tab.Password is null ? null : "That password doesn't open this file.";
+            // B-07: ask for the password. The library says whether one was given (PasswordSupplied, 3.24+):
+            // none → just the prompt; a wrong one → say so. (No RequiresPassword pre-check: it costs as much
+            // as opening a plain PDF, and on a locked file more than this failed open.)
+            tab.PasswordError = ex.PasswordSupplied ? WrongPassword : null;
             tab.Password = null;
             tab.NeedsPassword = true;
         }
