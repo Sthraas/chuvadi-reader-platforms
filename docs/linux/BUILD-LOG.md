@@ -455,3 +455,14 @@ all three buttons, so vanilla GNOME (`appmenu:close`) showed minimise and maximi
 - Test-harness fix on the way: a fresh profile can open maximised, so the step reads the state first.
 - Local (x64): all tests incl. Web and Mobile Ui (shared Ui changed); full UI pass **108 / 108**.
 - Not built: following a layout *change* while the app runs (read at start-up) — option B in the proposal.
+
+### 36. Green in CI on both architectures with the fix
+Run 42481652554 (commit `f7d0034`): x64 and ARM64 each **108 / 108** in the full UI pass, including
+`35-button-layouts` (8 layouts exact, window close under vanilla GNOME's close-only layout); Linux parser
+tests 25 / 25 on both; both `.deb` packages built, installed and launched (36.7 / 10.8 MB x64,
+33.1 / 10.2 MB ARM64). The shared `platforms` workflow (run 42481652486) is green too — the Windows app,
+and the shared build on Windows, macOS, Ubuntu x64 and ARM64 — so the contract and Ui change is safe for
+every other host.
+
+The Linux Test chat (`platform/linux-test`, 9ef12c4) has a test plan and no `BUGS.md` yet; its T3.4 covers
+this layout bug.
