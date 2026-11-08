@@ -1,7 +1,8 @@
 <#
   Mac Test — TESTING ONLY. Windows counterpart of macdrive's first-frame probe, so the Mac and Windows numbers
   measure the same thing: from Start-Process to (a) the main window existing and (b) the first captured frame of
-  that window's CLIENT AREA (below the native WPF title bar and frame, i.e. the WebView2 content only) with painted
+  that window's CLIENT AREA (below the native WPF title bar and frame, i.e. the WebView2 content only), captured
+  with PrintWindow(PW_RENDERFULLCONTENT) so a window still hidden behind another one never counts with painted
   app content (>= 40 distinct colours, the same rule as on the Mac, where the window has no native title bar).
   D-127: test side only, no app change.
 
@@ -20,6 +21,8 @@ public static class ChvdWin {
   [StructLayout(LayoutKind.Sequential)] public struct POINT { public int X, Y; }
   [DllImport("user32.dll")] public static extern bool GetClientRect(IntPtr h, out RECT r);
   [DllImport("user32.dll")] public static extern bool ClientToScreen(IntPtr h, ref POINT p);
+  [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr h, IntPtr hdc, uint flags);
+  [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
 }
 "@
 [ChvdWin]::SetProcessDPIAware() | Out-Null
@@ -51,17 +54,27 @@ for ($run = 1; $run -le $Runs; $run++) {
         $p.Refresh()
         if ($p.MainWindowHandle -eq [IntPtr]::Zero) { Start-Sleep -Milliseconds 2; continue }
         if (-not $win) { $win = $sw.Elapsed.TotalMilliseconds }
+        if (-not [ChvdWin]::IsWindowVisible($p.MainWindowHandle)) { continue }
+        $wr = New-Object ChvdWin+RECT
+        [void][ChvdWin]::GetWindowRect($p.MainWindowHandle, [ref]$wr)
         $r = New-Object ChvdWin+RECT
         [void][ChvdWin]::GetClientRect($p.MainWindowHandle, [ref]$r)
         $o = New-Object ChvdWin+POINT
         [void][ChvdWin]::ClientToScreen($p.MainWindowHandle, [ref]$o)
+        $ww = $wr.R - $wr.L; $wh = $wr.B - $wr.T
         $w = $r.R - $r.L; $h = $r.B - $r.T
         if ($w -lt 200 -or $h -lt 150) { continue }
         $t = $sw.Elapsed.TotalMilliseconds
-        $bmp = New-Object System.Drawing.Bitmap $w, $h
-        $g = [System.Drawing.Graphics]::FromImage($bmp)
-        $g.CopyFromScreen($o.X, $o.Y, 0, 0, $bmp.Size)
-        $g.Dispose()
+        # PrintWindow(PW_RENDERFULLCONTENT) draws the window's own pixels (WebView2 included) even when something
+        # else covers it on screen; then crop to the client area (below the WPF title bar).
+        $full = New-Object System.Drawing.Bitmap $ww, $wh
+        $fg = [System.Drawing.Graphics]::FromImage($full)
+        $hdc = $fg.GetHdc()
+        [void][ChvdWin]::PrintWindow($p.MainWindowHandle, $hdc, 2)
+        $fg.ReleaseHdc($hdc); $fg.Dispose()
+        $bmp = $full.Clone((New-Object System.Drawing.Rectangle ($o.X - $wr.L), ($o.Y - $wr.T), $w, $h), $full.PixelFormat)
+        $full.Dispose()
+        $g = $null
         $frames++
         $c = Count-Colours $bmp
         if ($c -ge 40) { $first = $t; if ($run -le 2) { $bmp.Save("win-first-render-$run.png") }; $bmp.Dispose(); break }
