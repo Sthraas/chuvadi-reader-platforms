@@ -10,10 +10,10 @@ Evidence paths are relative to this folder unless absolute. My test tools (never
 |---|---|---|---|
 | T1 Build & package | 10 | 3 (B-01, B-02, B-13) | 1 |
 | T2 Startup | 4 | 1 (B-12) | — |
-| T3 Design | 6 | 2 (B-18, B-19) | 3 |
-| T4 Function | 11 | 5 (B-04–B-07, B-14) | 6 |
+| T3 Design | 9 | 4 (B-18, B-19, B-22, B-23) | 1 |
+| T4 Function | 14 | 6 (B-04–B-07, B-14, B-21) | 3 |
 | T5 Robustness | 11 | 7 (B-08–B-11, B-16, B-17, B-20) | 2 |
-| T6 Wayland/X11 | 4 | 1 (B-15) | 3 |
+| T6 Wayland/X11 | 5 | 1 (B-15) | 2 |
 
 The Linux chat's own UI pass (`tools/linux/uitest.py`) re-run here independently: **106/107**; the one fail (`05-window-minimise`) was my environment (`xprop` from `x11-utils` not installed), not the app.
 
@@ -70,8 +70,10 @@ Findings
 | T3.3 | 12 px corners | ✅ restored under mutter: all 4 corners rounded, measured inset consistent with r = 12 px; maximised: square; no WM / no compositor: square with a thin resize border | `evidence/corners/` |
 | T3.4 | Button layout follows `gtk-decoration-layout` | eb65770: ✅ right, ✅ left, ❌ close-only (known). **f7d0034: ✅ all** — `:minimize,maximize,close`, `close,minimize,maximize:`, `appmenu:close`, `close:`, `close:maximize`, `minimize:`. ❌ new **B-19** (S4): with buttons on the left the top-bar brand cell widens past the left bar, so the top-bar divider no longer lines up with the left bar's edge | `evidence/buttons/` |
 | T3.5 | Fonts actually loaded (`document.fonts`) | ✅ | T3.2a |
-| T3.6 | Hover / focus rings / RTL | ⏳ hover-expand and keyboard focus pass pending | |
-| T3.7 | Five themes vs handout frames | ⏳ captured; side-by-side sheet pending | |
+| T3.6a | Rails hover-expand (db28319) | ✅ Tools rail 64 → 228 px on hover with labels (Pages & outline, Add bookmark, Snapshot, Layers…) | `screenshots/T3-hover-tools-rail.png` |
+| T3.6b | Keyboard focus | ⚠️ visible ring on every stop, but it is WebKit's default GTK blue (`auto 5px rgba(53,132,228,.8)`) — no designed `:focus-visible` style, so focus looks different per engine → **B-22**; Tab order starts with one "Send page N to a desk" button per page → **B-23** | `screenshots/B-22-*` |
+| T3.6c | RTL | ✅ no `dir=rtl` anywhere; layout LTR throughout | |
+| T3.7 | Five themes vs handout | ✅ **token-for-token identical** to the handout's `tokens.css`: light 21, dark 18, palm 18, indigo 18, contrast 19 tokens, 0 differences, 0 extras; all five apply at runtime (UI pass 09-theme-0…4) | |
 | T3.8 | KDE (kwin) | 🔒 kwin not installable headless here; layout covered by GTK setting (T3.4) | |
 
 ## T4 Function
@@ -81,9 +83,11 @@ Findings
 | T4.1b | Several files on CLI / `%F` | ❌ **B-04** | `screenshots/B-04-*` |
 | T4.2 | Annotate + Save as new PDF, reopen | ✅ (UI pass re-run here; output is a valid 5-page PDF) | |
 | T4.3 | Sign with certificate | 🔒 disabled in the build ("soon") — library/Sangam-gated, not a Linux defect | |
-| T4.3b | Forms fill + save | ⏳ | |
+| T4.3b | Forms fill + save | 🔒 "Fill form" is a *Coming soon* placeholder in the shared Ui (`Reader.Shell.cs:483`) — same on Windows. Form PDFs render the same as poppler (own AcroForm fixture `evidence/form.pdf`) | |
 | T4.4 | **Redaction really removes text** | ✅ Find & redact "print test" → Redact all (5) → Save redacted copy (GTK dialog): `pdftotext` 0 hits, **raw bytes 0 hits**, rest of text intact, 5 pages | `/home/claude/evidence/lt/redact/redacted.pdf` |
-| T4.5 | Arrange / merge / split outputs | ⏳ (UI pass opens the cards; output order/page counts not yet verified) | |
+| T4.5a | Split → every page to a folder (db28319) | ✅ 5 files, 1 page each, each with its own "Page N" text |
+| T4.5b | Split → extract range 2–4 | ✅ 3 pages, exactly pages 2, 3, 4 |
+| T4.5c | Merge (Add open documents → Merge & Save) | ✅ 6 pages in order (five-pages 1–5, then the test page); both sources' fonts carried (Helvetica, embedded Ubuntu-Medium) | |
 | T4.6 | Password: protect a copy | ✅ AES-256 copy (UI pass); limiting print/copy is library-gated (card says so) | |
 | T4.6b | **Open a password-protected PDF** | ❌ **B-07** no prompt | `screenshots/B-07-*` |
 | T4.7 | **Print is vector** | ✅ The app submits the **source PDF byte-identical** to CUPS (preserved spool file `cmp`-equal) — CUPS test page, `five-pages.pdf`, and a 3-page A3 drawing with 40,000 strokes/page. cups-pdf output: fonts present, text extractable, **0 images**. | `/home/claude/evidence/lt/print/` |
@@ -92,10 +96,10 @@ Findings
 | T4.8b | Print a file opened with its owner password | 🔒 can't open with a password (B-07) | |
 | T4.9 | Word / Excel viewing | ✅ `sample.docx` renders in the Word view; `.xlsx` in the grid; ⚠️ known: shared-string index shown as value (Sheets 2.0.2, D-87) | |
 | T4.10a | File dialogs (open/save) | ✅ GTK dialogs drive correctly | |
-| T4.10b | Window drop, several files | ❌ **B-06** (code-confirmed); live drag-from-another-app ⏳ by hand | |
+| T4.10b | Real drag from another app (GTK 4 file-list drag source, xdotool), 2 files (db28319) | ❌ **B-06 confirmed live**: drop accepted, only the first file opens. No drop overlay while dragging — expected until Foundation's D-104 overlay lands (not on `platform/linux` yet); retest then | `screenshots/B-06-*` | |
 | T4.10c | Clipboard text | ✅ selected page text → Ctrl+C → `xclip` returns it exactly | |
 | T4.10d | Clipboard PNG (Snapshot → Copy to clipboard) | ✅ `image/png` (+ tiff/jpeg/bmp) offered; 543×362 PNG of real page pixels | `/home/claude/evidence/lt/clip/clip.png` |
-| T4.10e | Show in folder | ✅ D-Bus path (UI pass, stub service); ⏳ with a real file manager (Nautilus) by hand | |
+| T4.10e | Show in folder with real Nautilus 46 (db28319) | ⚠️ opens the right folder — ❌ **B-21**: when the file manager needs > 5 s for its first window the app times out, falls back to `xdg-open` and the user gets two windows (the fallback one without the file selected). Proven with `dbus-monitor` (call 0 s, fallback at 5.01 s, Nautilus's successful reply at 7.99 s) | `screenshots/B-21-*`, `evidence/reveal/dbus-monitor.log` | |
 | T4.11 | Single instance | ❌ **B-05** | `screenshots/B-05-*` |
 | T4.12 | XDG folders | ✅ settings in `$XDG_CONFIG_HOME/Chuvadi/settings.json`; Documents via XDG; ⚠️ creates `~/Documents/Chuvadi Documents/{Finance,Legal,…}` category folders on first run — designed (Core `CategoryService`), not a bug | |
 | T4.13 | Many tabs (30) | ✅ app ~500 MB + WebKit ~500 MB, plateaus; tab switch 33 ms; ⚠️ memory not returned after closing all (GC/WebKit cache behaviour, noted) | |
@@ -132,7 +136,7 @@ Findings
 | T6.1b | Wayland: Weston 13 headless (pixman), `GDK_BACKEND=wayland` | ✅ starts, renders Reader + PDF, restores tabs; first render 0.82–0.95 s |
 | T6.1c | No WM at all | ✅ renders; square corners |
 | T6.2a | 2× HiDPI (Weston) | ✅ crisp |
-| T6.2b | Fractional 1.25× / 1.5× under Wayland | ⏳ needs mutter headless with fractional scaling |
+| T6.2b | Fractional 1.25× / 1.5× under Wayland (mutter 46 headless, `scale-monitor-framebuffer`) | ✅ app binds `wp_fractional_scale_manager_v1`, receives `preferred_scale(150)` / `(180)`, uses viewporter; layout correct (1800×1125 → 1440×900 CSS px at 1.25, 1200×750 at 1.5; rails keep 64/54 px). ⚠️ engine note: WebKitGTK renders at DPR 2 and the compositor scales down; WebView2 renders at the exact fraction — sizes identical, Linux text may be marginally softer (no pixels from headless mutter to judge) | `tools/wlrun.py`, `tools/setscale.py` |
 | T6.3 | Drag-move / resize / max / min | ✅ drag/restore/maximise (UI pass 04); ⏳ minimise — the pass's step 05 failed on my environment (`xprop` missing), to re-run |
 | T6.4 | Containers / no user namespaces | ❌ **B-15** hard abort |
 

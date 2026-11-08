@@ -13,7 +13,7 @@ Every bug gets fixed; I re-verify on the fixing commit and mark it here.
 | B-03 | S3 (security) | Shared | `nuget.config` has no package source mapping (dependency-confusion risk) | open |
 | B-04 | S2 | Linux | Several files on the command line / `%F` open only the first | open |
 | B-05 | S2 | Linux | Single instance missing: a second launch opens a second window (Foundation contract + router already on `platform/foundation`) | open — retest when Linux lands it |
-| B-06 | S2 | Linux | Window drop of several files opens only the first (code-confirmed; live drag pending) | open |
+| B-06 | S2 | Linux | Window drop of several files opens only the first (**confirmed live** on db28319 with a real drag) | open |
 | B-07 | S2 | **shared Ui/Core** | Password-protected PDF can't be opened: no password prompt | open |
 | B-08a | S1 | **library** | Zip-bomb `.docx` → 4.5 GB RAM, 10 min+: Chuvadi.Docs has no input limits | open |
 | B-08b | S2 | **shared Ui/Core** | "Opening…" has no cancel and no timeout (B-08a, B-09a) | open |
@@ -30,13 +30,16 @@ Every bug gets fixed; I re-verify on the fixing commit and mark it here.
 | B-18 | S3 (design) | **shared Ui/Core** | Left bar at rest is the expanded 208 px labelled list; handout: 62 px icon rail, labels on hover | open |
 | B-19 | S4 | Linux | **D-110: option A** — Buttons on the left: top-bar brand cell widens past the left bar; divider no longer lines up (f7d0034) | open |
 | B-20 | S4 | Linux | No printer / CUPS down: empty print dialog, no explanation | open |
+| B-21 | S3 | Linux | Show in folder: 5 s D-Bus timeout → `xdg-open` fallback → two file-manager windows | open |
+| B-22 | S4 | shared Ui/Core | No designed keyboard-focus style: each engine draws its own (GTK blue on Linux) | open — suggestion |
+| B-23 | S4 | shared Ui/Core | Tab order starts with one "Send page N to a desk" button per page | open |
 | K-01 | — | Linux | GNOME close-only layout showed all three buttons (known, 7 Nov) | **fixed f7d0034 — verified** |
 
 Routing (coordinator, 8 Nov): **Linux** → the Linux chat. **shared Ui/Core** → Foundation's combined patch, as exact diffs from the Linux chat or Foundation. **library** → the coordinator compiles them for Arun (library coordinator).
 | Route | Bugs |
 |---|---|
-| Linux chat | B-01, B-04, B-05, B-06, B-12, B-13, B-14, B-15, B-17, B-19, B-20, and the Linux stanzas of B-02 |
-| shared Ui/Core | B-03, B-07, B-08b, B-10, B-11b, B-16, B-18, and the OFL texts next to the fonts in B-02 |
+| Linux chat | B-01, B-04, B-05, B-06, B-12, B-13, B-14, B-15, B-17, B-19, B-20, B-21, and the Linux stanzas of B-02 |
+| shared Ui/Core | B-03, B-07, B-08b, B-10, B-11b, B-16, B-18, B-22, B-23, and the OFL texts next to the fonts in B-02 |
 | library | B-08a (Chuvadi.Docs input limits), B-09a (Chuvadi.Sheets: don't materialise to the sheet's extent), B-11a (chuvadi-pdf: rebuild the xref on a bad `startxref`) |
 B-09's "no cancel / no timeout" half is the same fix as B-08b.
 
@@ -83,7 +86,7 @@ Functionally harmless (the apphost is `0755`; users can run it) — but rule: no
 **Actual.** A second process and a second window (2 windows named Chuvadi); the first window still has one tab. Screenshot: `screenshots/B-05-second-launch.png`. Foundation's contract and router (D-83) have been on `platform/foundation` since 6 Nov 19:41 (`docs/foundation/SINGLE-INSTANCE.md`, `Hosting/Desktop/DesktopSingleInstance.cs`, `InstanceChannel.cs`, `Platform/AppInstance.cs`); the Linux side builds against it. *(Correction: my first report said the doc was missing — my check listed the wrong ref.)*
 
 ## B-06 — Drop of several files opens only the first (S2, Linux)
-**Evidence.** `Program.cs:174` drop handler: filters supported paths, then `Request(supported[0])` only. Same root cause as B-04. Live multi-file drag test is still pending (needs a real drag source; I'll re-verify on the fix with one).
+**Evidence.** `Program.cs:174` drop handler: filters supported paths, then `Request(supported[0])` only. Same root cause as B-04. **Confirmed live on db28319:** a GTK 4 window offering two files as a `GdkFileList` (as a file manager does), dragged with xdotool onto the Reader — drop accepted, one tab (`five-pages.pdf`). Screenshot: `screenshots/B-06-drag-two-files-one-tab.png`. Tool: `tools/dragsrc.py`, `tools/t_drag.py`.
 **Expected.** Each dropped file in its own tab.
 
 ## B-07 — Password-protected PDF can't be opened (S2, shared Ui/Core)
@@ -160,3 +163,19 @@ Second instance: a non-zip `.xlsx` shows "Couldn't open this workbook: **EOCDNot
 **Steps.** Stop CUPS (or a machine with no queues); open a PDF; Ctrl+P → Print.
 **Expected.** A plain message before or instead of the dialog ("No printers found — add one in Settings › Printers"), as the handout's "Blocked actions explain themselves".
 **Actual.** GTK dialog opens with an empty printer list and a disabled Print button; the card shows "Cancel printing". No crash; Cancel works. ("Print to File" is absent too — fine if deliberate, since it would re-render rather than send the PDF as-is; worth a line in the README.) Screenshot: `screenshots/B-20-no-printer-empty-dialog.png`.
+
+## B-21 — Show in folder opens two file-manager windows (S3, Linux) — db28319
+**Steps.** Nautilus not yet showing a window (fresh session, or `nautilus --gapplication-service` only); open a PDF; Document ▾ › Show in folder.
+**Expected.** One Nautilus window with the file selected.
+**Actual.** Two windows on the folder. `chvd_reveal` (`native/chvdhost.c:924`) calls `FileManager1.ShowItems` with a **5000 ms** timeout; Nautilus here needs ~8 s for its first window, so the call is treated as failed and `LinuxDesktop.RevealAsync` runs `xdg-open <folder>` — then Nautilus's own reply arrives (successfully) and opens the selected-file window too. `dbus-monitor`: call at 0 s, fallback at 5.01 s, Nautilus reply at 7.99 s (`evidence/reveal/dbus-monitor.log`). A logging `xdg-open` stub confirmed the fallback fires. A single direct `ShowItems` never opens two windows (cold → 1 window; warm → reused in 6 ms).
+**Fix.** Fall back only when there is no FileManager1 (`ServiceUnknown` / `NameHasNoOwner` / `UnknownMethod`); on a timeout, trust the call (or use an async call with no fallback). Screenshot: `screenshots/B-21-two-nautilus-windows.png`.
+
+## B-22 — No designed keyboard-focus style (S4, shared Ui/Core) — suggestion
+**Steps.** Open a PDF; press Tab.
+**Expected.** A consistent, designed focus ring (the handout's only focus treatment is the 1 px `binding` ring on a focused desk).
+**Actual.** Every stop shows WebKit's default ring, `outline: auto 5px rgba(53,132,228,.8)` (GTK blue); Windows shows Chromium's own default — so focus looks different per platform. Only `.tb-pg-box` and `.ph-pager-in` define focus styles. Suggest one rule: `:focus-visible { outline: 2px solid var(--chvd-binding); outline-offset: 2px; }`. Screenshot: `screenshots/B-22-focus-ring-gtk-blue.png`.
+
+## B-23 — Tab order starts with a per-page button for every page (S4, shared Ui/Core)
+**Steps.** Open `five-pages.pdf`; focus the window; Tab.
+**Actual.** Tab 1–5 are `button.rpage-send` "Send page N to a desk" (hover-only controls), one per page, before the rails. A 300-page document = 300 Tab presses to reach anything else.
+**Fix.** `tabindex="-1"` on the per-page hover buttons (reach them via the page strip / keyboard shortcut), or make only the current page's strip tabbable.

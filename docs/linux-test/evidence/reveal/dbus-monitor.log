@@ -1,0 +1,992 @@
+signal time=1794148958.052520 sender=org.freedesktop.DBus -> destination=:1.22 serial=2 path=/org/freedesktop/DBus; interface=org.freedesktop.DBus; member=NameAcquired
+   string ":1.22"
+signal time=1794148958.052587 sender=org.freedesktop.DBus -> destination=:1.22 serial=4 path=/org/freedesktop/DBus; interface=org.freedesktop.DBus; member=NameLost
+   string ":1.22"
+method call time=1794148959.064300 sender=:1.20 -> destination=org.freedesktop.FileManager1 serial=10 path=/org/freedesktop/FileManager1; interface=org.freedesktop.FileManager1; member=ShowItems
+   array [
+      string "file:///home/claude/lt/five-pages.pdf"
+   ]
+   string ""
+method return time=1794148966.090228 sender=org.freedesktop.DBus -> destination=:1.23 serial=1 reply_serial=1
+   string ":1.23"
+method return time=1794148966.090548 sender=org.freedesktop.DBus -> destination=:1.23 serial=3 reply_serial=2
+method return time=1794148966.090702 sender=org.freedesktop.DBus -> destination=:1.23 serial=4 reply_serial=3
+   uint32 2
+method return time=1794148966.090769 sender=org.freedesktop.DBus -> destination=:1.23 serial=5 reply_serial=4
+   string ":1.1"
+method return time=1794148966.091152 sender=:1.1 -> destination=:1.23 serial=20 reply_serial=5
+   array [
+      struct {
+         string "ftps"
+         string "ftps"
+         array [
+         ]
+         int32 21
+         boolean true
+      }
+      struct {
+         string "localtest"
+         string "localtest"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "ftpis"
+         string "ftpis"
+         array [
+         ]
+         int32 990
+         boolean true
+      }
+      struct {
+         string "archive"
+         string "archive"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "burn"
+         string "burn"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "gphoto2"
+         string "gphoto2"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "davs+sd"
+         string "davs+sd"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "dav+sd"
+         string "dav+sd"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "http"
+         string "http"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "admin"
+         string "admin"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "cdda"
+         string "cdda"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "ftp"
+         string "ftp"
+         array [
+         ]
+         int32 21
+         boolean true
+      }
+      struct {
+         string "mtp"
+         string "mtp"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "network"
+         string "network"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "smb-share"
+         string "smb"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "afp-volume"
+         string "afp"
+         array [
+         ]
+         int32 548
+         boolean true
+      }
+      struct {
+         string "davs"
+         string "davs"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "dav"
+         string "dav"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "nfs"
+         string "nfs"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "google-drive"
+         string "google-drive"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "onedrive"
+         string "onedrive"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "wsdd"
+         string "wsdd"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "afc"
+         string "afc"
+         array [
+         ]
+         int32 1
+         boolean false
+      }
+      struct {
+         string "computer"
+         string "computer"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "trash"
+         string "trash"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "afp-server"
+         string "afp"
+         array [
+         ]
+         int32 548
+         boolean true
+      }
+      struct {
+         string "sftp"
+         string "sftp"
+         array [
+            string "ssh"
+         ]
+         int32 22
+         boolean true
+      }
+      struct {
+         string "recent"
+         string "recent"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "dns-sd"
+         string "dns-sd"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "smb-server"
+         string "smb"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "smb-network"
+         string "smb"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+   ]
+method return time=1794148966.092162 sender=org.freedesktop.DBus -> destination=:1.23 serial=6 reply_serial=6
+method return time=1794148966.092172 sender=org.freedesktop.DBus -> destination=:1.23 serial=7 reply_serial=7
+method return time=1794148966.092173 sender=org.freedesktop.DBus -> destination=:1.23 serial=8 reply_serial=8
+   uint32 2
+method return time=1794148966.092304 sender=org.freedesktop.DBus -> destination=:1.23 serial=9 reply_serial=9
+   string ":1.1"
+method return time=1794148966.092651 sender=:1.1 -> destination=:1.23 serial=21 reply_serial=10
+   struct {
+      string ":1.6"
+      object path "/org/gtk/vfs/mount/1"
+      string "Trash"
+      string "trash:"
+      string ""
+      string ". GThemedIcon user-trash user user-trash-symbolic user-symbolic"
+      string ". GThemedIcon user-trash-symbolic user-symbolic user-trash user"
+      string ""
+      boolean false
+      array of bytes "" + \0
+      struct {
+         array of bytes "/" + \0
+         array [
+            dict entry(
+               string "type"
+               variant                   array of bytes "trash" + \0
+            )
+         ]
+      }
+      array of bytes "" + \0
+   }
+method return time=1794148966.092886 sender=org.freedesktop.DBus -> destination=:1.23 serial=10 reply_serial=11
+method return time=1794148966.093149 sender=org.freedesktop.DBus -> destination=:1.23 serial=11 reply_serial=12
+method return time=1794148966.093736 sender=:1.6 -> destination=:1.23 serial=15 reply_serial=13
+   string "unix:path=/tmp/chvd-xdg-mhiyxrbj/gvfsd/socket-BSeUhLv7"
+   string ""
+method return time=1794148966.093801 sender=org.freedesktop.DBus -> destination=:1.23 serial=12 reply_serial=14
+method return time=1794148966.108259 sender=org.freedesktop.DBus -> destination=:1.23 serial=14 reply_serial=15
+   uint32 1
+method return time=1794148966.108271 sender=org.freedesktop.DBus -> destination=:1.23 serial=16 reply_serial=16
+   uint32 1
+method return time=1794148966.158274 sender=org.freedesktop.DBus -> destination=:1.23 serial=17 reply_serial=17
+method return time=1794148966.158376 sender=org.freedesktop.DBus -> destination=:1.23 serial=18 reply_serial=18
+   string ":1.8"
+method return time=1794148966.159095 sender=org.freedesktop.DBus -> destination=:1.23 serial=19 reply_serial=19
+error time=1794148966.159253 sender=org.freedesktop.DBus -> destination=:1.23 error_name=org.freedesktop.DBus.Error.NameHasNoOwner reply_serial=20
+   string "Could not get owner of name 'org.gnome.SessionManager': no such name"
+method return time=1794148966.159360 sender=org.freedesktop.DBus -> destination=:1.23 serial=21 reply_serial=21
+method return time=1794148966.159415 sender=org.freedesktop.DBus -> destination=:1.23 serial=22 reply_serial=22
+error time=1794148966.159471 sender=org.freedesktop.DBus -> destination=:1.23 error_name=org.freedesktop.DBus.Error.NameHasNoOwner reply_serial=23
+   string "Could not get owner of name 'org.xfce.SessionManager': no such name"
+method return time=1794148966.159916 sender=org.freedesktop.DBus -> destination=:1.23 serial=24 reply_serial=24
+method return time=1794148966.159920 sender=org.freedesktop.DBus -> destination=:1.23 serial=25 reply_serial=25
+method return time=1794148966.159922 sender=org.freedesktop.DBus -> destination=:1.23 serial=26 reply_serial=26
+   string ":1.7"
+method return time=1794148966.159924 sender=org.freedesktop.DBus -> destination=:1.23 serial=27 reply_serial=27
+method return time=1794148966.159925 sender=org.freedesktop.DBus -> destination=:1.23 serial=28 reply_serial=28
+method return time=1794148966.159927 sender=org.freedesktop.DBus -> destination=:1.23 serial=29 reply_serial=29
+   uint32 2
+method return time=1794148966.160415 sender=org.freedesktop.DBus -> destination=:1.23 serial=30 reply_serial=30
+   string ":1.7"
+method return time=1794148966.160847 sender=:1.7 -> destination=:1.23 serial=100 reply_serial=31
+   array [
+      dict entry(
+         string "version"
+         variant             uint32 3
+      )
+   ]
+method return time=1794148966.181695 sender=org.freedesktop.DBus -> destination=:1.23 serial=31 reply_serial=32
+method return time=1794148966.181706 sender=org.freedesktop.DBus -> destination=:1.23 serial=32 reply_serial=33
+method return time=1794148966.181708 sender=org.freedesktop.DBus -> destination=:1.23 serial=33 reply_serial=34
+   uint32 2
+method return time=1794148966.182061 sender=org.freedesktop.DBus -> destination=:1.23 serial=34 reply_serial=35
+   string ":1.7"
+error time=1794148966.182341 sender=:1.7 -> destination=:1.23 error_name=org.freedesktop.DBus.Error.InvalidArgs reply_serial=36
+   string "No such interface “org.freedesktop.portal.Settings”"
+error time=1794148966.182669 sender=:1.7 -> destination=:1.23 error_name=org.freedesktop.DBus.Error.UnknownMethod reply_serial=37
+   string "No such interface “org.freedesktop.portal.Settings” on object at path /org/freedesktop/portal/desktop"
+error time=1794148966.182907 sender=:1.7 -> destination=:1.23 error_name=org.freedesktop.DBus.Error.UnknownMethod reply_serial=38
+   string "No such interface “org.freedesktop.portal.Settings” on object at path /org/freedesktop/portal/desktop"
+error time=1794148966.183123 sender=:1.7 -> destination=:1.23 error_name=org.freedesktop.DBus.Error.UnknownMethod reply_serial=39
+   string "No such interface “org.freedesktop.portal.Settings” on object at path /org/freedesktop/portal/desktop"
+method return time=1794148966.183969 sender=org.freedesktop.DBus -> destination=:1.23 serial=35 reply_serial=41
+error time=1794148966.184179 sender=:1.7 -> destination=:1.23 error_name=org.freedesktop.DBus.Error.UnknownMethod reply_serial=40
+   string "No such interface “org.freedesktop.portal.Settings” on object at path /org/freedesktop/portal/desktop"
+method return time=1794148966.225699 sender=org.freedesktop.DBus -> destination=:1.23 serial=36 reply_serial=42
+method return time=1794148966.225712 sender=org.freedesktop.DBus -> destination=:1.23 serial=37 reply_serial=43
+method return time=1794148966.225839 sender=org.freedesktop.DBus -> destination=:1.23 serial=38 reply_serial=44
+method return time=1794148966.225953 sender=org.freedesktop.DBus -> destination=:1.23 serial=39 reply_serial=45
+method return time=1794148966.225975 sender=org.freedesktop.DBus -> destination=:1.23 serial=40 reply_serial=46
+method return time=1794148966.226175 sender=org.freedesktop.DBus -> destination=:1.23 serial=41 reply_serial=47
+method return time=1794148966.226282 sender=org.freedesktop.DBus -> destination=:1.23 serial=42 reply_serial=48
+method return time=1794148966.226285 sender=org.freedesktop.DBus -> destination=:1.23 serial=43 reply_serial=49
+method return time=1794148966.226295 sender=org.freedesktop.DBus -> destination=:1.23 serial=44 reply_serial=50
+method return time=1794148966.230906 sender=org.freedesktop.DBus -> destination=:1.23 serial=45 reply_serial=51
+error time=1794148966.231103 sender=org.freedesktop.DBus -> destination=:1.23 error_name=org.freedesktop.DBus.Error.NameHasNoOwner reply_serial=52
+   string "Could not get owner of name 'com.canonical.Unity': no such name"
+method return time=1794148966.231109 sender=org.freedesktop.DBus -> destination=:1.23 serial=47 reply_serial=53
+   boolean false
+method return time=1794148966.231747 sender=org.freedesktop.DBus -> destination=:1.23 serial=48 reply_serial=54
+method return time=1794148966.231878 sender=org.freedesktop.DBus -> destination=:1.23 serial=49 reply_serial=55
+method return time=1794148966.232066 sender=org.freedesktop.DBus -> destination=:1.23 serial=50 reply_serial=56
+error time=1794148966.232352 sender=org.freedesktop.DBus -> destination=:1.23 error_name=org.freedesktop.DBus.Error.ServiceUnknown reply_serial=57
+   string "The name org.freedesktop.DBus was not provided by any .service files"
+method return time=1794148966.232781 sender=org.freedesktop.DBus -> destination=:1.23 serial=52 reply_serial=58
+error time=1794148966.232785 sender=org.freedesktop.DBus -> destination=:1.23 error_name=org.freedesktop.DBus.Error.NameHasNoOwner reply_serial=59
+   string "Could not get owner of name 'org.gnome.Console': no such name"
+method return time=1794148966.232788 sender=org.freedesktop.DBus -> destination=:1.23 serial=54 reply_serial=60
+method return time=1794148966.232789 sender=org.freedesktop.DBus -> destination=:1.23 serial=55 reply_serial=61
+error time=1794148966.232790 sender=org.freedesktop.DBus -> destination=:1.23 error_name=org.freedesktop.DBus.Error.NameHasNoOwner reply_serial=62
+   string "Could not get owner of name 'org.gnome.Console': no such name"
+method return time=1794148966.232932 sender=org.freedesktop.DBus -> destination=:1.23 serial=57 reply_serial=64
+error time=1794148966.232957 sender=org.freedesktop.DBus -> destination=:1.23 error_name=org.freedesktop.DBus.Error.NameHasNoOwner reply_serial=65
+   string "Could not get owner of name 'org.gnome.NautilusPreviewer': no such name"
+method return time=1794148966.233057 sender=org.freedesktop.DBus -> destination=:1.23 serial=59 reply_serial=66
+method return time=1794148966.233077 sender=org.freedesktop.DBus -> destination=:1.23 serial=60 reply_serial=67
+error time=1794148966.233141 sender=org.freedesktop.DBus -> destination=:1.23 error_name=org.freedesktop.DBus.Error.NameHasNoOwner reply_serial=68
+   string "Could not get owner of name 'org.gnome.NautilusPreviewer': no such name"
+method return time=1794148966.233229 sender=org.freedesktop.DBus -> destination=:1.23 serial=62 reply_serial=69
+error time=1794148966.233318 sender=org.freedesktop.DBus -> destination=:1.23 error_name=org.freedesktop.DBus.Error.NameHasNoOwner reply_serial=70
+   string "Could not get owner of name 'org.gnome.DiskUtility': no such name"
+method return time=1794148966.233347 sender=org.freedesktop.DBus -> destination=:1.23 serial=64 reply_serial=71
+method return time=1794148966.233426 sender=org.freedesktop.DBus -> destination=:1.23 serial=65 reply_serial=72
+error time=1794148966.233453 sender=org.freedesktop.DBus -> destination=:1.23 error_name=org.freedesktop.DBus.Error.NameHasNoOwner reply_serial=73
+   string "Could not get owner of name 'org.gnome.DiskUtility': no such name"
+method return time=1794148966.233476 sender=org.freedesktop.DBus -> destination=:1.23 serial=67 reply_serial=74
+error time=1794148966.233952 sender=org.freedesktop.DBus -> destination=:1.23 error_name=org.freedesktop.DBus.Error.NameHasNoOwner reply_serial=75
+   string "Could not get owner of name 'org.gnome.Settings': no such name"
+method return time=1794148966.233958 sender=org.freedesktop.DBus -> destination=:1.23 serial=69 reply_serial=76
+method return time=1794148966.233959 sender=:1.14 -> destination=:1.23 serial=87 reply_serial=63
+method return time=1794148966.233961 sender=org.freedesktop.DBus -> destination=:1.23 serial=70 reply_serial=77
+error time=1794148966.233969 sender=org.freedesktop.DBus -> destination=:1.23 error_name=org.freedesktop.DBus.Error.NameHasNoOwner reply_serial=78
+   string "Could not get owner of name 'org.gnome.Settings': no such name"
+method return time=1794148966.244538 sender=org.freedesktop.DBus -> destination=:1.23 serial=72 reply_serial=79
+method return time=1794148966.244704 sender=org.freedesktop.DBus -> destination=:1.23 serial=73 reply_serial=80
+   uint32 2
+method return time=1794148966.244843 sender=org.freedesktop.DBus -> destination=:1.23 serial=74 reply_serial=81
+   string ":1.1"
+method return time=1794148966.245331 sender=:1.1 -> destination=:1.23 serial=22 reply_serial=82
+   array [
+      struct {
+         string "GProxyVolumeMonitorGoa"
+         string "org.gtk.vfs.GoaVolumeMonitor"
+         boolean false
+         int32 0
+         array [
+         ]
+      }
+      struct {
+         string "GProxyVolumeMonitorUDisks2"
+         string "org.gtk.vfs.UDisks2VolumeMonitor"
+         boolean true
+         int32 4
+         array [
+         ]
+      }
+      struct {
+         string "GProxyVolumeMonitorGPhoto2"
+         string "org.gtk.vfs.GPhoto2VolumeMonitor"
+         boolean false
+         int32 0
+         array [
+         ]
+      }
+      struct {
+         string "GProxyVolumeMonitorMTP"
+         string "org.gtk.vfs.MTPVolumeMonitor"
+         boolean false
+         int32 0
+         array [
+         ]
+      }
+      struct {
+         string "GProxyVolumeMonitorAfc"
+         string "org.gtk.vfs.AfcVolumeMonitor"
+         boolean false
+         int32 0
+         array [
+         ]
+      }
+   ]
+method return time=1794148966.245795 sender=org.freedesktop.DBus -> destination=:1.23 serial=75 reply_serial=83
+method return time=1794148966.245971 sender=org.freedesktop.DBus -> destination=:1.23 serial=76 reply_serial=84
+method return time=1794148966.246034 sender=org.freedesktop.DBus -> destination=:1.23 serial=77 reply_serial=85
+   uint32 2
+method return time=1794148966.246164 sender=org.freedesktop.DBus -> destination=:1.23 serial=78 reply_serial=86
+   string ":1.15"
+method return time=1794148966.246648 sender=:1.15 -> destination=:1.23 serial=4 reply_serial=87
+   boolean false
+method return time=1794148966.246846 sender=org.freedesktop.DBus -> destination=:1.23 serial=79 reply_serial=88
+method return time=1794148966.247484 sender=org.freedesktop.DBus -> destination=:1.23 serial=80 reply_serial=89
+method return time=1794148966.247663 sender=org.freedesktop.DBus -> destination=:1.23 serial=81 reply_serial=90
+   uint32 2
+method return time=1794148966.247821 sender=org.freedesktop.DBus -> destination=:1.23 serial=82 reply_serial=91
+   string ":1.16"
+method return time=1794148966.248462 sender=org.freedesktop.DBus -> destination=:1.16 serial=12 reply_serial=12
+method return time=1794148966.248469 sender=org.freedesktop.DBus -> destination=:1.16 serial=13 reply_serial=13
+   string ":1.23"
+method return time=1794148966.248522 sender=:1.16 -> destination=:1.23 serial=14 reply_serial=92
+   boolean true
+method return time=1794148966.248732 sender=org.freedesktop.DBus -> destination=:1.23 serial=83 reply_serial=93
+method return time=1794148966.248842 sender=org.freedesktop.DBus -> destination=:1.23 serial=84 reply_serial=94
+method return time=1794148966.248950 sender=org.freedesktop.DBus -> destination=:1.23 serial=85 reply_serial=95
+   string ":1.16"
+method return time=1794148966.248973 sender=org.freedesktop.DBus -> destination=:1.23 serial=86 reply_serial=96
+method return time=1794148966.248998 sender=org.freedesktop.DBus -> destination=:1.23 serial=87 reply_serial=97
+   uint32 2
+method return time=1794148966.249193 sender=org.freedesktop.DBus -> destination=:1.23 serial=88 reply_serial=98
+   string ":1.16"
+method return time=1794148966.249694 sender=:1.16 -> destination=:1.23 serial=15 reply_serial=99
+   array [
+   ]
+   array [
+   ]
+   array [
+   ]
+method return time=1794148966.249832 sender=org.freedesktop.DBus -> destination=:1.23 serial=89 reply_serial=100
+method return time=1794148966.249880 sender=org.freedesktop.DBus -> destination=:1.23 serial=90 reply_serial=101
+   uint32 2
+method return time=1794148966.250041 sender=org.freedesktop.DBus -> destination=:1.23 serial=91 reply_serial=102
+   string ":1.17"
+method return time=1794148966.250528 sender=org.freedesktop.DBus -> destination=:1.17 serial=7 reply_serial=7
+method return time=1794148966.250531 sender=org.freedesktop.DBus -> destination=:1.17 serial=8 reply_serial=8
+   string ":1.23"
+method return time=1794148966.250614 sender=:1.17 -> destination=:1.23 serial=9 reply_serial=103
+   boolean true
+method return time=1794148966.250698 sender=org.freedesktop.DBus -> destination=:1.23 serial=92 reply_serial=104
+method return time=1794148966.250815 sender=org.freedesktop.DBus -> destination=:1.23 serial=93 reply_serial=105
+method return time=1794148966.250934 sender=org.freedesktop.DBus -> destination=:1.23 serial=94 reply_serial=106
+   string ":1.17"
+method return time=1794148966.250956 sender=org.freedesktop.DBus -> destination=:1.23 serial=95 reply_serial=107
+method return time=1794148966.250984 sender=org.freedesktop.DBus -> destination=:1.23 serial=96 reply_serial=108
+   uint32 2
+method return time=1794148966.251151 sender=org.freedesktop.DBus -> destination=:1.23 serial=97 reply_serial=109
+   string ":1.17"
+method return time=1794148966.251620 sender=:1.17 -> destination=:1.23 serial=10 reply_serial=110
+   array [
+   ]
+   array [
+   ]
+   array [
+   ]
+method return time=1794148966.251753 sender=org.freedesktop.DBus -> destination=:1.23 serial=98 reply_serial=111
+method return time=1794148966.251813 sender=org.freedesktop.DBus -> destination=:1.23 serial=99 reply_serial=112
+   uint32 2
+method return time=1794148966.251994 sender=org.freedesktop.DBus -> destination=:1.23 serial=100 reply_serial=113
+   string ":1.18"
+method return time=1794148966.252489 sender=org.freedesktop.DBus -> destination=:1.18 serial=7 reply_serial=7
+method return time=1794148966.252542 sender=org.freedesktop.DBus -> destination=:1.18 serial=8 reply_serial=8
+   string ":1.23"
+method return time=1794148966.252628 sender=:1.18 -> destination=:1.23 serial=9 reply_serial=114
+   boolean true
+method return time=1794148966.252821 sender=org.freedesktop.DBus -> destination=:1.23 serial=101 reply_serial=115
+method return time=1794148966.252951 sender=org.freedesktop.DBus -> destination=:1.23 serial=102 reply_serial=116
+method return time=1794148966.253062 sender=org.freedesktop.DBus -> destination=:1.23 serial=103 reply_serial=117
+   string ":1.18"
+method return time=1794148966.253065 sender=org.freedesktop.DBus -> destination=:1.23 serial=104 reply_serial=118
+method return time=1794148966.253066 sender=org.freedesktop.DBus -> destination=:1.23 serial=105 reply_serial=119
+   uint32 2
+method return time=1794148966.253310 sender=org.freedesktop.DBus -> destination=:1.23 serial=106 reply_serial=120
+   string ":1.18"
+method return time=1794148966.253821 sender=:1.18 -> destination=:1.23 serial=10 reply_serial=121
+   array [
+   ]
+   array [
+   ]
+   array [
+   ]
+method return time=1794148966.253991 sender=org.freedesktop.DBus -> destination=:1.23 serial=107 reply_serial=122
+method return time=1794148966.254060 sender=org.freedesktop.DBus -> destination=:1.23 serial=108 reply_serial=123
+   uint32 2
+method return time=1794148966.254225 sender=org.freedesktop.DBus -> destination=:1.23 serial=109 reply_serial=124
+   string ":1.19"
+method return time=1794148966.254747 sender=org.freedesktop.DBus -> destination=:1.19 serial=7 reply_serial=7
+method return time=1794148966.254753 sender=org.freedesktop.DBus -> destination=:1.19 serial=8 reply_serial=8
+   string ":1.23"
+method return time=1794148966.254890 sender=:1.19 -> destination=:1.23 serial=9 reply_serial=125
+   boolean true
+method return time=1794148966.255055 sender=org.freedesktop.DBus -> destination=:1.23 serial=110 reply_serial=126
+method return time=1794148966.255162 sender=org.freedesktop.DBus -> destination=:1.23 serial=111 reply_serial=127
+method return time=1794148966.255281 sender=org.freedesktop.DBus -> destination=:1.23 serial=112 reply_serial=128
+   string ":1.19"
+method return time=1794148966.255292 sender=org.freedesktop.DBus -> destination=:1.23 serial=113 reply_serial=129
+method return time=1794148966.255293 sender=org.freedesktop.DBus -> destination=:1.23 serial=114 reply_serial=130
+   uint32 2
+method return time=1794148966.255550 sender=org.freedesktop.DBus -> destination=:1.23 serial=115 reply_serial=131
+   string ":1.19"
+method return time=1794148966.255845 sender=:1.19 -> destination=:1.23 serial=10 reply_serial=132
+   array [
+   ]
+   array [
+   ]
+   array [
+   ]
+method return time=1794148966.256277 sender=org.freedesktop.DBus -> destination=:1.23 serial=116 reply_serial=133
+method return time=1794148966.256413 sender=org.freedesktop.DBus -> destination=:1.23 serial=117 reply_serial=134
+   string ":1.1"
+method return time=1794148966.256417 sender=org.freedesktop.DBus -> destination=:1.23 serial=118 reply_serial=135
+method return time=1794148966.256418 sender=org.freedesktop.DBus -> destination=:1.23 serial=119 reply_serial=136
+   uint32 2
+method return time=1794148966.256704 sender=org.freedesktop.DBus -> destination=:1.23 serial=120 reply_serial=137
+   string ":1.1"
+method return time=1794148966.257076 sender=:1.1 -> destination=:1.23 serial=23 reply_serial=138
+   array [
+   ]
+method return time=1794148966.303928 sender=:1.11 -> destination=:1.23 serial=7 reply_serial=139
+   string ":1.11:user:2"
+method return time=1794148966.305320 sender=:1.11 -> destination=:1.23 serial=9 reply_serial=140
+   string ":1.11:user:3"
+method return time=1794148967.055141 sender=:1.23 -> destination=:1.20 serial=141 reply_serial=10
+method return time=1794148967.055524 sender=org.freedesktop.DBus -> destination=:1.23 serial=121 reply_serial=142
+method return time=1794148967.060668 sender=org.freedesktop.DBus -> destination=:1.24 serial=1 reply_serial=1
+   string ":1.24"
+method return time=1794148967.061144 sender=org.freedesktop.DBus -> destination=:1.23 serial=123 reply_serial=143
+   uint32 1
+method return time=1794148967.061160 sender=org.freedesktop.DBus -> destination=:1.24 serial=4 reply_serial=2
+   uint32 1
+method return time=1794148967.061769 sender=org.freedesktop.DBus -> destination=:1.23 serial=125 reply_serial=144
+   string ":1.24"
+method return time=1794148967.062298 sender=:1.24 -> destination=:1.23 serial=3 reply_serial=145
+   string ""
+method return time=1794148967.071724 sender=org.freedesktop.DBus -> destination=:1.23 serial=126 reply_serial=146
+   string "org.freedesktop.DBus"
+error time=1794148967.072678 sender=org.freedesktop.DBus -> destination=:1.23 error_name=org.freedesktop.DBus.Error.ServiceUnknown reply_serial=147
+   string "The name org.gnome.NautilusPreviewer was not provided by any .service files"
+method return time=1794148967.073156 sender=org.freedesktop.DBus -> destination=:1.23 serial=128 reply_serial=149
+   uint32 2
+method return time=1794148967.073793 sender=org.freedesktop.DBus -> destination=:1.23 serial=129 reply_serial=150
+   uint32 2
+method return time=1794148967.073918 sender=org.freedesktop.DBus -> destination=:1.23 serial=130 reply_serial=151
+   uint32 2
+method return time=1794148967.074419 sender=org.freedesktop.DBus -> destination=:1.23 serial=131 reply_serial=152
+   array [
+      dict entry(
+         string "Features"
+         variant             array [
+               string "ActivatableServicesChanged"
+               string "HeaderFiltering"
+            ]
+      )
+      dict entry(
+         string "Interfaces"
+         variant             array [
+               string "org.freedesktop.DBus.Monitoring"
+               string "org.freedesktop.DBus.Debug.Stats"
+            ]
+      )
+   ]
+method return time=1794148967.074828 sender=org.freedesktop.DBus -> destination=:1.23 serial=132 reply_serial=153
+   string ":1.1"
+method return time=1794148967.074896 sender=org.freedesktop.DBus -> destination=:1.23 serial=133 reply_serial=154
+   string ":1.1"
+method return time=1794148967.075016 sender=org.freedesktop.DBus -> destination=:1.23 serial=134 reply_serial=155
+   string ":1.1"
+method return time=1794148967.080078 sender=org.freedesktop.DBus -> destination=:1.23 serial=135 reply_serial=156
+   array [
+      string "org.freedesktop.DBus"
+      string "org.freedesktop.impl.portal.desktop.gtk"
+      string "org.gnome.Nautilus.Tracker3.Miner.Extract"
+      string "org.freedesktop.portal.Desktop"
+      string "org.gtk.vfs.UDisks2VolumeMonitor"
+      string "org.gtk.vfs.Metadata"
+      string "org.freedesktop.systemd1"
+      string "org.freedesktop.impl.portal.PermissionStore"
+      string "org.gnome.keyring.SystemPrompter"
+      string "org.gnome.keyring"
+      string "org.gtk.vfs.AfcVolumeMonitor"
+      string "org.gnome.Nautilus.Tracker3.Miner.Files"
+      string "org.freedesktop.FileManager1"
+      string "org.freedesktop.ColorHelper"
+      string "org.gtk.vfs.Daemon"
+      string "org.freedesktop.secrets"
+      string "org.freedesktop.Tracker3.Writeback"
+      string "org.gnome.Nautilus"
+      string "org.gtk.GLib.PACRunner"
+      string "org.freedesktop.impl.portal.Secret"
+      string "org.gtk.vfs.GoaVolumeMonitor"
+      string "org.gtk.vfs.MTPVolumeMonitor"
+      string "org.freedesktop.Tracker3.Miner.Files.Control"
+      string "org.freedesktop.Tracker3.Miner.Files"
+      string "org.gnome.keyring.PrivatePrompter"
+      string "org.freedesktop.portal.Tracker"
+      string "org.gtk.vfs.GPhoto2VolumeMonitor"
+      string "org.freedesktop.portal.Documents"
+      string "ca.desrt.dconf"
+   ]
+method return time=1794148967.080440 sender=org.freedesktop.DBus -> destination=:1.23 serial=136 reply_serial=157
+method return time=1794148967.080490 sender=org.freedesktop.DBus -> destination=:1.23 serial=137 reply_serial=161
+method return time=1794148967.081725 sender=:1.14 -> destination=:1.23 serial=88 reply_serial=148
+   array [
+      string "prefix"
+      string "name"
+   ]
+error time=1794148967.082128 sender=:1.1 -> destination=:1.23 error_name=org.gtk.GDBus.UnmappedGError.Quark._g_2dio_2derror_2dquark.Code15 reply_serial=159
+   string "The specified location is not supported"
+error time=1794148967.082747 sender=:1.1 -> destination=:1.23 error_name=org.gtk.GDBus.UnmappedGError.Quark._g_2dio_2derror_2dquark.Code15 reply_serial=160
+   string "The specified location is not supported"
+method return time=1794148967.086158 sender=:1.24 -> destination=:1.23 serial=4 reply_serial=164
+   string ""
+method return time=1794148967.090065 sender=org.freedesktop.DBus -> destination=:1.25 serial=1 reply_serial=1
+   string ":1.25"
+method return time=1794148967.090979 sender=org.freedesktop.DBus -> destination=:1.25 serial=4 reply_serial=2
+   uint32 1
+method return time=1794148967.092657 sender=org.freedesktop.DBus -> destination=:1.25 serial=5 reply_serial=3
+method return time=1794148967.092812 sender=org.freedesktop.DBus -> destination=:1.25 serial=6 reply_serial=4
+   uint32 2
+method return time=1794148967.092959 sender=org.freedesktop.DBus -> destination=:1.25 serial=7 reply_serial=5
+method return time=1794148967.093446 sender=:1.1 -> destination=:1.25 serial=26 reply_serial=6
+method return time=1794148967.093594 sender=org.freedesktop.DBus -> destination=:1.25 serial=8 reply_serial=7
+   string ":1.1"
+method return time=1794148967.093680 sender=org.freedesktop.DBus -> destination=:1.1 serial=7 reply_serial=27
+method return time=1794148967.093918 sender=org.freedesktop.DBus -> destination=:1.25 serial=9 reply_serial=8
+method return time=1794148967.095724 sender=org.freedesktop.DBus -> destination=:1.25 serial=10 reply_serial=9
+   uint32 2
+method return time=1794148967.095884 sender=org.freedesktop.DBus -> destination=:1.25 serial=11 reply_serial=10
+   string ":1.1"
+method return time=1794148967.111444 sender=:1.1 -> destination=:1.25 serial=29 reply_serial=11
+   array [
+      struct {
+         string "ftps"
+         string "ftps"
+         array [
+         ]
+         int32 21
+         boolean true
+      }
+      struct {
+         string "localtest"
+         string "localtest"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "ftpis"
+         string "ftpis"
+         array [
+         ]
+         int32 990
+         boolean true
+      }
+      struct {
+         string "archive"
+         string "archive"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "burn"
+         string "burn"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "gphoto2"
+         string "gphoto2"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "davs+sd"
+         string "davs+sd"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "dav+sd"
+         string "dav+sd"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "http"
+         string "http"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "admin"
+         string "admin"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "cdda"
+         string "cdda"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "ftp"
+         string "ftp"
+         array [
+         ]
+         int32 21
+         boolean true
+      }
+      struct {
+         string "mtp"
+         string "mtp"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "network"
+         string "network"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "smb-share"
+         string "smb"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "afp-volume"
+         string "afp"
+         array [
+         ]
+         int32 548
+         boolean true
+      }
+      struct {
+         string "davs"
+         string "davs"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "dav"
+         string "dav"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "nfs"
+         string "nfs"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "google-drive"
+         string "google-drive"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "onedrive"
+         string "onedrive"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "wsdd"
+         string "wsdd"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "afc"
+         string "afc"
+         array [
+         ]
+         int32 1
+         boolean false
+      }
+      struct {
+         string "computer"
+         string "computer"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "trash"
+         string "trash"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "afp-server"
+         string "afp"
+         array [
+         ]
+         int32 548
+         boolean true
+      }
+      struct {
+         string "sftp"
+         string "sftp"
+         array [
+            string "ssh"
+         ]
+         int32 22
+         boolean true
+      }
+      struct {
+         string "recent"
+         string "recent"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "dns-sd"
+         string "dns-sd"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "smb-server"
+         string "smb"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+      struct {
+         string "smb-network"
+         string "smb"
+         array [
+         ]
+         int32 0
+         boolean false
+      }
+   ]
+method return time=1794148967.112219 sender=org.freedesktop.DBus -> destination=:1.25 serial=12 reply_serial=12
+   uint32 2
+method return time=1794148967.112342 sender=org.freedesktop.DBus -> destination=:1.25 serial=13 reply_serial=13
+   string ":1.1"
+method return time=1794148967.113373 sender=:1.1 -> destination=:1.25 serial=31 reply_serial=14
+method return time=1794148967.113537 sender=org.freedesktop.DBus -> destination=:1.1 serial=8 reply_serial=32
+   string ":1.25"
+method return time=1794148967.113725 sender=:1.25 -> destination=:1.1 serial=15 reply_serial=28
+method return time=1794148967.113929 sender=:1.1 -> destination=:1.23 serial=33 reply_serial=158
+   struct {
+      string ":1.25"
+      object path "/org/gtk/vfs/mount/1"
+      string "Recent"
+      string "recent:"
+      string ""
+      string ". GThemedIcon document-open-recent document-open document document-open-recent-symbolic document-open-symbolic document-symbolic"
+      string ". GThemedIcon document-open-recent-symbolic document-open-symbolic document-symbolic document-open-recent document-open document"
+      string ""
+      boolean false
+      array of bytes "" + \0
+      struct {
+         array of bytes "/" + \0
+         array [
+            dict entry(
+               string "type"
+               variant                   array of bytes "recent" + \0
+            )
+         ]
+      }
+      array of bytes "" + \0
+   }
+method return time=1794148967.115284 sender=:1.24 -> destination=:1.23 serial=5 reply_serial=165
+   string ""
+method return time=1794148967.115853 sender=:1.24 -> destination=:1.23 serial=6 reply_serial=166
+   string ""
+method return time=1794148967.118937 sender=org.freedesktop.DBus -> destination=:1.23 serial=140 reply_serial=168
+method return time=1794148967.118944 sender=:1.24 -> destination=:1.23 serial=7 reply_serial=170
+   string ""
+method return time=1794148967.119002 sender=:1.6 -> destination=:1.23 serial=16 reply_serial=171
+   string "unix:path=/tmp/chvd-xdg-mhiyxrbj/gvfsd/socket-JrRMcQyJ"
+   string ""
+method return time=1794148967.119006 sender=:1.11 -> destination=:1.23 serial=11 reply_serial=167
+   string ":1.11:user:4"
+method return time=1794148967.119155 sender=:1.6 -> destination=:1.23 serial=17 reply_serial=172
+   string "unix:path=/tmp/chvd-xdg-mhiyxrbj/gvfsd/socket-j1IjsGzo"
+   string ""
+method return time=1794148967.957110 sender=:1.25 -> destination=:1.23 serial=16 reply_serial=173
+   string "unix:path=/tmp/chvd-xdg-mhiyxrbj/gvfsd/socket-slS41Dsb"
+   string ""
+method return time=1794148967.967595 sender=org.freedesktop.DBus -> destination=:1.23 serial=141 reply_serial=175
+method return time=1794148967.967608 sender=org.freedesktop.DBus -> destination=:1.23 serial=142 reply_serial=176
+method return time=1794148967.967610 sender=:1.24 -> destination=:1.23 serial=8 reply_serial=177
+   string ""
+method return time=1794148968.236594 sender=org.freedesktop.DBus -> destination=:1.23 serial=143 reply_serial=178
+error time=1794148968.252122 sender=org.freedesktop.DBus -> destination=:1.23 error_name=org.freedesktop.DBus.Error.NameHasNoOwner reply_serial=180
+   string "Could not get owner of name 'org.gnome.NautilusPreviewer': no such name"
+error time=1794148968.253251 sender=org.freedesktop.DBus -> destination=:1.23 error_name=org.freedesktop.DBus.Error.ServiceUnknown reply_serial=181
+   string "The name org.gnome.NautilusPreviewer was not provided by any .service files"
