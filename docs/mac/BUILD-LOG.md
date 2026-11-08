@@ -364,3 +364,33 @@ Each lookup step was first run locally against real SDK builds (single-RID and m
 copied from the pinned SDK before it went to CI.
 Foundation's `platforms` workflow green on the same code after rebasing onto a73a898 (its 839571e fixed the
 Windows single-instance tests that failed on fa9d120).
+
+## 2026-11-09 — Session 6: Mac Test M-01…M-16 fixed, each with a smoke check on a real macOS runner
+Rebased onto Foundation 839d39d. `.github/scripts/mac-smoke.sh` (step "Smoke run (files, menu bar, window, quit)")
+launches the built app with `CHUVADI_SMOKE=1`; `Platform/MacSmoke.cs` prints what the app sees and the script asserts it.
+
+| Bug | Fix | Commit | Smoke check |
+|---|---|---|---|
+| M-01 | Menu bar from IAppCommands: File, View (⌘K, Immersive ⌃⌘F), Document with Mark/Protect/Arrange/Tools; AppKit Format/Find/Enter Full Screen removed | ca3fd1d | View, Document, Print ⌘P ✔ · **Open… ⌘O waits on the shared global-commands patch** |
+| M-02 | Scene manifest + `SceneDelegate`; SceneWillConnect/OpenUrl → kit `IncomingFiles`; a launch file is received before Blazor starts instead of being dropped; Platform kept untrimmed (DI-only types had lost their constructors) | ca3fd1d, 69640cb, 09bab61 | launch file → tab; two more while running → tabs 3, one process ✔ |
+| M-03 | `MacQuit`: on terminate/scene disconnect, windows let go of MAUI pages before the provider is disposed; a managed exception after quit began ends the process quietly | ca3fd1d | quit leaves no crash report ✔ |
+| M-04 | Full-size content view, transparent hidden title bar; `SafeAreaEdges.None` and no scroll-view inset (MAUI kept a 32 pt safe area) | ca3fd1d, 09bab61 | web view top 0, full height ✔ |
+| M-05 | `XSAppIconAssets` → Assets.car + CFBundleIconName | ca3fd1d | bundle step: Assets.car, CFBundleIconName ✔ |
+| M-06 | WebKit prewarm at launch; marks for WebKit page loads | 09bab61, 44404d5 | prints the breakdown (below) |
+| M-07 | 1100×720 centred, clamped to the screen's visible frame | ca3fd1d, 09bab61, e11011b | size (clamped on the 1024×768 runner) and centre ✔ |
+| M-11 | Settings… ⌘, in the Chuvadi menu (`go.settings`) | ca3fd1d | **waits on the shared patch** (the command reaches IAppCommands only with it) |
+| M-12 | Runtime legal files copied and chmod 0644 before bundling | ca3fd1d | bundle step: every `legal/*.txt` mode 644 ✔ |
+| M-14 | `UseSystemResourceKeys=false` — .NET messages stay text | 4cc889d | ObjectDisposedException message is a sentence ✔ |
+| M-15 | ⌘O — the File menu gets Open… ⌘O from the shared patch | (shared) | with M-01 |
+| M-16 | Same root cause as M-02's crash: trimmed Platform DI types (fixed 69640cb, after the tested 7a65178) | 69640cb | after opening: route /reader, `.reader` rendered, error bar hidden, no Error logs ✔ |
+
+**M-06 breakdown** (run 42522567159, warm launch, ms since process start): main 190 · prewarm load asked 332 ·
+MAUI built 365 · window 540 · WebView ready 597 · Ui load asked 618 · **prewarm's empty page loaded 1722** · Ui
+navigation starts 1761 · Blazor script 1958 · #app content 2238 · first paint 2443 · ready 2482.
+The 1.1–1.4 s hole is WebKit launching its web-content/GPU/network processes: an *empty* page takes 1.4 s from the
+request. Our side (main → load asked) is 430 ms. The prewarm cut ~260 ms (WebView ready → navigation 1.42 s → 1.16 s);
+it cannot start earlier — CreateMauiApp is the first point UIKit is up. These runners are GPU-less VMs; on a real Mac
+WebKit's process launch is expected to be far shorter — added to REAL-MAC-CHECKS.
+
+Shared patches for Foundation (tested on 839d39d): `docs/mac/foundation/M-08-M-09-M-10-mac-conventions.patch`,
+`docs/mac/foundation/M-01-M-11-global-commands.patch`.

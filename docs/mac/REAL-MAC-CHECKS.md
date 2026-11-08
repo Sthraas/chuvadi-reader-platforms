@@ -109,3 +109,13 @@ version and the Mac model, and attach a screenshot where it says so.
 - [ ] Sleep and wake with a document open: still works.
 - [ ] Activity Monitor: memory after opening a 100-page PDF ______ MB; CPU idles at ~0 % when idle.
 - [ ] Console.app: no repeated errors from ChuvadiReader.Mac while using it.
+
+## 11. Mac Test fixes (M-01…M-16) — what only a person at a real Mac can confirm
+- [ ] Dock and Finder show the Chuvadi icon (M-05).
+- [ ] The window opens at 1100×720, centred; the page reaches the window's top edge with no band (M-04, M-07).
+- [ ] Double-click a PDF in Finder with Chuvadi closed, then another while it runs: both open as tabs in one window (M-02).
+- [ ] Chuvadi menu has Settings… ⌘,; File has Open… ⌘O; ⌘O opens the panel (M-11, M-15 — after the shared patch).
+- [ ] ⌃Tab / ⌃⇧Tab move between tabs; Immersive shows "⌃⌘F" everywhere; the green light says "Zoom" (M-08…M-10 — after the shared patch).
+- [ ] Open panel → a PDF → the Reader shows page 1 (M-16).
+- [ ] Quit ten times with ⌘Q, some with documents open: never "quit unexpectedly" (M-03).
+- [ ] Startup: launch to the first painted Home, cold ______ ms, warm ______ ms (M-06; the CI VM is ~2.5 s warm, most of it WebKit starting).
