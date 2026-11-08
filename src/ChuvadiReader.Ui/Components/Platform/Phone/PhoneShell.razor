@@ -152,7 +152,7 @@
     }
     else if (_sheet == PhoneSheetKind.View)
     {
-        <PhoneSheet Title="View" Action="Done" OnClose="Close">
+        <PhoneSheet Title="View" Action="Done" Docked="true" OnClose="Close">
             @foreach (var row in PhoneCommands.View)
             {
                 var cmd = PhoneCommands.Find(Shell.Commands, row.CommandIds);

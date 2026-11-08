@@ -544,7 +544,10 @@ export async function measureFit(deskEl, mode) {
     const { natW, natH } = naturalSize(page);
     if (!natW || !natH) return 0;
     const cols = deskEl.classList.contains('two') ? 2 : 1;
-    const gap = 18, padX = 60, padY = 44;
+    // Side padding the fit leaves: 60 px on the desktop; a shell can set --rfit-pad-x on the desk
+    // (the phone: 24 px, so the page fills the screen's width as in Portal & Android 12g).
+    const padX = parseFloat(getComputedStyle(deskEl).getPropertyValue('--rfit-pad-x')) || 60;
+    const gap = 18, padY = 44;
     const perPageW = (deskEl.clientWidth - padX - (cols - 1) * gap) / cols;
     const s = mode === 'width'
         ? perPageW / natW
