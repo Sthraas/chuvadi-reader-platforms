@@ -332,5 +332,7 @@ Options considered:
 | D-131 | Linux print orientation (AutoRotate) | A: keep the Linux step that fixed B-14. Chuvadi.Print's AutoRotate affects raster mode only; in document mode the ticket still says portrait, which caused B-14. B (raster mode) is rejected: it prints images, and Arun's rule is vector everywhere. Library ask: in document mode, honour AutoRotate by leaving orientation-requested out of the ticket |
 | — | Foundation next patch | B-24 stall fix; Chuvadi.Zip into ci/packages from its latest released tag (for D-129); Web portal UI's Upload wording and Q-3 "this session" diffs |
 
+| D-132 | Mac: keep a warnings-and-errors log in ~/Library/Logs/Chuvadi | Yes: about 1 MB, rotated, local only, never sent anywhere; no document contents or passwords; file names as extension plus a short hash. Pros: a failure on Arun's or a user's Mac can be diagnosed. Cons: a small local file. Mentioned in the privacy notice draft |
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).
