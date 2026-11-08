@@ -175,9 +175,5 @@ Handout references: **Walkthrough "Drop to open"** (drag-over state) and **State
 ## D-54 (chuvadi-pdf 3.31.2)
 Landed on `platform/foundation` (be4498a) during this session; `platform/web-ui` is rebased onto it and re-checked (BUILD-LOG session 2 §7).
 
-## Q-3 / D-119 — the example shelf wording needs a layout change (coordinator 9 Nov 02:30)
-"Files in this session" fits. "Your shelves for this session are empty — open the Library" wraps to two lines at every size, making the Library card 19 px taller. Following the instruction, that would mean hiding both blocks, so here are the two choices:
-- **(a) Keep both blocks, with "Files in this session" and "Nothing shelved this session — open the Library".** Pros: it's (c) with no layout change (measured: 0 of 9 cases change size); one Home design; honest. Cons: the shelf line isn't your example's words.
-- **(b) Hide the Storage map and the Library shelf on the Web** (your stated fallback). Pros: nothing that looks like storage. Cons: Home's right column is left with only Pinned, so the portal Home differs from the desktop's.
-
-**Recommendation: (a).** Both diffs are ready and proven (HOOKS). Nothing is sent as decided until you choose.
+## ✔ decided (c) — Q-3 / D-119 Home wording on the portal (coordinator 02:30, confirmed 03:07)
+"Files in this session" for the Storage map heading, and "Nothing shelved this session — open the Library" for the empty shelf. The example line, "Your shelves for this session are empty — …", wraps to two lines, which would be a layout change, so I used the shorter line that keeps the "this session" wording and the layout. The diff went to the Foundation (HOOKS). The hide-on-Web version was prepared and then dropped.

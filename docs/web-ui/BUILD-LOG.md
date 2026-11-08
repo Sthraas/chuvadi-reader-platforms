@@ -267,3 +267,6 @@ Branches re-checked first: `platform/web` has moved to 1b32ad8, `platform/androi
 
 ### 3. Build and tests
 Build `-warnaserror` 0 warnings with each diff applied and with neither; tests **297 pass**.
+
+## 2026-11-09 — session 14 (coordinator 03:07: go ahead with Q-3 (c); Upload diff to the Foundation)
+Branches checked: `platform/foundation` d70590a (tenth combined patch, B-24), merged in; `platform/web` 35229c3, `platform/web-test` 2cc43db, `main` ee2b877 (D-129, D-130). Q-3 (c) is sent as `proposal/web-ui-home-session-wording.patch`, with "Files in this session" and "Nothing shelved this session — open the Library". The example line wraps, so I used the line that fits; the hide version is dropped. Both of my open diffs apply to d70590a and build together with 0 warnings.

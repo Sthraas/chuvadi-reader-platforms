@@ -14,20 +14,17 @@ Consequences on my side (this branch):
 ## Applied by the Foundation (part 2a, foundation 9fbed93)
 - **H7** status-bar wording (D-98) and the **"Drop to open" overlay** (D-104 b) — checked: `git apply -R --check` of both patches succeeds on 9fbed93, and the 12a pitch (D-103) is as sent. Patches kept in `proposal/` for the record.
 
-## Waiting for the coordinator's choice — Q-3 Home wording on the portal (D-119; coordinator 9 Nov 02:30)
-This replaces my first Q-3 diff ("0 pdfs · this session"), which I've withdrawn because the coordinator gave the wording. Both new diffs are against foundation **f1e4126** and apply cleanly:
-- **(a) `proposal/web-ui-home-session-wording-a.patch`**: `PlatformText` gets `HomeStorageMapTitle = "Files in this session"` (shown in place of "Storage map") and `HomeShelvesEmpty = "Nothing shelved this session — open the Library"`. `Dashboard.razor` changes two lines, picking these when `IsPortal`; the desktop text stays in place, unchanged.
-- **(b) `proposal/web-ui-home-session-wording-b-hide.patch`**: `Dashboard.razor` (+8) wraps the Storage map section and the Library shelf in `@if (!IsPortal)`.
+## Still to apply — Q-3 Home wording on the portal (D-119 c; coordinator 9 Nov 02:30, confirmed 03:07)
+**`proposal/web-ui-home-session-wording.patch`**, against foundation **d70590a** (applies cleanly; builds with 0 warnings together with the Upload-wording diff):
+- `Components/Platform/PlatformText.cs` (+8): `HomeStorageMapTitle = "Files in this session"` and `HomeShelvesEmpty = "Nothing shelved this session — open the Library"`.
+- `Pages/Dashboard.razor` (+2/−2): on the portal (`IsPortal`), the Storage map heading and the empty Library shelf line use these. The desktop text stays in place, unchanged.
 
-Measured (preview; Chromium / Firefox / WebKit; desktop, tablet and phone touch):
-- The coordinator's example line, "Your shelves for this session are empty — open the Library", **wraps to two lines** in every browser and size, making the Library card 19 px taller (193 → 212). That's a layout change. "Your shelves are empty this session — …" wraps too.
-- "Files in this session" fits on one line (171–179 px).
-- "Nothing shelved this session — open the Library" fits on one line (19 px), like the desktop line. With (a), no block changes size in any of the 9 cases.
-- Windows: the same text, and pixel-identical with (a) and with (b) in all three browsers. The only exception is the known 3-pixel Chromium speck with (b), which also differs between two runs of the same build.
-- Screenshots: `screenshots/chromium-q3a-home.png`, `screenshots/webkit-q3a-phone-home.png`, `screenshots/chromium-q3b-home-hidden.png`.
+Why the shelf line isn't the example wording: "Your shelves for this session are empty — open the Library" wraps to two lines in all three browsers at every size, making the Library card 19 px taller, which is a layout change. The shorter line keeps "this session" and fits on one line, so (c) holds without hiding anything.
+
+Measured (preview; Chromium / Firefox / WebKit; desktop 1280×720, tablet 1024×768 touch, phone 390×844 touch): both lines stay on one line, no block changes size in any of the 9 cases, and Windows shows the same text and is pixel-identical in all three browsers (clock masked). Screenshots: `screenshots/chromium-q3a-home.png`, `screenshots/webkit-q3a-phone-home.png`.
 
 ## Still to apply — "Upload" in Arrange and Redact on the portal (coordinator 9 Nov 01:42, same bug as WT-10)
-**`proposal/web-ui-upload-wording.patch`**, against foundation **839d39d** (applies cleanly). It touches four of the Foundation's files and adds no new injects, because both pages already inject `IPlatformInfo Platform`:
+**`proposal/web-ui-upload-wording.patch`**, against foundation **839d39d**, and still applies cleanly on **d70590a**. It touches four of the Foundation's files and adds no new injects, because both pages already inject `IPlatformInfo Platform`:
 - `Components/Platform/PlatformText.cs` (+6): `FetchOrUpload(platform, desktop, portal)` returns the portal text when `Kind == Web` and the desktop text otherwise (Android included), character for character.
 - `Pages/Bench.razor` (+5/−5), `Pages/Bench.Shell.cs` (+1/−1), `Pages/Redact.razor` (+2/−2): every "Fetch" label goes through it, with the desktop text left exactly as it was:
 
