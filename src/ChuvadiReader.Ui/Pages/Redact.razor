@@ -61,7 +61,7 @@
             <Icon Name="redact" Size="40" />
             <div class="rd-empty-t">Send a document here to redact it</div>
             <div class="rd-empty-sub">Redaction permanently removes the content under each box and always writes a new file.</div>
-            <button class="rd-empty-btn" @onclick="Fetch">Fetch a document…</button>
+            <button class="rd-empty-btn" @onclick="Fetch">@ChuvadiReader.Ui.Components.Platform.PlatformText.FetchOrUpload(Platform, "Fetch a document…", "Upload a document…")</button>
         </div>
     }
     else if (_loading)
@@ -76,7 +76,7 @@
         <div class="rd-empty">
             <Icon Name="warning" Size="40" />
             <div class="rd-empty-t">@_error</div>
-            <button class="rd-empty-btn" @onclick="Fetch">Fetch a document…</button>
+            <button class="rd-empty-btn" @onclick="Fetch">@ChuvadiReader.Ui.Components.Platform.PlatformText.FetchOrUpload(Platform, "Fetch a document…", "Upload a document…")</button>
         </div>
     }
     else if (_session is not null)

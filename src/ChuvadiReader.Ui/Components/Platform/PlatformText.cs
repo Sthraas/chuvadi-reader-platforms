@@ -14,6 +14,14 @@ public static class PlatformText
     /// <summary>End of the Home summary line on the Web portal (U-11); desktop says "nothing leaves this device.".</summary>
     public const string HomeServerLine = "processed on the Chuvadi server · removed when you sign out.";
 
+    /// <summary>Home's "Storage map" heading on the Web portal (Q-3, D-119 c): no server storage (D-31), so the
+    /// map shows only this session's files.</summary>
+    public const string HomeStorageMapTitle = "Files in this session";
+
+    /// <summary>Home's empty Library shelf line on the Web portal (Q-3, D-119 c); desktop says
+    /// "Your shelves are empty — open the Library".</summary>
+    public const string HomeShelvesEmpty = "Nothing shelved this session — open the Library";
+
     /// <summary>"phone" on an Android phone, "device" on an Android tablet, "computer" everywhere else.</summary>
     public static string DeviceNoun(IPlatformInfo platform) =>
         platform.Kind != PlatformKind.Android ? "computer"
@@ -41,4 +49,10 @@ public static class PlatformText
     /// form factor, not the input (an Android tablet reports a keyboard). Both layouts show the same
     /// "Find or do anything…" control.</summary>
     public const string TouchFindTip = "Tip: tap “Find or do anything” to reach any file or action. Try typing “merge”.";
+
+    /// <summary>Arrange and Redact (coordinator 9 Nov 01:42, like WT-10: one word for one action): choosing a
+    /// file is "Fetch" on the desktop and "Upload" on the portal, as on Home and in the Reader. Desktop and
+    /// Android get <paramref name="desktop"/>, character for character.</summary>
+    public static string FetchOrUpload(IPlatformInfo platform, string desktop, string portal) =>
+        platform.Kind == PlatformKind.Web ? portal : desktop;
 }

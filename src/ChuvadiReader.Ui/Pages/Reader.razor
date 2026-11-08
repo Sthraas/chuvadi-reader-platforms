@@ -3259,8 +3259,11 @@
 
     // Takes every waiting request in order; each is taken once, so two requests made
     // before the Reader ran open two tabs, each with its own file and name.
+    // B-24: each tab is added at once and loads on its own; a file that never delivers data
+    // doesn't hold up the requests behind it (they used to wait for it in this loop).
     private async Task OpenPendingAsync()
     {
+        var loading = new List<Task>();
         while (OpenDoc.TryTake(out var open))
         {
             var path = open.Path;
@@ -3268,7 +3271,13 @@
             var format = DocumentFormatExtensions.FromPath(path);
             _pendingJumpPage = open.Page;
             await Recents.TouchAsync(new RecentItem(name, path, format, DateTimeOffset.Now, false));
-            await Tabs.OpenAsync(path, name, format);
+            loading.Add(Tabs.OpenAsync(path, name, format)); // adds and shows the tab before it loads
+            StateHasChanged();
+        }
+
+        if (loading.Count > 0)
+        {
+            await Task.WhenAll(loading);
             StateHasChanged();
         }
     }

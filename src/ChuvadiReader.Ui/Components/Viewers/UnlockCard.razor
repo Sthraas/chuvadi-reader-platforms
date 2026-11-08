@@ -1,6 +1,6 @@
 @*
-    Locked Word/Excel file (README "Word / Excel tabs"): lock icon in a 44 px circle, a password
-    field and an Open button. The password is handed to the viewer, which keeps it only in memory
+    Locked PDF, Word or Excel file (README "Word / Excel tabs", §187): lock icon in a 44 px circle, a
+    "Password to open" field with show/hide (as Protect › Password) and an Open button. The password is handed to the viewer, which keeps it only in memory
     for that tab.
 *@
 <div class="uc">
@@ -8,9 +8,14 @@
         <div class="uc-ic"><Icon Name="lock" Size="20" /></div>
         <h3>This @Kind is password-protected</h3>
         <p>Enter its password to view it here. The password stays in memory for this tab only.</p>
+        @* B-07: the field speaks the Protect › Password card's language ("Password to open", show/hide). *@
+        <label class="uc-label" for="@_id">Password to open</label>
         <div class="uc-row">
-            <input class="uc-pw" type="password" autocomplete="off" spellcheck="false"
-                   placeholder="Password" aria-label="Password" @bind="_pw" @bind:event="oninput" disabled="@Busy" />
+            <span class="uc-in">
+                <input id="@_id" class="uc-pw" type="@(_show ? "text" : "password")" autocomplete="off" spellcheck="false"
+                       aria-label="Password to open" @bind="_pw" @bind:event="oninput" disabled="@Busy" />
+                <button type="button" class="uc-show" @onclick="() => _show = !_show">@(_show ? "hide" : "show")</button>
+            </span>
             <button class="uc-open" type="submit" disabled="@(Busy || string.IsNullOrEmpty(_pw))">
                 <Icon Name="unlock" Size="14" /> Open
             </button>
@@ -29,7 +34,9 @@
     [Parameter] public bool Busy { get; set; }
     [Parameter] public EventCallback<string> OnUnlock { get; set; }
 
+    private readonly string _id = "uc-" + Guid.NewGuid().ToString("N")[..8];
     private string _pw = "";
+    private bool _show;
 
     private async Task Submit()
     {
