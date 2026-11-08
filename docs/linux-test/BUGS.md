@@ -183,7 +183,7 @@ Second instance: a non-zip `.xlsx` shows "Couldn't open this workbook: **EOCDNot
 
 ---
 
-## Linux chat — fixes for re-verification (9 Nov: re-verify on `platform/linux` e468d1a)
+## Linux chat — fixes for re-verification (9 Nov: re-verify on `platform/linux` faffa10, CI green on x64 and ARM64)
 Each fix has a test in `.github/workflows/linux.yml` / `tools/linux` (details: `docs/linux/BUILD-LOG.md` §37).
 | Bug | Commit | Test |
 |---|---|---|
@@ -195,8 +195,8 @@ Each fix has a test in `.github/workflows/linux.yml` / `tools/linux` (details: `
 | B-14 | 4e9e244 | UI step 30: printed landscape page 4 has rotation 90 (fills the sheet) |
 | B-15 | e8ca522 | `no-userns-test.sh` (seccomp rule refusing user namespaces): message window, exit 2 |
 | B-16 | e8ca522; kit's `FileAppStorage` since 4144909 | `readonly-home-test.py` as an ordinary user: starts, opens the file, one notice |
-| B-17 | 4e9e244 | `check-deb.py` (runtimeconfig); UI step 34d as a non-root user (chmod 000 file → "Access to the path … is denied") |
-| B-20 | 606d01b (test in CI: ffb2823) | `no-printer-test.py` with CUPS stopped: plain message, no dialog |
+| B-17 | 4e9e244; test faffa10 | `check-deb.py` (runtimeconfig); UI step 34d as a non-root user (chmod 000 file → the plain sentence, Details says "Access to the path … is denied") |
+| B-20 | 606d01b (test in CI: ffb2823); separate CUPS server 1da278d | `no-printer-test.py` with CUPS stopped: plain message, no dialog ; `remote-cups-test.py`: a stand-in server named in CUPS_SERVER or client.conf gets the job |
 | B-21 | c9f5500 (test: ffb2823) | `reveal-test.py`: a file manager answering after 8 s → one ShowItems, no xdg-open; none → one xdg-open |
 
 | D-101 | 4144909 (+ Foundation 839d39d) | UI step 35: three live layout changes followed without a restart |
