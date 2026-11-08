@@ -577,3 +577,15 @@ capitalises on Enter (the search found 1/4).
 - **P-07** stays applied by the composition until Foundation takes it (coordinator has asked).
 - Composition: Foundation `cd9b72d` (seventh combined patch part 1: H-13 in Foundation) + Mobile UI `a20f6d1` + P-07
   + host. Android 0 warnings; Platforms `-warnaserror` 0 warnings; tests 171 + 54 + 32 + 16 pass.
+
+### 49. Round 6 — run 42488183117 (all four emulators)
+- **API 36, phone and tablet: all green.** Gestures 10/10 (phone) and 9/9 (tablet), platform 25/25 and 23/23,
+  smoke pass. With P-07 applied, Back now walks real screens only (/reader → /bench → /reader → / → launcher), no
+  dead presses. Back closes the Print card; Open with / Share; rotation; keyboards; printing incl. L-8; split
+  screen; D-89 wording; no crash.
+- **API 35 (WebView 124.0.6367.219):** the app correctly showed the update screen (smoke test found it, portrait and
+  rotated: "One small update first … On this device it is version 124.0.6367.219", the Update button). But the
+  WebView gate never ran: **my slip** — in step 48 the `emulator-tests.sh` rewrite sat behind a failed `sed` in an
+  `&&` chain and was never written, so the old runner sent API 35 into the Reader suites (which timed out waiting
+  for a PDF the update screen rightly never shows). Runner now written and checked (`bash -n`); the gate runs on
+  API 35 next round.
