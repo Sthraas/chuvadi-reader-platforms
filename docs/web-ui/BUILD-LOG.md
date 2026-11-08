@@ -229,3 +229,6 @@ Diff for the Foundation: `proposal/web-ui-home-drop-zone.patch` — `portal-drop
 
 ### 3. Build and tests
 Build `-warnaserror` 0 warnings; tests below.
+
+### 4. Push (coordinator 20:22: no force)
+The rebased branch no longer followed GitHub's cd03fac, and the force push was refused. I merged cd03fac in with no change to the files (`-s ours`). The ten files that differed were all the Foundation's 9fbed93 work, which this branch already has. Merge commit e27a52a was pushed normally, and CI run 42491908079 is green. Authorship stays Arun's; commits are not re-signed (signing is Arun's choice later).
