@@ -590,6 +590,14 @@ case "setwin":
     let r = AXUIElementSetAttributeValue(w, attr as CFString, (value ? kCFBooleanTrue : kCFBooleanFalse)!)
     print("set \(attr)=\(value): \(r == .success ? "ok" : "error \(r.rawValue)")")
 
+case "focusset":
+    // focusset <name|pid> <text>: sets AXValue of the app's focused text field (e.g. the Open panel's Go-to field)
+    let pid = pidOf(arg(0))
+    guard let f = ax(appElement(pid), kAXFocusedUIElementAttribute) else { fail("no focused element") }
+    let el = f as! AXUIElement
+    let r = AXUIElementSetAttributeValue(el, kAXValueAttribute as CFString, arg(1) as CFString)
+    print("\(describe(el)) set: \(r == .success ? "ok" : "error \(r.rawValue)") now=\(axStr(el, kAXValueAttribute))")
+
 case "lsquery":
     let url = URL(fileURLWithPath: arg(0))
     print("default: \(NSWorkspace.shared.urlForApplication(toOpen: url)?.path ?? "none")")

@@ -291,12 +291,15 @@ def open_doc(path, settle=4.0, label=None, how="button"):
     if not PANEL_SHOT:
         PANEL_SHOT = screen("open-panel-" + how)
         drive("windows")
+    drive("activate", NAME)
     drive("key", "cmd+shift+g")
-    time.sleep(1.0)
-    drive("type", path)
-    time.sleep(0.8)
+    time.sleep(2.5)
+    rc, o = drive("focusset", NAME, path)
+    if "set: ok" not in o:
+        drive("type", path)
+    time.sleep(1.5)
     drive("key", "return")
-    time.sleep(1.2)
+    time.sleep(2.5)
     ms = None
     if label:
         rc, out = drive("waitpage", NAME, f"{OUT}/timing", label, "--key", "return", "--timeout", 20, timeout=40)
@@ -1126,7 +1129,8 @@ def main():
     t4_7()
     t4_8()
     t3_5()
-    t2(A.runs)
+    if A.runs > 0:
+        t2(A.runs)
     if A.suite == "full":
         t4_0c()
         t3_1()
