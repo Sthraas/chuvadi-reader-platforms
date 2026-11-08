@@ -1,0 +1,298 @@
+name: Mac Test
+
+# Mac Test chat (D-99): independent testing of the Mac Catalyst build on GitHub's macOS runners.
+# Testing only — every tool used here (driver, fixtures, qpdf, poppler, Chrome) stays out of the product.
+# One run, then read it: no automatic retries. Runs on a push that changes the test harness itself, or by hand.
+on:
+  workflow_dispatch:
+    inputs:
+      app_ref:
+        description: platform/mac commit under test
+        default: 7a65178e5882ce250f3e1a6da4c83061d048d231
+      runs:
+        description: launches per timing set
+        default: '10'
+  push:
+    branches: [platform/mac-test]
+    paths: ['.github/workflows/mac-test.yml', 'tests/mac/**']
+
+concurrency:
+  group: mac-test-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  APP_REF: ${{ inputs.app_ref || '7a65178e5882ce250f3e1a6da4c83061d048d231' }}
+  RUNS: ${{ inputs.runs || '10' }}
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  DOTNET_NOLOGO: '1'
+  HOMEBREW_NO_AUTO_UPDATE: '1'
+  HOMEBREW_NO_INSTALL_CLEANUP: '1'
+
+jobs:
+  # T1 — build and package from clean, exactly as the Mac chat's workflow does, then audit the bundle.
+  build:
+    name: T1 build + audit (macos-26)
+    runs-on: macos-26
+    timeout-minutes: 75
+    steps:
+      - name: Checkout test harness
+        uses: actions/checkout@v7
+        with:
+          path: harness
+      - name: Checkout app under test (${{ env.APP_REF }})
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.APP_REF }}
+          path: app
+
+      - name: Driver compiles (fail fast)
+        run: swiftc -O harness/tests/mac/macdrive.swift -o macdrive && ./macdrive trust
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.4xx'
+
+      - name: Select Xcode 26.6
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          sudo xcodebuild -runFirstLaunch
+          xcodebuild -version; sw_vers
+
+      - name: Empty NuGet cache (T1.1 from clean)
+        run: |
+          echo "NUGET_PACKAGES=$RUNNER_TEMP/nuget-clean" >> "$GITHUB_ENV"
+          rm -rf "$RUNNER_TEMP/nuget-clean" ~/.nuget/packages
+
+      - name: Workload (pinned 10.0.401)
+        run: dotnet workload install maui-maccatalyst --version 10.0.401 && dotnet workload list
+
+      - name: Restore
+        working-directory: app
+        run: |
+          dotnet restore tests/ChuvadiReader.Tests/ChuvadiReader.Tests.csproj --configfile ci/nuget.config
+          dotnet restore tests/ChuvadiReader.Hosting.Tests/ChuvadiReader.Hosting.Tests.csproj --configfile ci/nuget.config
+          dotnet restore src/ChuvadiReader.Mac/ChuvadiReader.Mac.csproj --configfile ci/nuget.config
+
+      - name: T1.3 restore audit (package origins and hashes)
+        working-directory: app
+        run: |
+          python3 - <<'EOF' | tee ../t1-3-restore.txt
+          import json, base64, hashlib, glob, os, re
+          a = json.load(open("src/ChuvadiReader.Mac/obj/project.assets.json"))
+          feed = {}
+          for f in glob.glob("ci/packages/*.nupkg"):
+              feed[os.path.basename(f).lower()] = base64.b64encode(hashlib.sha512(open(f, "rb").read()).digest()).decode()
+          bad = []
+          names = []
+          for key, lib in a["libraries"].items():
+              if lib.get("type") != "package":
+                  continue
+              n, v = key.split("/")
+              names.append(key)
+              own = n.startswith(("Chuvadi.", "LiPicons."))
+              ms = re.match(r"^(Microsoft|System|runtime|NETStandard|Xamarin)\.", n)
+              if own:
+                  fn = f"{n}.{v}.nupkg".lower()
+                  if feed.get(fn) != lib.get("sha512"):
+                      bad.append(f"{key}: not byte-identical to ci/packages/{fn}")
+              elif not ms:
+                  bad.append(f"{key}: not Microsoft/.NET and not Arun's")
+          print(f"{len(names)} packages restored for ChuvadiReader.Mac")
+          for n in sorted(names): print("  ", n)
+          print("RESULT:", "PASS" if not bad else "FAIL")
+          for b in bad: print("  ", b)
+          EOF
+
+      - name: T1.2 tests on macOS
+        working-directory: app
+        run: |
+          dotnet test tests/ChuvadiReader.Tests/ChuvadiReader.Tests.csproj -c Release --no-restore --logger "trx;LogFileName=core.trx" 2>&1 | tail -5 | tee ../t1-2-core.txt
+          dotnet test tests/ChuvadiReader.Hosting.Tests/ChuvadiReader.Hosting.Tests.csproj -c Release --no-restore --logger "trx;LogFileName=hosting.trx" 2>&1 | tail -5 | tee ../t1-2-hosting.txt
+
+      - name: T1.1 build universal app (Release, warnings as errors)
+        working-directory: app
+        run: |
+          set -o pipefail
+          dotnet build src/ChuvadiReader.Mac/ChuvadiReader.Mac.csproj -c Release --no-restore -warnaserror 2>&1 | tee ../t1-1-build.log
+          grep -E "Warn|Error|warning|error" ../t1-1-build.log | tail -5 || true
+          APP=$(find src/ChuvadiReader.Mac/bin/Release -maxdepth 3 -name '*.app' -type d | awk -F/ '{print NF" "$0}' | sort -n | head -1 | cut -d' ' -f2-)
+          echo "APP=$PWD/$APP" >> "$GITHUB_ENV"
+          du -sh "$APP"
+
+      - name: T1.7 ad-hoc sign + verify
+        run: |
+          codesign --force --deep --sign - --entitlements app/src/ChuvadiReader.Mac/Platforms/MacCatalyst/Entitlements.plist "$APP"
+          {
+            codesign --verify --deep --strict --verbose=2 "$APP" 2>&1; echo "verify exit $?"
+            codesign -d --entitlements :- "$APP" 2>&1
+            codesign -dv "$APP" 2>&1
+            spctl -a -vv -t exec "$APP" 2>&1; echo "spctl exit $?"
+          } | tee t1-7-sign.txt
+
+      - name: T1.8 unsigned zip round trip
+        run: |
+          mkdir -p out x
+          ditto -c -k --keepParent "$APP" out/Chuvadi-mac-universal-unsigned.zip
+          ditto -x -k out/Chuvadi-mac-universal-unsigned.zip x
+          (cd "$(dirname "$APP")" && find Chuvadi.app -type f -print0 | sort -z | xargs -0 shasum -a 256) > a.sha
+          (cd x && find Chuvadi.app -type f -print0 | sort -z | xargs -0 shasum -a 256) > b.sha
+          { ls -l out/*.zip; shasum -a 256 out/*.zip; if cmp -s a.sha b.sha; then echo "zip round trip: identical ($(wc -l < a.sha) files)"; else echo "zip round trip: DIFFERENT"; diff a.sha b.sha | head; fi; } | tee t1-8-zip.txt
+
+      - name: T1.11 assembly identities
+        run: dotnet run harness/tests/mac/AsmIds.cs -- "$APP" > asm-ids.tsv 2> asm-ids.err; wc -l asm-ids.tsv; head -3 asm-ids.tsv; cat asm-ids.err | tail -5
+
+      - name: T1.4 T1.5 T1.9–T1.12 bundle audit
+        run: python3 harness/tests/mac/audit_bundle.py "$APP" asm-ids.tsv app audit.json | tee t1-audit.txt
+
+      - name: Upload app + T1 evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: t1-build
+          path: |
+            out/
+            t1-*.txt
+            t1-1-build.log
+            asm-ids.tsv
+            audit.json
+            app/**/*.trx
+
+  # T2–T5 on each runner: install the built zip as a person would, then drive it from outside.
+  probe:
+    name: T2–T5 (${{ matrix.runner }})
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-26
+            suite: full
+          - runner: macos-15
+            suite: core
+          - runner: macos-15-intel
+            suite: core
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          path: harness
+      - uses: actions/download-artifact@v7
+        with:
+          name: t1-build
+          path: t1
+      - name: Install Chuvadi.app into /Applications
+        run: |
+          ditto -x -k t1/out/Chuvadi-mac-universal-unsigned.zip /Applications
+          ls -la /Applications/Chuvadi.app/Contents/MacOS
+          sw_vers; uname -m; sysctl -n machdep.cpu.brand_string; sysctl -n hw.ncpu hw.memsize
+      - name: Tools (testing only)
+        run: |
+          brew install qpdf poppler >/dev/null 2>&1 || brew install qpdf poppler
+          qpdf --version | head -1; pdffonts -v 2>&1 | head -1
+          swiftc -O harness/tests/mac/macdrive.swift -o "$RUNNER_TEMP/macdrive"
+      - name: Permissions for the test tools (TCC)
+        run: |
+          sudo python3 harness/tests/mac/grant_tcc.py "$RUNNER_TEMP/macdrive" /usr/bin/osascript "$(python3 -c 'import sys;print(sys.executable)')" /bin/bash || true
+          "$RUNNER_TEMP/macdrive" trust
+      - name: Fixtures
+        run: |
+          python3 harness/tests/mac/make_fixtures.py /tmp/fixtures
+          cd /tmp/fixtures
+          qpdf --encrypt user1 own1 256 -- five-pages.pdf aes256.pdf
+          qpdf --encrypt user1 own1 128 --use-aes=y -- five-pages.pdf aes128.pdf
+          qpdf --allow-weak-crypto --encrypt user1 own1 40 -- five-pages.pdf rc4.pdf
+          qpdf --encrypt "" own1 256 --modify=none -- five-pages.pdf owner-only.pdf
+          qpdf --encrypt "" own1 256 --print=none -- annotated.pdf noprint.pdf
+          ls -la
+      - name: Test printer (CUPS queue, paused so jobs stay in the spool)
+        run: |
+          sudo lpadmin -p ChvdTest -E -v ipp://127.0.0.1:9/none -m everywhere 2>&1 || sudo lpadmin -p ChvdTest -E -v ipp://127.0.0.1:9/none -m raw 2>&1 || true
+          sudo lpadmin -p ChvdTest -E -v ipp://127.0.0.1:9/none 2>&1 || true
+          sudo lpadmin -d ChvdTest; lpoptions -d ChvdTest >/dev/null 2>&1 || true
+          sudo cupsdisable ChvdTest
+          lpstat -t || true
+      - name: Run T2–T5 (${{ matrix.suite }})
+        run: python3 harness/tests/mac/run_ui.py "$RUNNER_TEMP/macdrive" /tmp/fixtures "$PWD/evidence" --suite ${{ matrix.suite }} --runs "$RUNS"
+        timeout-minutes: 100
+      - name: Logs
+        if: always()
+        run: |
+          mkdir -p evidence/logs
+          cp -R ~/Library/Logs/Chuvadi evidence/logs/ 2>/dev/null || true
+          ls ~/Library/Logs/DiagnosticReports | grep -i chuvadi && cp ~/Library/Logs/DiagnosticReports/*Chuvadi* evidence/logs/ 2>/dev/null || true
+          log show --last 2h --style compact --predicate 'process == "ChuvadiReader.Mac"' 2>/dev/null | tail -400 > evidence/logs/unified.txt || true
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: evidence-${{ matrix.runner }}
+          path: evidence/
+
+  # Design reference: handout frames and the Ui in Chromium (Windows look via the dev-only preview host).
+  reference:
+    name: T3.4 references (macos-26, Chrome)
+    runs-on: macos-26
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.APP_REF }}
+          path: app
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.4xx'
+      - name: Handout frames
+        run: |
+          CH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+          mkdir -p ref
+          for f in "Reader Side Rails" "Chuvadi Revamp v3" "Chuvadi Revamp v2" "Settings Sections" "States & Feedback"; do
+            n=$(echo "$f" | tr ' &' '__')
+            "$CH" --headless=new --disable-gpu --hide-scrollbars --force-device-scale-factor=1 --window-size=1600,9000 \
+              --virtual-time-budget=8000 --screenshot="$PWD/ref/handout-$n.png" "file://$PWD/app/docs/design-handoff/$f.dc.html" 2>/dev/null || true
+          done
+          ls -la ref
+      - name: Ui in Chromium (preview host, Windows profile)
+        working-directory: app
+        run: |
+          dotnet restore tests/ChuvadiReader.MobileUi.Preview/ChuvadiReader.MobileUi.Preview.csproj --configfile ci/nuget.config
+          CHVD_FF=desktop ASPNETCORE_URLS=http://127.0.0.1:5077 nohup dotnet run --project tests/ChuvadiReader.MobileUi.Preview -c Release --no-restore > ../preview.log 2>&1 &
+          for i in $(seq 1 120); do curl -sf http://127.0.0.1:5077/ >/dev/null && break; sleep 2; done
+          CH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+          for p in "" library settings reader; do
+            for s in 1 2; do
+              "$CH" --headless=new --disable-gpu --hide-scrollbars --force-device-scale-factor=$s --window-size=1100,720 \
+                --virtual-time-budget=10000 --screenshot="$PWD/../ref/chromium-${p:-home}-${s}x.png" "http://127.0.0.1:5077/$p" 2>/dev/null || true
+            done
+          done
+          ls -la ../ref; tail -20 ../preview.log
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: reference
+          path: |
+            ref/
+            preview.log
+
+  # T2.5 Windows comparison: the repo's own startup script (window shown), ReadyToRun as shipped (D-50).
+  windows-startup:
+    name: T2.5 Windows startup (windows-latest)
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.APP_REF }}
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.4xx'
+      - name: Feed
+        shell: bash
+        run: scripts/setup-feed.sh
+      - name: measure-startup.ps1 -ReadyToRun -Runs 10
+        shell: pwsh
+        run: pwsh scripts/measure-startup.ps1 -ReadyToRun -Runs 10 | Tee-Object -FilePath windows-startup.txt
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: windows-startup
+          path: windows-startup.txt
