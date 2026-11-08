@@ -23,13 +23,47 @@ Mobile UI 95b9d79 + Android 7ec8017; cancelled after the API 35 jobs proved AT-0
 | B-12 | **Release package starts** | **FAIL → AT-03 (S1)** — crashes at every launch (trimmed seam constructors) | R1 › results-*-api35 › dropbox.txt |
 
 ## 2. Startup
-PENDING (R1b). R1 had no measurement: the Release app never reached a first frame (AT-03).
+**Release: not measurable yet** — the shipped Release never reaches a first frame (AT-03; R1c re-confirmed 3 of 3 launches crash on
+API 36 phone and tablet). R1c's test-only rooted build still crashed (the build reused the previous link output); R2 rebuilds it clean.
 
-## 3. Design
-PENDING (R1b). Handout reference frames rendered from `Portal & Android.dc.html`: `screenshots/handout/12d…12j.png`.
+**Preliminary, Debug x64 build of the same composition (JIT, no AOT, not what ships), API 36, 12 runs, device clock, ms:**
+| Emulator | Cold → first frame | Cold → UI painted | Warm → first frame | Hot → first frame | Cold Open with → first frame | Cold Open with → page 1 painted |
+|---|---|---|---|---|---|---|
+| Phone (pixel_7) | 1,488 (worst 1,616) | 2,144 (worst 2,318) | 138 (worst 198) | 109 (worst 186) | 1,582 (worst 1,696) | **4,232** (worst 4,782) |
+| Tablet (pixel_tablet) | 1,933 (worst 2,244) | 2,864 (worst 3,132) | 220 (worst 485) | 171 (worst 335) | 2,111 (worst 2,432) | **7,080** (worst 7,897) |
+Warm "UI painted" had no valid sample (probe arrived after the UI each time; recorded as upper bounds). Emulators are x86_64 with
+software GPU on shared CI runners: compare between rounds, not with a phone in the hand. Evidence: R1 › results-*-api36 › startup-debug.
 
-## 4–5. Function, robustness
-PENDING (R1b function suite; robustness round 3).
+## 3. Design (R1, API 36, Debug build — the look is identical to Release)
+| # | Case | Result | Evidence |
+|---|---|---|---|
+| D-01 | Every screen × 5 themes × portrait/landscape, phone and tablet | **DONE** — 140 phone and 140 tablet screenshots, every screen reached | R1 › results-*-api36 › design/*.png |
+| D-02 | 12d tablet Read | **PASS** (rail heading shows the mode name per D-111; extra "More view options" per D-113) | screenshots/r1/12d-vs-app.png |
+| D-02 | 12e tablet Mark | **PASS** with the desktop's larger markup set; Save pinned at the rail foot (D-112) | 12e-vs-app.png |
+| D-02 | 12f tablet Arrange portrait | **FAIL → AT-04, AT-05** | 12f-vs-app.png |
+| D-02 | 12g phone Read | **PASS** | 12g-vs-app.png |
+| D-02 | 12h phone Mark | **PASS** | 12h-vs-app.png |
+| D-02 | 12i phone Arrange | **FAIL → AT-04** | 12i-vs-app.png |
+| D-02 | 12j phone Protect + View sheet | **PASS** (rows 44 dp; Box not pre-selected as drawn — S4, noted only) | 12j-vs-app.png |
+| D-03 | Touch targets ≥ 44 dp | **FAIL → AT-06** | design/*.layout.json |
+| D-04 | Sideways overflow | **PASS** — 0 px on every screen, both orientations | design/summary.json |
+| D-06 | Themes / system bars | **FAIL → AT-08** (system bars stay cream) | screenshots/r1/themes-phone-home-mark.png |
+| D-10 | Theme by a real Settings tap, kept after restart | **PASS** phone (R1c); tablet result was a test-tool error (taps not rotated), re-run R2 | R1c › function |
+
+## 4. Function (R1c, API 36, Debug fallback; round 2 re-runs with corrected tooling)
+| # | Case | Result |
+|---|---|---|
+| F-01c | Open with opens the PDF (phone, tablet) | **PASS** |
+| F-17 | Single instance: one activity after three arrivals | **PASS** |
+| F-14 | Rotation keeps document, page, process | **PASS** |
+| F-15 | Process death (`am kill` in background) → tabs come back | **PASS** |
+| F-16 | All trim-memory levels → alive and responsive | **PASS** |
+| R-10 | No crash / ANR / uncaught page error (Debug) | **PASS** |
+| F-10, R-02 | AES-256 files (user password; owner-only) | **"This PDF is damaged"** — the fixtures had `/P` unsigned (pypdf), i.e. the known library item **LIB-1**; R2 adds signed-`/P` fixtures to test the password path itself |
+| F-01a/b, F-02, F-03, F-11, F-12, D-08 | — | test-tool errors (selectors, tablet tap rotation); fixed, re-run R2 |
+
+## 5. Robustness
+PENDING (round 3).
 
 ## Test-tool notes (my own bugs, fixed)
 - R1: the WebView donor took only the WebView `.apk`; the API 36 WebView needs the Trichrome static library, so the API 35

@@ -105,9 +105,10 @@ Measured in the page (CSS px = dp), every visible control, all screens, R1 API 3
 **Expected:** ≥ 44 dp everywhere (Android's own minimum is 48 dp; the handout asks 48 on tablet rails and phone bars). A larger
 hit area (padding / `::after` inset) keeps the drawn size.
 
-## AT-07 · S4 · Foundation · open — Tab tooltip shows the internal working path
-The tablet tab's `title` is the working copy path, e.g. `/data/user/0/in.chuvadi.reader/cache/work/open/1429e6d5d0cd4…`
-(`design/tablet-*-home.layout.json`). Android shows `title` on long-press/hover with a mouse. **Expected:** the document's name
+## AT-07 · S4 · Foundation · open — Tabs and Home's recent cards/rows label themselves with the internal working path
+The tablet tab's `title`, and the accessible name/`title` of every Home "Pick up where you left off" card (`.rcard`) and Recent
+row (`.rrow`) on phone and tablet, is the working copy path, e.g. `/data/user/0/in.chuvadi.reader/cache/work/open/1429e6d5d0cd4…`
+(`design/*-home.layout.json`). TalkBack reads that path aloud. Android shows `title` on long-press/hover with a mouse. **Expected:** the document's name
 (or the original location the person chose), never the app's private cache path.
 
 ## AT-08 · S3 · Android · open — Status and navigation bar areas stay cream in the Night, Palm and Indigo themes
