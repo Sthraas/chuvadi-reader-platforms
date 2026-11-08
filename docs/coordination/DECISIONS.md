@@ -306,5 +306,10 @@ Options considered:
 | D-124 | Running eleven chats at once hit the account's usage limit twice | Finish one platform at a time. Now: Foundation + Linux Test only (Linux is closest: build complete, most bugs fixed). Then Android + Android Test, then Web + Web Test (+ Web portal UI), then Mac + Mac Test. Pros: steady progress without stops; earliest first release (Linux). Cons: the other platforms wait |
 | — | Library list addition | Chuvadi.Print's printer list ignores a remote CUPS server (prints through one show "No printers"); also print orientation automatic, cancel a long open |
 
+## 9 Nov 2026 01:30 — Arun
+| # | Item | Decision |
+|---|---|---|
+| D-125 | Run all chats in parallel (Arun, 01:26 IST) | Replaces D-124. All eleven chats resumed at 01:30 IST; the Mac chat was given Mac Test's M-01..M-12 (S1 M-03 crash on quit; S2 M-01 empty menu bar, M-02 files from macOS never open). If the usage limit stops chats again, the coordinator tells Arun at once and resumes as soon as it clears |
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).

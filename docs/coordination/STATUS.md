@@ -1,8 +1,8 @@
 # Programme status
 
-_Last updated: 9 Nov 2026, 01:25 IST._
+_Last updated: 9 Nov 2026, 01:35 IST._
 
-**Usage limit hit again ~20:45 IST 8 Nov.** From now on one platform at a time (D-124): Foundation + Linux Test running; the rest paused.
+**All chats running in parallel (D-125, Arun).**
 
 **Restarted 18:15–18:40 IST 8 Nov** after the usage-limit stop and paused subscription (Arun paid). All build chats running; Mac Test and Web Test chats open next.
 
@@ -11,7 +11,7 @@ _Last updated: 9 Nov 2026, 01:25 IST._
 | Chat | State |
 |---|---|
 | Foundation | Eighth patch landed: platform/foundation 839d39d (green on 6); PR #11 at 50182a4 (green). Footer lines need deleting again by Arun. B-18 waits on Arun (D-121) |
-| Mac | Done: legal texts embedded and verified on runner; Mac workflows manual-only; pushed 7a65178. Waiting for the friend's Mac (REAL-MAC-CHECKS.md). Mac Test chat next |
+| Mac | Fixing Mac Test's M-01..M-12 (crash on quit, empty menu bar, files from macOS never open, startup ~2 s gap, icon, …) |
 | Linux | Rebasing onto 839d39d, full Xvfb pass, then hand head to Linux Test |
 | Android | All four emulators green (rounds 6–7); fixing what Android Test finds |
 | Web | Rebase, then WT-01 (CSP), WT-07/08/11–13, Sangam timeouts (D-117, D-118) |
