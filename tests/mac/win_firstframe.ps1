@@ -1,7 +1,9 @@
 <#
   Mac Test — TESTING ONLY. Windows counterpart of macdrive's first-frame probe, so the Mac and Windows numbers
   measure the same thing: from Start-Process to (a) the main window existing and (b) the first captured frame of
-  that window with painted app content (>= 40 distinct colours, the same rule as on the Mac).
+  that window's CLIENT AREA (below the native WPF title bar and frame, i.e. the WebView2 content only) with painted
+  app content (>= 40 distinct colours, the same rule as on the Mac, where the window has no native title bar).
+  D-127: test side only, no app change.
 
     pwsh tests/mac/win_firstframe.ps1 -Exe <path to ChuvadiReader.Windows.exe> -Runs 10
 #>
@@ -15,6 +17,9 @@ public static class ChvdWin {
   [StructLayout(LayoutKind.Sequential)] public struct RECT { public int L, T, R, B; }
   [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
   [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
+  [StructLayout(LayoutKind.Sequential)] public struct POINT { public int X, Y; }
+  [DllImport("user32.dll")] public static extern bool GetClientRect(IntPtr h, out RECT r);
+  [DllImport("user32.dll")] public static extern bool ClientToScreen(IntPtr h, ref POINT p);
 }
 "@
 [ChvdWin]::SetProcessDPIAware() | Out-Null
@@ -47,13 +52,15 @@ for ($run = 1; $run -le $Runs; $run++) {
         if ($p.MainWindowHandle -eq [IntPtr]::Zero) { Start-Sleep -Milliseconds 2; continue }
         if (-not $win) { $win = $sw.Elapsed.TotalMilliseconds }
         $r = New-Object ChvdWin+RECT
-        [void][ChvdWin]::GetWindowRect($p.MainWindowHandle, [ref]$r)
+        [void][ChvdWin]::GetClientRect($p.MainWindowHandle, [ref]$r)
+        $o = New-Object ChvdWin+POINT
+        [void][ChvdWin]::ClientToScreen($p.MainWindowHandle, [ref]$o)
         $w = $r.R - $r.L; $h = $r.B - $r.T
         if ($w -lt 200 -or $h -lt 150) { continue }
         $t = $sw.Elapsed.TotalMilliseconds
         $bmp = New-Object System.Drawing.Bitmap $w, $h
         $g = [System.Drawing.Graphics]::FromImage($bmp)
-        $g.CopyFromScreen($r.L, $r.T, 0, 0, $bmp.Size)
+        $g.CopyFromScreen($o.X, $o.Y, 0, 0, $bmp.Size)
         $g.Dispose()
         $frames++
         $c = Count-Colours $bmp
