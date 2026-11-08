@@ -343,5 +343,8 @@ Options considered:
 
 | D-136 | Who moves Docs and Sheets (item 2) | Arun: (a). Foundation moves Chuvadi.Docs 1.1.0 → 2.0.0 and Chuvadi.Sheets 1.1.2 → 2.0.2 inside PR #11, including the Core code changes (namespace rename, old zip API retired), packs both from their release tags into ci/packages with SHA-256s, and wires Docs limits (MaxPartBytes ~20 MB, MaxTotalUncompressedBytes ~64 MB, timed token also passed to Paragraphs etc.) and the Sheets XlsxReaderOptions.CancellationToken into open/Cancel. The Reader chat must not make the same change (Arun relays); it picks this up when PR #11 merges. Replaces D-87 |
 
+| — | Mobile UI: touch tap areas on the shelf | Yes: every touch control gets at least a 44 px hit area (D-37), visible size unchanged; desktop unchanged |
+| — | Mac | M fixes done (c6d7705); Mac Test told to re-verify and run the blocked cases |
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).
