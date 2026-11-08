@@ -247,5 +247,14 @@ Options considered:
 | — | Seventh combined patch | Foundation takes Mobile UI H-13 (fit/zoom jump, API 35 sizing), Web UI H7 (D-98 status text), the D-104 overlay diff and the Linux D-101 event |
 | — | Web Test chat | Opened 19:13 IST (db2f7f00) |
 
+## 8 Nov 2026 19:30 check-in — coordinator
+| # | Item | Decision |
+|---|---|---|
+| D-105 | Android API 35 ships WebView 124; CSS zoom measured differently before 128 (blank area when zoomed) | (a) require WebView 128+: startup check plus a message to update Android System WebView. Pros: host-only, about 20 lines; real Android 15 devices update WebView through Play; no Windows pixel risk. Cons: an API 35 emulator stuck at 124 only shows the message. Try a Play system image first; otherwise API 36 covers phone and tablet. (b) explicit sizing: big shared-UI change with Windows risk. (c) two code paths kept for old WebViews |
+| D-106 | Android P-07: Back steps through duplicate history entries | Bug fix: MainLayout navigates to the Reader only when it isn't already showing; into Foundation's combined patch |
+| D-107 | Portal privacy line in PlatformText ("encrypted", D-20) | Changed to "kept in memory only" — D-98 supersedes D-20 because D-28 made it inaccurate |
+| — | PR #11 | Foundation moves it once, when part 2 of the seventh patch lands, so Arun checks one head |
+| — | Mac Test | Two likely Mac bugs under confirmation: next/previous tab bound to ⌘Tab (macOS app switcher), and Immersive labelled F11 while the Mac binding is ⌃⌘F |
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).
