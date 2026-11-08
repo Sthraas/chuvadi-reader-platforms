@@ -68,7 +68,7 @@ public static class Program
             Mark("instance " + instance.Role);
 
             var paths = new DesktopAppPaths(); // XDG config folder; Documents for saves (the kit's fallback)
-            var storage = new ResilientAppStorage(paths.AppDataFolder); // B-16: survives an unwritable home
+            var storage = new FileAppStorage(paths.AppDataFolder); // B-16: the kit keeps settings in memory when home is unwritable
             var services = BuildServices(paths, storage, LinuxPlatformInfo.Create(), instance);
             Mark("services");
 
@@ -154,7 +154,7 @@ public static class Program
     private const bool DevTools = false;
 #endif
 
-    private static ServiceProvider BuildServices(IAppPaths paths, ResilientAppStorage storage, IPlatformInfo platform, IAppInstance instance)
+    private static ServiceProvider BuildServices(IAppPaths paths, FileAppStorage storage, IPlatformInfo platform, IAppInstance instance)
     {
         var services = new ServiceCollection();
         services.AddBlazorWebView();
@@ -206,7 +206,7 @@ public static class Program
 
     /// <summary>B-16: one notice when settings can't be written (read-only or full home folder); the app keeps
     /// working with them in memory.</summary>
-    private static void WarnWhenSettingsCantBeSaved(IServiceProvider services, ResilientAppStorage storage, LinuxWebViewManager manager)
+    private static void WarnWhenSettingsCantBeSaved(IServiceProvider services, FileAppStorage storage, LinuxWebViewManager manager)
     {
         var shell = services.GetRequiredService<ShellService>();
         var warned = 0;
@@ -222,9 +222,9 @@ public static class Program
 
         services.GetRequiredService<IAppReadySignal>().Ready += () =>
         {
-            if (!storage.Saving)
+            if (!storage.CanSave)
             {
-                Warn(storage.Reason ?? "the settings folder can't be written");
+                Warn(storage.CannotSaveReason ?? "the settings folder can't be written");
             }
 
             storage.CannotSave += Warn;

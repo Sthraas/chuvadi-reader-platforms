@@ -21,6 +21,8 @@ internal static unsafe class GtkHost
 
     public static event Action<string[]>? FilesDropped;
 
+    /// <summary>The desktop's window-button layout changed (D-101).</summary>
+    public static event Action<string>? ButtonLayoutChanged;
 
 #if CHUVADI_UITEST
     /// <summary>UI test build only: the same event the window's GTK drop target raises.</summary>
@@ -234,6 +236,9 @@ internal static unsafe class GtkHost
                 case Native.WindowEvent.JsResult when text is not null:
                     var nl = text.IndexOf('\n');
                     JsResult?.Invoke(int.Parse(text.AsSpan(0, nl), System.Globalization.CultureInfo.InvariantCulture), text[(nl + 1)..]);
+                    break;
+                case Native.WindowEvent.ButtonLayout:
+                    ButtonLayoutChanged?.Invoke(text ?? string.Empty);
                     break;
                 case Native.WindowEvent.FirstPaint:
                     FirstPaint?.Invoke();

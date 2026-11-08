@@ -694,6 +694,52 @@ def render_choice():
 step("34b2-render-choice-without-gpu", render_choice)
 
 
+def tab_order():
+    """B-23: Tab doesn't walk through a "Send page N to a desk" button per page before anything else."""
+    ensure_reader(0)
+    stops = app.js("return [...document.querySelectorAll('button, [href], input, select, textarea, [tabindex]')]"
+                   ".filter(e => e.tabIndex >= 0 && !e.disabled && e.offsetParent !== null)"
+                   ".slice(0, 12).map(e => e.className || e.tagName)")
+    sends = [c for c in stops if "rpage-send" in str(c)]
+    if sends:
+        raise AssertionError(f"per-page buttons in the first Tab stops: {stops}")
+    return "first Tab stops: " + ", ".join(str(c).split()[0] for c in stops[:6])
+
+
+step("34b3-tab-order-skips-per-page-buttons", tab_order)
+
+
+def focus_ring():
+    """B-22: keyboard focus draws the theme's accent ring (--chvd-binding) in every theme; a mouse click draws none."""
+    ensure_reader(0)
+    ring = ("var e=document.activeElement, c=getComputedStyle(e), r=getComputedStyle(document.documentElement);"
+            "return [e.className || e.tagName, c.outlineStyle, c.outlineWidth, c.outlineColor,"
+            " (function(){var d=document.createElement('i'); d.style.color=r.getPropertyValue('--chvd-binding');"
+            " document.body.appendChild(d); var v=getComputedStyle(d).color; d.remove(); return v;})()]")
+    seen = []
+    try:
+        for theme in ("light", "dark", "palm", "indigo", "contrast"):
+            app.js(f"document.documentElement.setAttribute('data-theme','{theme}'); document.activeElement.blur(); return 1")
+            app.key("Tab")
+            time.sleep(0.3)
+            el, style, width, colour, accent = app.js(ring)
+            if style != "solid" or width != "2px" or colour != accent:
+                raise AssertionError(f"{theme}: Tab focus on {el} drew {style} {width} {colour}, accent is {accent}")
+            seen.append(f"{theme} {colour}")
+        app.click_real(".tb-pg-btn", 1)  # next page with a real pointer click
+        time.sleep(0.4)
+        clicked = app.js("var e=document.activeElement; return [e.className || e.tagName, getComputedStyle(e).outlineStyle]")
+        app.click(".tb-pg-btn", 0)  # back to page 1
+        if clicked[1] != "none":
+            raise AssertionError(f"a mouse click drew a focus ring: {clicked}")
+    finally:
+        app.js("document.documentElement.setAttribute('data-theme','light'); return 1")
+    return "accent ring on Tab: " + "; ".join(seen) + f"; none on a mouse click (focus on {str(clicked[0]).split()[0]})"
+
+
+step("34b4-focus-ring-theme-accent", focus_ring)
+
+
 def drop_several():
     """B-06: several files dropped on the window — each in its own tab (the window's drop handler, as GTK
     calls it; a real drag from a file manager is checked by hand)."""
@@ -807,12 +853,24 @@ def button_layouts():
             app.wait(lambda: "Iconic" in wm_state()[1], 10, "minimised")
             subprocess.run(["xdotool", "windowactivate", "--sync", wm_state()[0]], env=app.env, capture_output=True)
             app.wait(lambda: "Iconic" not in wm_state()[1], 10, "back from minimised")
+        # B-19: the brand cell's divider lines up with the left bar's edge, wherever the buttons are.
+        cell = app.js("var r=document.querySelector('.tb-brandbox').getBoundingClientRect(); return r.right")
+        bar = app.js("var r=document.querySelector('.leftbar').getBoundingClientRect(); return r.right")
+        if abs(cell - bar) > 1.5:  # top bar padding 12 px + cell (left bar − 12 px) = the left bar's edge
+            raise AssertionError(f"{layout!r}: top-bar cell ends at {cell:.0f} px, left bar at {bar:.0f} px")
         app.shot(f"35-layout-{i}")
         seen.append(f"{layout or '(empty)'} → {'/'.join(left) or '-'} | {'/'.join(right) or '-'}")
     # The window-close step runs under vanilla GNOME's close-only layout.
     app.restart(["gtk-decoration-layout=appmenu:close"], log_name="app-3.log")
     if shown_buttons() != {"left": [], "right": ["close"]}:
         raise AssertionError("close-only layout not shown for the window-close step")
+    # D-101: the desktop's layout changes while the app is open — the top bar follows without a restart.
+    for layout, left, right in [(":minimize,maximize,close", [], ["min", "max", "close"]),
+                                ("close,maximize:", ["close", "max"], []),
+                                ("appmenu:close", [], ["close"])]:
+        app.send("set-layout " + layout)
+        app.wait(lambda: shown_buttons() == {"left": left, "right": right}, 10, f"live change to {layout}")
+        seen.append(f"live {layout} → {'/'.join(left) or '-'} | {'/'.join(right) or '-'}")
     return f"{len(LAYOUTS)} layouts exact: " + "; ".join(seen)
 
 

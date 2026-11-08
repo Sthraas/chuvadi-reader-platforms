@@ -5,26 +5,62 @@ using ChuvadiReader.Platform;
 
 namespace ChuvadiReader.Linux.Platform;
 
-/// <summary>What the Linux host is: desktop form factor, Ctrl labels, window buttons on the side the
-/// desktop's own button layout puts them (GNOME/KDE setting), 12 px window corners (handout).</summary>
-internal static class LinuxPlatformInfo
+/// <summary>What the Linux host is: desktop form factor, Ctrl labels, 12 px window corners (handout), and
+/// the window buttons exactly as the desktop lays them out (GNOME/KDE setting) — followed live: when the
+/// person changes the layout while Chuvadi is open, <see cref="IPlatformInfo.ChromeChanged"/> is raised and
+/// the top bar redraws (D-101).</summary>
+internal sealed class LinuxPlatformInfo : IPlatformInfo
 {
-    /// <summary>Main thread, after GTK init (reads GtkSettings). The window buttons follow the desktop's
-    /// layout exactly (<see cref="GtkButtonLayout"/>).</summary>
-    public static IPlatformInfo Create()
+    private ShellChrome _chrome;
+
+    private LinuxPlatformInfo(ShellChrome chrome) => _chrome = chrome;
+
+    /// <summary>Main thread, after GTK init (reads GtkSettings and listens for its changes).</summary>
+    public static LinuxPlatformInfo Create()
     {
-        var layout = GtkButtonLayout.Parse(Native.ButtonLayout());
-        return new FixedPlatformInfo(
-            PlatformKind.Linux,
-            InputKinds.Mouse | InputKinds.Keyboard,
-            new ShellChrome(
-                GtkButtonLayout.SideOf(layout),
-                NativeMenuBar: false,
-                AccountMenu: false,
-                TitleBarDrag: true,
-                CornerRadiusPx: 12) { ButtonLayout = layout },
-            FixedPlatformInfo.DesktopCapabilities,
-            new CtrlKeyLabels());
+        var info = new LinuxPlatformInfo(ChromeFor(Native.ButtonLayout()));
+        GtkHost.ButtonLayoutChanged += info.OnLayoutChanged;
+        return info;
+    }
+
+    public PlatformKind Kind => PlatformKind.Linux;
+
+    public FormFactor FormFactor => FormFactor.Desktop;
+
+    public event Action? FormFactorChanged { add { } remove { } }
+
+    public InputKinds Input => InputKinds.Mouse | InputKinds.Keyboard;
+
+    public ShellChrome Chrome => Volatile.Read(ref _chrome);
+
+    public event Action? ChromeChanged;
+
+    public PlatformCapabilities Capabilities => FixedPlatformInfo.DesktopCapabilities;
+
+    public IKeyLabels Keys { get; } = new CtrlKeyLabels();
+
+    private void OnLayoutChanged(string layout)
+    {
+        var chrome = ChromeFor(layout);
+        if (chrome.ButtonLayout is { } now && Chrome.ButtonLayout is { } was
+            && now.Left.SequenceEqual(was.Left) && now.Right.SequenceEqual(was.Right))
+        {
+            return;
+        }
+
+        Volatile.Write(ref _chrome, chrome);
+        ChromeChanged?.Invoke();
+    }
+
+    private static ShellChrome ChromeFor(string? layoutText)
+    {
+        var layout = GtkButtonLayout.Parse(layoutText);
+        return new ShellChrome(
+            GtkButtonLayout.SideOf(layout),
+            NativeMenuBar: false,
+            AccountMenu: false,
+            TitleBarDrag: true,
+            CornerRadiusPx: 12) { ButtonLayout = layout };
     }
 }
 

@@ -18,6 +18,7 @@ internal static unsafe partial class Native
         DialogResult = 6,
         PrintResult = 7,
         JsResult = 8,
+        ButtonLayout = 9,
     }
 
     [LibraryImport(Lib, EntryPoint = "chvd_init")]
@@ -109,6 +110,10 @@ internal static unsafe partial class Native
     /// <summary>Bit 0: no GPU; bit 1: WebKit compositing off (hardware acceleration policy "never").</summary>
     [LibraryImport(Lib, EntryPoint = "chvd_render_info")]
     public static partial int RenderInfo();
+
+    /// <summary>Sets GTK's window-button layout (UI tests: what the desktop's settings bridge does).</summary>
+    [LibraryImport(Lib, EntryPoint = "chvd_set_button_layout", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial void SetButtonLayout(string layout);
 
     [LibraryImport(Lib, EntryPoint = "chvd_button_layout")]
     private static partial int ButtonLayout(byte* buf, int size);

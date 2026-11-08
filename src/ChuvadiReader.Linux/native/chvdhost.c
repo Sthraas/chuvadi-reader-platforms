@@ -40,6 +40,7 @@ enum
     CHVD_EVENT_DIALOG_RESULT = 6,     /* payload "<token>" then one chosen path per line (none = cancelled) */
     CHVD_EVENT_PRINT_RESULT = 7,      /* payload "<token>" then key=value lines (none = cancelled) */
     CHVD_EVENT_JS_RESULT = 8,         /* payload "<token>" then the result as JSON, or "!<error>" (UI test builds) */
+    CHVD_EVENT_BUTTON_LAYOUT = 9,     /* payload: the desktop's new window-button layout (D-101) */
 };
 
 typedef void (*chvd_scheme_fn)(void *request, const char *uri);
@@ -90,6 +91,23 @@ static gboolean has_render_node(void)
     return found;
 }
 
+static void on_layout_changed(GObject *settings, GParamSpec *pspec, gpointer data)
+{
+    char *layout = NULL;
+    g_object_get(settings, "gtk-decoration-layout", &layout, NULL);
+    if (S.event)
+    {
+        S.event(CHVD_EVENT_BUTTON_LAYOUT, layout ? layout : "");
+    }
+    g_free(layout);
+}
+
+/* UI tests only call this: sets the layout the way the desktop's settings bridge does. */
+CHVD_EXPORT void chvd_set_button_layout(const char *layout)
+{
+    g_object_set(gtk_settings_get_default(), "gtk-decoration-layout", layout, NULL);
+}
+
 CHVD_EXPORT int chvd_init(chvd_scheme_fn scheme, chvd_message_fn message, chvd_wake_fn wake, chvd_event_fn event)
 {
     if (!scheme || !message || !wake || !event)
@@ -122,6 +140,9 @@ CHVD_EXPORT int chvd_init(chvd_scheme_fn scheme, chvd_message_fn message, chvd_w
      * File" pseudo-printer can't take that job, so the print dialog lists CUPS printers only.
      * (GTK 4 reads this from its settings; the GTK 3 GTK_PRINT_BACKENDS variable is gone.) */
     g_object_set(gtk_settings_get_default(), "gtk-print-backends", "cups", NULL);
+    /* D-101: the desktop's window-button layout can change while Chuvadi is open (GNOME/KDE settings reach
+     * GTK as this property); the top bar follows at once. */
+    g_signal_connect(gtk_settings_get_default(), "notify::gtk-decoration-layout", G_CALLBACK(on_layout_changed), NULL);
 
     S.loop = g_main_loop_new(NULL, FALSE);
     return 1;

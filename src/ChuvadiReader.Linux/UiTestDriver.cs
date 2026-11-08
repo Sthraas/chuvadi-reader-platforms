@@ -16,6 +16,7 @@ namespace ChuvadiReader.Linux;
 ///   commands             → [{id,label,group,keys,enabled}…] (the Ctrl K registry, IAppCommands)
 ///   invoke &lt;id&gt;          → true | false | "pending" (still running after 2 s, e.g. waiting in a dialog)
 ///   open &lt;path&gt;          → true (as a file arriving from outside: OpenDocumentService.Request)
+///   set-layout &lt;layout&gt;   → true (sets GTK's gtk-decoration-layout, as a desktop settings change does)
 ///   render-info          → {"noGpu":…,"compositingOff":…} (what the host chose at start-up, B-12)
 ///   drop &lt;p1&gt;\t&lt;p2&gt;…    → true (the window's drop handler, with these paths, as GTK's drop target calls it)
 /// tools/linux/uitest.py drives it.
@@ -116,6 +117,10 @@ internal static class UiTestDriver
 
             case "open":
                 await manager.Dispatcher.InvokeAsync(() => services.GetRequiredService<OpenDocumentService>().Request(arg));
+                return "true";
+
+            case "set-layout":
+                GtkHost.Post(() => Native.SetButtonLayout(arg));
                 return "true";
 
             case "render-info":
