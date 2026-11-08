@@ -171,5 +171,5 @@ CI artifact `linux-arm64/deb/chuvadi-reader_1.0.0~preview_arm64.deb` from run 42
 
 ## Questions for the coordinator / Arun
 1. The **7.9 MB vector CAD PDF** from the Reader chat's uploads — can Arun attach it here (or commit it to a test-fixtures path)? T5.3 is blocked without it.
-2. **B-05 single instance**: `SINGLE-INSTANCE.md` isn't on `platform/foundation`. Who is unblocking the contract — Foundation, or may the Linux chat implement against D-83 directly?
-3. **B-07 / B-08–B-11 / B-16 / B-18** are in shared code or libraries — please route to the Reader chat / library coordinator (Arun relays).
+2. ~~B-05 contract~~ — answered: on `platform/foundation` since 6 Nov; Linux builds against it. (My error.)
+3. Routing done in BUGS.md (Linux / shared Ui/Core / library).
