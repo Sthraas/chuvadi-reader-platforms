@@ -6,21 +6,23 @@ Severity: **High** = wrong result, security weakness, or a screen that doesn't w
 
 | # | Severity | Area | Title | Owner | Status |
 |---|---|---|---|---|---|
-| WT-01 | High | Security | In gateway mode the Reader page loses its Content-Security-Policy (only `frame-ancestors 'self'` reaches the browser) | Web | Open |
-| WT-02 | High | Function | Print "Current" prints the **next** page; Measure card shows the next page number | Existing file → Arun | Open |
-| WT-03 | High | Design | Phone width shows squeezed desktop rails, not the phone shell; per-page strip and Arrange shelf clipped | Web (rebase) + Web portal UI (re-check) | Open |
-| WT-04 | Medium | Wording | Status bar still says "encrypted at rest" (D-98) | Web portal UI → Foundation patch → Web | Open (fix queued: web-ui 5bec046 H7) |
-| WT-05 | Medium | Wording | 12a pitch still says "encrypted at rest" | Coordinator decision, then Web portal UI | Question |
-| WT-06 | Medium | Design | Account menu has no "Terms of use · Privacy" footer (D-97) | Web portal UI → Foundation patch → Web | Open (fix queued: web-ui 5bec046) |
-| WT-07 | Low | Security | The circuit (`/_blazor`) accepts a foreign `Origin` | Web | Open |
-| WT-08 | Low | Security | File names keep Unicode bidi controls (U+202E), so a name can display reversed | Web | Open |
-| WT-09 | Low | UX | The no-print reason is only a hover tooltip on a disabled button (invisible on touch) | Existing file → Arun | Open |
-| WT-10 | Low | UX | A file that can't be opened shows raw parser text, and a "Fetch…" button where the portal says "Upload" | Existing file → Arun (text) / Web portal UI (label) | Open |
-| WT-11 | Low | Packaging | Publish output carries `web.config` (IIS), `appsettings.Development.json`, `.pdb` and `.xml` files | Web | Open |
-| WT-12 | Low | Docs/CI | The plan's build command fails from a clean clone; Web is built without `-warnaserror` in CI and isn't in Platforms.slnx | Web | Open |
-| WT-13 | Low | Test tooling | `load.py`: no output folder created; "paging" is mostly fixed sleeps; one browser for everyone | Web | Open |
+| WT-01 | High | Security | In gateway mode the Reader page loses its Content-Security-Policy (only `frame-ancestors 'self'` reaches the browser) | Web | Open — Web, after the rebase (Q-4) |
+| WT-02 | High | Function | Print "Current" prints the **next** page; Measure card shows the next page number | Existing file → Arun | Open — Foundation combined patch (exact diff) → Arun via PR #11; changes Windows output (coordinator 20:40) |
+| WT-03 | High | Design | Phone width shows squeezed desktop rails, not the phone shell; per-page strip and Arrange shelf clipped | Web (rebase) + Web portal UI (re-check) | Fix in Foundation 63f37b1 (PhoneShell in MainLayout; source checked); re-test after the Web rebase |
+| WT-04 | Medium | Wording | Status bar still says "encrypted at rest" (D-98) | Web portal UI → Foundation patch → Web | Fix in Foundation 63f37b1 ("kept in memory only"; source checked); re-test after the Web rebase |
+| WT-05 | Medium | Wording | 12a pitch still says "encrypted at rest" | Coordinator decision, then Web portal UI | Decided D-103; fix in Foundation 9fbed93 (pitch "kept in memory only"; source checked); re-test after the Web rebase |
+| WT-06 | Medium | Design | Account menu has no "Terms of use · Privacy" footer (D-97) | Web portal UI → Foundation patch → Web | Fix in Foundation 63f37b1 (`PortalLegalLinks` in AccountMenu; source checked); re-test after the Web rebase |
+| WT-07 | Low | Security | The circuit (`/_blazor`) accepts a foreign `Origin` | Web | Open — Web, after the rebase |
+| WT-08 | Low | Security | File names keep Unicode bidi controls (U+202E), so a name can display reversed | Web | Open — Web, after the rebase |
+| WT-09 | Low | UX | The no-print reason is only a hover tooltip on a disabled button (invisible on touch) | Existing file → Arun | Open — Foundation combined patch → Arun via PR #11 |
+| WT-10 | Low | UX | A file that can't be opened shows raw parser text, and a "Fetch…" button where the portal says "Upload" | Existing file → Arun (text) / Web portal UI (label) | Open — Foundation combined patch → Arun via PR #11 (label: Web portal UI) |
+| WT-11 | Low | Packaging | Publish output carries `web.config` (IIS), `appsettings.Development.json`, `.pdb` and `.xml` files | Web | Open — Web, after the rebase |
+| WT-12 | Low | Docs/CI | The plan's build command fails from a clean clone; Web is built without `-warnaserror` in CI and isn't in Platforms.slnx | Web | Open — Web, after the rebase |
+| WT-13 | Low | Test tooling | `load.py`: no output folder created; "paging" is mostly fixed sleeps; one browser for everyone | Web | Open — Web, after the rebase |
 
-Library items (Arun's libraries; not app bugs, recorded so they aren't lost): **LIB-1**, **LIB-2** at the end.
+Library items (Arun's libraries; not app bugs, recorded so they aren't lost): **LIB-1**, **LIB-2** at the end — on the coordinator's list for Arun's library coordinator (20:40).
+
+**Coordinator decisions 8 Nov 20:40 (D-117 to D-120):** O-1 (b) 10 s timeout for discovery and the token call; O-2 (b) probe Sangam before redirecting (2 s, cached 30 s); WT-05 already D-103; Q-3 (c) keep Storage map and shelves with "this session" wording if the Web portal UI confirms no layout change, else (b); order: Web rebases first, then WT-01, WT-07, WT-08, WT-11 to WT-13; WT-02, WT-09, WT-10 into Foundation's combined patch → PR #11. New checks to run when they land: O-1 (G-9 ≤ 10 s), O-2 (G-1 warm shows our message), Q-3 wording.
 
 ---
 

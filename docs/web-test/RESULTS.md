@@ -105,3 +105,8 @@ Legend: ✅ pass · ❌ fail (bug linked) · ⚠️ pass with a note · ⏳ not 
 ## Observations (not bugs yet)
 - **OBS-1 Firefox automation:** in 2 of 15 Firefox page loads during the long screenshot run, Playwright's `load` event didn't fire within 30 s with **no pending request**; 9/9 isolated retries loaded in 151–1,181 ms. Looks like an automation quirk; check on real Firefox in a manual run.
 - `/error` answers 500 when opened directly (by design: it is the error page).
+
+## Re-verification log
+| When | What | Result |
+|---|---|---|
+| 8 Nov 20:45 | Branch heads after the coordinator's 20:40 decisions | `platform/web` still 31b063e (not rebased; lacks Foundation 584bbf2) → nothing to re-test in a running build yet. Source check of Foundation **63f37b1**, which the rebase will bring: status bar "processed on the server · kept in memory only · only you can see it" (WT-04); 12a pitch "…kept in memory only…" (WT-05, D-103 in 9fbed93); `PortalLegalLinks` in `AccountMenu.razor` (WT-06); `PhoneShell` wired in `MainLayout.razor` (WT-03). WT-02 not yet changed (`Reader.razor` still passes 1-based `CurPage` to `PrintCard`) — expected, it goes into the combined patch. All four to be re-run in browsers (3 engines, phone/tablet/desktop) once the Web chat rebases |
