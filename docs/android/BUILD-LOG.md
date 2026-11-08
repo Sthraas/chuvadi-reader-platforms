@@ -589,3 +589,9 @@ capitalises on Enter (the search found 1/4).
   `&&` chain and was never written, so the old runner sent API 35 into the Reader suites (which timed out waiting
   for a PDF the update screen rightly never shows). Runner now written and checked (`bash -n`); the gate runs on
   API 35 next round.
+
+### 50. Round 7 set-up (coordinator, 8 Nov 20:05 IST): API 35 only
+- Rebased onto Foundation `9fbed93` (seventh combined patch part 2a, which takes P-07); the composition now finds
+  P-06, P-07 and Mobile UI's hooks-4 already in Foundation. Mobile UI `a20f6d1` unchanged. Android 0 warnings;
+  Platforms `-warnaserror` 0 warnings; tests 171 + 54 + 33 + 16 pass.
+- One run, `emulators=phone-35,tablet-35`: the WebView gate (update screen, Play button, back in) on WebView 124.

@@ -108,7 +108,7 @@ that consumes.
 - **Not included (say if wanted):** Back closing the pages drawer or the find bar (Escape closes both on
   the desktop). Same pattern, a few lines each.
 
-## P-07 Open from another app: no duplicate "/reader" history entry — for Foundation's combined patch
+## P-07 Open from another app: no duplicate "/reader" history entry — **taken by Foundation (seventh combined patch part 2a, 9fbed93)**
 Patch: [`proposal/P-07-no-duplicate-reader-history.patch`](proposal/P-07-no-duplicate-reader-history.patch), against
 platform/foundation **8098695**; one file, `Ui/Layout/MainLayout.razor` (+9 −1).
 
