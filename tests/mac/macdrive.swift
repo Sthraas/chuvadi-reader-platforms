@@ -570,6 +570,15 @@ case "displays":
     let modes = (CGDisplayCopyAllDisplayModes(id, opts) as? [CGDisplayMode]) ?? []
     if let cur = CGDisplayCopyDisplayMode(id) { print("current: \(cur.width)x\(cur.height) pt, \(cur.pixelWidth)x\(cur.pixelHeight) px") }
     for m in modes { print("mode: \(m.width)x\(m.height) pt \(m.pixelWidth)x\(m.pixelHeight) px\(m.pixelWidth > m.width ? " HiDPI" : "")") }
+    if flag("--max") {
+        let lo = modes.filter { $0.pixelWidth == $0.width }.max { $0.width * $0.height < $1.width * $1.height }
+        guard let lo else { print("no modes"); exit(4) }
+        var cfg: CGDisplayConfigRef?
+        CGBeginDisplayConfiguration(&cfg)
+        CGConfigureDisplayWithDisplayMode(cfg, id, lo, nil)
+        let r = CGCompleteDisplayConfiguration(cfg, .permanently)
+        print("switch to \(lo.width)x\(lo.height): \(r == .success ? "ok" : "error \(r.rawValue)")")
+    }
     if flag("--hidpi") {
         let hi = modes.filter { $0.pixelWidth > $0.width && $0.width >= 1280 }.max { $0.width < $1.width }
         guard let hi else { print("no HiDPI mode ≥ 1280 pt"); exit(4) }

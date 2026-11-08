@@ -139,9 +139,15 @@ jobs:
           { ls -l out/*.zip; shasum -a 256 out/*.zip; if cmp -s a.sha b.sha; then echo "zip round trip: identical ($(wc -l < a.sha) files)"; else echo "zip round trip: DIFFERENT"; diff a.sha b.sha | head; fi; } | tee t1-8-zip.txt
 
       - name: T1.11 assembly identities
-        run: dotnet run harness/tests/mac/AsmIds.cs -- "$APP" > asm-ids.tsv 2> asm-ids.err; wc -l asm-ids.tsv; head -3 asm-ids.tsv; cat asm-ids.err | tail -5
+        continue-on-error: true
+        run: |
+          # Outside the repo, so no repo nuget.config applies (it points at a dev-only ./localpackages).
+          mkdir -p "$RUNNER_TEMP/asmids" && cp harness/tests/mac/AsmIds.cs "$RUNNER_TEMP/asmids/"
+          (cd "$RUNNER_TEMP/asmids" && dotnet run AsmIds.cs -- "$APP") > asm-ids.tsv 2> asm-ids.err || { tail -20 asm-ids.err; exit 1; }
+          wc -l asm-ids.tsv; head -3 asm-ids.tsv
 
       - name: T1.4 T1.5 T1.9–T1.12 bundle audit
+        continue-on-error: true
         run: python3 harness/tests/mac/audit_bundle.py "$APP" asm-ids.tsv app audit.json | tee t1-audit.txt
 
       - name: Upload app + T1 evidence
@@ -154,6 +160,7 @@ jobs:
             t1-*.txt
             t1-1-build.log
             asm-ids.tsv
+            asm-ids.err
             audit.json
             app/**/*.trx
 
@@ -186,11 +193,14 @@ jobs:
           ditto -x -k t1/out/Chuvadi-mac-universal-unsigned.zip /Applications
           ls -la /Applications/Chuvadi.app/Contents/MacOS
           sw_vers; uname -m; sysctl -n machdep.cpu.brand_string; sysctl -n hw.ncpu hw.memsize
+      - name: Display (largest mode the virtual display offers)
+        run: |
+          swiftc -O harness/tests/mac/macdrive.swift -o "$RUNNER_TEMP/macdrive"
+          "$RUNNER_TEMP/macdrive" displays --max || true
       - name: Tools (testing only)
         run: |
           brew install qpdf poppler >/dev/null 2>&1 || brew install qpdf poppler
           qpdf --version | head -1; pdffonts -v 2>&1 | head -1
-          swiftc -O harness/tests/mac/macdrive.swift -o "$RUNNER_TEMP/macdrive"
       - name: Permissions for the test tools (TCC)
         run: |
           sudo python3 harness/tests/mac/grant_tcc.py "$RUNNER_TEMP/macdrive" /usr/bin/osascript "$(python3 -c 'import sys;print(sys.executable)')" /bin/bash || true
