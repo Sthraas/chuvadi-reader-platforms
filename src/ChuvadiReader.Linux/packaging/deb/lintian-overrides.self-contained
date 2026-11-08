@@ -1,0 +1,19 @@
+# Self-contained build only: the .NET runtime ships inside the package.
+# .NET's own compression library (Microsoft, MIT) carries zlib, built into it by Microsoft; it is part of the
+# .NET runtime in the self-contained build and can't be swapped for the system's zlib.
+chuvadi-reader: embedded-library zlib [usr/lib/chuvadi-reader/libSystem.IO.Compression.Native.so]
+# Microsoft's prebuilt .NET runtime binaries (createdump, the runtime's native libraries): built and
+# hardened by Microsoft; we ship them as published and can't rebuild them.
+chuvadi-reader: hardening-no-fortify-functions [usr/lib/chuvadi-reader/createdump]
+chuvadi-reader: hardening-no-fortify-functions [usr/lib/chuvadi-reader/libSystem.*.so]
+chuvadi-reader: hardening-no-fortify-functions [usr/lib/chuvadi-reader/libclrjit.so]
+chuvadi-reader: hardening-no-fortify-functions [usr/lib/chuvadi-reader/libcoreclr.so]
+chuvadi-reader: hardening-no-fortify-functions [usr/lib/chuvadi-reader/libhostfxr.so]
+chuvadi-reader: hardening-no-fortify-functions [usr/lib/chuvadi-reader/libhostpolicy.so]
+chuvadi-reader: hardening-no-fortify-functions [usr/lib/chuvadi-reader/libmscordaccore.so]
+chuvadi-reader: hardening-no-fortify-functions [usr/lib/chuvadi-reader/libmscordbi.so]
+chuvadi-reader: hardening-no-fortify-functions [usr/lib/chuvadi-reader/libclrgc.so]
+chuvadi-reader: hardening-no-fortify-functions [usr/lib/chuvadi-reader/libclrgcexp.so]
+chuvadi-reader: binary-has-unneeded-section * [usr/lib/chuvadi-reader/lib*.so]
+chuvadi-reader: binary-has-unneeded-section * [usr/lib/chuvadi-reader/createdump]
+chuvadi-reader: spelling-error-in-binary * [usr/lib/chuvadi-reader/*]

@@ -16,10 +16,12 @@
 
     <TieredPGO>true</TieredPGO>
     <TieredCompilation>true</TieredCompilation>
-    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+    <!-- .NET's own error messages stay in (B-17): the Ui shows them ("Access to the path … is denied"). -->
     <AutoreleasePoolSupport>false</AutoreleasePoolSupport>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <!-- No IntelliSense XML of referenced projects in the output (B-13). -->
+    <AllowedReferenceRelatedFileExtensions>.pdb</AllowedReferenceRelatedFileExtensions>
 
     <!-- UI test build only (dotnet build -p:UiTest=true): adds UiTestDriver. Never set for a release. -->
     <DefineConstants Condition="'$(UiTest)' == 'true'">$(DefineConstants);CHUVADI_UITEST</DefineConstants>

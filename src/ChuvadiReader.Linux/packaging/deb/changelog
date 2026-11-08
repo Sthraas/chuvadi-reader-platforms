@@ -1,0 +1,5 @@
+chuvadi-reader (1.0.0~preview) unstable; urgency=medium
+
+  * First Linux preview: GTK 4 + WebKitGTK 6.0 host for Chuvadi Reader.
+
+ -- Sthraas Intelligence Pvt Ltd <maintainer@chuvadi.in>  Sun, 08 Nov 2026 12:00:00 +0000

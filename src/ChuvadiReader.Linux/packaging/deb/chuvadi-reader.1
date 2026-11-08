@@ -1,0 +1,25 @@
+.TH CHUVADI-READER 1 "November 2026" "chuvadi-reader 1.0.0~preview" "User Commands"
+.SH NAME
+chuvadi-reader \- read, mark, arrange and protect PDF documents; view Word and Excel files
+.SH SYNOPSIS
+.B chuvadi-reader
+[\fIFILE\fR...]
+.SH DESCRIPTION
+.B chuvadi-reader
+opens each \fIFILE\fR (PDF, Word .docx, Excel .xlsx) in its own tab. When Chuvadi Reader is already
+running, the files open as new tabs in the running window.
+Everything is processed on this device.
+.SH ENVIRONMENT
+.TP
+.B CHUVADI_TIMING=1
+Print the time of each start-up stage to standard error.
+.SH FILES
+.TP
+.I ~/.config/Chuvadi
+Settings.
+.TP
+.I ~/Documents/Chuvadi Documents
+Default folder for saved documents.
+.SH SEE ALSO
+.UR https://chuvadi.in
+.UE

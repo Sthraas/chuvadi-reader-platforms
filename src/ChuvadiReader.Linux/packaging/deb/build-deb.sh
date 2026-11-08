@@ -50,6 +50,17 @@ rm -f "$lib"/*.pdb
 # .NET's optional LTTng tracing hook: it links liblttng-ust.so.0, which Ubuntu 24.04+ no longer ships, and
 # .NET runs without it (Microsoft's guidance: remove it when LTTng tracing isn't used).
 rm -f "$lib/libcoreclrtraceptprovider.so"
+# IntelliSense documentation of our own assemblies (B-13): not needed at run time.
+for xml in "$lib"/*.xml; do
+    [ -e "$xml" ] && [ -f "${xml%.xml}.dll" ] && rm -f "$xml"
+done
+# Precompressed .gz/.br copies of web assets (made by the Ui project's build for web servers): the web view's
+# assets are answered in-process from the originals, so the copies are never read.
+find "$lib/wwwroot" -type f \( -name '*.gz' -o -name '*.br' \) | while read -r c; do
+    [ -f "${c%.*}" ] && rm -f "$c"
+done
+# Our own native shim ships without symbols (B-01); Microsoft's .so files come stripped.
+strip --strip-unneeded --remove-section=.comment "$lib/libchvdhost.so"
 ln -s "../lib/$pkg/chuvadi-reader" "$stage/usr/bin/chuvadi-reader"
 
 # 2. Desktop integration.
@@ -106,6 +117,15 @@ for i in range(count):
     open(os.path.join(folder, name + ".png"), "wb").write(png)
 PY
 
+# Debian changelog and a short manual page (B-01: lintian no-changelog, no-manual-page).
+mkdir -p "$stage/usr/share/man/man1"
+gzip -9nc "$here/changelog" > "$stage/usr/share/doc/$pkg/changelog.gz"   # a native package: changelog.gz
+gzip -9nc "$here/chuvadi-reader.1" > "$stage/usr/share/man/man1/chuvadi-reader.1.gz"
+# Lintian overrides, each with its reason (in the file).
+mkdir -p "$stage/usr/share/lintian/overrides"
+cat "$here/lintian-overrides" > "$stage/usr/share/lintian/overrides/$pkg"
+[ "$mode" = "self-contained" ] && cat "$here/lintian-overrides.self-contained" >> "$stage/usr/share/lintian/overrides/$pkg"
+
 # 3. AppArmor profile for the installed path.
 sed "s#@CHUVADI_BINARY@#/usr/lib/$pkg/chuvadi-reader#" "$project/packaging/apparmor/chuvadi-reader" \
     > "$stage/etc/apparmor.d/chuvadi-reader"
@@ -149,6 +169,16 @@ if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
 fi
 SH
 chmod 755 "$stage/DEBIAN/postinst" "$stage/DEBIAN/postrm"
+
+# File modes (B-01): the publish keeps the NuGet cache's 0744 on everything. Files 0644, folders 0755;
+# executable only the apphost, .NET's crash-dump helper and the maintainer scripts.
+find "$stage" -type d -exec chmod 0755 {} +
+find "$stage" -type f -exec chmod 0644 {} +
+chmod 0755 "$lib/chuvadi-reader" "$stage/DEBIAN/postinst" "$stage/DEBIAN/postrm"
+[ -f "$lib/createdump" ] && chmod 0755 "$lib/createdump"
+
+(cd "$stage" && find . -path ./DEBIAN -prune -o -type f -printf '%P\0' | sort -z | xargs -0 md5sum) > "$stage/DEBIAN/md5sums"
+chmod 0644 "$stage/DEBIAN/md5sums"
 
 size="$(du -sk --exclude=DEBIAN "$stage" | cut -f1)"
 cat > "$stage/DEBIAN/control" <<EOF
