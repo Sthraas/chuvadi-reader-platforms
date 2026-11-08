@@ -30,7 +30,7 @@ depend on the contract (D-101) are in the same diff and land on `platform/linux`
   - B-09 `far-cell.xlsx` (cell at XFD1048576): grid in 2.6 s, 26,112 cells drawn instead of 1.28 million;
     memory 372 MB (Test chat: 1.7 GB and "Opening…" for 185 s+).
   - B-10: a PDF opened right after it opens in 0.3 s.
-- Full UI pass on the shared build: see the result line at the end of this file.
+- Full UI pass on the shared build (rebased on ffb2823): 114/114. Step 35: all 8 layouts exact, the brand cell's divider within 1.5 px of the left bar's edge in each (B-19), and three live changes followed without a restart (D-101); step 34b3: the first Tab stops are brand, tab closes, new tab, tab menu — no per-page buttons (B-23).
 
 ## Options
 **S1 (D-101), how the change reaches the Ui.** A. An event on `IPlatformInfo` with a no-op default (built).
