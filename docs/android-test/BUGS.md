@@ -9,6 +9,43 @@ run [42518447149](https://github.com/Sthraas/chuvadi-reader-platforms/actions/ru
 
 ---
 
+## AT-03 · S1 · Foundation (+ Android CI) · open — The Release app crashes at every launch (trimmed constructor)
+**Steps:** install the Release `.apk` from the build above (the same build as the Play `.aab`) on any emulator; tap the icon,
+or Open with a PDF.
+**Expected:** the app starts.
+**Actual:** it dies in `MainActivity.OnCreate` before the first frame, every time (15 of 15 crash entries in `dumpsys dropbox`
+on phone API 35 and tablet API 35; `am start -W` never reports a TotalTime):
+```
+FATAL EXCEPTION: main  Process: in.chuvadi.reader
+[System.InvalidOperationException]: NoConstructorMatch, ChuvadiReader.Platform.NoAppInstance
+  at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateConstructorCallSite
+  … ServiceProvider.GetService … MauiContext+WrappedServiceProvider.GetService
+  at ChuvadiReader.Android.MainActivity.Service / Deliver / OnCreate
+```
+Evidence: run 42518447149, artifacts `results-phone-api35/…/dropbox.txt`, `…/logcat.txt` (same on tablet).
+**Cause:** `ChuvadiReader.Platform.csproj` sets `IsTrimmable` / `IsAotCompatible`, so the Android Release build (MAUI's
+partial trimming, `AndroidLinkMode=SdkOnly`) trims that assembly. The host kit registers the seam defaults
+(`NoAppInstance`, `NoopUiScale`, `NoExternalLinks`, `NoopWindowControls`, `NoopPrintService`, `NoHostNotices`, `NoDroppedFiles`,
+`NoFileWriteBack`, `NoAppLifecycle`, `NoFileManager`, …) from `(Type Service, Type Impl)` tuples in
+`ChuvadiReader.Hosting/ChuvadiReaderServices.cs`, which carry no `[DynamicallyAccessedMembers]`; the trimmer can't see that their
+constructors are used and removes them. No trim warning appears because Hosting itself isn't marked trimmable, so ILLink doesn't
+analyse it. `UseSystemResourceKeys` hides the full message ("A suitable constructor … could not be located").
+**Why nobody saw it:** the Android workflow installs only the **Debug** x64 `.apk` on the emulators (no trimming there);
+Release was built and uploaded but never run.
+**Fix options (for the coordinator):**
+- (a) **Annotate the registration tables** — e.g. a small `readonly record struct Seam(Type Service, [DynamicallyAccessedMembers(PublicConstructors)] Type Impl)`
+  or `DynamicDependency` on the table — in Hosting. *Pros:* correct for every trimmed host (Android now, Mac Catalyst Release
+  too, any future AOT); keeps Foundation's non-generic registrations, so no desktop startup cost. *Cons:* shared-code edit (Foundation
+  combined patch); needs the trim analyser turned on for Hosting to prove nothing else is missed.
+- (b) **Drop `IsTrimmable`/`IsAotCompatible` from ChuvadiReader.Platform.** *Pros:* one-line, no runtime change. *Cons:* hides the
+  problem rather than fixing it; any other trimmable assembly with the same pattern stays exposed.
+- (c) **Android host roots the assembly** (`<TrimmerRootAssembly Include="ChuvadiReader.Platform" />`). *Pros:* host-only, today.
+  *Cons:* Mac Catalyst Release likely has the same crash and needs its own copy; papers over the shared cause.
+**Recommendation:** (a), with the trim analyser enabled on Hosting/Platform (`EnableTrimAnalyzer`) so CI fails on the next
+case, **plus** the Android workflow running the Release `.apk` on at least one emulator per round. **The Mac Test chat should
+check the Mac Catalyst Release build for the same crash.** Until (a) lands, this chat tests a Release build with (c) applied in
+the test composition only, marked as such, so startup and design results reflect the shipping configuration.
+
 ## AT-01 · S2 · Android + Foundation · open — Third-party notices leave out AndroidX, Material Components and Kotlin, which ship in the app
 **Steps:** build Release; list `obj/Release/net10.0-android/android-arm64/linked/*.dll` and the dex (`audit/assemblies.txt`,
 `audit/apk-contents.txt`); open About › Licences.
