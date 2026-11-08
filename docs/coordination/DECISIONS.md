@@ -338,7 +338,8 @@ Options considered:
 | # | Item | Decision |
 |---|---|---|
 | D-133 | B-18 / D-121 left bar | Arun: documents are mostly portrait, so there is always room; keep the Reader's wide labelled left rail with a collapse button (Arun has asked the Reader chat for it). Platforms follow the Reader's version through the shared Ui; B-18 closed as "by design" |
-| D-134 | D-111 rail heading ("top railing") | Arun: follow the handout. Being confirmed with Arun that this means the tool rail's "TOOLS" heading; the Reader chat to be told the same (Arun relays) so every platform looks the same |
+| D-134 | D-111 rail heading | Arun (confirmed 03:40): the tool rail heading says "TOOLS" as in the handout, on every platform. The Reader chat changes Windows (Arun relays); platforms inherit through the shared Ui |
+| D-135 | D-112 Save on the Mark rail, desktop | Arun: yes. Save at the foot of the Mark rail on desktop too, as in the handout. The Reader chat adds it on Windows; Mobile UI's touch-only version merges into the shared one |
 
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).
