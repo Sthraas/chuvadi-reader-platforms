@@ -20,13 +20,23 @@ adb shell dumpsys webviewupdate | grep "Current WebView package" | tee "$OUT/web
 
 python3 "$HERE/fixtures.py" "$OUT/fixtures" > "$OUT/fixtures.txt"
 
-# The shipped Release package, as Play would deliver it (universal .apk from the same build).
-adb install -r "$PKGS/chuvadi-reader-release.apk" | tee "$OUT/install-release.txt"
+# 1. The Release package exactly as built (same build as the .aab): does it start? (AT-03)
+adb install -r "$PKGS/chuvadi-reader-release.apk" | tee "$OUT/install-release-as-built.txt"
 COMP="$(adb shell cmd package resolve-activity --brief in.chuvadi.reader | tail -1 | tr -d '\r')"
+adb logcat -c
+for i in 1 2 3; do adb shell am start -W -n "$COMP" >> "$OUT/as-built-launch.txt" 2>&1; sleep 4; adb shell am force-stop in.chuvadi.reader; done
+adb logcat -d -v epoch > "$OUT/as-built-logcat.txt"
+echo "as-built Release: $(grep -c 'FATAL EXCEPTION' "$OUT/as-built-logcat.txt") crashes in 3 launches; TotalTime lines: $(grep -c TotalTime "$OUT/as-built-launch.txt")" | tee "$OUT/as-built.txt"
+adb uninstall in.chuvadi.reader >/dev/null
+
+# 2. Release with the AT-03 test-only fix (ChuvadiReader.Platform rooted), used for every suite below until AT-03 is fixed.
+REL="$PKGS/chuvadi-reader-release-at03.apk"; [ -f "$REL" ] || REL="$PKGS/chuvadi-reader-release.apk"
+echo "suites run on: $(basename "$REL")" | tee "$OUT/package-under-test.txt"
+adb install -r "$REL" | tee "$OUT/install-release.txt"
 adb shell am start -W -n "$COMP" > /dev/null
 sleep 6
 PID="$(adb shell pidof in.chuvadi.reader | tr -d '\r')"
-if adb shell cat /proc/net/unix | grep -q "webview_devtools_remote_$PID"; then
+if [ -n "$PID" ] && adb shell cat /proc/net/unix | grep -q "webview_devtools_remote_$PID"; then
   echo "release build is inspectable on this image" | tee "$OUT/inspect.txt"
 else
   echo "release build NOT inspectable: page-level checks use the Debug x64 build of the same composition" | tee "$OUT/inspect.txt"

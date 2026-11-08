@@ -74,7 +74,11 @@ def page_time(cond):
 
 def measure(kind, runs, prep, launch, cond):
     rows = []
+    fails = 0
     for i in range(runs):
+        if fails >= 3:
+            print(kind, "stopped: 3 launches in a row gave no measurement", flush=True)
+            break
         prep()
         adb("logcat", "-c")
         time.sleep(0.5)
@@ -97,6 +101,7 @@ def measure(kind, runs, prep, launch, cond):
                "ready_upper_bound": (t_page["t"] - t0) if ok and late else None,
                "probe_injected": (t_page["injected"] - t0) if ok else None}
         rows.append(row)
+        fails = fails + 1 if row["first_frame"] is None and row["ready"] is None and row["ready_upper_bound"] is None else 0
         print(kind, row, flush=True)
     json.dump(rows, open(os.path.join(OUT, f"{kind}.json"), "w"), indent=1)
     return rows

@@ -111,6 +111,14 @@ jobs:
           find reader/src/ChuvadiReader.Android/bin/Release -name '*-Signed.aab' -exec cp {} out/chuvadi-reader-release.aab \;
           find reader/src/ChuvadiReader.Android/bin/Debug -name '*-Signed.apk' -exec cp {} out/chuvadi-reader-debug-x64.apk \;
           ls -la out; sha256sum out/*
+      - name: Test-only Release with the AT-03 fix (ChuvadiReader.Platform rooted) — never shipped
+        working-directory: reader
+        run: |
+          sed -i 's#</Project>#  <ItemGroup><TrimmerRootAssembly Include="ChuvadiReader.Platform" /></ItemGroup>\n</Project>#' src/ChuvadiReader.Android/ChuvadiReader.Android.csproj
+          dotnet publish src/ChuvadiReader.Android/ChuvadiReader.Android.csproj -c Release -f net10.0-android --no-restore -p:AndroidSdkDirectory=$ANDROID_HOME > ../publish-release-at03.txt 2>&1; tail -3 ../publish-release-at03.txt
+          find src/ChuvadiReader.Android/bin/Release -name '*-Signed.apk' -exec cp {} ../out/chuvadi-reader-release-at03.apk \;
+          git checkout src/ChuvadiReader.Android/ChuvadiReader.Android.csproj 2>/dev/null || sed -i '/TrimmerRootAssembly/d' src/ChuvadiReader.Android/ChuvadiReader.Android.csproj
+          ls -la ../out
       - name: Package audit
         run: mkdir -p audit && (bash test/docs/android-test/ci/audit.sh reader out audit 2>&1 | tee audit/run.txt) || true
       - name: Keep build evidence

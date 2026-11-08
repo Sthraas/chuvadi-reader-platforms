@@ -129,7 +129,9 @@ class Cdp:
 
     def call(self, method, params=None):
         if self.ws is None or pid() != self.pid:
-            self.connect()
+            if not pid():
+                raise RuntimeError(f"{PKG} is not running")
+            self.connect(20)
         self.n += 1
         my = self.n
         self.ws.send(json.dumps({"id": my, "method": method, "params": params or {}}))

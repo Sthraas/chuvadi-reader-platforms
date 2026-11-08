@@ -90,7 +90,9 @@ cdp.wait("document.getElementById('app') && document.getElementById('app').child
 uri = push_media(PDF, "design-doc.pdf")
 open_with(uri)
 ok = cdp.wait("document.querySelectorAll('.rpage svg').length > 0", 60)
-R.check("test document opens for the design sweep", bool(ok), reader_state())
+if not R.check("test document opens for the design sweep", bool(ok), reader_state()):
+    screencap(os.path.join(OUT, "not-opened.png"))
+    sys.exit(1)
 
 shell = js("document.documentElement.getAttribute('data-shell')")
 SCREENS = [
