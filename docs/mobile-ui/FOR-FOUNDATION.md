@@ -1,4 +1,45 @@
-# Mobile app UI → Foundation: hooks and hand-off (updated 7 Nov, 05:05 IST)
+# Mobile app UI → Foundation: hooks and hand-off (updated 8 Nov, 18:51 IST)
+
+## Outstanding for Foundation: H-13 only (`proposal/mobile-ui-hooks-4.patch`)
+H-5 to H-12 and the PhoneShell slot landed in the **sixth combined patch** (584bbf2). Checked on this
+branch after merging 8098695:
+- H-6 to H-11 are exactly as written.
+- H-5 was merged with the Web UI's H5: PhoneShell gets `SwitchTab` / `CloseTab`.
+- H-12 became `PhaseZeroSamples.Shown` (samples on Windows only), which covers Android.
+
+**H-13: `Ui/wwwroot/js/reader.js`, bug fix (Android round 3), +58 / −8**, applies cleanly to 8098695.
+Three bugs, each reproduced headless on 8098695 and passing with H-13:
+
+| Bug (round 3) | Cause | Fix | Before → after (test) |
+|---|---|---|---|
+| Double-tap on page 2 zooms into page **3**; the counter reads **1** | (a) `anchorZoom` scaled the whole scroll offset, including the fixed gaps between pages, so it drifts by a page or more at 200 %. (b) The visible page was picked from ratios kept only at threshold crossings and relative to each page's height: a page filling the view at 200 % is ~0.34 of itself and lost to a stale ratio | (a) Anchor on the page under the finger: the same spot of the same page stays under it (vertical from the unzoomed `.rpage-wrap`, sideways from the page, as `zoomToRect` already does). (b) Pick the page covering the most of the view **in pixels, measured now**; also re-check on scroll | gestures.py "double-tap on page 2 stays on page 2": phone FAIL (under 2→3→2, counter 2→1→2) → PASS on phone portrait, landscape and tablet |
+| Phone API 35: Fit page **147 px** in a 402 px desk | `measureFit` used `getBoundingClientRect ÷ zoom`; older WebViews report a CSS-zoomed box **unzoomed**, so after the first fit the natural size came out ×2.25 | `naturalSize(page)`: the rendered SVG's own `width` / `height` ("595pt"), else `offsetWidth` / `offsetHeight`. Never box ÷ zoom | checks.py fakes the API 35 behaviour: fit 0.444 → **0.197** (FAIL) → 0.444 (PASS) |
+
+- Pinch and Ctrl-wheel use the same `anchorZoom`, so they now also keep the point under the finger /
+  cursor at high zoom.
+- **For:**
+  - It fixes what round 3 saw on the devices.
+  - One file; the desktop at rest is unchanged: Read ×2, Arrange, Mark clock only; Home 12 pixels of
+    1-level noise.
+  - All desktop checks pass (→ paging, Print, fit before render, fit under an old WebView).
+- **Against:**
+  - The page counter now also updates from the (200 ms throttled) scroll handler: one more interop call
+    per 200 ms while scrolling, on every platform.
+  - Anchoring now depends on `elementFromPoint` finding a page. It falls back to the old maths in the
+    gaps.
+- **Alternatives:**
+  - Finer observer thresholds (0, 0.05 … 1) instead of the scroll re-check: fewer code paths, but at
+    500 % a page filling the view is still ~0.15 of itself, so stale ratios can still win. Not
+    recommended.
+  - Fixing anchoring in mobile.js only: the drift is in reader.js's zoom, shared with desktop pinch and
+    Ctrl-wheel, so the fix belongs there.
+- Also fixed in my own file: `mobile.js fitWidthZoom` (Redact on a phone, H-7) had the same box ÷ zoom
+  measurement; it now uses the SVG's width too.
+- Tooling: each `mobile-ui-hooks-N.patch` is a full outstanding set, and preview.sh now applies only the
+  highest N (as Android's compose.sh does). hooks-3 (H-5 to H-12) is landed; hooks-4 = H-13.
+
+Evidence (8098695 + this branch + H-13): 0 warnings; tests 171 + 54 + 32 + 16 = **273 pass**;
+`screens/2026-11-08/desktop-compare.txt`.
 
 ## CI on this branch (D-93, 7 Nov 05:20)
 - The 23:36 UTC run failed on `shared (windows-latest)`: 4 tests in `SingleInstanceTests` (Foundation's

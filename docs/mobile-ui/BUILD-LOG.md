@@ -288,3 +288,20 @@ Evidence:
     box. After: "Open your first document", D-89 C wording correct on phone and tablet.
   - Results: desktop unchanged; 266 tests with H-5 to H-12.
 - For PlatformText: the tablet first-run tip says "Ctrl K".
+
+## 8 Nov: Android round 3 → H-13; sixth combined patch merged
+- Round 3 (run 42314548860): swipe, pinch, long-press drag pass on all four emulators; phone sideways
+  overflow 0 px (H-9). Two new findings: double-tap lands on the wrong page; API 35 Fit page 147 px.
+- Reproduced headless on Foundation 8098695 (sixth combined patch, with H-5 to H-12):
+  - Double-tap on page 2: under 2 → **3**, counter 2 → **1**. Causes: `anchorZoom` scales the fixed
+    page gaps; the visible-page spy keeps stale, height-relative ratios (logged `OnPageVisible(1)` at
+    218 ms into the gesture).
+  - Old-WebView fit: faked API 35's unzoomed boxes → fit 0.197 instead of 0.444.
+- **H-13** (reader.js): page-anchored zoom; visible page by pixels, measured now (also on scroll);
+  natural size from the SVG's width / height. Same natural-size fix in my `fitWidthZoom`.
+- Tests: gestures.py "double-tap on page 2 stays on page 2"; checks.py "fit … unzoomed (API 35)".
+  Before FAIL, after PASS (phone portrait and landscape, tablet).
+- Results:
+  - 273 tests; desktop clock-only, apart from 12 pixels of 1-level noise on Home.
+- Merged Foundation 8098695: one conflict, in mobile.js (Foundation carried my earlier copy); kept
+  mine. H-5 and H-12 landed in merged / generalised form, intent checked.

@@ -46,6 +46,25 @@ async def main():
         report("fit measured before the pages render matches the rendered fit",
                abs(r["beforeRender"] - r["rendered"]) <= 0.01, r)
 
+        # 1c. Older WebViews (Android API 35) report a CSS-zoomed box unzoomed. Fit must not depend on
+        #     it (round 3: Fit page 147 px on a 402 px phone): fake that WebView and compare (H-13).
+        r = await pg.evaluate('''async () => {
+            const m = await import('/_content/ChuvadiReader.Ui/js/reader.js');
+            const d = document.querySelector('.rdesk');
+            const want = await m.measureFit(d, 'width');
+            const z = parseFloat(getComputedStyle(d).getPropertyValue('--rpage-zoom')) || 1;
+            const orig = Element.prototype.getBoundingClientRect;
+            Element.prototype.getBoundingClientRect = function () {
+                const b = orig.call(this);
+                if (!this.closest || !this.closest('.rpage')) return b;
+                return new DOMRect(b.left, b.top, b.width / z, b.height / z);   // unzoomed, as API 35
+            };
+            try { return { modern: want, oldWebView: await m.measureFit(d, 'width') }; }
+            finally { Element.prototype.getBoundingClientRect = orig; }
+        }''')
+        report("fit is the same when the WebView reports zoomed boxes unzoomed (API 35)",
+               abs(r["oldWebView"] - r["modern"]) <= 0.01, r)
+
         # 2. ⋮ (phone) / Document (tablet) → Print opens the Print card
         if phone:
             await pg.locator('.ph-bar button[aria-label="More"]').click(); await pg.wait_for_timeout(500)

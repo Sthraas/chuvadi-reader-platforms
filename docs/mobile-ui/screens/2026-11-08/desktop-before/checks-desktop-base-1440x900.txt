@@ -1,0 +1,4 @@
+PASS → moves the page and the counter follows 1 → 2
+PASS fit measured before the pages render matches the rendered fit {'rendered': 1.329, 'beforeRender': 1.329}
+FAIL fit is the same when the WebView reports zoomed boxes unzoomed (API 35) {'modern': 1.329, 'oldWebView': 0.935}
+PASS Document menu › Print opens the Print card button Print 13 pages

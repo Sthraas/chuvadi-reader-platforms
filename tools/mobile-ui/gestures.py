@@ -92,6 +92,24 @@ async def main():
         await pg.wait_for_timeout(900); w2 = (await pg.evaluate(STATE))["page"]
         report("double-tap zooms in and back", w1 > w0 * 1.5 and abs(w2 - w0) <= 2, f"{w0} → {w1} → {w2} px")
 
+        # 2a. double-tap on page 2 zooms into page 2 and the counter stays on 2 (Android round 3: it
+        #     landed on page 3 / 6 and the counter read 1 — gaps scaled with the zoom, stale visibility)
+        UNDER = """() => { const d=document.querySelector('.rdesk'), r=d.getBoundingClientRect();
+            const e=document.elementFromPoint(r.left+r.width/2, r.top+r.height/2); const w=e&&e.closest('.rpage-wrap');
+            return w ? parseInt(w.dataset.page,10)+1 : 0; }"""
+        await pg.keyboard.press("Home"); await pg.wait_for_timeout(900)
+        await pg.keyboard.press("ArrowRight"); await pg.wait_for_timeout(1400)
+        b0 = await pg.evaluate(STATE); u0 = await pg.evaluate(UNDER)
+        for _ in range(2):
+            await touch(cdp, "touchStart", [(cx, cy)]); await touch(cdp, "touchEnd", []); await asyncio.sleep(0.06)
+        await pg.wait_for_timeout(1200); b1 = await pg.evaluate(STATE); u1 = await pg.evaluate(UNDER)
+        for _ in range(2):
+            await touch(cdp, "touchStart", [(cx, cy)]); await touch(cdp, "touchEnd", []); await asyncio.sleep(0.06)
+        await pg.wait_for_timeout(1200); b2 = await pg.evaluate(STATE); u2 = await pg.evaluate(UNDER)
+        report("double-tap on page 2 stays on page 2 (view and counter)",
+               u0 == u1 == u2 == 2 and b0["counter"][:1] == b1["counter"][:1] == b2["counter"][:1] == "2",
+               f'under {u0} → {u1} → {u2}; counter {b0["counter"]} → {b1["counter"]} → {b2["counter"]}')
+
         # 2b. a two-finger pinch that doubles the finger spread zooms the page about 2× — once, not twice
         #     (the old mobile.js pinch ran on top of reader.js's own)
         p0 = (await pg.evaluate(STATE))["page"]
