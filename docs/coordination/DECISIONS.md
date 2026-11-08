@@ -329,5 +329,8 @@ Options considered:
 
 | D-130 | Linux Test B-24 (S2): a PDF that never delivers data blanks the Reader and blocks every later open | Shared open path, so into Foundation's next combined patch (a Linux-only patch would split the code). The fix keeps "Opening…" and Cancel visible during a stall, Cancel frees the slot, and later opens are never blocked; the test uses a stalled stream. B-08b accepted on the code for now; Cancel is re-verified together with B-24 |
 
+| D-131 | Linux print orientation (AutoRotate) | A: keep the Linux step that fixed B-14. Chuvadi.Print's AutoRotate affects raster mode only; in document mode the ticket still says portrait, which caused B-14. B (raster mode) is rejected: it prints images, and Arun's rule is vector everywhere. Library ask: in document mode, honour AutoRotate by leaving orientation-requested out of the ticket |
+| — | Foundation next patch | B-24 stall fix; Chuvadi.Zip into ci/packages from its latest released tag (for D-129); Web portal UI's Upload wording and Q-3 "this session" diffs |
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).
