@@ -230,5 +230,14 @@ Options considered:
 | D-100 | Web Test chat | Opened. The Web plan is built (D-86, D-89 done; 142/142, CI green on 31b063e); starts from docs/web/TEST-PLAN.md. B5/B6 (domain, E2E) stay last |
 | — | Stoppage | 7 Nov ~06:00 to 8 Nov 18:12 IST: usage limit, then subscription paused; Arun paid. Restart staggered to avoid hitting the limit again; check-ins now every 15 minutes (Arun) |
 
+## 8 Nov 2026 19:00 check-in — coordinator
+| # | Item | Decision |
+|---|---|---|
+| D-101 | Linux: live change of the desktop's button layout | B: a "chrome changed" contract event so the top bar redraws immediately; diff to Foundation's next combined patch. Pros: the layout is followed exactly the whole time the app is open. Cons: one more contract member. A (applied only at start) leaves wrong buttons until restart |
+| D-102 | Printing a file opened with its owner password | Still refused on every platform; the Linux chat's library ask (allow owners to print) goes to Arun, because the library is his |
+| — | Linux Test | BUGS.md pushed (bd3a3a6): B-01 to B-13 sent to the Linux chat to fix, each with a test |
+| — | Android | Round 4 done (e34d237); round 5 started (Back closes cards, double-tap on API 35, WebView version) |
+| — | PR #11 | Green at 03406f0 on Windows, Ubuntu and macOS; waiting for Arun's Windows checks |
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).
