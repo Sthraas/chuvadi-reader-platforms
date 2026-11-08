@@ -336,8 +336,12 @@ if st0.get("desk"):
     st2 = state()
     shot("g3b-doubletapped-back")
     w0, w1, w2 = [(x.get("page") or {}).get("w") or 0 for x in (st1, st2z, st2)]
+    # H-13 (Mobile UI): the zoom keeps the tapped page in view (round 3 jumped 2 / 6 → 1 / 6 or 6 / 6).
+    c0, c1, c2 = (counter_number(x) for x in (st1, st2z, st2))
     check("double-tap zooms in, a second double-tap returns", w1 > w0 * 1.5 and abs(w2 - w0) <= 2,
           {"pageW": [w0, w1, w2]})
+    check("double-tap zoom stays on the tapped page", c0 is not None and c0 == c1 == c2,
+          {"page": [c0, c1, c2], "counter": [st1.get("counter"), st2z.get("counter"), st2.get("counter")]})
 
     # ── 4. Pinch out → zoom in ────────────────────────────────────────────────
     st2d = st2.get("desk") or d

@@ -531,3 +531,10 @@ capitalises on Enter (the search found 1/4).
   until the page paints, so the page colour behind it shows.
 - Phone "full screen again" picture was taken mid-animation (app in the top third, size already full); the check
   passed. A 2 s settle wait before that picture now.
+
+### 46. Round 5 set-up (coordinator, 8 Nov 18:58 IST)
+- Composition: Foundation `8098695` (sixth combined patch: Mobile UI H-5 to H-12 now in Foundation) + Mobile UI
+  `a20f6d1` merged + `mobile-ui-hooks-4.patch` (H-13 only: reader.js zoom anchor on the visible page, API 35 fit) +
+  host (Back first, transparent WebView). Android 0 warnings; Platforms `-warnaserror` 0 warnings; tests
+  171 + 54 + 32 + 16 pass.
+- New check: double-tap zoom stays on the tapped page (H-13).
