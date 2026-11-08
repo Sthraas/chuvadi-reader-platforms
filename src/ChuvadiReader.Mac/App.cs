@@ -20,7 +20,7 @@ public sealed class App : Application
             UIKit.UIApplication.SharedApplication.BeginInvokeOnMainThread(() =>
             {
                 MacMenuBar.RequestRebuild("ui-ready");
-                MacSmoke.Start(_services, MainPage.WebKitView);
+                MacSmoke.Start(_services, ChuvadiReader.Mac.MainPage.WebKitView);
             });
 
             // CI smoke run: launch, reach the first Blazor render, report, quit.
