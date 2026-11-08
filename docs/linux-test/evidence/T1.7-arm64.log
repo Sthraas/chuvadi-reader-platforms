@@ -1,0 +1,19 @@
+arch: aarch64
+install rc=0
+Processing triggers for libgdk-pixbuf-2.0-0:arm64 (2.42.10+dfsg-3ubuntu3.3) ...
+Architecture: arm64
+Version: 1.0.0~preview
+/t/arm.sh: line 5: file: command not found
+/opt/run.sh: line 9: 18766 Aborted                 CHUVADI_TIMING=1 timeout 40 chuvadi-reader ${FILE:-/opt/t/five-pages.pdf} > /tmp/app.log 2>&1
+arm64-fresh: NOT RUNNING
+arm64-fresh: rss=KB  locale=C.UTF-8
+arm64-fresh:   [timing]   545.6 ms since process start    349.6 ms in managed  managed main
+arm64-fresh:   libEGL warning: DRI3 error: Could not get DRI3 device
+arm64-fresh:   libEGL warning: Ensure your X server supports DRI3 to get accelerated rendering
+arm64-fresh:   [timing]  6960.0 ms since process start   6451.2 ms in managed  gtk init
+arm64-fresh:   [timing]  7356.1 ms since process start   6844.9 ms in managed  services
+arm64-fresh:   [timing]  9319.7 ms since process start   8809.3 ms in managed  window + web view
+arm64-fresh:   file /home/tester/.config/Chuvadi
+arm64-fresh:   file /home/tester/.config/Chuvadi/startup-error.log
+remove rc=0
+ARM_DONE

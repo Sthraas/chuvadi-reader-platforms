@@ -27,6 +27,7 @@ Every bug gets fixed; I re-verify on the fixing commit and mark it here.
 | B-17 | S3 | Linux | `UseSystemResourceKeys=true` → users see resource keys (`UnauthorizedAccess_IODenied_Path`, `EOCDNotFound`) instead of messages | open |
 | B-18 | S3 (design) | Shared | Left bar at rest is the expanded 208 px labelled list; handout: 62 px icon rail, labels on hover | open |
 | B-19 | S4 | Linux | Buttons on the left: top-bar brand cell widens past the left bar; divider no longer lines up (f7d0034) | open |
+| B-20 | S4 | Linux | No printer / CUPS down: empty print dialog, no explanation | open |
 | K-01 | — | Linux | GNOME close-only layout showed all three buttons (known, 7 Nov) | **fixed f7d0034 — verified** |
 
 Known and already tracked (not re-filed): sample recent files / watched folder on a fresh profile (D-94 H-12);
@@ -144,3 +145,8 @@ Second instance: a non-zip `.xlsx` shows "Couldn't open this workbook: **EOCDNot
 **Expected.** Buttons on the left, and the top bar's left cell still lines up with the left bar's edge (the handout's column), or a stated alternative.
 **Actual.** Buttons correct ✅, but the brand cell widens (≈ 210 → 245 px with one button, ≈ 292 px with three) while the left bar stays 210 px, so the top-bar divider sits 35–80 px right of the left-bar edge. Evidence: `screenshots/B-19-buttons-right.png` vs `screenshots/B-19-buttons-left.png`.
 **Options.** A. buttons overlay the left bar's top cell and the wordmark shifts within it (cell keeps 210 px; wordmark may truncate with three buttons). B. Accept a wider cell but widen the left bar to match while buttons are left. C. Accept as is. Recommendation: **A** — keeps the handout's column, the only cost is the wordmark sliding right.
+
+## B-20 — No printer: empty dialog with no explanation (S4, Linux)
+**Steps.** Stop CUPS (or a machine with no queues); open a PDF; Ctrl+P → Print.
+**Expected.** A plain message before or instead of the dialog ("No printers found — add one in Settings › Printers"), as the handout's "Blocked actions explain themselves".
+**Actual.** GTK dialog opens with an empty printer list and a disabled Print button; the card shows "Cancel printing". No crash; Cancel works. ("Print to File" is absent too — fine if deliberate, since it would re-render rather than send the PDF as-is; worth a line in the README.) Screenshot: `screenshots/B-20-no-printer-empty-dialog.png`.

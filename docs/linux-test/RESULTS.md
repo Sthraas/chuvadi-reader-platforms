@@ -8,11 +8,11 @@ Evidence paths are relative to this folder unless absolute. My test tools (never
 ## Summary
 | Area | ✅ | ❌ | ⏳/🔒 |
 |---|---|---|---|
-| T1 Build & package | 9 | 3 (B-01, B-02, B-13) | 1 |
+| T1 Build & package | 10 | 3 (B-01, B-02, B-13) | 1 |
 | T2 Startup | 4 | 1 (B-12) | — |
-| T3 Design | 5 | 2 (B-18, B-19) | 4 |
+| T3 Design | 6 | 2 (B-18, B-19) | 3 |
 | T4 Function | 11 | 5 (B-04–B-07, B-14) | 6 |
-| T5 Robustness | 10 | 6 (B-08–B-11, B-16, B-17) | 3 |
+| T5 Robustness | 11 | 7 (B-08–B-11, B-16, B-17, B-20) | 2 |
 | T6 Wayland/X11 | 4 | 1 (B-15) | 3 |
 
 The Linux chat's own UI pass (`tools/linux/uitest.py`) re-run here independently: **106/107**; the one fail (`05-window-minimise`) was my environment (`xprop` from `x11-utils` not installed), not the app.
@@ -28,7 +28,7 @@ The Linux chat's own UI pass (`tools/linux/uitest.py`) re-run here independently
 | T1.4 | Restored packages | ✅ only Microsoft.\*, System.\*, Chuvadi.\*, LiPicons.\* — ⚠️ but no source mapping → **B-03** | `T1.4-cache.txt` |
 | T1.5 | `--verify-pack` vs tag | ⏳ | |
 | T1.6 | `.deb` SC + FD, lintian | ❌ **B-01** (SC 21 E / 373 W; FD 7 E / 13 W) | `evidence/T1.6-lintian-*.txt` |
-| T1.7 | `.deb` arm64 (CI artifact, run 42481652554 on f7d0034) | see ARM64 below | `evidence/T1.7-arm64.log` |
+| T1.7 | `.deb` arm64 (CI artifact, run 42481652554 on f7d0034) | ✅ install/remove on arm64; launch 🔒 QEMU (see ARM64) | `evidence/T1.7-arm64*.log` |
 | T1.8 | Install / remove / purge, 24.04 + 26.04, SC + FD | ✅ apt resolves deps on both; purge leaves nothing; FD pulls `dotnet-runtime-10.0` | `evidence/T1.8-install-*.log` |
 | T1.8b | Upgrade 0.9.0~preview → 1.0.0~preview with existing settings | ✅ theme (Dark) + recents survive; app opens in Dark | `screenshots/` `upg-new` |
 | T1.9 | Desktop entry, `%F`, icons, MIME | ✅ `desktop-file-validate` clean, `appstreamcli validate` clean, `xdg-mime` default = `in.chuvadi.Reader.desktop` for pdf/docx/xlsx; hicolor 16–256 | install logs |
@@ -65,7 +65,7 @@ Findings
 | T3.1 | Every screen captured (Home, Library, Reader + each rail/card, Mark, Arrange/Bench, Protect, Settings × 10 sections, 5 themes, docmenu, command bar) | ✅ captured by the re-run UI pass; review against the handout continues (T3.7) | `/home/claude/evidence/uitest/*.png` (not committed — 107 files; will attach a contact sheet) |
 | T3.2a | **Engine vs Windows engine**: identical DOM snapshot from the running Linux app rendered in Chrome (= WebView2's engine) at 1920×1080 | ✅ explained differences only: Home 3.9 % / Reader 1.8 % of pixels differ > 8 %; WebKitGTK sets body text ~0.5 % wider (3 px over 480 px) and blocks ~2 px higher (glyph hinting / line-height rounding); Reader page 5 px left (overlay vs classic scrollbar gutter); page size identical (686 px). All fonts loaded in both (Fraunces, Instrument Serif, IBM Plex Mono, Tiro Tamil, LiPi Sans). | `evidence/snap/` |
 | T3.2b | vs handout `Reader Side Rails` | ❌ **B-18**: left bar at rest is the expanded 208 px labelled list; handout: 62 px icon rail that expands on hover (shared Ui default `leftbar.open`). Tools/View rails: same sets and order (+ "More view options"). Pager centred ✅ (README: "centred, always visible"). | |
-| T3.2c | Scales 1×, 1.25×, 1.5× (interface size) | ⏳ captured by the UI pass (09-scale-*); my side-by-side review pending | |
+| T3.2c | Scales 1×, 1.25×, 1.5× (interface size) | ✅ reviewed side by side: proportional, no clipping/overlap; at 150 % the top-bar search collapses to its Ctrl K chip and theme names wrap to two lines (reasonable) | |
 | T3.2d | 2× HiDPI (Weston `--scale=2`) | ✅ crisp text, wordmark, LiPicons — no blur | `T6-wayland-scale2.png` |
 | T3.3 | 12 px corners | ✅ restored under mutter: all 4 corners rounded, measured inset consistent with r = 12 px; maximised: square; no WM / no compositor: square with a thin resize border | `evidence/corners/` |
 | T3.4 | Button layout follows `gtk-decoration-layout` | eb65770: ✅ right, ✅ left, ❌ close-only (known). **f7d0034: ✅ all** — `:minimize,maximize,close`, `close,minimize,maximize:`, `appmenu:close`, `close:`, `close:maximize`, `minimize:`. ❌ new **B-19** (S4): with buttons on the left the top-bar brand cell widens past the left bar, so the top-bar divider no longer lines up with the left bar's edge | `evidence/buttons/` |
@@ -118,7 +118,7 @@ Findings
 | T5.6 | Read-only home | ❌ **B-16** crash at startup |
 | T5.6b | Unreadable file (non-root, mode 000) | ❌ **B-17** resource key shown |
 | T5.7 | No network (`--network none`) | ✅ starts and opens PDF; nothing tries to connect |
-| T5.7b | No printer / CUPS stopped | ⏳ |
+| T5.7b | No printer / CUPS stopped | ✅ no crash, Cancel works — ❌ **B-20** (S4) empty dialog, no explanation |
 | T5.8 | Locales en_IN, de_DE | ✅ start + open; ⏳ number/date formatting inside the UI not yet compared |
 | T5.9a | Fresh non-root user, 24.04 and 26.04 | ✅ |
 | T5.9b | Upgrade with existing settings | ✅ (T1.8b) |
@@ -137,7 +137,13 @@ Findings
 | T6.4 | Containers / no user namespaces | ❌ **B-15** hard abort |
 
 ## ARM64
-⏳ running — see `evidence/T1.7-arm64.log` (updated at end of session).
+CI artifact `linux-arm64/deb/chuvadi-reader_1.0.0~preview_arm64.deb` from run 42481652554 (f7d0034), in Docker `ubuntu:24.04` `linux/arm64` under QEMU user-mode:
+| Case | Result |
+|---|---|
+| `apt install` of the arm64 `.deb` (deps resolve on arm64 24.04) | ✅ rc 0; `Architecture: arm64`, `Version: 1.0.0~preview` |
+| `apt remove` | ✅ rc 0 |
+| Launch | 🔒 **environment**: the app reaches "window + web view" (8.8 s emulated), then the .NET runtime throws `NullReferenceException` **inside `System.Array.Empty<T>()`** during DI resolution — impossible on a sound runtime; .NET under QEMU user-mode is unsupported (W^X/JIT). Not an app defect. Logs: `evidence/arm64-startup-error.log`, `evidence/arm64-app.log` |
+**Sign-off for ARM64 launch/UI = the real arm64 CI runner** (green on f7d0034 per the Linux chat). Next session: download that run's UI-pass screenshots and judge them myself; optionally retry QEMU with `DOTNET_EnableWriteXorExecute=0`.
 
 ---
 

@@ -1,0 +1,28 @@
+[timing]   516.3 ms since process start    341.3 ms in managed  managed main
+libEGL warning: DRI3 error: Could not get DRI3 device
+libEGL warning: Ensure your X server supports DRI3 to get accelerated rendering
+[timing]  6468.6 ms since process start   5976.9 ms in managed  gtk init
+[timing]  6792.0 ms since process start   6298.0 ms in managed  services
+[timing]  8800.0 ms since process start   8306.6 ms in managed  window + web view
+Chuvadi error: System.NullReferenceException: Arg_NullReferenceException
+   at System.Array.Empty[T]()
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateConstructorCallSite(ResultCache lifetime, ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateExact(ServiceDescriptor descriptor, ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain, Int32 slot)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.TryCreateExact(ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateCallSite(ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.GetCallSite(ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceProvider.CreateServiceAccessor(ServiceIdentifier serviceIdentifier)
+   at System.Collections.Concurrent.ConcurrentDictionary`2.GetOrAdd(TKey key, Func`2 valueFactory)
+   at Microsoft.Extensions.DependencyInjection.ServiceProvider.GetService(ServiceIdentifier serviceIdentifier, ServiceProviderEngineScope serviceProviderEngineScope)
+   at Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService(IServiceProvider provider, Type serviceType)
+   at Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService[T](IServiceProvider provider)
+   at ChuvadiReader.Linux.Program.WireWindow(IServiceProvider services)
+   at ChuvadiReader.Linux.Program.Main(String[] args)
+Chuvadi error: System.NullReferenceException: Arg_NullReferenceException
+   at System.Diagnostics.Tracing.EventListener.DisposeOnShutdown()
+   at System.AppContext.OnProcessExit()
+Unhandled exception. System.NullReferenceException: Arg_NullReferenceException
+   at System.Diagnostics.Tracing.EventListener.DisposeOnShutdown()
+   at System.AppContext.OnProcessExit()
+qemu: uncaught target signal 6 (Aborted) - core dumped
+qemu: uncaught target signal 6 (Aborted) - core dumped
