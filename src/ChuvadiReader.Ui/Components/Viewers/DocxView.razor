@@ -18,7 +18,7 @@
     }
     else if (_view is null)
     {
-        @if (!string.IsNullOrEmpty(Path)) { <ViewerMessage IconName="clock" Text="Opening…" /> }
+        @if (!string.IsNullOrEmpty(Path)) { <ViewerMessage IconName="clock" Text="Opening…" /><SlowOpenNote OnStop="OnStopOpening" /> }
     }
     else
     {

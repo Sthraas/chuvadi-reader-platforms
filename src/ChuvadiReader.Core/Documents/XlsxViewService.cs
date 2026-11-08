@@ -37,6 +37,7 @@ public sealed class XlsxViewService
     public WorkbookView Load(string path, string? password = null)
     {
         Workbook wb;
+        OfficePackageGuard.Check(path, "Excel workbook"); // B-08: no zip bombs into the library
         try
         {
             wb = string.IsNullOrEmpty(password) ? Workbook.Load(path) : Workbook.Load(path, password);

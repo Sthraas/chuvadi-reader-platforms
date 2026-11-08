@@ -13,7 +13,7 @@
     }
     else if (_doc is null || _render is null)
     {
-        @if (!string.IsNullOrEmpty(Path)) { <ViewerMessage IconName="clock" Text="Opening…" /> }
+        @if (!string.IsNullOrEmpty(Path)) { <ViewerMessage IconName="clock" Text="Opening…" /><SlowOpenNote OnStop="OnStopOpening" /> }
     }
     else if (ShowSource)
     {

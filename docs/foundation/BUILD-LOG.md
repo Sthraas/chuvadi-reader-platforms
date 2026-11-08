@@ -145,3 +145,6 @@
 
 ### 24. Eighth combined patch, part 1 (8 Nov)
 - H-14 (Mobile UI: the phone opens at Fit width; desktop margin 60 px), Mobile UI's own phone and tablet files (9bb7f76), Web UI U-17 (b) Home drop zone during a drag (D-109). 27/27 desktop identical; phone fit 12 | 12 px; portal drop 7/7 plus U-17 state check; 276/276. Part 2 waits for D-112 and D-114. `COMBINED-HOOKS-8.md`.
+
+### 25. Eighth combined patch, part 2 (9 Nov)
+- The Linux chat's shared diff (B-02, B-03, B-07, B-08, B-09/B-10, B-11, B-19, B-23) without its D-101 hunks (already here), Linux host files and uitest.py. D-120 fixes WT-02, WT-09, WT-10/B-11b, B-08b, B-16 in the kit, B-22 (D-123). Mobile UI D-112 and D-114 (H-16). 295/295; Windows-layout screens identical apart from the intended Print-card text. `COMBINED-HOOKS-8.md`.

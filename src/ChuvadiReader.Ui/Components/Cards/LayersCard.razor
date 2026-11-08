@@ -64,6 +64,7 @@
     /// <summary>The open document whose view the toggles change.</summary>
     [Parameter] public IPdfSession? Session { get; set; }
 
+    /// <summary>Zero-based page in view (<c>ReaderTab.CurrentPageIndex</c>).</summary>
     [Parameter] public int CurrentPage { get; set; }
 
     [Parameter] public EventCallback OnClose { get; set; }

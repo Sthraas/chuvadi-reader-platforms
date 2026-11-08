@@ -38,6 +38,7 @@ public sealed class DocxViewService
     public WordView Load(string path, string? password = null)
     {
         Document doc;
+        OfficePackageGuard.Check(path, "Word document"); // B-08: no zip bombs into the library
         try
         {
             doc = string.IsNullOrEmpty(password) ? Document.Load(path) : Document.Load(path, password);
