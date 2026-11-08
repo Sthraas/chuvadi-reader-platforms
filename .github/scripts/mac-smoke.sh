@@ -1,6 +1,7 @@
 #!/bin/bash
 # Mac smoke test — checks the Mac Test fixes on a real macOS runner. Usage: mac-smoke.sh /path/to/Chuvadi.app
 #   M-16  the left bar's Open button → the real Open panel → the Reader, for PDF, Markdown, text, HTML, Word, Excel
+#   D-132 the error log in ~/Library/Logs/Chuvadi: written, scrubbed, rolled over, about 1 MB at most
 #   M-02  files handed over by macOS open as tabs: at launch, and while running (single instance)
 #   M-01  the menu bar carries Chuvadi's commands (File, View, Document), ⌘ shortcuts, no AppKit Enter Full Screen
 #   M-11  Settings… ⌘, in the Chuvadi menu
@@ -90,7 +91,8 @@ SW
 PICKS="five-pages.pdf notes.md plain.txt page.html letter.docx table.xlsx"
 PICK_ENV=$(for f in $PICKS; do printf '%s;' "$DOCS/$f"; done)
 rm -f "$LOG"
-open -n --env CHUVADI_SMOKE=1 --env "CHUVADI_SMOKE_PICK=$PICK_ENV" --stdout "$LOG" --stderr "$LOG" -a "$APP"
+LOGDIR="$HOME/Library/Logs/Chuvadi"; rm -rf "$LOGDIR"
+open -n --env CHUVADI_SMOKE=1 --env CHUVADI_SMOKE_LOGFILL=1 --env "CHUVADI_SMOKE_PICK=$PICK_ENV" --stdout "$LOG" --stderr "$LOG" -a "$APP"
 wait_for 'CHUVADI tabs 6: ' 150 || true
 sleep 3   # the last Ui report comes 1.5 s after the tab
 grep -E 'CHUVADI (open-button|picked|tabs|ui) ' "$LOG"
@@ -111,6 +113,23 @@ if grep -qE 'CHUVADI log (Error|Critical)' "$LOG"; then
   fail "M-16 the Ui logged errors on the Open-panel path"; grep -E 'CHUVADI log (Error|Critical)' "$LOG" | head -5 | tr '⏎' '\n' | head -80
 fi
 cp "$LOG" "$PWD/smoke-open-panel.log"
+
+# --- D-132: the Mac error log — present, scrubbed, rolled over, about 1 MB at most --------------------------
+ls -l "$LOGDIR" 2>/dev/null
+if [ -f "$LOGDIR/chuvadi.log" ]; then
+  pass "D-132 error log written to ~/Library/Logs/Chuvadi"
+  total=$(cat "$LOGDIR"/*.log | wc -c | tr -d ' ')
+  [ "$total" -le 1100000 ] && pass "D-132 log total $total bytes (≤ ~1 MB)" || fail "D-132 log total $total bytes"
+  [ -f "$LOGDIR/chuvadi.1.log" ] && pass "D-132 log rolled over to chuvadi.1.log" || fail "D-132 no roll-over after 1.3 MB of warnings"
+  leaks=$(cat "$LOGDIR"/*.log | grep -cE "smoke-secret-name|smoke-hunter2|/Users/|five-pages|notes\.md|plain\.txt|page\.html|letter\.docx|table\.xlsx" || true)
+  [ "${leaks:-0}" = "0" ] && pass "D-132 log holds no file names, paths or quoted secrets" || { fail "D-132 log leaks ($leaks lines)"; cat "$LOGDIR"/*.log | grep -E "smoke-secret-name|smoke-hunter2|/Users/|five-pages|notes|plain|page\.html|letter|table" | head -5; }
+  grep -h "smoke-check" "$LOGDIR"/*.log | head -1
+  grep -h "smoke-check" "$LOGDIR"/*.log | grep -qE '<\.pdf #[0-9a-f]{8}>.*<text #[0-9a-f]{8}>' && pass "D-132 names become extension + hash, secrets a hash" \
+    || fail "D-132 smoke-check entry not in the expected scrubbed form"
+  cp -R "$LOGDIR" "$PWD/chuvadi-logs" 2>/dev/null || true
+else
+  fail "D-132 no error log at $LOGDIR"
+fi
 quit_app || fail "Open-panel run did not quit"
 sleep 2
 

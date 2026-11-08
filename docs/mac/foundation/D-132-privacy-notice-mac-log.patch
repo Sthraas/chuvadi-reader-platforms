@@ -1,0 +1,12 @@
+diff --git a/legal/PRIVACY-NOTICE.txt b/legal/PRIVACY-NOTICE.txt
+index 23799cc..a29c2c6 100644
+--- a/legal/PRIVACY-NOTICE.txt
++++ b/legal/PRIVACY-NOTICE.txt
+@@ -10,6 +10,7 @@ PART A - THE CHUVADI READER APPS (Windows, macOS, Linux, Android)
+ 
+ A1. The apps do not send us any personal data. Your documents are opened, edited and saved on your own device. The apps have no accounts, no analytics, no advertising and no crash reporting, and they do not contact Sthraas.
+ A2. On your device, the apps keep your settings, recent files, open tabs and recovery drafts in the app's own folder. You can delete them by clearing the app's data or uninstalling it.
++A2a. On macOS the app also keeps a small error log on your Mac (in ~/Library/Logs/Chuvadi, which Console.app can show), so that a problem can be diagnosed if you choose to share it. It holds warnings and errors only, is limited to about 1 MB (older entries are removed), and is never sent anywhere. It does not hold the contents of your documents or any password: a file name is recorded only as its type and a short code (for example ".pdf #3f9a1c2e") that does not show the name, and links only as the website's address. You can delete the log at any time.
+ A3. Links you choose to open (for example to a website) open in your browser, under that site's own privacy terms. On Windows the app's display uses Microsoft Edge WebView2, a part of Windows covered by Microsoft's privacy statement and your Windows diagnostic settings.
+ A4. If a future version adds online features (for example signing in), this notice will be updated before those features are used.
+ 

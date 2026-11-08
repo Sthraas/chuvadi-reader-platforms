@@ -87,6 +87,19 @@ internal static class MacSmoke
             });
         }
 
+        // D-132 check: a warning that carries a path, a file name and a quoted secret, and (CHUVADI_SMOKE_LOGFILL=1)
+        // 1.3 MB of warnings so the log must roll over. The script reads ~/Library/Logs/Chuvadi afterwards.
+        var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger("ChuvadiReader.Mac.Smoke");
+        if (Environment.GetEnvironmentVariable("CHUVADI_SMOKE_LOGFILL") == "1")
+        {
+            var filler = new string('x', 300);
+            for (var i = 0; i < 4000; i++)
+            {
+                logger.LogWarning("smoke-fill {Index} {Filler}", i, filler);
+            }
+        }
+        logger.LogWarning("smoke-check could not open '/Users/someone/Documents/smoke-secret-name.pdf' with password 'smoke-hunter2'");
+
         Log("dotnet-text " + new ObjectDisposedException("IServiceProvider").Message.Replace('\n', ' ')); // M-14
         tabs.Changed += () => UIApplication.SharedApplication.BeginInvokeOnMainThread(ReportTabs);
         ReportTabs();
