@@ -5,6 +5,7 @@
 #   M-11  Settings… ⌘, in the Chuvadi menu
 #   M-04  the page reaches the window's top edge (no title-bar band)
 #   M-07  the window opens at 1100×720, centred
+#   M-16  the opened document shows in the Reader; no Blazor error bar, no logged errors
 #   M-03  quitting leaves no crash report
 #   M-06  prints the WebView timing breakdown
 # Every check runs; the script fails at the end if any failed. Log: smoke-files.log.
@@ -55,6 +56,19 @@ if wait_for 'CHUVADI tabs 3: ' 60; then pass "M-02 files opened while running be
 n=$(pgrep -f "$APP/Contents/MacOS/$EXE" | wc -l | tr -d ' ')
 [ "$n" = "1" ] && pass "single instance ($n process)" || fail "single instance: $n processes"
 sleep 4   # the menu is dumped 1.5 s after the tabs change
+
+# --- M-16: the opened document shows in the Reader, and the Ui did not fail -------------------------------
+wait_for 'CHUVADI ui ' 15 || true
+UI=$(grep 'CHUVADI ui ' "$LOG" | tail -1); echo "$UI"
+[[ "$UI" == *"reader=1"* && "$UI" == *"errorbar=none"* ]] && pass "M-16 Reader shows the document, no Blazor error bar" \
+  || fail "M-16 Ui after opening: ${UI:-no report}"
+if grep -q 'CHUVADI log Error\|CHUVADI log Critical' "$LOG"; then
+  fail "M-16 the Ui logged errors"; grep -E 'CHUVADI log (Error|Critical)' "$LOG" | head -5 | tr '⏎' '\n' | head -60
+fi
+
+# --- M-14: .NET messages are text, not resource keys -------------------------------------------------
+T=$(grep 'CHUVADI dotnet-text' "$LOG" | tail -1); echo "$T"
+[[ "$T" == *"Cannot access a disposed object"* ]] && pass "M-14 .NET messages are text" || fail "M-14 .NET message: ${T:-no report}"
 
 # --- M-01 / M-11: the real AppKit menu bar --------------------------------------------------------
 menu() { grep "CHUVADI menu $1:" "$LOG" | tail -1; }

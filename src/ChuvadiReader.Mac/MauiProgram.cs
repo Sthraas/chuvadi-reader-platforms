@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using ChuvadiReader.Core.Reader;
 using ChuvadiReader.Core.Storage;
 using ChuvadiReader.Hosting.Desktop;
@@ -22,6 +23,10 @@ public static class MauiProgram
 
         var services = builder.Services;
         services.AddMauiBlazorWebView();
+        if (MacSmoke.Enabled)
+        {
+            builder.Logging.AddProvider(new SmokeLoggerProvider()); // CI smoke only: Ui exceptions to stdout
+        }
 #if DEBUG
         services.AddBlazorWebViewDeveloperTools();
 #endif

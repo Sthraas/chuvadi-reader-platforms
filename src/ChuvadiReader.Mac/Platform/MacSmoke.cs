@@ -2,6 +2,7 @@ using System.Diagnostics;
 using ChuvadiReader.Core.Reader;
 using Foundation;
 using UIKit;
+using Microsoft.Extensions.Logging;
 using WebKit;
 
 namespace ChuvadiReader.Mac.Platform;
@@ -44,9 +45,17 @@ internal static class MacSmoke
 
             last = now;
             Log($"tabs {tabs.Tabs.Count}: {now}");
-            Later(1.5, ReportMenu);
+            Later(1.5, () =>
+            {
+                ReportMenu();
+                if (view is not null)
+                {
+                    _ = UiStateAsync(view);
+                }
+            });
         }
 
+        Log("dotnet-text " + new ObjectDisposedException("IServiceProvider").Message.Replace('\n', ' ')); // M-14
         tabs.Changed += () => UIApplication.SharedApplication.BeginInvokeOnMainThread(ReportTabs);
         ReportTabs();
 
@@ -71,6 +80,27 @@ internal static class MacSmoke
         foreach (var line in AppKitBridge.DumpMainMenu())
         {
             Log("menu " + line);
+        }
+    }
+
+    /// <summary>What the page shows (M-16): the route, whether the Reader rendered, and whether Blazor's
+    /// "An error occurred" bar is showing.</summary>
+    private static async Task UiStateAsync(WKWebView view)
+    {
+        const string script = """
+            (function () {
+              var e = document.getElementById('blazor-error-ui');
+              return 'route=' + location.pathname + ' reader=' + (document.querySelector('.reader') ? 1 : 0)
+                + ' errorbar=' + (e ? getComputedStyle(e).display : 'none');
+            })()
+            """;
+        try
+        {
+            Log("ui " + (await view.EvaluateJavaScriptAsync(script))?.ToString());
+        }
+        catch (Exception ex)
+        {
+            Log("ui failed: " + ex.Message);
         }
     }
 
@@ -107,6 +137,32 @@ internal static class MacSmoke
         catch (Exception ex)
         {
             Log("webtimings failed: " + ex.Message);
+        }
+    }
+}
+
+/// <summary>Smoke runs only: warnings and errors from every logger (Blazor's unhandled exceptions among them) go to
+/// stdout as "CHUVADI log …", so a Ui failure on the runner shows its exception (Mac Test M-16).</summary>
+internal sealed class SmokeLoggerProvider : ILoggerProvider
+{
+    public ILogger CreateLogger(string categoryName) => new SmokeLogger(categoryName);
+
+    public void Dispose()
+    {
+    }
+
+    private sealed class SmokeLogger(string category) : ILogger
+    {
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => logLevel >= LogLevel.Warning;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            if (IsEnabled(logLevel))
+            {
+                MacSmoke.Log($"log {logLevel} {category}: {formatter(state, exception)} {exception}".Replace('\n', '⏎'));
+            }
         }
     }
 }

@@ -34,6 +34,9 @@
          app's own code are kept whole until each library declares trim safety (package report,
          decision 4) — Sheets' typed import/export loses data when it is trimmed. -->
     <MtouchLink>SdkOnly</MtouchLink>
+    <!-- Mac Test M-14: keep .NET's own message text. Trimmed Apple builds default to resource keys
+         ("IO_FileNotFound_FileName"), and the Ui shows exception messages to people. -->
+    <UseSystemResourceKeys>false</UseSystemResourceKeys>
 
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
