@@ -1,0 +1,89 @@
++ export DEBIAN_FRONTEND=noninteractive
++ DEBIAN_FRONTEND=noninteractive
++ apt-get update -qq
++ echo '=== INSTALL SC'
+=== INSTALL SC
++ apt-get install -y -q /debs/chuvadi-reader_1.0.0~preview_amd64.deb
+install rc=0
++ echo 'install rc=0'
++ tail -3 /tmp/i.log
+aspell-autobuildhash: processing: en [en_US-w_accents-only].
+aspell-autobuildhash: processing: en [en_US-wo_accents-only].
+Processing triggers for libgdk-pixbuf-2.0-0:amd64 (2.42.10+dfsg-3ubuntu3.3) ...
++ grep -E 'Status|Version'
++ dpkg -s chuvadi-reader
+Status: install ok installed
+Version: 1.0.0~preview
++ ls -l /usr/bin/chuvadi-reader /usr/share/applications/in.chuvadi.Reader.desktop
+lrwxrwxrwx 1 root root  36 Nov  6 23:31 /usr/bin/chuvadi-reader -> ../lib/chuvadi-reader/chuvadi-reader
+-rw-r--r-- 1 root root 596 Nov  6 23:31 /usr/share/applications/in.chuvadi.Reader.desktop
++ ls /usr/share/icons/hicolor/128x128/apps/in.chuvadi.Reader.png /usr/share/icons/hicolor/16x16/apps/in.chuvadi.Reader.png /usr/share/icons/hicolor/24x24/apps/in.chuvadi.Reader.png /usr/share/icons/hicolor/256x256/apps/in.chuvadi.Reader.png /usr/share/icons/hicolor/32x32/apps/in.chuvadi.Reader.png /usr/share/icons/hicolor/48x48/apps/in.chuvadi.Reader.png /usr/share/icons/hicolor/64x64/apps/in.chuvadi.Reader.png
+/usr/share/icons/hicolor/128x128/apps/in.chuvadi.Reader.png
+/usr/share/icons/hicolor/16x16/apps/in.chuvadi.Reader.png
+/usr/share/icons/hicolor/24x24/apps/in.chuvadi.Reader.png
+/usr/share/icons/hicolor/256x256/apps/in.chuvadi.Reader.png
+/usr/share/icons/hicolor/32x32/apps/in.chuvadi.Reader.png
+/usr/share/icons/hicolor/48x48/apps/in.chuvadi.Reader.png
+/usr/share/icons/hicolor/64x64/apps/in.chuvadi.Reader.png
++ apt-get install -y -q desktop-file-utils appstream xdg-utils shared-mime-info
++ desktop-file-validate /usr/share/applications/in.chuvadi.Reader.desktop
+dfv=0
++ echo dfv=0
++ appstreamcli validate --no-net /usr/share/metainfo/in.chuvadi.Reader.metainfo.xml
+
+? Validation was successful: pedantic: 1
++ echo asv=0
++ for m in application/pdf application/vnd.openxmlformats-officedocument.wordprocessingml.document application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+asv=0
+++ xdg-mime query default application/pdf
++ echo 'application/pdf -> in.chuvadi.Reader.desktop'
+application/pdf -> in.chuvadi.Reader.desktop
++ for m in application/pdf application/vnd.openxmlformats-officedocument.wordprocessingml.document application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+++ xdg-mime query default application/vnd.openxmlformats-officedocument.wordprocessingml.document
+application/vnd.openxmlformats-officedocument.wordprocessingml.document -> in.chuvadi.Reader.desktop
++ echo 'application/vnd.openxmlformats-officedocument.wordprocessingml.document -> in.chuvadi.Reader.desktop'
++ for m in application/pdf application/vnd.openxmlformats-officedocument.wordprocessingml.document application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+++ xdg-mime query default application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
++ echo 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet -> in.chuvadi.Reader.desktop'
+application/vnd.openxmlformats-officedocument.spreadsheetml.sheet -> in.chuvadi.Reader.desktop
++ grep -E '^(Exec|MimeType)' /usr/share/applications/in.chuvadi.Reader.desktop
+Exec=chuvadi-reader %F
+MimeType=application/pdf;application/vnd.openxmlformats-officedocument.wordprocessingml.document;application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;
++ grep -c 'Sthraas Intelligence Pvt Ltd' /usr/share/doc/chuvadi-reader/copyright
+1
++ echo '=== RUN --version-ish headless (no display)'
++ timeout 10 chuvadi-reader --help
+=== RUN --version-ish headless (no display)
+Chuvadi needs a graphical session (no display was found).
++ echo 'nodisplay rc=1'
+nodisplay rc=1
++ echo '=== REMOVE'
+=== REMOVE
++ apt-get remove -y -q chuvadi-reader
++ echo rm=0
+rm=0
++ find / -xdev -path /proc -prune -o '(' -name '*chuvadi*' -o -name 'in.chuvadi*' ')' -print
++ grep -v /debs
+/etc/apparmor.d/chuvadi-reader
+/var/lib/dpkg/info/chuvadi-reader.postrm
+/var/lib/dpkg/info/chuvadi-reader.list
+=== PURGE
++ echo '=== PURGE'
++ apt-get purge -y -q chuvadi-reader
++ echo purge=0
+purge=0
++ find / -xdev -path /proc -prune -o '(' -name '*chuvadi*' -o -name 'in.chuvadi*' ')' -print
++ grep -v /debs
+=== FD variant
++ echo '=== FD variant'
++ apt-get install -y -q /debs/fd/chuvadi-reader_1.0.0~preview_amd64.deb
++ echo 'fd install rc=0'
++ tail -2 /tmp/f.log
+fd install rc=0
+Processing triggers for hicolor-icon-theme (0.17-2) ...
+Processing triggers for libc-bin (2.39-0ubuntu8.9) ...
++ dpkg -l
++ grep -E 'dotnet-runtime|aspnetcore'
++ awk '{print $2,$3}'
+dotnet-runtime-10.0 10.0.14-0ubuntu1~24.04.1
++ apt-get purge -y -q chuvadi-reader

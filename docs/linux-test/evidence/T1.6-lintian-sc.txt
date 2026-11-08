@@ -1,0 +1,1297 @@
+running with root privileges is not recommended!
+N:
+E: chuvadi-reader: embedded-library zlib [usr/lib/chuvadi-reader/libSystem.IO.Compression.Native.so]
+N: 
+N:   The given ELF object appears to have been statically linked to a library.
+N:   Doing this is strongly discouraged due to the extra work needed by the
+N:   security team to fix all the extra embedded copies or trigger the package
+N:   rebuilds, as appropriate.
+N:   
+N:   If the package uses a modified version of the given library it is highly
+N:   recommended to coordinate with the library's maintainer to include the
+N:   changes on the system version of the library.
+N: 
+N:   Please refer to Embedded code copies (Section 4.13) in the Debian Policy
+N:   Manual for details.
+N: 
+N:   Visibility: error
+N:   Show-Always: no
+N:   Check: libraries/embedded
+N: 
+N:
+E: chuvadi-reader: executable-in-usr-share-doc 0744 [usr/share/doc/chuvadi-reader/THIRD-PARTY-NOTICES.microsoft.aspnetcore.authorization.txt]
+N: 
+N:   Usually, documentation files in /usr/share/doc should have mode 0644. If
+N:   the executable is an example, it should go in
+N:   /usr/share/doc/*pkg*/examples.
+N: 
+N:   Visibility: error
+N:   Show-Always: no
+N:   Check: documentation
+N: 
+N:
+E: chuvadi-reader: executable-in-usr-share-doc 0744 [usr/share/doc/chuvadi-reader/THIRD-PARTY-NOTICES.microsoft.aspnetcore.components.txt]
+N:
+E: chuvadi-reader: executable-in-usr-share-doc 0744 [usr/share/doc/chuvadi-reader/THIRD-PARTY-NOTICES.microsoft.extensions.configuration.txt]
+N:
+E: chuvadi-reader: executable-in-usr-share-doc 0744 [usr/share/doc/chuvadi-reader/THIRD-PARTY-NOTICES.microsoft.netcore.app.runtime.linux-x64.txt]
+N:
+E: chuvadi-reader: no-changelog usr/share/doc/chuvadi-reader/changelog.gz (native package)
+N: 
+N:   A Debian package that provides a /usr/share/doc/*pkg* directory must
+N:   install a changelog file.
+N:   
+N:   For native packages the best name is /usr/share/doc/*pkg*/changelog.gz.
+N:   
+N:   For non-native packages the best name is
+N:   /usr/share/doc/*pkg*/changelog.Debian.gz.
+N:   
+N:   This tag may also be emitted when the changelog exists but does not
+N:   otherwise resemble a Debian changelog.
+N: 
+N:   Please refer to Changelog files and release notes (Section 12.7) in the
+N:   Debian Policy Manual for details.
+N: 
+N:   Visibility: error
+N:   Show-Always: no
+N:   Check: debian/changelog
+N:   Renamed from: changelog-file-missing-in-native-package
+N:   debian-changelog-file-missing
+N: 
+N:
+E: chuvadi-reader: shared-library-is-executable 0744 [usr/lib/chuvadi-reader/libSystem.Globalization.Native.so]
+N: 
+N:   Shared libraries should be mode 0644.
+N: 
+N:   Please refer to Run-time shared libraries (Section 8.1) in the Debian
+N:   Policy Manual for details.
+N: 
+N:   Visibility: error
+N:   Show-Always: no
+N:   Check: libraries/shared/file-permissions
+N:   Renamed from: shlib-with-executable-bit
+N: 
+N:
+E: chuvadi-reader: shared-library-is-executable 0744 [usr/lib/chuvadi-reader/libSystem.IO.Compression.Native.so]
+N:
+E: chuvadi-reader: shared-library-is-executable 0744 [usr/lib/chuvadi-reader/libSystem.Native.so]
+N:
+E: chuvadi-reader: shared-library-is-executable 0744 [usr/lib/chuvadi-reader/libSystem.Net.Security.Native.so]
+N:
+E: chuvadi-reader: shared-library-is-executable 0744 [usr/lib/chuvadi-reader/libSystem.Security.Cryptography.Native.OpenSsl.so]
+N:
+E: chuvadi-reader: shared-library-is-executable 0744 [usr/lib/chuvadi-reader/libclrgc.so]
+N:
+E: chuvadi-reader: shared-library-is-executable 0744 [usr/lib/chuvadi-reader/libclrgcexp.so]
+N:
+E: chuvadi-reader: shared-library-is-executable 0744 [usr/lib/chuvadi-reader/libclrjit.so]
+N:
+E: chuvadi-reader: shared-library-is-executable 0744 [usr/lib/chuvadi-reader/libcoreclr.so]
+N:
+E: chuvadi-reader: shared-library-is-executable 0744 [usr/lib/chuvadi-reader/libhostfxr.so]
+N:
+E: chuvadi-reader: shared-library-is-executable 0744 [usr/lib/chuvadi-reader/libhostpolicy.so]
+N:
+E: chuvadi-reader: shared-library-is-executable 0744 [usr/lib/chuvadi-reader/libmscordaccore.so]
+N:
+E: chuvadi-reader: shared-library-is-executable 0744 [usr/lib/chuvadi-reader/libmscordbi.so]
+N:
+E: chuvadi-reader: shared-library-is-executable 0755 [usr/lib/chuvadi-reader/libchvdhost.so]
+N:
+E: chuvadi-reader: unstripped-binary-or-object [usr/lib/chuvadi-reader/libchvdhost.so]
+N: 
+N:   The package installs an unstripped binary or object file.
+N:   
+N:   Please note, that shared libraries have to be stripped with the
+N:   --strip-unneeded option.
+N: 
+N:   Please refer to Binaries (Section 10.1) in the Debian Policy Manual and
+N:   Libraries (Section 10.2) in the Debian Policy Manual for details.
+N: 
+N:   Visibility: error
+N:   Show-Always: no
+N:   Check: binaries/debug-symbols
+N: 
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/Microsoft.AspNetCore.Metadata.dll]
+N: 
+N:   This executable file is not an ELF format binary, and does not start with
+N:   the #! sequence that marks interpreted scripts. It might be a sh script
+N:   that fails to name /bin/sh as its shell, or it may be incorrectly marked
+N:   as executable. Sometimes upstream files developed on Windows are marked
+N:   unnecessarily as executable on other systems.
+N:   
+N:   If you are using debhelper to build your package, running dh_fixperms will
+N:   often correct this problem for you.
+N: 
+N:   Please refer to Scripts (Section 10.4) in the Debian Policy Manual for
+N:   details.
+N: 
+N:   Visibility: warning
+N:   Show-Always: no
+N:   Check: executable
+N: 
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/Microsoft.CSharp.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/Microsoft.VisualBasic.Core.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/Microsoft.VisualBasic.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/Microsoft.Win32.Primitives.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/Microsoft.Win32.Registry.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.AppContext.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Buffers.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Collections.Concurrent.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Collections.Immutable.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Collections.NonGeneric.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Collections.Specialized.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Collections.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.ComponentModel.Annotations.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.ComponentModel.DataAnnotations.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.ComponentModel.EventBasedAsync.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.ComponentModel.Primitives.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.ComponentModel.TypeConverter.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.ComponentModel.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Configuration.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Console.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Core.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Data.Common.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Data.DataSetExtensions.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Data.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Diagnostics.Contracts.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Diagnostics.Debug.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Diagnostics.DiagnosticSource.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Diagnostics.FileVersionInfo.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Diagnostics.Process.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Diagnostics.StackTrace.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Diagnostics.TextWriterTraceListener.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Diagnostics.Tools.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Diagnostics.TraceSource.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Diagnostics.Tracing.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Drawing.Primitives.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Drawing.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Dynamic.Runtime.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Formats.Asn1.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Formats.Tar.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Globalization.Calendars.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Globalization.Extensions.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Globalization.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.IO.Compression.Brotli.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.IO.Compression.FileSystem.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.IO.Compression.ZipFile.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.IO.Compression.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.IO.FileSystem.AccessControl.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.IO.FileSystem.DriveInfo.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.IO.FileSystem.Primitives.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.IO.FileSystem.Watcher.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.IO.FileSystem.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.IO.IsolatedStorage.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.IO.MemoryMappedFiles.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.IO.Pipelines.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.IO.Pipes.AccessControl.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.IO.Pipes.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.IO.UnmanagedMemoryStream.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.IO.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Linq.AsyncEnumerable.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Linq.Expressions.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Linq.Parallel.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Linq.Queryable.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Linq.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Memory.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Net.Http.Json.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Net.Http.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Net.HttpListener.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Net.Mail.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Net.NameResolution.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Net.NetworkInformation.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Net.Ping.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Net.Primitives.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Net.Quic.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Net.Requests.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Net.Security.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Net.ServerSentEvents.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Net.ServicePoint.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Net.Sockets.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Net.WebClient.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Net.WebHeaderCollection.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Net.WebProxy.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Net.WebSockets.Client.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Net.WebSockets.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Net.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Numerics.Vectors.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Numerics.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.ObjectModel.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Private.CoreLib.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Private.DataContractSerialization.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Private.Uri.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Private.Xml.Linq.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Private.Xml.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Reflection.DispatchProxy.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Reflection.Emit.ILGeneration.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Reflection.Emit.Lightweight.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Reflection.Emit.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Reflection.Extensions.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Reflection.Metadata.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Reflection.Primitives.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Reflection.TypeExtensions.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Reflection.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Resources.Reader.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Resources.ResourceManager.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Resources.Writer.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Runtime.CompilerServices.Unsafe.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Runtime.CompilerServices.VisualC.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Runtime.Extensions.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Runtime.Handles.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Runtime.InteropServices.JavaScript.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Runtime.InteropServices.RuntimeInformation.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Runtime.InteropServices.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Runtime.Intrinsics.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Runtime.Loader.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Runtime.Numerics.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Runtime.Serialization.Formatters.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Runtime.Serialization.Json.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Runtime.Serialization.Primitives.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Runtime.Serialization.Xml.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Runtime.Serialization.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Runtime.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Security.AccessControl.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Security.Claims.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Security.Cryptography.Algorithms.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Security.Cryptography.Cng.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Security.Cryptography.Csp.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Security.Cryptography.Encoding.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Security.Cryptography.OpenSsl.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Security.Cryptography.Primitives.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Security.Cryptography.X509Certificates.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Security.Cryptography.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Security.Principal.Windows.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Security.Principal.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Security.SecureString.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Security.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.ServiceModel.Web.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.ServiceProcess.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Text.Encoding.CodePages.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Text.Encoding.Extensions.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Text.Encoding.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Text.Encodings.Web.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Text.Json.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Text.RegularExpressions.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Threading.AccessControl.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Threading.Channels.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Threading.Overlapped.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Threading.Tasks.Dataflow.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Threading.Tasks.Extensions.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Threading.Tasks.Parallel.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Threading.Tasks.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Threading.Thread.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Threading.ThreadPool.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Threading.Timer.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Threading.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Transactions.Local.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Transactions.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.ValueTuple.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Web.HttpUtility.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Web.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Windows.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Xml.Linq.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Xml.ReaderWriter.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Xml.Serialization.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Xml.XDocument.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Xml.XPath.XDocument.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Xml.XPath.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Xml.XmlDocument.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Xml.XmlSerializer.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.Xml.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/System.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/WindowsBase.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/mscorlib.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/netstandard.dll]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/wwwroot/_framework/blazor.modules.json]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/lib/chuvadi-reader/wwwroot/_framework/blazor.webview.js]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/share/doc/chuvadi-reader/THIRD-PARTY-NOTICES.microsoft.aspnetcore.authorization.txt]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/share/doc/chuvadi-reader/THIRD-PARTY-NOTICES.microsoft.aspnetcore.components.txt]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/share/doc/chuvadi-reader/THIRD-PARTY-NOTICES.microsoft.extensions.configuration.txt]
+N:
+W: chuvadi-reader: executable-not-elf-or-script [usr/share/doc/chuvadi-reader/THIRD-PARTY-NOTICES.microsoft.netcore.app.runtime.linux-x64.txt]
+N:
+W: chuvadi-reader: no-manual-page [usr/bin/chuvadi-reader]
+N: 
+N:   Each binary in /usr/bin, /usr/sbin, /bin, /sbin or /usr/games should have
+N:   a manual page
+N:   
+N:   Note that though the man program has the capability to check for several
+N:   program names in the NAMES section, each of these programs should have its
+N:   own manual page (a symbolic link to the appropriate manual page is
+N:   sufficient) because other manual page viewers such as xman or tkman don't
+N:   support this.
+N:   
+N:   If the name of the manual page differs from the binary by case, man may be
+N:   able to find it anyway; however, it is still best practice to match the
+N:   exact capitalization of the executable in the manual page.
+N:   
+N:   If the manual pages are provided by another package on which this package
+N:   depends, Lintian may not be able to determine that manual pages are
+N:   available. In this case, after confirming that all binaries do have manual
+N:   pages after this package and its dependencies are installed, please add a
+N:   Lintian override.
+N: 
+N:   Please refer to Manual pages (Section 12.1) in the Debian Policy Manual
+N:   for details.
+N: 
+N:   Visibility: warning
+N:   Show-Always: no
+N:   Check: documentation/manual
+N:   Renamed from: binary-without-manpage
+N: 
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/Microsoft.AspNetCore.Metadata.dll]
+N: 
+N:   Executables that are not setuid or setgid should always have a mode of
+N:   0755. Since anyone can obtain the executable by downloading the Debian
+N:   package and extracting it, restricting access serves little purpose.
+N: 
+N:   Please refer to Permissions and owners (Section 10.9) in the Debian Policy
+N:   Manual for details.
+N: 
+N:   Visibility: warning
+N:   Show-Always: no
+N:   Check: files/permissions
+N: 
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/Microsoft.CSharp.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/Microsoft.VisualBasic.Core.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/Microsoft.VisualBasic.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/Microsoft.Win32.Primitives.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/Microsoft.Win32.Registry.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.AppContext.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Buffers.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Collections.Concurrent.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Collections.Immutable.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Collections.NonGeneric.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Collections.Specialized.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Collections.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.ComponentModel.Annotations.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.ComponentModel.DataAnnotations.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.ComponentModel.EventBasedAsync.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.ComponentModel.Primitives.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.ComponentModel.TypeConverter.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.ComponentModel.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Configuration.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Console.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Core.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Data.Common.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Data.DataSetExtensions.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Data.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Diagnostics.Contracts.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Diagnostics.Debug.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Diagnostics.DiagnosticSource.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Diagnostics.FileVersionInfo.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Diagnostics.Process.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Diagnostics.StackTrace.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Diagnostics.TextWriterTraceListener.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Diagnostics.Tools.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Diagnostics.TraceSource.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Diagnostics.Tracing.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Drawing.Primitives.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Drawing.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Dynamic.Runtime.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Formats.Asn1.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Formats.Tar.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Globalization.Calendars.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Globalization.Extensions.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Globalization.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.IO.Compression.Brotli.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.IO.Compression.FileSystem.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.IO.Compression.ZipFile.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.IO.Compression.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.IO.FileSystem.AccessControl.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.IO.FileSystem.DriveInfo.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.IO.FileSystem.Primitives.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.IO.FileSystem.Watcher.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.IO.FileSystem.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.IO.IsolatedStorage.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.IO.MemoryMappedFiles.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.IO.Pipelines.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.IO.Pipes.AccessControl.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.IO.Pipes.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.IO.UnmanagedMemoryStream.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.IO.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Linq.AsyncEnumerable.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Linq.Expressions.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Linq.Parallel.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Linq.Queryable.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Linq.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Memory.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Net.Http.Json.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Net.Http.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Net.HttpListener.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Net.Mail.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Net.NameResolution.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Net.NetworkInformation.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Net.Ping.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Net.Primitives.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Net.Quic.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Net.Requests.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Net.Security.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Net.ServerSentEvents.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Net.ServicePoint.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Net.Sockets.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Net.WebClient.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Net.WebHeaderCollection.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Net.WebProxy.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Net.WebSockets.Client.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Net.WebSockets.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Net.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Numerics.Vectors.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Numerics.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.ObjectModel.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Private.CoreLib.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Private.DataContractSerialization.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Private.Uri.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Private.Xml.Linq.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Private.Xml.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Reflection.DispatchProxy.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Reflection.Emit.ILGeneration.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Reflection.Emit.Lightweight.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Reflection.Emit.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Reflection.Extensions.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Reflection.Metadata.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Reflection.Primitives.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Reflection.TypeExtensions.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Reflection.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Resources.Reader.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Resources.ResourceManager.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Resources.Writer.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Runtime.CompilerServices.Unsafe.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Runtime.CompilerServices.VisualC.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Runtime.Extensions.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Runtime.Handles.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Runtime.InteropServices.JavaScript.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Runtime.InteropServices.RuntimeInformation.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Runtime.InteropServices.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Runtime.Intrinsics.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Runtime.Loader.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Runtime.Numerics.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Runtime.Serialization.Formatters.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Runtime.Serialization.Json.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Runtime.Serialization.Primitives.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Runtime.Serialization.Xml.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Runtime.Serialization.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Runtime.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Security.AccessControl.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Security.Claims.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Security.Cryptography.Algorithms.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Security.Cryptography.Cng.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Security.Cryptography.Csp.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Security.Cryptography.Encoding.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Security.Cryptography.OpenSsl.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Security.Cryptography.Primitives.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Security.Cryptography.X509Certificates.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Security.Cryptography.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Security.Principal.Windows.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Security.Principal.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Security.SecureString.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Security.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.ServiceModel.Web.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.ServiceProcess.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Text.Encoding.CodePages.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Text.Encoding.Extensions.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Text.Encoding.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Text.Encodings.Web.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Text.Json.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Text.RegularExpressions.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Threading.AccessControl.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Threading.Channels.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Threading.Overlapped.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Threading.Tasks.Dataflow.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Threading.Tasks.Extensions.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Threading.Tasks.Parallel.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Threading.Tasks.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Threading.Thread.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Threading.ThreadPool.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Threading.Timer.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Threading.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Transactions.Local.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Transactions.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.ValueTuple.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Web.HttpUtility.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Web.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Windows.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Xml.Linq.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Xml.ReaderWriter.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Xml.Serialization.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Xml.XDocument.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Xml.XPath.XDocument.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Xml.XPath.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Xml.XmlDocument.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Xml.XmlSerializer.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.Xml.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/System.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/WindowsBase.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/createdump]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/libSystem.Globalization.Native.so]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/libSystem.IO.Compression.Native.so]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/libSystem.Native.so]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/libSystem.Net.Security.Native.so]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/libSystem.Security.Cryptography.Native.OpenSsl.so]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/libclrgc.so]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/libclrgcexp.so]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/libclrjit.so]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/libcoreclr.so]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/libhostfxr.so]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/libhostpolicy.so]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/libmscordaccore.so]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/libmscordbi.so]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/mscorlib.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/netstandard.dll]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/wwwroot/_framework/blazor.modules.json]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/lib/chuvadi-reader/wwwroot/_framework/blazor.webview.js]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/share/doc/chuvadi-reader/THIRD-PARTY-NOTICES.microsoft.aspnetcore.authorization.txt]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/share/doc/chuvadi-reader/THIRD-PARTY-NOTICES.microsoft.aspnetcore.components.txt]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/share/doc/chuvadi-reader/THIRD-PARTY-NOTICES.microsoft.extensions.configuration.txt]
+N:
+W: chuvadi-reader: non-standard-executable-perm 0744 != 0755 [usr/share/doc/chuvadi-reader/THIRD-PARTY-NOTICES.microsoft.netcore.app.runtime.linux-x64.txt]
+N:
+I: chuvadi-reader: binary-has-unneeded-section .comment [usr/lib/chuvadi-reader/chuvadi-reader]
+N: 
+N:   The binary or shared library is stripped, but still contains a section
+N:   that is not useful. You should call strip with --remove-section=.comment
+N:   --remove-section=.note to remove the .note and .comment sections.
+N:   
+N:   dh_strip will do this automatically for you, but install -s will not
+N:   because it calls strip without any arguments.
+N: 
+N:   Visibility: info
+N:   Show-Always: no
+N:   Check: binaries
+N: 
+N:
+I: chuvadi-reader: binary-has-unneeded-section .comment [usr/lib/chuvadi-reader/createdump]
+N:
+I: chuvadi-reader: binary-has-unneeded-section .comment [usr/lib/chuvadi-reader/libSystem.Globalization.Native.so]
+N:
+I: chuvadi-reader: binary-has-unneeded-section .comment [usr/lib/chuvadi-reader/libSystem.IO.Compression.Native.so]
+N:
+I: chuvadi-reader: binary-has-unneeded-section .comment [usr/lib/chuvadi-reader/libSystem.Native.so]
+N:
+I: chuvadi-reader: binary-has-unneeded-section .comment [usr/lib/chuvadi-reader/libSystem.Net.Security.Native.so]
+N:
+I: chuvadi-reader: binary-has-unneeded-section .comment [usr/lib/chuvadi-reader/libSystem.Security.Cryptography.Native.OpenSsl.so]
+N:
+I: chuvadi-reader: binary-has-unneeded-section .comment [usr/lib/chuvadi-reader/libclrgc.so]
+N:
+I: chuvadi-reader: binary-has-unneeded-section .comment [usr/lib/chuvadi-reader/libclrgcexp.so]
+N:
+I: chuvadi-reader: binary-has-unneeded-section .comment [usr/lib/chuvadi-reader/libclrjit.so]
+N:
+I: chuvadi-reader: binary-has-unneeded-section .comment [usr/lib/chuvadi-reader/libcoreclr.so]
+N:
+I: chuvadi-reader: binary-has-unneeded-section .comment [usr/lib/chuvadi-reader/libhostfxr.so]
+N:
+I: chuvadi-reader: binary-has-unneeded-section .comment [usr/lib/chuvadi-reader/libhostpolicy.so]
+N:
+I: chuvadi-reader: binary-has-unneeded-section .comment [usr/lib/chuvadi-reader/libmscordaccore.so]
+N:
+I: chuvadi-reader: binary-has-unneeded-section .comment [usr/lib/chuvadi-reader/libmscordbi.so]
+N:
+I: chuvadi-reader: compressed-duplicate [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/ChuvadiReader.Ui.4e4a8ncp5t.bundle.scp.css.gz]
+N: 
+N:   The given, apparently compressed, file is shipped in the package in
+N:   addition to another file with the same name without the compression-method
+N:   extension. Normally this indicates a mistake in the installation process
+N:   of the package.
+N: 
+N:   Visibility: info
+N:   Show-Always: no
+N:   Check: files/compressed
+N:   Renamed from: duplicated-compressed-file
+N: 
+N:
+I: chuvadi-reader: compressed-duplicate [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/css/app.css.gz]
+N:
+I: chuvadi-reader: compressed-duplicate [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/css/mobile.css.gz]
+N:
+I: chuvadi-reader: compressed-duplicate [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/css/prefs.css.gz]
+N:
+I: chuvadi-reader: compressed-duplicate [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/css/shell.css.gz]
+N:
+I: chuvadi-reader: compressed-duplicate [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/css/tokens.css.gz]
+N:
+I: chuvadi-reader: compressed-duplicate [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/fonts.css.gz]
+N:
+I: chuvadi-reader: compressed-duplicate [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/js/bench.js.gz]
+N:
+I: chuvadi-reader: compressed-duplicate [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/js/mobile.js.gz]
+N:
+I: chuvadi-reader: compressed-duplicate [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/js/reader.js.gz]
+N:
+I: chuvadi-reader: compressed-duplicate [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/js/redact.js.gz]
+N:
+I: chuvadi-reader: compressed-duplicate [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/js/shell.js.gz]
+N:
+I: chuvadi-reader: compressed-duplicate [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/js/theme.js.gz]
+N:
+I: chuvadi-reader: compressed-duplicate [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/js/viewers.js.gz]
+N:
+I: chuvadi-reader: compressed-duplicate [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/lipi-sans/LICENSE.txt.gz]
+N:
+I: chuvadi-reader: compressed-duplicate [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/lipi-sans/lipi-sans.css.gz]
+N:
+I: chuvadi-reader: extra-license-file [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/lipi-sans/LICENSE.txt.br]
+N: 
+N:   All license information should be collected in the debian/copyright file.
+N:   This usually makes it unnecessary for the package to install this
+N:   information in other places as well.
+N: 
+N:   Please refer to Copyright information (Section 12.5) in the Debian Policy
+N:   Manual for details.
+N: 
+N:   Visibility: info
+N:   Show-Always: no
+N:   Check: files/licenses
+N: 
+N:
+I: chuvadi-reader: extra-license-file [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/lipi-sans/LICENSE.txt.gz]
+N:
+I: chuvadi-reader: extra-license-file [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/lipi-sans/LICENSE.txt]
+N:
+I: chuvadi-reader: font-in-non-font-package [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/-F63fjptAgt5VM-kVkqdyU8n1i8q1w.woff2]
+N: 
+N:   This package contains a *.ttf, *.otf, or *.pfb file, file extensions used
+N:   by TrueType, OpenType, or Type 1 fonts, but the package does not appear to
+N:   be a dedicated font package. Dedicated font package names should begin
+N:   with fonts-. (Type 1 fonts are also allowed in packages starting with
+N:   xfonts-.) If the font is already packaged, you should depend on that
+N:   package instead. Otherwise, normally the font should be packaged
+N:   separately, since fonts are usually useful outside of the package that
+N:   embeds them.
+N: 
+N:   Visibility: info
+N:   Show-Always: no
+N:   Check: fonts
+N: 
+N:
+I: chuvadi-reader: font-in-non-font-package [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/-F63fjptAgt5VM-kVkqdyU8n1iAq129k.woff2]
+N:
+I: chuvadi-reader: font-in-non-font-package [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/-F63fjptAgt5VM-kVkqdyU8n1iEq129k.woff2]
+N:
+I: chuvadi-reader: font-in-non-font-package [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/-F63fjptAgt5VM-kVkqdyU8n1iIq129k.woff2]
+N:
+I: chuvadi-reader: font-in-non-font-package [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/-F63fjptAgt5VM-kVkqdyU8n1isq129k.woff2]
+N:
+I: chuvadi-reader: font-in-non-font-package [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/-F6qfjptAgt5VM-kVkqdyU8n3twJwl1FgtIU.woff2]
+N:
+I: chuvadi-reader: font-in-non-font-package [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/-F6qfjptAgt5VM-kVkqdyU8n3twJwl5FgtIU.woff2]
+N:
+I: chuvadi-reader: font-in-non-font-package [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/-F6qfjptAgt5VM-kVkqdyU8n3twJwl9FgtIU.woff2]
+N:
+I: chuvadi-reader: font-in-non-font-package [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/-F6qfjptAgt5VM-kVkqdyU8n3twJwlBFgg.woff2]
+N:
+I: chuvadi-reader: font-in-non-font-package [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/-F6qfjptAgt5VM-kVkqdyU8n3twJwlRFgtIU.woff2]
+N:
+I: chuvadi-reader: font-in-non-font-package [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/6NU78FyLNQOQZAnv9bYEvDiIdE9Ea92uemAk_WBq8U_9v0c2Wa0KxC9TeA.woff2]
+N:
+I: chuvadi-reader: font-in-non-font-package [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/6NU78FyLNQOQZAnv9bYEvDiIdE9Ea92uemAk_WBq8U_9v0c2Wa0KxCBTeO-U.woff2]
+N:
+I: chuvadi-reader: font-in-non-font-package [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/6NU78FyLNQOQZAnv9bYEvDiIdE9Ea92uemAk_WBq8U_9v0c2Wa0KxCFTeO-U.woff2]
+N:
+I: chuvadi-reader: font-in-non-font-package [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/jizBRFtNs2ka5fXjeivQ4LroWlx-6zUTjg.woff2]
+N:
+I: chuvadi-reader: font-in-non-font-package [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/jizBRFtNs2ka5fXjeivQ4LroWlx-6zsTjmbI.woff2]
+N:
+I: chuvadi-reader: font-in-non-font-package [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/jizHRFtNs2ka5fXjeivQ4LroWlx-6zAjgn7MsNo.woff2]
+N:
+I: chuvadi-reader: font-in-non-font-package [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/jizHRFtNs2ka5fXjeivQ4LroWlx-6zAjjH7M.woff2]
+N:
+I: chuvadi-reader: font-in-non-font-package [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/m8JXjfVIf7OT22n3M-S_YKVla1OD.woff2]
+N:
+I: chuvadi-reader: font-in-non-font-package [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/m8JXjfVIf7OT22n3M-S_YL1la1OD.woff2]
+N:
+I: chuvadi-reader: font-in-non-font-package [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/m8JXjfVIf7OT22n3M-S_YLNlaw.woff2]
+N:
+I: chuvadi-reader: font-in-non-font-package [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/lipi-sans/fonts/LiPi-Sans-Bengali.woff2]
+N:
+I: chuvadi-reader: font-in-non-font-package [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/lipi-sans/fonts/LiPi-Sans-Devanagari.woff2]
+N:
+I: chuvadi-reader: font-in-non-font-package [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/lipi-sans/fonts/LiPi-Sans-Gujarati.woff2]
+N:
+I: chuvadi-reader: font-in-non-font-package [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/lipi-sans/fonts/LiPi-Sans-Gurmukhi.woff2]
+N:
+I: chuvadi-reader: font-in-non-font-package [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/lipi-sans/fonts/LiPi-Sans-Kannada.woff2]
+N:
+I: chuvadi-reader: font-in-non-font-package [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/lipi-sans/fonts/LiPi-Sans-Latin-Italic.woff2]
+N:
+I: chuvadi-reader: font-in-non-font-package [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/lipi-sans/fonts/LiPi-Sans-Latin.woff2]
+N:
+I: chuvadi-reader: font-in-non-font-package [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/lipi-sans/fonts/LiPi-Sans-Malayalam.woff2]
+N:
+I: chuvadi-reader: font-in-non-font-package [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/lipi-sans/fonts/LiPi-Sans-Odia.woff2]
+N:
+I: chuvadi-reader: font-in-non-font-package [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/lipi-sans/fonts/LiPi-Sans-Tamil.woff2]
+N:
+I: chuvadi-reader: font-in-non-font-package [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/lipi-sans/fonts/LiPi-Sans-Telugu.woff2]
+N:
+I: chuvadi-reader: font-outside-font-dir [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/-F63fjptAgt5VM-kVkqdyU8n1i8q1w.woff2]
+N: 
+N:   This package contains a TrueType, OpenType, or Type 1 fonts, but the
+N:   package does not install this file under /usr/share/fonts/.
+N: 
+N:   Please refer to https://wiki.debian.org/Fonts/PackagingPolicy for details.
+N: 
+N:   Visibility: info
+N:   Show-Always: no
+N:   Check: fonts
+N: 
+N:
+I: chuvadi-reader: font-outside-font-dir [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/-F63fjptAgt5VM-kVkqdyU8n1iAq129k.woff2]
+N:
+I: chuvadi-reader: font-outside-font-dir [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/-F63fjptAgt5VM-kVkqdyU8n1iEq129k.woff2]
+N:
+I: chuvadi-reader: font-outside-font-dir [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/-F63fjptAgt5VM-kVkqdyU8n1iIq129k.woff2]
+N:
+I: chuvadi-reader: font-outside-font-dir [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/-F63fjptAgt5VM-kVkqdyU8n1isq129k.woff2]
+N:
+I: chuvadi-reader: font-outside-font-dir [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/-F6qfjptAgt5VM-kVkqdyU8n3twJwl1FgtIU.woff2]
+N:
+I: chuvadi-reader: font-outside-font-dir [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/-F6qfjptAgt5VM-kVkqdyU8n3twJwl5FgtIU.woff2]
+N:
+I: chuvadi-reader: font-outside-font-dir [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/-F6qfjptAgt5VM-kVkqdyU8n3twJwl9FgtIU.woff2]
+N:
+I: chuvadi-reader: font-outside-font-dir [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/-F6qfjptAgt5VM-kVkqdyU8n3twJwlBFgg.woff2]
+N:
+I: chuvadi-reader: font-outside-font-dir [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/-F6qfjptAgt5VM-kVkqdyU8n3twJwlRFgtIU.woff2]
+N:
+I: chuvadi-reader: font-outside-font-dir [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/6NU78FyLNQOQZAnv9bYEvDiIdE9Ea92uemAk_WBq8U_9v0c2Wa0KxC9TeA.woff2]
+N:
+I: chuvadi-reader: font-outside-font-dir [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/6NU78FyLNQOQZAnv9bYEvDiIdE9Ea92uemAk_WBq8U_9v0c2Wa0KxCBTeO-U.woff2]
+N:
+I: chuvadi-reader: font-outside-font-dir [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/6NU78FyLNQOQZAnv9bYEvDiIdE9Ea92uemAk_WBq8U_9v0c2Wa0KxCFTeO-U.woff2]
+N:
+I: chuvadi-reader: font-outside-font-dir [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/jizBRFtNs2ka5fXjeivQ4LroWlx-6zUTjg.woff2]
+N:
+I: chuvadi-reader: font-outside-font-dir [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/jizBRFtNs2ka5fXjeivQ4LroWlx-6zsTjmbI.woff2]
+N:
+I: chuvadi-reader: font-outside-font-dir [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/jizHRFtNs2ka5fXjeivQ4LroWlx-6zAjgn7MsNo.woff2]
+N:
+I: chuvadi-reader: font-outside-font-dir [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/jizHRFtNs2ka5fXjeivQ4LroWlx-6zAjjH7M.woff2]
+N:
+I: chuvadi-reader: font-outside-font-dir [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/m8JXjfVIf7OT22n3M-S_YKVla1OD.woff2]
+N:
+I: chuvadi-reader: font-outside-font-dir [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/m8JXjfVIf7OT22n3M-S_YL1la1OD.woff2]
+N:
+I: chuvadi-reader: font-outside-font-dir [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/fonts/google/m8JXjfVIf7OT22n3M-S_YLNlaw.woff2]
+N:
+I: chuvadi-reader: font-outside-font-dir [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/lipi-sans/fonts/LiPi-Sans-Bengali.woff2]
+N:
+I: chuvadi-reader: font-outside-font-dir [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/lipi-sans/fonts/LiPi-Sans-Devanagari.woff2]
+N:
+I: chuvadi-reader: font-outside-font-dir [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/lipi-sans/fonts/LiPi-Sans-Gujarati.woff2]
+N:
+I: chuvadi-reader: font-outside-font-dir [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/lipi-sans/fonts/LiPi-Sans-Gurmukhi.woff2]
+N:
+I: chuvadi-reader: font-outside-font-dir [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/lipi-sans/fonts/LiPi-Sans-Kannada.woff2]
+N:
+I: chuvadi-reader: font-outside-font-dir [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/lipi-sans/fonts/LiPi-Sans-Latin-Italic.woff2]
+N:
+I: chuvadi-reader: font-outside-font-dir [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/lipi-sans/fonts/LiPi-Sans-Latin.woff2]
+N:
+I: chuvadi-reader: font-outside-font-dir [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/lipi-sans/fonts/LiPi-Sans-Malayalam.woff2]
+N:
+I: chuvadi-reader: font-outside-font-dir [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/lipi-sans/fonts/LiPi-Sans-Odia.woff2]
+N:
+I: chuvadi-reader: font-outside-font-dir [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/lipi-sans/fonts/LiPi-Sans-Tamil.woff2]
+N:
+I: chuvadi-reader: font-outside-font-dir [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/lipi-sans/fonts/LiPi-Sans-Telugu.woff2]
+N:
+I: chuvadi-reader: hardening-no-fortify-functions [usr/lib/chuvadi-reader/chuvadi-reader]
+N: 
+N:   This package provides an ELF binary that lacks the use of fortified libc
+N:   functions. Either there are no potentially unfortified functions called by
+N:   any routines, all unfortified calls have already been fully validated at
+N:   compile-time, or the package was not built with the default Debian
+N:   compiler flags defined by dpkg-buildflags. If built using dpkg-buildflags
+N:   directly, be sure to import CPPFLAGS.
+N:   
+N:   NB: Due to false-positives, Lintian ignores some unprotected functions
+N:   (e.g. memcpy).
+N: 
+N:   Please refer to https://wiki.debian.org/Hardening and Bug#673112 for
+N:   details.
+N: 
+N:   Visibility: info
+N:   Show-Always: no
+N:   Check: binaries/hardening
+N: 
+N:
+I: chuvadi-reader: hardening-no-fortify-functions [usr/lib/chuvadi-reader/createdump]
+N:
+I: chuvadi-reader: hardening-no-fortify-functions [usr/lib/chuvadi-reader/libSystem.Globalization.Native.so]
+N:
+I: chuvadi-reader: hardening-no-fortify-functions [usr/lib/chuvadi-reader/libSystem.Native.so]
+N:
+I: chuvadi-reader: hardening-no-fortify-functions [usr/lib/chuvadi-reader/libSystem.Net.Security.Native.so]
+N:
+I: chuvadi-reader: hardening-no-fortify-functions [usr/lib/chuvadi-reader/libSystem.Security.Cryptography.Native.OpenSsl.so]
+N:
+I: chuvadi-reader: hardening-no-fortify-functions [usr/lib/chuvadi-reader/libclrgc.so]
+N:
+I: chuvadi-reader: hardening-no-fortify-functions [usr/lib/chuvadi-reader/libclrgcexp.so]
+N:
+I: chuvadi-reader: hardening-no-fortify-functions [usr/lib/chuvadi-reader/libclrjit.so]
+N:
+I: chuvadi-reader: hardening-no-fortify-functions [usr/lib/chuvadi-reader/libcoreclr.so]
+N:
+I: chuvadi-reader: hardening-no-fortify-functions [usr/lib/chuvadi-reader/libhostfxr.so]
+N:
+I: chuvadi-reader: hardening-no-fortify-functions [usr/lib/chuvadi-reader/libhostpolicy.so]
+N:
+I: chuvadi-reader: hardening-no-fortify-functions [usr/lib/chuvadi-reader/libmscordaccore.so]
+N:
+I: chuvadi-reader: hardening-no-fortify-functions [usr/lib/chuvadi-reader/libmscordbi.so]
+N:
+I: chuvadi-reader: no-md5sums-control-file
+N: 
+N:   This package does not contain an md5sums control file. This control file
+N:   listing the MD5 checksums of the contents of the package is not required,
+N:   but if present debsums can use it to verify that no files shipped with
+N:   your package have been modified. Providing it is recommended.
+N:   
+N:   If you are using debhelper to create your package, just add a call to
+N:   dh_md5sums at the end of your binary-indep or binary-arch target, right
+N:   before dh_builddeb.
+N: 
+N:   Visibility: info
+N:   Show-Always: no
+N:   Check: md5sums
+N: 
+N:
+I: chuvadi-reader: package-contains-documentation-outside-usr-share-doc [usr/lib/chuvadi-reader/wwwroot/_content/ChuvadiReader.Ui/lipi-sans/LICENSE.txt]
+N: 
+N:   This package ships a documentation file outside /usr/share/doc
+N:   Documentation files are normally installed inside /usr/share/doc.
+N:   
+N:   If this file doesn't describe the contents or purpose of the directory it
+N:   is in, please consider moving this file to /usr/share/doc/ or maybe even
+N:   removing it. If this file does describe the contents or purpose of the
+N:   directory it is in, please add a lintian override.
+N: 
+N:   Visibility: info
+N:   Show-Always: no
+N:   Check: documentation
+N: 
+N:   Screen: python/egg/metadata
+N:     Advocates: "Scott Kitterman" <debian@kitterman.com>
+N:     Reason: The folders XXX.dist-info/ and XXX.egg-info/ hold metadata for
+N:             Python modules. Those files are not documentation even though
+N:             some of their names carry the .txt file extension.
+N:             
+N:             Python modules can be both public and private.
+N:             
+N:             Read more in
+N:             https://www.python.org/dev/peps/pep-0427/#the-dist-info-directory,
+N:             https://www.python.org/dev/peps/pep-0376/#id16,
+N:             https://www.python.org/dev/peps/pep-0610/,
+N:             https://www.python.org/dev/peps/pep-0639/,
+N:             https://setuptools.pypa.io/en/latest/deprecated/python_eggs.html,
+N:             and Bug#1003913.
+N: 
+N:
+I: chuvadi-reader: package-contains-documentation-outside-usr-share-doc [usr/lib/chuvadi-reader/wwwroot/index.html]
+N:
+I: chuvadi-reader: spelling-error-in-binary befor before [usr/lib/chuvadi-reader/libSystem.IO.Compression.Native.so]
+N: 
+N:   Lintian found a spelling error in the given binary. Lintian has a list of
+N:   common misspellings that it looks for. It does not have a dictionary like
+N:   a spelling checker does.
+N:   
+N:   If the string containing the spelling error is translated with the help of
+N:   gettext or a similar tool, please fix the error in the translations as
+N:   well as the English text to avoid making the translations fuzzy. With
+N:   gettext, for example, this means you should also fix the spelling mistake
+N:   in the corresponding msgids in the *.po files.
+N:   
+N:   You can often find the word in the source code by running:
+N:   
+N:    grep -rw <word> <source-tree>
+N:   
+N:   This tag may produce false positives for words that contain non-ASCII
+N:   characters due to limitations in strings.
+N: 
+N:   Visibility: info
+N:   Show-Always: no
+N:   Check: binaries/spelling
+N: 
+N:
+I: chuvadi-reader: spelling-error-in-binary ofthe of the [usr/lib/chuvadi-reader/libSystem.IO.Compression.Native.so]
+N:
+I: chuvadi-reader: spelling-error-in-binary perfrom perform [usr/lib/chuvadi-reader/libclrjit.so]
+N:
+I: chuvadi-reader: spelling-error-in-binary perfrom perform [usr/lib/chuvadi-reader/libcoreclr.so]
+N:
+I: chuvadi-reader: spelling-error-in-binary perfrom perform [usr/lib/chuvadi-reader/libmscordaccore.so]
+N:
+I: chuvadi-reader: spelling-error-in-binary withthe with the [usr/lib/chuvadi-reader/libSystem.IO.Compression.Native.so]

@@ -1,0 +1,30 @@
+aes128.pdf               open->True                 alive=True rss_peak=268MB tabs=['aes128.pdf']
+    msg: Could not open this document. This PDF is encrypted and needs a password to open. Fetch… || Could not open this document. This PDF is encrypted and needs a password to open. || Fetch…
+aes256.pdf               open->True                 alive=True rss_peak=280MB tabs=['aes128.pdf', 'aes256.pdf']
+    msg: Could not open this document. This PDF is encrypted and needs a password to open. Fetch… || Could not open this document. This PDF is encrypted and needs a password to open. || Fetch…
+bad-sst.xlsx             open->True                 alive=True rss_peak=287MB tabs=['aes128.pdf', 'aes256.pdf', 'bad-sst.xlsx']
+    msg: 
+badxref.pdf              open->True                 alive=True rss_peak=293MB tabs=['aes128.pdf', 'aes256.pdf', 'bad-sst.xlsx', 'badxref.pdf']
+    msg: Could not open this document. Expected object number integer, got EndOfStream at offset -1. Fetch… || Could not open this document. Expected object number integer, got EndOfStream at offset -1. || Fetch…
+deepnest.pdf             open->True                 alive=True rss_peak=294MB tabs=['aes128.pdf', 'aes256.pdf', 'bad-sst.xlsx', 'badxref.pdf', 'deepnest.pdf']
+    msg: Could not open this document. Could not locate 'startxref' keyword in the last 1024 bytes of the file. Fetch… || Could not open this document. Could not locate 'startxref' keyword in the last 1024 bytes of the file. || Fetch…
+empty.pdf                open->True                 alive=True rss_peak=305MB tabs=['aes128.pdf', 'aes256.pdf', 'bad-sst.xlsx', 'badxref.pdf', 'deepnest.pdf', 'empty.pdf']
+    msg: Could not open this document. Could not locate 'startxref' keyword in the last 1024 bytes of the file. Fetch… || Could not open this document. Could not locate 'startxref' keyword in the last 1024 bytes of the file. || Fetch…
+far-cell.xlsx            open->True                 alive=True rss_peak=1740MB tabs=['aes128.pdf', 'aes256.pdf', 'bad-sst.xlsx', 'badxref.pdf', 'deepnest.pdf', 'empty.pdf', 'far-cell.xlsx']
+    msg: 
+garbage.pdf              open->True                 alive=True rss_peak=1737MB tabs=['aes128.pdf', 'aes256.pdf', 'bad-sst.xlsx', 'badxref.pdf', 'deepnest.pdf', 'empty.pdf', 'far-cell.xlsx']
+    msg: 
+missing-part.docx        open->True                 alive=True rss_peak=1740MB tabs=['aes128.pdf', 'aes256.pdf', 'bad-sst.xlsx', 'badxref.pdf', 'deepnest.pdf', 'empty.pdf', 'far-cell.xlsx']
+    msg: 
+noeof.pdf                open->True                 alive=True rss_peak=1742MB tabs=['aes128.pdf', 'aes256.pdf', 'bad-sst.xlsx', 'badxref.pdf', 'deepnest.pdf', 'empty.pdf', 'far-cell.xlsx']
+    msg: 
+notzip.xlsx              open->True                 alive=True rss_peak=1742MB tabs=['aes128.pdf', 'aes256.pdf', 'bad-sst.xlsx', 'badxref.pdf', 'deepnest.pdf', 'empty.pdf', 'far-cell.xlsx']
+    msg: 
+owner-only-noprint.pdf   open->True                 alive=True rss_peak=1743MB tabs=['aes128.pdf', 'aes256.pdf', 'bad-sst.xlsx', 'badxref.pdf', 'deepnest.pdf', 'empty.pdf', 'far-cell.xlsx']
+    msg: 
+rc4-128.pdf              open->True                 alive=True rss_peak=1743MB tabs=['aes128.pdf', 'aes256.pdf', 'bad-sst.xlsx', 'badxref.pdf', 'deepnest.pdf', 'empty.pdf', 'far-cell.xlsx']
+    msg: 
+rc4-40.pdf               open->True                 alive=True rss_peak=1743MB tabs=['aes128.pdf', 'aes256.pdf', 'bad-sst.xlsx', 'badxref.pdf', 'deepnest.pdf', 'empty.pdf', 'far-cell.xlsx']
+    msg: 
+truncated.pdf            open->True                 alive=True rss_peak=1744MB tabs=['aes128.pdf', 'aes256.pdf', 'bad-sst.xlsx', 'badxref.pdf', 'deepnest.pdf', 'empty.pdf', 'far-cell.xlsx']
+    msg: 
