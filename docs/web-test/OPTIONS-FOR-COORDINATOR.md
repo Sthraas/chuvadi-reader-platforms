@@ -41,3 +41,7 @@ Today: one browser download per page (13 for a 13-page PDF, 0.6 s). Real Chrome 
 
 ## WT-15 (security) — no option, a fix
 Production should refuse an `http://` Sangam address (details in BUGS). Raising so it's in the Web chat's next round.
+
+## Decided 9 Nov 02:30 (D-129)
+- **O-3:** a single `.zip` for any save producing two or more files, built with **Chuvadi.Zip** (Arun's library; processing goes through the Chuvadi libraries), not .NET's compression. Re-test when it lands: Split to folder (13 pages) → one `.zip` download in Chrome, Firefox and WebKit; 13 PDFs inside, byte-identical to today's single files; a one-file save stays a plain PDF.
+- **Q-3:** (c) — "this session" wording on Home's Storage map and shelves; the Web portal UI chat adds it now. Re-test when it lands.

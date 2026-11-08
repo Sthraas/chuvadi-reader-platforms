@@ -15,13 +15,13 @@ Severity: **High** = wrong result, security weakness, or a screen that doesn't w
 | WT-07 | Low | Security | The circuit (`/_blazor`) accepts a foreign `Origin` | Web | **Verified fixed** in 1b32ad8 — foreign Origin → 403, own → 200 |
 | WT-08 | Low | Security | File names keep Unicode bidi controls (U+202E), so a name can display reversed | Web | **Verified fixed** in 1b32ad8 — U+202E removed ("rtlfdp.exe.pdf"), 3 engines |
 | WT-09 | Low | UX | The no-print reason is only a hover tooltip on a disabled button (invisible on touch) | Existing file → Arun | **Verified fixed** in 1b32ad8 — reason shown in the card body, 3 engines |
-| WT-10 | Low | UX | A file that can't be opened shows raw parser text, and a "Fetch…" button where the portal says "Upload" | Existing file → Arun (text) / Web portal UI (label) | **Partly fixed** in 1b32ad8 — plain "This PDF is damaged" sentence and "Upload" on the failed-open screen ✅; **Arrange still says "Fetch…"** (5 places; reported 9 Nov, see below) |
+| WT-10 | Low | UX | A file that can't be opened shows raw parser text, and a "Fetch…" button where the portal says "Upload" | Existing file → Arun (text) / Web portal UI (label) | **Partly fixed** in 1b32ad8 (Arrange wording diff on `platform/web-ui` 99ba339, awaiting Foundation → Web) — plain "This PDF is damaged" sentence and "Upload" on the failed-open screen ✅; **Arrange still says "Fetch…"** (5 places; reported 9 Nov, see below) |
 | WT-11 | Low | Packaging | Publish output carries `web.config` (IIS), `appsettings.Development.json`, `.pdb` and `.xml` files | Web | **Verified fixed** in 1b32ad8 — no web.config / Development settings / .pdb / .xml; `check-package.sh` PASS |
 | WT-12 | Low | Docs/CI | The plan's build command fails from a clean clone; Web is built without `-warnaserror` in CI and isn't in Platforms.slnx | Web | **Verified fixed** in 1b32ad8 — restore step documented and works from a clean cache; `-warnaserror` in web.yml; reason for Web outside Platforms.slnx stated |
 | WT-13 | Low | Test tooling | `load.py`: no output folder created; "paging" is mostly fixed sleeps; one browser for everyone | Web | Fixed in 1b32ad8 (per Web chat) — not re-run (perf.py used instead) |
 | WT-14 | Low | Test tooling | `sangam_signin.py` sign-out step races in WebKit (1 in 5 runs) | Web | Open |
 | WT-15 | Medium | Security | Production starts with an `http://` Sangam address | Web | Open |
-| WT-16 | Low | UX | "Split to folder" on the portal arrives as one download per page | Coordinator option O-3 | Question |
+| WT-16 | Low | UX | "Split to folder" on the portal arrives as one download per page | Web (D-129: one .zip via Chuvadi.Zip) | Open |
 
 Library items (Arun's libraries; not app bugs, recorded so they aren't lost): **LIB-1**, **LIB-2** at the end — on the coordinator's list for Arun's library coordinator (20:40).
 
