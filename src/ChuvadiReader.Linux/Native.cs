@@ -18,6 +18,7 @@ internal static unsafe partial class Native
         DialogResult = 6,
         PrintResult = 7,
         JsResult = 8,
+        InstanceOpen = 9,
     }
 
     [LibraryImport(Lib, EntryPoint = "chvd_init")]
@@ -80,6 +81,17 @@ internal static unsafe partial class Native
 
     [LibraryImport(Lib, EntryPoint = "chvd_clipboard_set_text", StringMarshalling = StringMarshalling.Utf8)]
     public static partial void ClipboardSetText(string text);
+
+    /// <summary>1 = first copy (serves hand-overs), 0 = another copy runs, -1 = no session bus. Before Init.</summary>
+    [LibraryImport(Lib, EntryPoint = "chvd_instance_claim", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int InstanceClaim(string appId);
+
+    /// <summary>Hands files (one per line) and the activation token to the running copy; 1 = delivered.</summary>
+    [LibraryImport(Lib, EntryPoint = "chvd_instance_forward", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int InstanceForward(string appId, string files, string token);
+
+    [LibraryImport(Lib, EntryPoint = "chvd_instance_ready")]
+    public static partial void InstanceReady();
 
     [LibraryImport(Lib, EntryPoint = "chvd_sandbox_check")]
     private static partial int SandboxCheck(byte* buf, int size);

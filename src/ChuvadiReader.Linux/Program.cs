@@ -41,6 +41,23 @@ public static class Program
 
         try
         {
+            // B-05 (D-83): one Chuvadi per session. A later launch hands its files to the running copy, which
+            // opens each in a new tab and comes forward, and ends here without a window.
+            var launchFiles = DocumentOpener.Openable(args);
+            if (Native.InstanceClaim(AppId) == 0)
+            {
+                var token = Environment.GetEnvironmentVariable("XDG_ACTIVATION_TOKEN")
+                            ?? Environment.GetEnvironmentVariable("DESKTOP_STARTUP_ID") ?? string.Empty;
+                if (Native.InstanceForward(AppId, string.Join('\n', launchFiles), token) != 0)
+                {
+                    Mark("handed over to the running copy");
+                    return 0;
+                }
+
+                // The running copy didn't answer: start on our own rather than lose the files.
+            }
+
+            Mark("instance");
             if (!GtkHost.Init())
             {
                 Console.Error.WriteLine("Chuvadi needs a graphical session (no display was found).");
@@ -106,7 +123,9 @@ public static class Program
                 GtkHost.FirstPaint += () => Mark("page loaded");
             }
 
-            OpenFromCommandLine(services, opener, args);
+            OpenFromCommandLine(services, opener, launchFiles);
+            GtkHost.InstanceOpen += paths => _ = opener.OpenAsync(DocumentOpener.Openable(paths));
+            services.GetRequiredService<IAppReadySignal>().Ready += () => GtkHost.Post(Native.InstanceReady);
             WarnWhenSettingsCantBeSaved(services, storage, manager);
 #if CHUVADI_UITEST
             UiTestDriver.Start(services, manager);
@@ -198,9 +217,8 @@ public static class Program
 
     /// <summary>"chuvadi-reader a.pdf b.docx …" (and the desktop entry's %F): every openable file, each in
     /// its own tab, in the order given (B-04).</summary>
-    private static void OpenFromCommandLine(IServiceProvider services, DocumentOpener opener, string[] args)
+    private static void OpenFromCommandLine(IServiceProvider services, DocumentOpener opener, IReadOnlyList<string> files)
     {
-        var files = DocumentOpener.Openable(args);
         if (files.Count == 0)
         {
             return;

@@ -708,6 +708,32 @@ def drop_several():
 step("34c-drop-several-files", drop_several)
 
 
+def second_launch():
+    """B-05 (D-83): a second launch hands its files to the running copy — a new tab there, the window comes
+    forward — and ends without a window of its own."""
+    before = tab_names()
+    handed = os.path.join(FIX, "handed-over.pdf")
+    with open(os.path.join(FIX, "five-pages.pdf"), "rb") as src, open(handed, "wb") as dst:
+        dst.write(src.read())
+    started = time.time()
+    second = subprocess.run([os.path.join(app.app_dir, "chuvadi-reader"), handed], env=app.env,
+                            capture_output=True, text=True, timeout=30)
+    took = time.time() - started
+    if second.returncode != 0:
+        raise AssertionError(f"second launch exited {second.returncode}: {second.stderr[-300:]}")
+    windows = subprocess.run(["xdotool", "search", "--onlyvisible", "--name", "^Chuvadi$"], env=app.env,
+                             capture_output=True, text=True).stdout.split()
+    if len(windows) != 1:
+        raise AssertionError(f"{len(windows)} Chuvadi windows after the second launch")
+    app.wait(lambda: "handed-over.pdf" in tab_names(), 20, "the handed-over file's tab")
+    app.shot("34c2-second-launch")
+    return (f"second launch handed over and exited 0 in {took:.2f} s; one window; tabs {len(before)} → "
+            f"{len(tab_names())} (handed-over.pdf added)")
+
+
+step("34c2-second-launch-opens-in-running-window", second_launch)
+
+
 def error_message_is_a_sentence():
     """B-17: .NET's own error messages reach the user, not resource keys. A PDF without read permission
     (chmod 000) must say "Access to the path … is denied". Root can read any file, so as root this step only
