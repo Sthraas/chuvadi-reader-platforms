@@ -1004,7 +1004,10 @@ CHVD_EXPORT int chvd_render_info(void)
 
 /* "Show in folder": asks the desktop's file manager to open the folder with the file selected
  * (freedesktop org.freedesktop.FileManager1.ShowItems — Nautilus, Dolphin, Nemo, Thunar…).
- * Any thread (GDBus sync calls are thread-safe). Returns 1 when a file manager accepted it. */
+ * Returns 1 when a file manager took the request (or is still opening its window: a slow first window
+ * is not a failure), 0 only when there is no file manager service, so the caller falls back to opening
+ * the folder. B-21: with a short timeout, a slow Nautilus first got the fallback (one window) and then
+ * answered (a second window). Any thread (GDBus sync calls are thread-safe); blocks up to 30 s. */
 CHVD_EXPORT int chvd_reveal(const char *path)
 {
     if (!path || !*path)
@@ -1030,13 +1033,22 @@ CHVD_EXPORT int chvd_reveal(const char *path)
     const char *uris[] = {uri, NULL};
     GVariant *reply = g_dbus_connection_call_sync(
         bus, "org.freedesktop.FileManager1", "/org/freedesktop/FileManager1", "org.freedesktop.FileManager1",
-        "ShowItems", g_variant_new("(^ass)", uris, ""), NULL, G_DBUS_CALL_FLAGS_NONE, 5000, NULL, &error);
+        "ShowItems", g_variant_new("(^ass)", uris, ""), NULL, G_DBUS_CALL_FLAGS_NONE, 30000, NULL, &error);
 
-    int ok = reply != NULL;
+    int ok = 1;
     if (reply)
     {
         g_variant_unref(reply);
     }
+    else if (error && error->domain == G_DBUS_ERROR &&
+             (error->code == G_DBUS_ERROR_SERVICE_UNKNOWN || error->code == G_DBUS_ERROR_NAME_HAS_NO_OWNER ||
+              error->code == G_DBUS_ERROR_UNKNOWN_METHOD || error->code == G_DBUS_ERROR_UNKNOWN_OBJECT ||
+              error->code == G_DBUS_ERROR_UNKNOWN_INTERFACE || error->code == G_DBUS_ERROR_SPAWN_SERVICE_NOT_FOUND))
+    {
+        ok = 0; /* no file manager on the bus: open the folder instead */
+    }
+    /* Anything else (a timeout, the file manager's own error): it's there and has the request; opening the
+     * folder as well would show a second window. */
 
     g_clear_error(&error);
     g_free(uri);

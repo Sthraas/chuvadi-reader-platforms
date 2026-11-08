@@ -38,7 +38,8 @@ jobs:
 
       # Build: SDK, GTK 4, WebKitGTK 6.0, dpkg-dev. Test only (never shipped): Xvfb, mutter, ImageMagick,
       # xdotool, xclip, x11-utils, poppler-utils, CUPS + cups-pdf, xdg-utils, qpdf (makes the no-printing fixture),
-      # lintian + python3-fonttools/brotli (package check), python3-seccomp (no-user-namespace test).
+      # lintian + python3-fonttools/brotli (package check), python3-seccomp (no-user-namespace test),
+      # python3-gi (a stand-in file manager for the Show in folder test).
       - name: Install build and test packages (Ubuntu)
         timeout-minutes: 15
         run: |
@@ -46,7 +47,7 @@ jobs:
           sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 install -y -qq dotnet-sdk-10.0 \
             libgtk-4-dev libwebkitgtk-6.0-dev dpkg-dev \
             xvfb mutter imagemagick dbus-x11 xdotool xclip x11-utils poppler-utils cups cups-pdf xdg-utils qpdf \
-            lintian python3-fonttools python3-brotli python3-seccomp
+            lintian python3-fonttools python3-brotli python3-seccomp python3-gi
           dotnet --info | head -8
 
       # Packages: the committed ci/packages feed (byte-identical to the Windows app), coordinator D-01,
@@ -117,6 +118,9 @@ jobs:
           python3 -I tools/linux/make-fixtures.py "$PWD/ro-fixtures"
           python3 -I tools/linux/readonly-home-test.py "$PWD/uitest-build" "$PWD/ro-fixtures/five-pages.pdf" "$PWD/readonly-home"
 
+      - name: Show in folder → one file-manager window, slow or missing file manager (B-21)
+        run: python3 -I tools/linux/reveal-test.py "$PWD/uitest-build" "$PWD/ro-fixtures/five-pages.pdf" "$PWD/reveal"
+
       - name: No printing service → Print explains itself, no empty dialog (B-20)
         run: |
           sudo systemctl stop cups.service cups.socket cups.path 2>/dev/null || sudo pkill -x cupsd || true
@@ -134,6 +138,7 @@ jobs:
             no-userns
             readonly-home
             no-printer
+            reveal
             smoke
             smoke-installed
             uitest

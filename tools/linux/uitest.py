@@ -577,25 +577,29 @@ step("31-print-cancel", print_cancel)
 
 
 def print_not_allowed():
-    """A file whose permissions forbid printing: refused before any dialog, nothing sent (D-66)."""
+    """A file whose permissions forbid printing (D-66): the Print card is locked with the reason (Foundation's
+    shared card), no dialog opens and nothing reaches CUPS. The Linux print service refuses as well."""
     started = time.time()
     app.open(os.path.join(FIX, "no-print.pdf"))
     app.wait(lambda: app.js("var t=[...document.querySelectorAll('.rtab')].find(t=>t.innerText.includes('no-print.pdf')); if(!t) return false; t.click(); return true"), 20, "tab no-print.pdf")
     time.sleep(1.5)
     focus_main()
     app.key("ctrl+p")
-    time.sleep(1)
-    app.click("section[aria-label=Print] button.primary")
-    msg = app.wait(lambda: app.js("return document.body.innerText.includes(\"permissions don't allow printing\") ? 'shown' : null"), 10, "refusal message")
+    time.sleep(1.2)
+    card = "section[aria-label=Print]"
+    reason = app.wait(lambda: app.js(f"var c=document.querySelector({json.dumps(card)}); return c && c.innerText.includes(\"permissions don't allow printing\") ? 'shown' : null"), 10, "the reason on the card")
+    disabled = app.js(f"var b=document.querySelector({json.dumps(card + ' button.primary')}); return !!b && b.disabled")
+    if not disabled:
+        raise AssertionError("the Print button is enabled for a no-printing file")
+    app.click(card + " button.primary")  # a disabled button: nothing may happen
     time.sleep(3)
-    dialogs = [x for x in native_windows() if x[1].startswith("Print")]
-    if dialogs:
+    if [x for x in native_windows() if x[1].startswith("Print")]:
         raise AssertionError("the GTK print dialog opened for a no-printing file")
     if cups_pdfs(started):
         raise AssertionError("a job reached CUPS for a no-printing file")
     app.shot("31-print-not-allowed")
     dismiss()
-    return f"message {msg}; no print dialog; nothing sent to CUPS"
+    return f"reason {reason} on the card; Print disabled; no print dialog; nothing sent to CUPS"
 
 
 step("31-print-not-allowed", print_not_allowed)
