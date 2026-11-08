@@ -110,3 +110,43 @@ Legend: ✅ pass · ❌ fail (bug linked) · ⚠️ pass with a note · ⏳ not 
 | When | What | Result |
 |---|---|---|
 | 8 Nov 20:45 | Branch heads after the coordinator's 20:40 decisions | `platform/web` still 31b063e (not rebased; lacks Foundation 584bbf2) → nothing to re-test in a running build yet. Source check of Foundation **63f37b1**, which the rebase will bring: status bar "processed on the server · kept in memory only · only you can see it" (WT-04); 12a pitch "…kept in memory only…" (WT-05, D-103 in 9fbed93); `PortalLegalLinks` in `AccountMenu.razor` (WT-06); `PhoneShell` wired in `MainLayout.razor` (WT-03). WT-02 not yet changed (`Reader.razor` still passes 1-based `CurPage` to `PrintCard`) — expected, it goes into the combined patch. All four to be re-run in browsers (3 engines, phone/tablet/desktop) once the Web chat rebases |
+
+## Session 2 — 9 Nov 2026, 01:30–02:45 IST
+### Remaining cases from session 1 (build 31b063e, then regression on 1b32ad8)
+| ID | Result | Evidence |
+|---|---|---|
+| F-2, F-13, F-14, F-16, S-5, G-2…G-8 (real Sangam) | ✅ | Local Sangam **v1.0.0-rc.16 (d43a5ff)**, exported with `git archive`, read-only, PostgreSQL 16, Development; portal gateway mode. `sangam_signin.py` **13/13 in Chrome, Firefox, WebKit** on 31b063e and again on **1b32ad8**: 12a → Continue with Sangam → Sangam sign-in → back signed in; Reader shows the Sangam name; account menu name + Sangam ID; cookie HttpOnly + SameSite=Lax; no flow cookie left; sign-out → `/signed-out`; the other open tab ended too; asked to sign in again; second sign-in; **back-channel logout from Sangam ends the open tab**. One WebKit run in five raced on sign-out (test script → WT-14) |
+| X-S5 (8 h absolute) | ⏳ | Needs a short `Sangam:AbsoluteSessionLifetime` with a real sign-in; unit `SessionClockTests` ✅. Next session |
+| S-2, S-13 TLS (production rehearsal) | ✅ | `ASPNETCORE_ENVIRONMENT=Production`, gateway, tmpfs data root, self-signed PEM, real Sangam (second client `https://localhost:8443/`): starts; `sangam_signin.py --insecure` 13/14 — cookie **`__Host-chvd` + Secure** ✅; HSTS `max-age=31536000; includeSubDomains` ✅; full CSP ✅; `http://…:8080` → **307** to https ✅; **TLS 1.0/1.1 refused, 1.2/1.3 accepted** ✅; `X-Dev-User` ignored (302 to sign-in) ✅. Back-channel over https ✗ only because Sangam's own certificate check rejects a self-signed portal certificate (its callback, not the system store) → 🖥 V-2 with Let's Encrypt. Production accepted an `http://` Sangam address → **WT-15** |
+| F-5 Mark | ✅ | Firefox: Rectangle drawn, "Save as new PDF" → `text-3-edited.pdf`; the shape is in the file (form XObject `/CvStamp0`, rendered and seen). Highlight, Note, Fill form are "Coming soon" — same as the desktop app (library-gated), not portal bugs. In Chromium with the Development header the download got 404: Playwright doesn't send the injected header on Chromium's download request; **with a real Sangam cookie Chromium downloads it (200)** — harness only |
+| F-7 Split | ✅ | Document ▾ Split → "Use current" → "Split to folder": **13 files `text-13_p01…p13.pdf` in 0.6 s** as 13 separate downloads → option O-3 / WT-16 |
+| F-8 Redact | ✅ | Protect → Redact box over "Line 1:" → "Save redacted copy" → `text-3-redacted.pdf`: "Line 1:" gone from `pdftotext` **and from the raw content stream** (true removal, not a cover-up); a line the box touched went too |
+| F-8 Password | ✅ | Protect → Password → set → `text-3-protected.pdf`; `qpdf --requires-password` → needs a password |
+| Forms | ⏳ | "Fill form" is "Coming soon" in the shared Ui (library-gated); nothing for the portal to test yet |
+| — | ℹ️ | Protect shows "Sign with certificate — Waiting on the PDF library — certificate signing fails in chuvadi-pdf 3.30.1" (disabled; D-27 keeps it off on the portal anyway) |
+
+### Re-verification on `platform/web` @ **1b32ad8** (Foundation 839d39d)
+Clean cache, documented restore, `-warnaserror`: shared solution 0 warnings — Reader **187**, Hosting **59**, Mobile UI **16**, Web UI **33**; Web and Web.Tests 0 warnings, Web **154/154**; publish 0 non-own assemblies; `check-package.sh` PASS. Browser checks: `tests/web-test/verify_fixes.py` (Chromium, Firefox, WebKit).
+
+| Bug | Result |
+|---|---|
+| WT-01 CSP | ✅ Reader page in gateway mode: full policy + Blazor's `frame-ancestors` |
+| WT-02 print page | ✅ Current on p1 → "Page 1 of 13" (1 page); on p5 → "Page 5 of 13" (Chromium, Firefox; WebKit hands print over as a link, so the server-side check is the same code); Measure card "page 5" on p5 |
+| WT-03 phone shell | ✅ top bar with tab + page count, full-width page (366/390 px), bottom bar Read/Mark/Arrange/Protect, Home bottom bar Home/Library/Tabs/Settings — 3 engines (`screenshots/v2-phone-*.png`) |
+| WT-04 status bar | ✅ "processed on the server · kept in memory only · only you can see it", 3 engines |
+| WT-05 12a pitch | ✅ "kept in memory only", no "encrypted at rest"; Privacy link present (F-23 ✅), 3 engines |
+| WT-06 account footer | ✅ "Terms of use · Privacy", 3 engines |
+| WT-07 circuit Origin | ✅ foreign Origin → 403, own → 200 |
+| WT-08 bidi names | ✅ U+202E removed, 3 engines |
+| WT-09 no-print reason | ✅ "This file's permissions don't allow printing." in the card body, 3 engines |
+| WT-10 wording | ⚠️ damaged file → "This PDF is damaged" ✅, "Upload" ✅; **Arrange still says "Fetch…"** (addendum) |
+| WT-11 package | ✅ |
+| WT-12 build/CI | ✅ |
+| O-1 Sangam slow | ✅ 503 + message in **2.1 s** (the 2 s probe answers first; 10 s call limit behind it) |
+| O-2 Sangam down, warm | ✅ 503 + message in 5 ms once the 30 s cached "up" result expires; back to 302 when Sangam returns. Within those 30 s a person can still be sent to a dead Sangam (as decided) |
+| Q-3 Home wording | ⏳ unchanged (pending the Web portal UI's confirmation) |
+| Regression | ✅ `flows.py` 9/9 × Chrome, Firefox, WebKit; `sangam_signin.py` 13/13 × 3; hostile-file suite: see below |
+
+**Hostile-file regression on 1b32ad8** (`sec_browser.py`, Chrome): 19/21. All hostile names contained as before (`passwd.pdf`, `win.pdf`, `_CON.pdf`, 120-char stems, HTML stripped, U+202E removed, CJK kept); no script ran; every damaged/hostile document refused with one message, worker survived, the other person paged at 67–99 ms. Messages are now plain: damaged PDF → "…Chuvadi can try to rebuild it as a new copy." with "Try to repair (new copy)" and "Details"; zip bombs → "This Word document / Excel workbook is too large to open: its contents unpack to more than 2,048 MB. It may be damaged." The 2 fails are the known harness artefact (Playwright pushing 210 MB through the one shared browser); re-checked with separate browsers: refusal in 0.1 s, the other person 83–167 ms ✅.
+
+**New in 1b32ad8 — password-protected PDFs open** (was a known gap): "This PDF is password-protected · Enter its password to view it here. The password stays in memory for this tab only." Wrong password → "That password doesn't open this file."; right password → page 1 drawn; the password never appears in the page HTML — ✅ Chromium, Firefox, WebKit.

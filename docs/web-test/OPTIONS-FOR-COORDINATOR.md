@@ -24,3 +24,20 @@ With no server storage this release (D-31 scope), Home still shows a Storage map
 
 ## Q-4 Order of re-testing
 WT-03, WT-04, WT-06 all clear when `platform/web` rebases on Foundation ≥ 584bbf2 plus the Web portal UI's 5bec046 files. Suggest the Web chat does that rebase first, then WT-01, WT-07, WT-08, WT-11…WT-13; WT-02, WT-09, WT-10 go to Arun as listed changes.
+
+---
+
+# Session 2 (9 Nov 2026)
+
+## Q-3 status
+Decided (c), conditional on the Web portal UI confirming no layout change. In 1b32ad8 (Foundation 839d39d) Home still shows "STORAGE MAP" and "Your shelves are empty — open the Library" with no "this session" wording. Waiting on the Web portal UI's confirmation, or (b) — tell me which and I re-check.
+
+## O-3 "Split to folder" on the portal (WT-16)
+Today: one browser download per page (13 for a 13-page PDF, 0.6 s). Real Chrome stops to ask "download multiple files"; Safari may block after the first.
+- (a) Keep. Pros: no change; each file is a plain PDF. Cons: the multiple-downloads prompt; a 200-page split is 200 downloads.
+- (b) When a save produces more than one file, the portal hands over one `.zip` built with .NET's own `System.IO.Compression` (no third-party code). Pros: one download, works in every browser, any page count. Cons: one unzip step for the person; portal-only behaviour in `OutboxDelivery`.
+- (c) Ask on the card: "one file per page" vs "a single .zip". Pros: choice. Cons: an extra question on a card the handout doesn't show (rule 1 — design is final).
+**Recommendation: (b)** for two or more files. Owner: Web.
+
+## WT-15 (security) — no option, a fix
+Production should refuse an `http://` Sangam address (details in BUGS). Raising so it's in the Web chat's next round.

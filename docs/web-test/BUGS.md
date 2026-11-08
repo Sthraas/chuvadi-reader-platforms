@@ -6,19 +6,22 @@ Severity: **High** = wrong result, security weakness, or a screen that doesn't w
 
 | # | Severity | Area | Title | Owner | Status |
 |---|---|---|---|---|---|
-| WT-01 | High | Security | In gateway mode the Reader page loses its Content-Security-Policy (only `frame-ancestors 'self'` reaches the browser) | Web | Open — Web, after the rebase (Q-4) |
-| WT-02 | High | Function | Print "Current" prints the **next** page; Measure card shows the next page number | Existing file → Arun | Open — Foundation combined patch (exact diff) → Arun via PR #11; changes Windows output (coordinator 20:40) |
-| WT-03 | High | Design | Phone width shows squeezed desktop rails, not the phone shell; per-page strip and Arrange shelf clipped | Web (rebase) + Web portal UI (re-check) | Fix in Foundation 63f37b1 (PhoneShell in MainLayout; source checked); re-test after the Web rebase |
-| WT-04 | Medium | Wording | Status bar still says "encrypted at rest" (D-98) | Web portal UI → Foundation patch → Web | Fix in Foundation 63f37b1 ("kept in memory only"; source checked); re-test after the Web rebase |
-| WT-05 | Medium | Wording | 12a pitch still says "encrypted at rest" | Coordinator decision, then Web portal UI | Decided D-103; fix in Foundation 9fbed93 (pitch "kept in memory only"; source checked); re-test after the Web rebase |
-| WT-06 | Medium | Design | Account menu has no "Terms of use · Privacy" footer (D-97) | Web portal UI → Foundation patch → Web | Fix in Foundation 63f37b1 (`PortalLegalLinks` in AccountMenu; source checked); re-test after the Web rebase |
-| WT-07 | Low | Security | The circuit (`/_blazor`) accepts a foreign `Origin` | Web | Open — Web, after the rebase |
-| WT-08 | Low | Security | File names keep Unicode bidi controls (U+202E), so a name can display reversed | Web | Open — Web, after the rebase |
-| WT-09 | Low | UX | The no-print reason is only a hover tooltip on a disabled button (invisible on touch) | Existing file → Arun | Open — Foundation combined patch → Arun via PR #11 |
-| WT-10 | Low | UX | A file that can't be opened shows raw parser text, and a "Fetch…" button where the portal says "Upload" | Existing file → Arun (text) / Web portal UI (label) | Open — Foundation combined patch → Arun via PR #11 (label: Web portal UI) |
-| WT-11 | Low | Packaging | Publish output carries `web.config` (IIS), `appsettings.Development.json`, `.pdb` and `.xml` files | Web | Open — Web, after the rebase |
-| WT-12 | Low | Docs/CI | The plan's build command fails from a clean clone; Web is built without `-warnaserror` in CI and isn't in Platforms.slnx | Web | Open — Web, after the rebase |
-| WT-13 | Low | Test tooling | `load.py`: no output folder created; "paging" is mostly fixed sleeps; one browser for everyone | Web | Open — Web, after the rebase |
+| WT-01 | High | Security | In gateway mode the Reader page loses its Content-Security-Policy (only `frame-ancestors 'self'` reaches the browser) | Web | **Verified fixed** in 1b32ad8 (9 Nov) — gateway Reader page carries the full policy plus Blazor's |
+| WT-02 | High | Function | Print "Current" prints the **next** page; Measure card shows the next page number | Existing file → Arun | **Verified fixed** in 1b32ad8 (Foundation 839d39d) — Current prints page 1 on p1 and page 5 on p5 (Chromium, Firefox); Measure card says "page 5" on p5 |
+| WT-03 | High | Design | Phone width shows squeezed desktop rails, not the phone shell; per-page strip and Arrange shelf clipped | Web (rebase) + Web portal UI (re-check) | **Verified fixed** in 1b32ad8 — phone shell (top bar, bottom bar, full-width page) in Chromium, Firefox, WebKit |
+| WT-04 | Medium | Wording | Status bar still says "encrypted at rest" (D-98) | Web portal UI → Foundation patch → Web | **Verified fixed** in 1b32ad8 — "kept in memory only", 3 engines |
+| WT-05 | Medium | Wording | 12a pitch still says "encrypted at rest" | Coordinator decision, then Web portal UI | **Verified fixed** in 1b32ad8 — 12a "kept in memory only", 3 engines (D-103) |
+| WT-06 | Medium | Design | Account menu has no "Terms of use · Privacy" footer (D-97) | Web portal UI → Foundation patch → Web | **Verified fixed** in 1b32ad8 — "Terms of use · Privacy" footer, 3 engines |
+| WT-07 | Low | Security | The circuit (`/_blazor`) accepts a foreign `Origin` | Web | **Verified fixed** in 1b32ad8 — foreign Origin → 403, own → 200 |
+| WT-08 | Low | Security | File names keep Unicode bidi controls (U+202E), so a name can display reversed | Web | **Verified fixed** in 1b32ad8 — U+202E removed ("rtlfdp.exe.pdf"), 3 engines |
+| WT-09 | Low | UX | The no-print reason is only a hover tooltip on a disabled button (invisible on touch) | Existing file → Arun | **Verified fixed** in 1b32ad8 — reason shown in the card body, 3 engines |
+| WT-10 | Low | UX | A file that can't be opened shows raw parser text, and a "Fetch…" button where the portal says "Upload" | Existing file → Arun (text) / Web portal UI (label) | **Partly fixed** in 1b32ad8 — plain "This PDF is damaged" sentence and "Upload" on the failed-open screen ✅; **Arrange still says "Fetch…"** (5 places; reported 9 Nov, see below) |
+| WT-11 | Low | Packaging | Publish output carries `web.config` (IIS), `appsettings.Development.json`, `.pdb` and `.xml` files | Web | **Verified fixed** in 1b32ad8 — no web.config / Development settings / .pdb / .xml; `check-package.sh` PASS |
+| WT-12 | Low | Docs/CI | The plan's build command fails from a clean clone; Web is built without `-warnaserror` in CI and isn't in Platforms.slnx | Web | **Verified fixed** in 1b32ad8 — restore step documented and works from a clean cache; `-warnaserror` in web.yml; reason for Web outside Platforms.slnx stated |
+| WT-13 | Low | Test tooling | `load.py`: no output folder created; "paging" is mostly fixed sleeps; one browser for everyone | Web | Fixed in 1b32ad8 (per Web chat) — not re-run (perf.py used instead) |
+| WT-14 | Low | Test tooling | `sangam_signin.py` sign-out step races in WebKit (1 in 5 runs) | Web | Open |
+| WT-15 | Medium | Security | Production starts with an `http://` Sangam address | Web | Open |
+| WT-16 | Low | UX | "Split to folder" on the portal arrives as one download per page | Coordinator option O-3 | Question |
 
 Library items (Arun's libraries; not app bugs, recorded so they aren't lost): **LIB-1**, **LIB-2** at the end — on the coordinator's list for Arun's library coordinator (20:40).
 
@@ -109,7 +112,19 @@ Examples: "Could not open this document. Invalid integer '4294965240' at offset 
 
 ---
 
+## WT-10 addendum (9 Nov) — "Fetch" wording in Arrange
+In Arrange (Bench) on the portal: "Fetch a PDF to start.", "Fetch a file", "Fetch file" (twice), "Fetch image", and the title "Fetch another PDF onto the shelf". The portal's word is "Upload". Same route as WT-10 (shared Ui → Foundation patch, `Kind == Web` wording). Found tonight; not in the 8 Nov report, so not a regression.
+
+## WT-14 — `sangam_signin.py` sign-out race in WebKit (Low, test tooling)
+After "Sign out", the script waits for `networkidle`, which WebKit sometimes reaches while still on Sangam's `/connect/endsession` before the redirect back; it then reports "sign-out ends on the portal's signed-out page" as failed. 1 failure in 5 WebKit runs, 0 in Chrome/Firefox; the portal behaves correctly. **Fix:** `page.wait_for_url(portal + "/signed-out*", timeout=30000)` instead of `networkidle`.
+
+## WT-15 — Production accepts an `http://` Sangam address (Medium, security)
+**Steps:** `ASPNETCORE_ENVIRONMENT=Production`, `Sangam__Authority=http://localhost:5100/` (plus TLS, PublicOrigin, tmpfs). **Expected:** refuse to start outside Development/Testing unless the Sangam address is https (as the portal already refuses Development sign-in and a disk data root). **Actual:** starts; discovery, token call (with the client secret) and back-channel would go over plain http if misconfigured. No https check exists for `Sangam:Authority` (`Auth/SangamMetadata.cs`). **Fix:** startup check — https required outside Development/Testing.
+
+## WT-16 — Split to folder = one download per page (Low, UX — option)
+On the portal "Split to folder" of a 13-page PDF hands the browser 13 separate downloads in 0.6 s (all 13 arrive in headless runs). Real Chrome asks "This site is trying to download multiple files" and Safari may block them. Option O-3 in `OPTIONS-FOR-COORDINATOR.md`.
+
 ## Library items (Arun's libraries)
 - **LIB-1 chuvadi-pdf refuses `/P` written as an unsigned 32-bit number.** PDFs whose encryption dictionary has e.g. `/P 4294965240` (pypdf writes this) fail with "Invalid integer … must be a valid 32-bit signed integer". qpdf, poppler and pdf.js open them (reading the bits). Ask: accept 0…4294967295 and reinterpret as signed. Not worked around in the app (rule 2).
 - **LIB-2 Chuvadi.Sheets 1.1.2 can't open XLSX with absolute relationship targets.** openpyxl (and so pandas) writes `Target="/xl/worksheets/sheet1.xml"`; Core reports "Couldn't open this workbook: Part '/xl/xl/worksheets/sheet1.xml' not found in package." LibreOffice/Excel (relative targets) open fine. Sheets 2.0.2 fixed `./` and `..` targets; to confirm whether absolute targets are covered when the Reader moves to 2.0.2 (D-87).
-- **Known gap, not new:** a PDF with an open (user) password can't be opened on the portal — "This PDF is encrypted and needs a password to open." with no way to type it. Listed as library-gated in DESIGN-NOTE ("password API"); recorded so the test is re-run when that lands.
+- **Known gap, not new:** a PDF with an open (user) password can't be opened on the portal — "This PDF is encrypted and needs a password to open." with no way to type it. Listed as library-gated in DESIGN-NOTE ("password API"); recorded so the test is re-run when that lands. **9 Nov: works in 1b32ad8** (prompt, wrong-password message, opens; 3 engines).
