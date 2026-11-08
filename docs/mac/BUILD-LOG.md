@@ -394,3 +394,19 @@ WebKit's process launch is expected to be far shorter — added to REAL-MAC-CHEC
 
 Shared patches for Foundation (tested on 839d39d): `docs/mac/foundation/M-08-M-09-M-10-mac-conventions.patch`,
 `docs/mac/foundation/M-01-M-11-global-commands.patch`.
+
+### 2026-11-09 (03:00) — M-16 and M-02 first (coordinator), checked through the tester's own path
+- **M-16 through the Open panel**: the smoke run now starts on Home, presses the left bar's Open button, lets the real
+  NSOpenPanel run modally (a modal-mode timer closes it and a fixture stands in for the choice) and checks the Reader for
+  PDF (five pages), Markdown, text, HTML, Word and Excel. All six reach /reader with no error bar — on eb26aae, *before*
+  any picker change — so M-16's cause was the trimmed Platform DI types (69640cb, after the tested 7a65178), not the
+  panel. 6adeb7a still posts every panel to the next run-loop turn (never inside Blazor's click dispatch): defensive,
+  not the fix.
+- **Found and fixed: HTML documents showed blank on Mac.** MAUI's handler sent the viewer's `<iframe srcdoc>` navigation
+  (`about:srcdoc`) to the browser and cancelled it. 31dfe67 keeps `about:srcdoc`/`about:blank` in the WebView, as
+  WebView2 does. Proof: run 42527083558 (probe only) `frame=empty` + "error trying to open URL: about:srcdoc";
+  run 42527099579 (fix) `frame="Page\nAn HTML file."`, no errors.
+- **M-02**: a restored session (tabs saved by the previous launch) comes back first and the handed-over files are added
+  after it; checks no longer assume an empty session. Run 42527099579: launch file and running hand-over ✔, one process ✔.
+- Run 42527099579 (31dfe67): everything passes except File › Open… ⌘O (M-01/M-15) and Settings… (M-11), which wait on
+  the shared global-commands patch.
