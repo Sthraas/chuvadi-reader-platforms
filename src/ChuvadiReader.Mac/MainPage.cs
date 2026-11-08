@@ -44,6 +44,8 @@ public sealed class MainPage : ContentPage
         }
     }
 
+    internal static IDisposable? LoadingMarks; // kept alive for the app's life
+
     public MainPage(IServiceProvider services)
     {
         _services = services;
@@ -94,6 +96,7 @@ public sealed class MainPage : ContentPage
 
         _services.GetService<MacUiScale>()?.Attach(view);
         FileDrop.Attach(view, _services);
+        LoadingMarks = WebKitPrewarm.MarkLoading(view, "wk-ui"); // M-06: when the Ui's page load is asked for and done
         _services.GetService<MacWindowControls>()?.ApplyChrome();
     }
 }
