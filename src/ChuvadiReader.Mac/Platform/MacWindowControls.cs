@@ -16,7 +16,7 @@ public sealed class MacWindowControls : IWindowControls, IDisposable
 
     public event Action? StateChanged;
 
-    public bool IsMaximized => OnMain(() => AppKitBridge.IsZoomed(AppKitBridge.KeyWindow()));
+    public bool IsMaximized => OnMain(() => AppKitBridge.IsZoomed(AppKitBridge.AppWindow()));
 
     public MacWindowControls()
     {
@@ -30,38 +30,63 @@ public sealed class MacWindowControls : IWindowControls, IDisposable
         {
             _observers.Add(NSNotificationCenter.DefaultCenter.AddObserver(new NSString(name), _ =>
             {
-                AppKitBridge.HideTitlebar(AppKitBridge.KeyWindow());
+                ApplyChrome(); // idempotent; also catches a window that wasn't up yet at WebView ready
                 RaiseIfChanged();
             }));
         }
     }
 
-    public void Minimize() => OnMain(() => AppKitBridge.Miniaturize(AppKitBridge.KeyWindow()));
+    public void Minimize() => OnMain(() => AppKitBridge.Miniaturize(AppKitBridge.AppWindow()));
 
-    public void ToggleMaximize() => OnMain(() => AppKitBridge.Zoom(AppKitBridge.KeyWindow()));
+    public void ToggleMaximize() => OnMain(() => AppKitBridge.Zoom(AppKitBridge.AppWindow()));
 
-    public void Close() => OnMain(() => AppKitBridge.PerformClose(AppKitBridge.KeyWindow()));
+    public void Close() => OnMain(() => AppKitBridge.PerformClose(AppKitBridge.AppWindow()));
 
-    public void BeginDrag() => OnMain(() => AppKitBridge.BeginDrag(AppKitBridge.KeyWindow()));
+    public void BeginDrag() => OnMain(() => AppKitBridge.BeginDrag(AppKitBridge.AppWindow()));
 
-    /// <summary>No title text, no toolbar, no native title bar: the page runs to the window's top edge.</summary>
+    /// <summary>Opening size (Mac Test M-07): the Windows host's opening size, centred on the screen.</summary>
+    public const double OpeningWidth = 1100;
+    public const double OpeningHeight = 720;
+
+    private bool _sized;
+
+    /// <summary>
+    /// No title text, no toolbar, no native title bar, and the page running to the window's top edge
+    /// (Mac Test M-04); not restorable (M-03); 1100×720 centred on first show (M-07); 720×480 minimum.
+    /// </summary>
     public void ApplyChrome() => OnMain(() =>
     {
         foreach (var scene in UIApplication.SharedApplication.ConnectedScenes)
         {
-            if (scene is UIWindowScene { Titlebar: { } titlebar })
+            if (scene is UIWindowScene windowScene)
             {
-                titlebar.TitleVisibility = UITitlebarTitleVisibility.Hidden;
-                titlebar.Toolbar = null;
+                if (windowScene.Titlebar is { } titlebar)
+                {
+                    titlebar.TitleVisibility = UITitlebarTitleVisibility.Hidden;
+                    titlebar.Toolbar = null;
+                }
+
+                if (windowScene.SizeRestrictions is { } limits)
+                {
+                    limits.MinimumSize = new CoreGraphics.CGSize(720, 480);
+                }
             }
         }
 
-        AppKitBridge.HideTitlebar(AppKitBridge.KeyWindow());
+        var window = AppKitBridge.AppWindow();
+        AppKitBridge.MakeContentFullHeight(window);
+        AppKitBridge.HideTitlebar(window);
+        AppKitBridge.SetRestorable(window, false);
+        if (!_sized && window != IntPtr.Zero)
+        {
+            _sized = true;
+            AppKitBridge.SizeAndCenter(window, OpeningWidth, OpeningHeight);
+        }
     });
 
     private void RaiseIfChanged()
     {
-        var zoomed = AppKitBridge.IsZoomed(AppKitBridge.KeyWindow());
+        var zoomed = AppKitBridge.IsZoomed(AppKitBridge.AppWindow());
         if (zoomed != _lastZoomed)
         {
             _lastZoomed = zoomed;

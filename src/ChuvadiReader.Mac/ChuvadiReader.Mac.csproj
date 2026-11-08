@@ -125,9 +125,18 @@
     </PropertyGroup>
     <Error Condition="'$(_ChvdMonoNotices)' == '' or !Exists('$(_ChvdMonoNotices)')" Text="Chuvadi: .NET runtime notices not found in the resolved runtime pack ('$(_ChvdMonoNotices)'). Resolved framework references: @(ResolvedFrameworkReference->'%(Identity)=%(RuntimePackName)@%(RuntimePackPath)', ' | '). Downloaded runtime packs: @(_ChvdMonoDownload->'%(Identity) %(Version)', ' | '). Known Mono pack: $(_ChvdMonoId) $(_ChvdMonoVersion) (RID $(_ChvdRid), TFM $(_ChvdTfm)). NuGet root: $(NuGetPackageRoot). Packs root: $(NetCoreTargetingPackRoot)." />
     <Error Condition="'$(_ChvdAppleLicense)' == '' or !Exists('$(_ChvdAppleLicense)')" Text="Chuvadi: .NET for Mac Catalyst licence not found ('$(_ChvdAppleLicense)'). Known pack: $(_ChvdAppleId) $(_ChvdAppleVersion) (RID $(_ChvdRid), TFM $(_ChvdTfm)). Packs root: $(NetCoreTargetingPackRoot). NuGet root: $(NuGetPackageRoot)." />
+    <!-- Copied (content unchanged) and set to 0644 first: files in the NuGet cache can carry an
+         executable bit, which would otherwise ship in the bundle (Mac Test M-12). -->
+    <PropertyGroup>
+      <_ChvdLegalDir>$(IntermediateOutputPath)chuvadi-legal/</_ChvdLegalDir>
+    </PropertyGroup>
+    <Copy SourceFiles="$(_ChvdMonoNotices);$(_ChvdAppleLicense)"
+          DestinationFiles="$(_ChvdLegalDir)DOTNET-RUNTIME-THIRD-PARTY-NOTICES.txt;$(_ChvdLegalDir)DOTNET-MACCATALYST-LICENSE.txt"
+          SkipUnchangedFiles="true" />
+    <Exec Condition="'$(OS)' != 'Windows_NT'" Command="chmod 0644 &quot;$(_ChvdLegalDir)DOTNET-RUNTIME-THIRD-PARTY-NOTICES.txt&quot; &quot;$(_ChvdLegalDir)DOTNET-MACCATALYST-LICENSE.txt&quot;" />
     <ItemGroup>
-      <BundleResource Include="$(_ChvdMonoNotices)" LogicalName="legal/DOTNET-RUNTIME-THIRD-PARTY-NOTICES.txt" />
-      <BundleResource Include="$(_ChvdAppleLicense)" LogicalName="legal/DOTNET-MACCATALYST-LICENSE.txt" />
+      <BundleResource Include="$(_ChvdLegalDir)DOTNET-RUNTIME-THIRD-PARTY-NOTICES.txt" LogicalName="legal/DOTNET-RUNTIME-THIRD-PARTY-NOTICES.txt" />
+      <BundleResource Include="$(_ChvdLegalDir)DOTNET-MACCATALYST-LICENSE.txt" LogicalName="legal/DOTNET-MACCATALYST-LICENSE.txt" />
     </ItemGroup>
   </Target>
 

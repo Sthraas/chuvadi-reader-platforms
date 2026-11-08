@@ -13,6 +13,9 @@ namespace ChuvadiReader.Mac;
 public sealed class MainPage : ContentPage
 {
     private static BlazorWebView? _web;
+
+    /// <summary>The page's WKWebView, once BlazorWebView has created it.</summary>
+    public static WKWebView? WebKitView { get; private set; }
     private readonly IServiceProvider _services;
 
     /// <summary>Runs <paramref name="action"/> on the Blazor renderer's dispatcher — used by the
@@ -62,6 +65,7 @@ public sealed class MainPage : ContentPage
     {
         StartupTimeline.Mark("webview-ready");
         var view = e.WebView;
+        WebKitView = view;
 
         // No page zoom gestures — only the Interface size setting zooms (as on Windows).
         // (Catalyst's WKWebView zooms through its scroll view.) The reader's own pinch-to-zoom of

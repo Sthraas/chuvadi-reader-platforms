@@ -11,6 +11,29 @@
 	<array>
 		<integer>6</integer>
 	</array>
+	<!-- Mac Test M-05: the app icon. MauiIcon compiles Resources/AppIcon into this asset set; Mac
+	     Catalyst only adds it to Assets.car (and sets CFBundleIconName) when Info.plist names it. -->
+	<key>XSAppIconAssets</key>
+	<string>Assets.xcassets/appicon.appiconset</string>
+	<!-- Mac Test M-02: MAUI's documented scene setup, one scene (single window, tabs inside it). macOS
+	     delivers files opened with Chuvadi as scene events, at launch and while running. -->
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneConfigurationName</key>
+					<string>__MAUI_DEFAULT_SCENE_CONFIGURATION__</string>
+					<key>UISceneDelegateClassName</key>
+					<string>SceneDelegate</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.productivity</string>
 	<!-- "Open With" from Finder: the Open panel's types. Alternate rank — Chuvadi is offered,

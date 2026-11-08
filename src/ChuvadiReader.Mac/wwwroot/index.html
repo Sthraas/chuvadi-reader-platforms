@@ -34,6 +34,14 @@
     </div>
 
     <script src="_content/ChuvadiReader.Ui/js/theme.js"></script>
+    <script>
+        // Startup timing marks (Mac Test M-06), read back only by the CI smoke run: when the page's
+        // scripts start, and when Blazor puts the Ui's first content into #app.
+        performance.mark('chvd-blazor-script');
+        new MutationObserver(function (_, o) {
+            if (document.getElementById('app').firstElementChild) { performance.mark('chvd-app-content'); o.disconnect(); }
+        }).observe(document.getElementById('app'), { childList: true });
+    </script>
     <script src="_framework/blazor.webview.js"></script>
 </body>
 </html>

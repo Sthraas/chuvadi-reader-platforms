@@ -15,11 +15,19 @@ public sealed class AppDelegate : MauiUIApplicationDelegate
 
     protected override MauiApp CreateMauiApp()
     {
+        MacQuit.Install();
         var app = MauiProgram.CreateMauiApp();
         _commands = app.Services.GetRequiredService<IAppCommands>();
         _shell = app.Services.GetRequiredService<ShellService>();
         MacMenuBar.Watch(_commands);
         return app;
+    }
+
+    /// <summary>Quit (⌘Q, Dock, logout): detach the page before MAUI and AppKit finish (Mac Test M-03).</summary>
+    public override void WillTerminate(UIApplication application)
+    {
+        MacQuit.Begin("will-terminate");
+        base.WillTerminate(application);
     }
 
     /// <summary>The macOS menu bar, built from the Ui's commands (IAppCommands).</summary>

@@ -1,0 +1,143 @@
+From ca3d78b28b3212e7a1ce7fb00b6c28a96b875756 Mon Sep 17 00:00:00 2001
+From: Arun Shiva B <arunshiva@gmail.com>
+Date: Sun, 8 Nov 2026 20:03:50 +0000
+Subject: [PATCH] Mac conventions in shared code (Mac Test M-08, M-09, M-10)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- M-08: next/previous tab on Ctrl+Tab on every platform (reader.js); on a Mac the label is ⌃Tab / ⌃⇧Tab
+  (MacKeyLabels) — ⌘Tab is the system app switcher and never reaches the page.
+- M-09: MacKeyLabels shows F11 as ⌃⌘F (macOS full screen; the Mac host binds Immersive to it).
+- M-10: the macOS green light is Zoom in both states (aria-label and icon), not 'Exit full screen'.
+Tests: Hosting Mac_key_labels (F11, Ctrl Tab, Ctrl Shift Tab, Ctrl T), MacConventionsTests (reader.js, WindowButtons).
+---
+ src/ChuvadiReader.Hosting/Defaults.cs         | 10 ++++++
+ .../Components/Platform/WindowButtons.razor   |  3 +-
+ src/ChuvadiReader.Ui/wwwroot/js/reader.js     |  8 +++++
+ .../HostingTests.cs                           |  5 ++-
+ .../MacConventionsTests.cs                    | 34 +++++++++++++++++++
+ 5 files changed, 58 insertions(+), 2 deletions(-)
+ create mode 100644 tests/ChuvadiReader.Hosting.Tests/MacConventionsTests.cs
+
+diff --git a/src/ChuvadiReader.Hosting/Defaults.cs b/src/ChuvadiReader.Hosting/Defaults.cs
+index 11fce1d..40f96c9 100644
+--- a/src/ChuvadiReader.Hosting/Defaults.cs
++++ b/src/ChuvadiReader.Hosting/Defaults.cs
+@@ -19,6 +19,11 @@ public sealed class MacKeyLabels : IKeyLabels
+     public string Format(string canonical)
+     {
+         if (string.IsNullOrWhiteSpace(canonical)) return canonical;
++
++        // macOS conventions that are not a plain Ctrl → ⌘ swap:
++        // F11 is Show Desktop on a Mac; full screen is ⌃⌘F (the Mac host binds Immersive to it).
++        if (canonical == "F11") return "⌃⌘F";
++
+         bool cmd = false, shift = false, alt = false;
+         var rest = new List<string>();
+         foreach (var part in canonical.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+@@ -32,7 +37,12 @@ public sealed class MacKeyLabels : IKeyLabels
+             }
+         }
+ 
++        // Next/previous tab is ⌃Tab on a Mac — ⌘Tab is the system app switcher (reader.js accepts ⌃Tab).
++        var control = cmd && rest.Count == 1 && rest[0] == "Tab";
++        if (control) cmd = false;
++
+         var sb = new StringBuilder();
++        if (control) sb.Append('⌃');
+         if (alt) sb.Append('⌥');
+         if (shift) sb.Append('⇧');
+         if (cmd) sb.Append('⌘');
+diff --git a/src/ChuvadiReader.Ui/Components/Platform/WindowButtons.razor b/src/ChuvadiReader.Ui/Components/Platform/WindowButtons.razor
+index d3a6f0f..46571f1 100644
+--- a/src/ChuvadiReader.Ui/Components/Platform/WindowButtons.razor
++++ b/src/ChuvadiReader.Ui/Components/Platform/WindowButtons.razor
+@@ -40,7 +40,8 @@ else if (Platform.Chrome.Buttons == Side)
+     <div class="traffic traffic-left" @onmousedown:stopPropagation="true" @ondblclick:stopPropagation="true">
+         <button class="tl tl-close" @onclick="() => Win.Close()" aria-label="Close"><Icon Name="x" Size="10" /></button>
+         <button class="tl tl-min" @onclick="() => Win.Minimize()" aria-label="Minimize"><Icon Name="minus" Size="10" /></button>
+-        <button class="tl tl-max" @onclick="() => Win.ToggleMaximize()" aria-label="@(Win.IsMaximized ? "Exit full screen" : "Zoom")"><Icon Name="@(Win.IsMaximized ? "restore" : "square")" Size="9" /></button>
++        @* macOS: the green light is Zoom in both states (zoom is not full screen; the native glyph doesn't change). *@
++        <button class="tl tl-max" @onclick="() => Win.ToggleMaximize()" aria-label="Zoom"><Icon Name="square" Size="9" /></button>
+     </div>
+ }
+ 
+diff --git a/src/ChuvadiReader.Ui/wwwroot/js/reader.js b/src/ChuvadiReader.Ui/wwwroot/js/reader.js
+index 98b8077..1bfc2f4 100644
+--- a/src/ChuvadiReader.Ui/wwwroot/js/reader.js
++++ b/src/ChuvadiReader.Ui/wwwroot/js/reader.js
+@@ -120,6 +120,14 @@ export function init(deskEl, dotnetRef) {
+ 
+         if (e.key === 'Escape') { invoke('OnEscape'); return; }
+ 
++        // Next/previous tab: ⌃Tab / ⌃⇧Tab on every platform. On macOS this is the only way —
++        // ⌘Tab is the system app switcher and never reaches the page (Safari, Finder, Xcode use ⌃Tab).
++        if (e.key === 'Tab' && e.ctrlKey === true && e.metaKey !== true && e.altKey !== true) {
++            e.preventDefault();
++            invoke('CycleTab', e.shiftKey ? -1 : 1);
++            return;
++        }
++
+         // Tab-close shortcuts: handle the Alt/Shift variants of W before the no-Alt block.
+         if (isPrimary(e) && e.key.toLowerCase() === 'w') {
+             e.preventDefault();
+diff --git a/tests/ChuvadiReader.Hosting.Tests/HostingTests.cs b/tests/ChuvadiReader.Hosting.Tests/HostingTests.cs
+index f6adf60..7045dc4 100644
+--- a/tests/ChuvadiReader.Hosting.Tests/HostingTests.cs
++++ b/tests/ChuvadiReader.Hosting.Tests/HostingTests.cs
+@@ -120,7 +120,10 @@ public sealed class HostingTests
+     [InlineData("Ctrl Shift S", "⇧⌘S")]
+     [InlineData("Ctrl Alt W", "⌥⌘W")]
+     [InlineData("Ctrl 1 … 9", "⌘1 … 9")]
+-    [InlineData("F11", "F11")]
++    [InlineData("F11", "⌃⌘F")]
++    [InlineData("Ctrl Tab", "⌃Tab")]
++    [InlineData("Ctrl Shift Tab", "⌃⇧Tab")]
++    [InlineData("Ctrl T", "⌘T")]
+     public void Mac_key_labels(string canonical, string expected) =>
+         Assert.Equal(expected, new MacKeyLabels().Format(canonical));
+ 
+diff --git a/tests/ChuvadiReader.Hosting.Tests/MacConventionsTests.cs b/tests/ChuvadiReader.Hosting.Tests/MacConventionsTests.cs
+new file mode 100644
+index 0000000..e5662a5
+--- /dev/null
++++ b/tests/ChuvadiReader.Hosting.Tests/MacConventionsTests.cs
+@@ -0,0 +1,34 @@
++using Xunit;
++
++namespace ChuvadiReader.Hosting.Tests;
++
++/// <summary>Mac Test M-08 / M-10: macOS conventions in shared Ui files, checked in the source that ships.</summary>
++public class MacConventionsTests
++{
++    private static string Repo(params string[] parts)
++    {
++        var dir = new DirectoryInfo(AppContext.BaseDirectory);
++        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "Directory.Build.props")))
++        {
++            dir = dir.Parent;
++        }
++
++        Assert.NotNull(dir);
++        return File.ReadAllText(Path.Combine([dir!.FullName, .. parts]));
++    }
++
++    [Fact]
++    public void Tab_cycling_accepts_control_tab_so_it_works_on_a_mac_M08()
++    {
++        var js = Repo("src", "ChuvadiReader.Ui", "wwwroot", "js", "reader.js");
++        Assert.Contains("e.key === 'Tab' && e.ctrlKey === true && e.metaKey !== true", js);
++    }
++
++    [Fact]
++    public void Mac_green_light_is_zoom_in_both_states_M10()
++    {
++        var razor = Repo("src", "ChuvadiReader.Ui", "Components", "Platform", "WindowButtons.razor");
++        Assert.DoesNotContain("Exit full screen", razor);
++        Assert.Contains("class=\"tl tl-max\" @onclick=\"() => Win.ToggleMaximize()\" aria-label=\"Zoom\"", razor);
++    }
++}
+-- 
+2.43.0
+
