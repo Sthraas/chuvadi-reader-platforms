@@ -65,7 +65,7 @@ echo "$FILE"; echo "$VIEW"; echo "$DOC"
 items=$(echo "${DOC#*: }" | tr '|' '\n' | grep -c '[^ ]' || true)
 [ "${items:-0}" -ge 3 ] && pass "M-01 Document menu has $items items" || fail "M-01 Document menu: $DOC"
 [[ "$VIEW" == *"⌘K"* && "$VIEW" == *"⌃⌘F"* ]] && pass "M-01 View has ⌘K and Immersive ⌃⌘F" || fail "M-01 View menu: $VIEW"
-[[ "$VIEW" != *"Enter Full Screen"* ]] && pass "M-01 no AppKit Enter Full Screen" || fail "M-01 View still has Enter Full Screen"
+[ -n "$VIEW" ] && [[ "$VIEW" != *"Enter Full Screen"* ]] && pass "M-01 no AppKit Enter Full Screen" || fail "M-01 View missing or still has Enter Full Screen"
 grep -q 'CHUVADI menu .*Settings… ⌘,' "$LOG" && pass "M-11 Settings… ⌘, in the Chuvadi menu" || fail "M-11 no Settings… ⌘,"
 grep -q 'menu-build-failed' "$LOG" && fail "menu build threw: $(grep menu-build-failed "$LOG" | tail -1)"
 
@@ -74,8 +74,12 @@ GEO=$(grep 'CHUVADI geometry' "$LOG" | tail -1); WEB=$(grep 'CHUVADI webview' "$
 echo "$GEO"; echo "$WEB"
 read -r ww wh wx wy sw sh sx sy <<<"$(echo "$GEO" | sed -E 's/.*window=([0-9]+)x([0-9]+)@(-?[0-9]+),(-?[0-9]+) screen=([0-9]+)x([0-9]+)@(-?[0-9]+),(-?[0-9]+).*/\1 \2 \3 \4 \5 \6 \7 \8/')"
 if [ "${ww:-0}" = "1100" ] && [ "${wh:-0}" = "720" ]; then pass "M-07 window 1100×720"; else fail "M-07 window ${ww:-?}×${wh:-?}"; fi
-cx=$(( sx + (sw - ${ww:-0}) / 2 - ${wx:-0} )); cx=${cx#-}
-[ "${cx:-99}" -le 2 ] && pass "M-07 centred horizontally" || fail "M-07 not centred (x off by $cx)"
+if [ -n "${ww:-}" ] && [ -n "${sw:-}" ]; then
+  cx=$(( sx + (sw - ww) / 2 - wx )); cx=${cx#-}
+  [ "$cx" -le 2 ] && pass "M-07 centred horizontally" || fail "M-07 not centred (x off by $cx)"
+else
+  fail "M-07 no geometry reported"
+fi
 top=$(echo "$WEB" | sed -E 's/.*top=(-?[0-9]+).*/\1/'); webh=$(echo "$WEB" | sed -E 's/.*height=([0-9]+).*/\1/')
 [ "$top" = "0" ] && [ "$webh" = "${wh:-x}" ] && pass "M-04 page reaches the top edge (web view ${webh} of ${wh})" \
   || fail "M-04 band above the page: web view top=$top height=$webh, window height=${wh:-?}"
