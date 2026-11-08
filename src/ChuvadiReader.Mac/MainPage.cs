@@ -72,8 +72,23 @@ public sealed class MainPage : ContentPage
             ComponentType = typeof(ChuvadiReader.Ui.App),
         });
         web.BlazorWebViewInitialized += OnWebViewInitialized;
+        web.UrlLoading += OnUrlLoading;
         _web = web;
         Content = web;
+    }
+
+    /// <summary>
+    /// The HTML viewer shows a document in an &lt;iframe srcdoc&gt; (sandboxed, no scripts). MAUI's Mac handler
+    /// treats any URL outside the app's origin as a link to open in the browser — including the frame's own
+    /// about:srcdoc — so the frame was cancelled and stayed blank. WebView2 on Windows loads it in place;
+    /// so does this. Real links still go to the browser.
+    /// </summary>
+    private static void OnUrlLoading(object? sender, UrlLoadingEventArgs e)
+    {
+        if (e.Url.Scheme == "about" && e.Url.OriginalString is "about:srcdoc" or "about:blank")
+        {
+            e.UrlLoadingStrategy = UrlLoadingStrategy.OpenInWebView;
+        }
     }
 
     private void OnWebViewInitialized(object? sender, BlazorWebViewInitializedEventArgs e)
