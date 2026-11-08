@@ -1,0 +1,165 @@
+From 3d0d6785850325eaabe5d3a8441cff65f79c80a2 Mon Sep 17 00:00:00 2001
+From: Arun Shiva B <arunshiva@gmail.com>
+Date: Sun, 8 Nov 2026 20:37:42 +0000
+Subject: [PATCH] Shell's own commands reach IAppCommands (Mac Test M-01, M-11)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+MainLayout's global commands (Open a file…, Settings, Go to, modes, themes, tabs) were only handed to the
+Ctrl K bar, so the kit's IAppCommands — and the macOS menu bar built from it — had no File › Open… and no
+Settings. MainLayout now also publishes them through ShellService.SetGlobalCommands after each render
+(Changed only when ids, labels, keys or disabled reasons differ, so no render loop); ShellAppCommands lists
+them before the page commands and can invoke them. The Ctrl K bar is unchanged.
+Tests: GlobalCommandsTests (no Changed for the same list; order and invoke; disabled not run).
+---
+ src/ChuvadiReader.Core/Reader/ShellService.cs | 26 +++++++++
+ src/ChuvadiReader.Hosting/ShellAppCommands.cs |  5 +-
+ src/ChuvadiReader.Ui/Layout/MainLayout.razor  |  4 ++
+ .../GlobalCommandsTests.cs                    | 58 +++++++++++++++++++
+ 4 files changed, 92 insertions(+), 1 deletion(-)
+ create mode 100644 tests/ChuvadiReader.Hosting.Tests/GlobalCommandsTests.cs
+
+diff --git a/src/ChuvadiReader.Core/Reader/ShellService.cs b/src/ChuvadiReader.Core/Reader/ShellService.cs
+index 266451d..d024ac5 100644
+--- a/src/ChuvadiReader.Core/Reader/ShellService.cs
++++ b/src/ChuvadiReader.Core/Reader/ShellService.cs
+@@ -173,6 +173,32 @@ public sealed class ShellService
+         Changed?.Invoke();
+     }
+ 
++    // ── Global commands ───────────────────────────────────────────────────
++
++    private string _globalSignature = string.Empty;
++
++    /// <summary>The shell's own commands (Open, Settings, Go to, modes, themes, tabs) as MainLayout
++    /// last published them — the ones the Ctrl K bar lists before the page commands. Hosts read them
++    /// through IAppCommands for a native menu bar (Mac Test M-01, M-11).</summary>
++    public IReadOnlyList<ShellCommand> GlobalCommands { get; private set; } = Array.Empty<ShellCommand>();
++
++    /// <summary>Publishes the shell's own commands. Raises <see cref="Changed"/> only when an id, label,
++    /// shortcut or disabled reason differs, so calling it on every render can't loop.</summary>
++    public void SetGlobalCommands(IReadOnlyList<ShellCommand>? commands)
++    {
++        var list = commands ?? Array.Empty<ShellCommand>();
++        var signature = string.Join('\n', list.Select(c => $"{c.Id}\t{c.Label}\t{c.Keys}\t{c.DisabledReason}"));
++        if (signature == _globalSignature)
++        {
++            GlobalCommands = list; // fresh delegates, same content
++            return;
++        }
++
++        _globalSignature = signature;
++        GlobalCommands = list;
++        Changed?.Invoke();
++    }
++
+     // ── Ctrl K ────────────────────────────────────────────────────────────
+ 
+     /// <summary>Publish (or replace) the commands an owner contributes.</summary>
+diff --git a/src/ChuvadiReader.Hosting/ShellAppCommands.cs b/src/ChuvadiReader.Hosting/ShellAppCommands.cs
+index 23d4654..cdea910 100644
+--- a/src/ChuvadiReader.Hosting/ShellAppCommands.cs
++++ b/src/ChuvadiReader.Hosting/ShellAppCommands.cs
+@@ -18,8 +18,10 @@ public sealed class ShellAppCommands : IAppCommands, IDisposable
+         _shell.Changed += OnShellChanged;
+     }
+ 
++    /// <summary>The shell's own commands (Open, Settings, Go to, modes …) first, then the page's — the
++    /// order the Ctrl K bar lists them in.</summary>
+     public IReadOnlyList<AppCommandInfo> Commands =>
+-        _shell.Commands.Where(c => !IsSeparator(c)).Select(ToInfo).ToList();
++        _shell.GlobalCommands.Concat(_shell.Commands).Where(c => !IsSeparator(c)).Select(ToInfo).ToList();
+ 
+     public IReadOnlyList<AppCommandInfo> DocumentMenu =>
+         _shell.DocumentMenu.Select(ToInfo).ToList();
+@@ -29,6 +31,7 @@ public sealed class ShellAppCommands : IAppCommands, IDisposable
+     public async Task<bool> InvokeAsync(string id)
+     {
+         var command = _shell.DocumentMenu.FirstOrDefault(c => c.Id == id)
++                      ?? _shell.GlobalCommands.FirstOrDefault(c => c.Id == id)
+                       ?? _shell.Commands.FirstOrDefault(c => c.Id == id);
+         if (command is null || IsSeparator(command) || !command.IsEnabled)
+         {
+diff --git a/src/ChuvadiReader.Ui/Layout/MainLayout.razor b/src/ChuvadiReader.Ui/Layout/MainLayout.razor
+index 966983b..3f3df01 100644
+--- a/src/ChuvadiReader.Ui/Layout/MainLayout.razor
++++ b/src/ChuvadiReader.Ui/Layout/MainLayout.razor
+@@ -667,6 +667,10 @@
+     // ── lifecycle / theme / window ────────────────────────────────────────
+     protected override async Task OnAfterRenderAsync(bool firstRender)
+     {
++        // The shell's own commands, for hosts with a native menu bar (IAppCommands). Only raises
++        // Shell.Changed when they actually differ, so this can't re-render in a loop.
++        Shell.SetGlobalCommands(GlobalCommands().ToList());
++
+         if (!firstRender)
+         {
+             return;
+diff --git a/tests/ChuvadiReader.Hosting.Tests/GlobalCommandsTests.cs b/tests/ChuvadiReader.Hosting.Tests/GlobalCommandsTests.cs
+new file mode 100644
+index 0000000..cf09596
+--- /dev/null
++++ b/tests/ChuvadiReader.Hosting.Tests/GlobalCommandsTests.cs
+@@ -0,0 +1,58 @@
++using ChuvadiReader.Core.Reader;
++using Xunit;
++
++namespace ChuvadiReader.Hosting.Tests;
++
++/// <summary>Mac Test M-01 / M-11: the shell's own commands (Open, Settings, Go to …) reach IAppCommands.</summary>
++public class GlobalCommandsTests
++{
++    private static ShellCommand Cmd(string id, string label, string? keys = null, Func<Task>? run = null, string? disabled = null)
++        => new(id, label, "Go to", "home", keys, run ?? (() => Task.CompletedTask), disabled);
++
++    [Fact]
++    public void Publishing_the_same_commands_again_does_not_raise_Changed()
++    {
++        var shell = new ShellService();
++        var raised = 0;
++        shell.Changed += () => raised++;
++
++        shell.SetGlobalCommands([Cmd("go.settings", "Settings"), Cmd("file.open", "Open a file…", "Ctrl O")]);
++        shell.SetGlobalCommands([Cmd("go.settings", "Settings"), Cmd("file.open", "Open a file…", "Ctrl O")]);
++        Assert.Equal(1, raised);
++
++        shell.SetGlobalCommands([Cmd("go.settings", "Settings")]);
++        Assert.Equal(2, raised);
++        shell.SetGlobalCommands([Cmd("go.settings", "Settings", disabled: "busy")]);
++        Assert.Equal(3, raised);
++    }
++
++    [Fact]
++    public async Task IAppCommands_lists_the_shell_commands_first_and_runs_them()
++    {
++        var shell = new ShellService();
++        var opened = 0;
++        shell.RegisterCommands(this, [Cmd("r.print", "Print", "Ctrl P")]);
++        shell.SetGlobalCommands([Cmd("go.settings", "Settings"), Cmd("file.open", "Open a file…", "Ctrl O", () => { opened++; return Task.CompletedTask; })]);
++
++        var commands = new ShellAppCommands(shell);
++        Assert.Equal(["go.settings", "file.open", "r.print"], commands.Commands.Select(c => c.Id));
++        Assert.Equal("Ctrl O", commands.Commands.Single(c => c.Id == "file.open").Keys);
++
++        Assert.True(await commands.InvokeAsync("file.open"));
++        Assert.Equal(1, opened);
++    }
++
++    [Fact]
++    public async Task A_disabled_shell_command_is_reported_and_not_run()
++    {
++        var shell = new ShellService();
++        var ran = false;
++        shell.SetGlobalCommands([Cmd("tools.ocr", "OCR", run: () => { ran = true; return Task.CompletedTask; }, disabled: "Coming soon")]);
++        var commands = new ShellAppCommands(shell);
++
++        var info = commands.Commands.Single();
++        Assert.False(info.IsEnabled);
++        Assert.False(await commands.InvokeAsync("tools.ocr"));
++        Assert.False(ran);
++    }
++}
+-- 
+2.43.0
+

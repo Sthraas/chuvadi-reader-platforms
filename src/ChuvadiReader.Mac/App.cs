@@ -20,6 +20,7 @@ public sealed class App : Application
             UIKit.UIApplication.SharedApplication.BeginInvokeOnMainThread(() =>
             {
                 MacMenuBar.RequestRebuild("ui-ready");
+                WebKitPrewarm.Release();
                 MacSmoke.Start(_services, ChuvadiReader.Mac.MainPage.WebKitView);
             });
 

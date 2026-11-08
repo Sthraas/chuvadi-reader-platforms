@@ -292,7 +292,15 @@ internal static class AppKitBridge
             return;
         }
 
+        // Never larger than the screen's visible area (a 1024×768 display gets the whole visible area).
         var frame = Rect(window, "frame");
+        var screen = Rect(SendIntPtr(window, Sel("screen")), "visibleFrame");
+        if (screen.Width > 0 && screen.Height > 0)
+        {
+            width = Math.Min(width, (double)screen.Width);
+            height = Math.Min(height, (double)screen.Height);
+        }
+
         SendVoidRectBool(window, Sel("setFrame:display:"), new CoreGraphics.CGRect(frame.X, frame.Y, width, height), true);
         SendVoidIntPtr(window, Sel("center"), IntPtr.Zero);
     }

@@ -25,7 +25,10 @@ internal static class MacFileArrivals
         }
 
         var incoming = services.GetRequiredService<IncomingFiles>();
-        if (MainPage.CanDispatch)
+        // Before the Ui's first render, IncomingFiles only queues — call it directly (Blazor's dispatcher
+        // may not exist yet, and a dispatch then is dropped: Mac Test M-02, file given at launch).
+        var ready = services.GetRequiredService<ChuvadiReader.Core.Lifecycle.IAppReadySignal>().IsReady;
+        if (ready && MainPage.CanDispatch)
         {
             MainPage.Dispatch(() =>
             {
@@ -35,7 +38,6 @@ internal static class MacFileArrivals
         }
         else
         {
-            // Before the WebView exists the Ui hasn't rendered, so IncomingFiles only queues them.
             incoming.Receive(files);
         }
     }

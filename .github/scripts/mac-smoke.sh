@@ -73,7 +73,11 @@ grep -q 'menu-build-failed' "$LOG" && fail "menu build threw: $(grep menu-build-
 GEO=$(grep 'CHUVADI geometry' "$LOG" | tail -1); WEB=$(grep 'CHUVADI webview' "$LOG" | tail -1)
 echo "$GEO"; echo "$WEB"
 read -r ww wh wx wy sw sh sx sy <<<"$(echo "$GEO" | sed -E 's/.*window=([0-9]+)x([0-9]+)@(-?[0-9]+),(-?[0-9]+) screen=([0-9]+)x([0-9]+)@(-?[0-9]+),(-?[0-9]+).*/\1 \2 \3 \4 \5 \6 \7 \8/')"
-if [ "${ww:-0}" = "1100" ] && [ "${wh:-0}" = "720" ]; then pass "M-07 window 1100×720"; else fail "M-07 window ${ww:-?}×${wh:-?}"; fi
+# 1100×720, clamped to the screen's visible area (the runner's screen is 1024×768, visible 1024×677).
+ew=$(( ${sw:-0} < 1100 ? ${sw:-0} : 1100 )); eh=$(( ${sh:-0} < 720 ? ${sh:-0} : 720 ))
+if [ -n "${ww:-}" ] && [ "$ww" = "$ew" ] && [ "$wh" = "$eh" ]; then pass "M-07 window ${ww}×${wh} (1100×720 clamped to ${sw}×${sh})"; else fail "M-07 window ${ww:-?}×${wh:-?}, expected ${ew}×${eh}"; fi
+cy=$(( sy + (sh - wh) / 2 - wy )); cy=${cy#-}
+[ -n "${wh:-}" ] && [ "$cy" -le 2 ] && pass "M-07 centred vertically" || fail "M-07 not centred vertically (y off by ${cy:-?})"
 if [ -n "${ww:-}" ] && [ -n "${sw:-}" ]; then
   cx=$(( sx + (sw - ww) / 2 - wx )); cx=${cx#-}
   [ "$cx" -le 2 ] && pass "M-07 centred horizontally" || fail "M-07 not centred (x off by $cx)"
