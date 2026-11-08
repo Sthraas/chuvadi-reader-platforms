@@ -2,13 +2,13 @@
 
 Lands the Foundation edits in chuvadi-reader first (Arun's merge plan (a)), so the Reader chat builds on them. **Do not merge before the Windows checks below.**
 
-Three commits: code (`src`, `tests`, `ChuvadiReader.Platforms.slnx`), dev tools (never shipped), docs (`docs/foundation`).
+Four commits: code (`src`, `tests`, `ChuvadiReader.Platforms.slnx`, `Directory.Build.props`, `LICENSE`, `legal/`, `.github/workflows/ci.yml`), packages (`ci/packages`: chuvadi-pdf 3.31.2 and Chuvadi.Print 1.0.0-rc.2), dev tools (never shipped), docs (`docs/foundation`).
 
 ## What changes
 **New projects**
 - `ChuvadiReader.Platform` — the contract every host implements: platform kind, form factor, input, window chrome, capabilities, key labels, `ShellLayout` (desktop / tablet / phone / portal), file write-back, app folders, account, clipboard, file manager, share, lifecycle, menu-bar commands.
 - `ChuvadiReader.Hosting` — `AddChuvadiReader(lifetime)` registers every Core service once for all hosts (per-connection for Web); defaults for each seam; menu-bar commands from `ShellService`; desktop defaults (folders, account, Ctrl/⌘ labels, settings file storage).
-- `tests/ChuvadiReader.Hosting.Tests` — 28 tests (service graph, per-connection isolation, Windows registration drift guard, key labels, command bridge, every save delivers, openable types vs the Open dialog, settings write, host folders, tab restore).
+- `tests/ChuvadiReader.Hosting.Tests` — 28 tests (service graph, per-connection isolation, Windows registration drift guard, key labels, command bridge, every save delivers, openable types vs the Open dialog, settings write, host folders, save-folder fallback, tab restore).
 - `tests/ChuvadiReader.MobileUi.Tests` (3) and `tests/ChuvadiReader.WebUi.Tests` (14); `tests/ChuvadiReader.MobileUi.Preview` — a testing-only browser preview of the real Ui (never shipped).
 
 **Ui / Core (Windows looks and behaves the same, except where marked)**
@@ -32,8 +32,22 @@ Three commits: code (`src`, `tests`, `ChuvadiReader.Platforms.slnx`), dev tools 
 - Pen draws / finger pans on the markup layer when a pen is present; tablet desk counter on the Bench.
 - **Bug fix:** reopening the app could show the same file in two tabs (tab restore now skips duplicates; test added).
 - Mac Catalyst treated like macOS for signing-key storage and the temp-path guard.
+- **Bug fix:** a PDF whose permissions forbid printing no longer prints — the Print card says why (tests added).
+- **Bug fix:** the Home greeting no longer adds a second full stop after a name ending in "." (the name is shown as typed).
+- **Bug fix:** open requests queue instead of overwriting each other (only reachable with several at once, e.g. a multi-file upload).
+- **Single instance, tabbed:** opening a file while Chuvadi runs hands it to the running window as a new tab; Windows now opens the file it is started with (it ignored it before); every dropped file opens (before: only the first). A frozen running copy can't block a launch: after 1.5 s the new launch opens its own window.
+- Print results show as errors when printing failed or was refused (before: decided from the wording).
+- **Bug fixes (Mobile UI H-8, H-9):** the Reader re-renders correctly after a document change, and "fit" is computed after the page has rendered (it could measure a stale, over-wide page).
+- Phone and tablet layouts (tabs sheet, Settings on phone, Redact fit width, Home search) and the portal's phone account block — never shown on Windows. Phase 0 sample files appear only on Windows (other platforms start empty).
+- Web and Android wording for the Home summary, the drop zone, Appearance and the Preferred-name hint (Windows text unchanged).
+- Shared kit: the default save folder no longer falls back to the temp folder when Documents doesn't exist yet (Linux).
+- `ci/packages`: Chuvadi.Print and Chuvadi.Print.Ipp 1.0.0-rc.2 (used by the Linux host; nothing in this PR references them).
 
 **Windows host:** registers through `AddChuvadiReader`; adds `WpfClipboard`, `WpfFileManager`; `FileAppStorage` moves to the shared kit. **`dotnet publish` is now ReadyToRun** (win-x64 default, `-r win-arm64` for Arm); build, F5 and tests are unchanged.
+
+**Licence (Arun, 7 Nov: proprietary, free to use):** `LICENSE`, `legal/EULA.txt` and `legal/THIRD-PARTY-NOTICES.txt` (every bundled package's licence with full texts: chuvadi-pdf Apache-2.0, Chuvadi libraries MIT, LiPi Sans OFL-1.1, Microsoft MIT) — **all three are drafts for legal review**. `Directory.Build.props` sets Company, Product and Copyright on every assembly; the Windows app carries the three files in its output. Settings › About › Licences now opens them in the app (also at `/licence`).
+
+**CI:** `ci.yml` moves to `actions/checkout@v7`, `setup-dotnet@v6`, `upload-artifact@v7` (Node 24).
 
 ## Startup (published Release; `docs/foundation/STARTUP.md`)
 Core/Ui startup measured with `tools/StartupProbe` (services + first render of the real App), main c7b9e44 vs this branch, medians:
@@ -53,7 +67,8 @@ Core/Ui startup measured with `tools/StartupProbe` (services + first render of t
 
 ## Verified
 - `ChuvadiReader.Platforms.slnx` and `ChuvadiReader.Windows` build with `-warnaserror`: 0 warnings, 0 errors.
-- Tests: 206/206 (161 existing + 45 new).
+- Tests: 229/229 (161 existing + 68 new).
+- Second round of screenshots (9 screens incl. the Print card and two Settings sections, 100/125/150 %): identical (`docs/foundation/COMBINED-HOOKS-2.md`).
 - Working-repo CI (Sthraas/chuvadi-reader-platforms, `platform/foundation`): shared code on Ubuntu x64/arm64, macOS, Windows; the Windows app on windows-latest; package check.
 
 ## Windows checks for Arun before merging
@@ -75,6 +90,14 @@ Also for this PR's other changes:
 13. Status-bar clock ticks; Home, Library and Settings › About still show folder paths and the Watched folder card.
 14. Open two files, close the app, reopen: each file appears once.
 15. `dotnet publish src/ChuvadiReader.Windows -c Release`: the published app starts and works.
+16. Settings › Language › Preferred name "Arun S." → Home: "Good morning, Arun S." (one full stop).
+17. A PDF whose permissions forbid printing: the Print card is greyed with "This file's permissions don't allow printing."; an ordinary PDF still prints.
+18. Explorer › Properties › Details on `ChuvadiReader.Windows.exe`: Company "Sthraas Intelligence Pvt Ltd", Product "Chuvadi Reader", Copyright "© 2026 Sthraas Intelligence Pvt Ltd. All rights reserved."; `LICENSE.txt`, `EULA.txt`, `THIRD-PARTY-NOTICES.txt` sit beside the exe.
+19. Settings › About › Licences › Open: the licence agreement, the licence and the third-party notices; "‹ About" goes back.
+20. With Chuvadi open, double-click (or Open with) a PDF in Explorer: it opens as a new tab in the running window, which comes to the front — no second window.
+21. With Chuvadi closed, double-click a PDF: Chuvadi starts with that file open.
+22. Select three PDFs in Explorer and open them, or drag three onto the window: three tabs.
+23. Print a PDF whose permissions forbid printing: the message shows as an error, not with a tick.
 
 ## Known gaps (not changed here)
 - Windows printing is raster (`WpfPrintService`); move to Chuvadi.Print's vector XPS route when rc.3 is released.

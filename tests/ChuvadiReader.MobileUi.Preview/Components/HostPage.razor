@@ -1,7 +1,12 @@
 @* TESTING ONLY: the document the preview serves. Same stylesheets and order as the Windows host's
    index.html, plus css/mobile.css (which the Android host links the same way). *@
+@using ChuvadiReader.Platform
+@inject IPlatformInfo Info
 <!DOCTYPE html>
-<html lang="en">
+@* First paint already in the right layout (HANDOFF §2); MainLayout keeps them in sync. On Windows
+   every value is null, so Razor writes a bare <html lang="en">, exactly as the WPF host page. *@
+<html lang="en" data-shell="@Attr(ShellLayouts.Key(Info.Shell()))" data-platform="@Attr(ShellLayouts.PlatformKey(Info.Kind))"
+      data-form-factor="@Attr(ShellLayouts.FormFactorKey(Info.FormFactor))" data-input="@Attr(ShellLayouts.InputKey(Info.Input))">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -23,3 +28,7 @@
     <script src="_framework/blazor.web.js"></script>
 </body>
 </html>
+
+@code {
+    private string? Attr(string value) => Info.Kind == PlatformKind.Windows ? null : value;
+}

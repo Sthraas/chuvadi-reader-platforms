@@ -402,14 +402,18 @@ public partial class Reader
 
     private static ShellCommand Sep(string id) => new("sep." + id, "", "", "", null, () => Task.CompletedTask);
 
+    // A command that changes the Reader's own state re-renders it: commands run from MainLayout's Document
+    // menu, the command bar or the phone ⋮ sheet, whose click re-renders only the layout.
+    private Func<Task> T(Action a) => () => { a(); StateHasChanged(); return Task.CompletedTask; };
+
     private IEnumerable<ShellCommand> DocumentMenuItems(ReaderTab tab)
     {
         var isPdf = !tab.Format.IsViewOnly();
         var notPdf = isPdf ? null : "Convert to PDF first";
         yield return new("doc.props", "Properties", "Document", "info", null, DocProperties, notPdf);
-        yield return new("doc.export", "Export pages as images", "Document", "download", null, () => { DocExport(); return Task.CompletedTask; }, notPdf);
-        yield return new("doc.press", "Reduce file size (Press)", "Document", "compress", null, () => { DocPress(); return Task.CompletedTask; }, notPdf, "compress");
-        yield return new("doc.print", "Print", "Document", "print", "Ctrl P", () => { OpenCard("print"); return Task.CompletedTask; }, notPdf);
+        yield return new("doc.export", "Export pages as images", "Document", "download", null, T(DocExport), notPdf);
+        yield return new("doc.press", "Reduce file size (Press)", "Document", "compress", null, T(DocPress), notPdf, "compress");
+        yield return new("doc.print", "Print", "Document", "print", "Ctrl P", T(() => OpenCard("print")), notPdf);
         yield return Sep("1");
         yield return new("doc.flatten", "Flatten forms & marks", "Document", "compress", null, DocFlatten, notPdf ?? (_flattening ? "Flattening…" : null));
         yield return new("doc.password", "Password-protect a copy", "Document", "doc-lock", null, () => { OpenProtectCard("password"); return Task.CompletedTask; }, notPdf);
@@ -450,8 +454,6 @@ public partial class Reader
             yield return new("v.view", "View options", "View", "sliders", null, () => { ToggleCard("view"); return Task.CompletedTask; });
             yield break;
         }
-
-        Func<Task> T(Action a) => () => { a(); StateHasChanged(); return Task.CompletedTask; };
 
         // Read
         yield return new("r.pages", "Pages & outline", "Read", "page-single", null, T(TogglePagesDrawer), Keywords: "thumbnails bookmarks");
@@ -630,6 +632,34 @@ public partial class Reader
         }
 
         _card = null;
+    }
+
+    /// <summary>
+    /// The system Back gesture (Android; hosts without one never raise it): closes the open card
+    /// (measure included) exactly as Escape does, and consumes the gesture. With no card open it
+    /// returns false, so the host does its default (the previous screen, then leave the app).
+    /// </summary>
+    private bool OnBackRequested()
+    {
+        if (!_measureOn && _card is null)
+        {
+            return false;
+        }
+
+        _ = InvokeAsync(() =>
+        {
+            if (_measureOn)
+            {
+                CloseMeasure();
+            }
+            else
+            {
+                CloseCard();
+            }
+
+            StateHasChanged();
+        });
+        return true;
     }
 
     private void OpenProtectCard(string what)

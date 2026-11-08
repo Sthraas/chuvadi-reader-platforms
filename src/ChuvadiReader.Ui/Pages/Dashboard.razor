@@ -31,32 +31,66 @@
             </h1>
             @if (Platform.Capabilities.ServerSide)
             {
-                <p class="blurb">@LibCountText in your library · @Recents.EncryptedCount encrypted · @ChuvadiReader.Ui.Components.Platform.PlatformText.ServerPrivacy</p>
+                <p class="blurb">@LibCountText in your library · @Recents.EncryptedCount encrypted · @ChuvadiReader.Ui.Components.Platform.PlatformText.HomeServerLine</p>
             }
             else
             {
             <p class="blurb">@LibCountText in your library · @Recents.EncryptedCount encrypted · nothing leaves this device.</p>
             }
-        </section>
+        </section>@* Phone: 4a's search under the count line (H-10); null elsewhere, renders nothing. *@@PhoneHomeSearch
 
         @if (IsFirstRun)
         {
             <div class="drop first">
                 <span class="drop-ic"><Icon Name="upload" Size="34" /></span>
+                @if (CanDrop)
+                {
                 <span class="drop-title">Drop your first document here</span>
+                }
+                else
+                {
+                    <span class="drop-title">@(IsPortal ? "Upload your first document" : "Open your first document")</span>
+                }
                 <span class="drop-sub">PDF, Word or Excel — even password-protected ones.</span>
+                @if (IsPortal)
+                {
+                    <span class="first-actions">
+                        <button type="button" class="btn primary" @onclick="OpenFile">Upload a file…</button>
+                    </span>
+                }
+                else
+                {
                 <span class="first-actions">
                     <button type="button" class="btn primary" @onclick="OpenFile">Open a file…</button>
                     <button type="button" class="btn" @onclick="ChooseLibraryFolder">Choose a library folder</button>
                 </span>
+                }
             </div>
+            @if (ChuvadiReader.Platform.ShellLayouts.Shell(Platform) is ChuvadiReader.Platform.ShellLayout.Tablet or ChuvadiReader.Platform.ShellLayout.Phone)
+            {
+                <p class="tip">@ChuvadiReader.Ui.Components.Platform.PlatformText.TouchFindTip</p>
+            }
+            else
+            {
             <p class="tip">Tip: @Platform.Keys.Format("Ctrl K") finds any file or action. Try typing “merge”.</p>
+            }
         }
         else
         {
-            <button type="button" class="drop" @onclick="OpenFile" title="Drop a file anywhere on the window, or click to choose one">
+            <button type="button" class="drop" @onclick="OpenFile" title="@(CanDrop ? "Drop a file anywhere on the window, or click to choose one" : IsPortal ? "Choose a document to upload" : "Choose a document to open")">
                 <span class="drop-ic"><Icon Name="upload" Size="28" /></span>
+                @if (IsPortal)
+                {
+                    <span class="drop-title">@(CanDrop ? "Drop a document, or click to upload" : "Click to upload a document")</span>
+                }
+                else if (CanDrop)
+                {
                 <span class="drop-title">Drop a document, or click to open</span>
+                }
+                else
+                {
+                    <span class="drop-title">Open a document</span>
+                }
                 <span class="chips">
                     <span class="chip on">pdf</span>
                     <span class="chip">docx</span>
@@ -216,6 +250,10 @@
 </div>
 
 @code {
+    /// <summary>Phone (Portal & Android 4a): the shell's search button, placed under the count line.
+    /// Only the phone shell cascades it; elsewhere it is null and renders nothing.</summary>
+    [CascadingParameter(Name = "PhoneHomeSearch")] public RenderFragment? PhoneHomeSearch { get; set; }
+
     private const int RecentCount = 4;
     private static readonly int[] EmptyBooks = { 16, 22, 14, 26, 18, 20, 15, 24, 17 };
 
@@ -261,15 +299,20 @@
 
     // ── Greeting ─────────────────────────────────────────────────────────
 
+    // The Web portal (H3 "Upload", U-11): uploads, not local files.
+    private bool IsPortal => Platform.Kind == ChuvadiReader.Platform.PlatformKind.Web;
+
+    // D-89 B: no "Drop" wording where the platform can't take a drop (Android; the portal until its
+    // drop catcher is on). Desktop: always true, original text.
+    private bool CanDrop => Platform.Capabilities.DropFiles;
+
     private static string DayLine => DateTime.Now.ToString("dddd d MMM yyyy · HH:mm");
 
     private string Greeting
     {
         get
         {
-            var h = DateTime.Now.Hour;
-            var part = h < 12 ? "morning" : h < 17 ? "afternoon" : "evening";
-            return string.IsNullOrWhiteSpace(Profile.Name) ? $"Good {part}." : $"Good {part}, {Profile.Name}.";
+            return GreetingText.For(DateTime.Now.Hour, Profile.Name);
         }
     }
 

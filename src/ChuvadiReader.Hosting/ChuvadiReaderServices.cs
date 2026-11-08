@@ -89,6 +89,7 @@ public static class ChuvadiReaderServices
         (typeof(IEntitlements), typeof(DefaultEntitlements)),
         (typeof(IAppReadySignal), typeof(AppReadySignal)),
         (typeof(IAppCommands), typeof(ShellAppCommands)),
+        (typeof(IncomingFiles), typeof(IncomingFiles)),
     };
 
     private static readonly (Type Service, Type Impl)[] SeamDefaults =
@@ -97,6 +98,9 @@ public static class ChuvadiReaderServices
         (typeof(IExternalLinks), typeof(NoExternalLinks)),
         (typeof(IWindowControls), typeof(NoopWindowControls)),
         (typeof(IPrintService), typeof(NoopPrintService)),
+        (typeof(IAppInstance), typeof(NoAppInstance)),
+        (typeof(IHostNotices), typeof(NoHostNotices)),
+        (typeof(IDroppedFiles), typeof(NoDroppedFiles)),
         (typeof(IFileWriteBack), typeof(NoFileWriteBack)),
         (typeof(IAppPaths), typeof(Desktop.DesktopAppPaths)),
         (typeof(IAccount), typeof(LocalAccount)),

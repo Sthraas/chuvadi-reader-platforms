@@ -68,4 +68,15 @@ public class PhoneContractTests
 
         Assert.Empty(bad);
     }
+
+    [Fact]
+    public void Desk_counter_label_hook_still_matches_the_desktop_pager()
+    {
+        // mobile.css appends " desks" after the total by selecting the pager box on its
+        // aria-label ("desk number"); MainLayout must keep that label shape.
+        var layout = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "MainLayout.razor.txt"));
+        Assert.Contains("aria-label=\"@Shell.CounterUnit number\"", layout, StringComparison.Ordinal);
+        Assert.Contains("class=\"tb-pg-box\"", layout, StringComparison.Ordinal);
+        Assert.Contains("class=\"tb-pg-total\"", layout, StringComparison.Ordinal);
+    }
 }

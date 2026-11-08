@@ -41,4 +41,11 @@
     <ProjectReference Include="..\ChuvadiReader.Core\ChuvadiReader.Core.csproj" />
     <ProjectReference Include="..\ChuvadiReader.Hosting\ChuvadiReader.Hosting.csproj" />
   </ItemGroup>
+  <!-- Licence files beside the app (and in the installer): proprietary licence, EULA, notices. -->
+  <ItemGroup>
+    <None Include="..\..\LICENSE" Link="LICENSE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="..\..\legal\EULA.txt" Link="EULA.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="..\..\legal\THIRD-PARTY-NOTICES.txt" Link="THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

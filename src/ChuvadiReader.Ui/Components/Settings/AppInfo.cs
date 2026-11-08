@@ -27,6 +27,11 @@ public static class AppInfo
             : asm.GetName().Version?.ToString(3) ?? "?";
     }
 
+    /// <summary>"Copyright © 2026 Sthraas Intelligence Pvt Ltd. All rights reserved." — read from this
+    /// assembly, so Directory.Build.props stays the only place it is written.</summary>
+    public static string Copyright =>
+        typeof(AppInfo).Assembly.GetCustomAttribute<AssemblyCopyrightAttribute>()?.Copyright ?? string.Empty;
+
     /// <summary>The host app's informational version, e.g. "1.0.0+3f2a…".</summary>
     public static string FullVersion { get; } = ReadVersion();
 

@@ -26,7 +26,7 @@ dotnet publish src/ChuvadiReader.Windows -c Release              # ReadyToRun, w
 ```
 
 ## Testing-only previews and pixel checks
-`tests/ChuvadiReader.MobileUi.Preview` serves the real Ui in a browser (`CHVD_FF=phone|tablet|desktop`; desktop reports Windows). `tools/PixelProof` holds the Playwright scripts used to prove Windows renders unchanged (`COMBINED-HOOKS.md`). Neither ships.
+`tests/ChuvadiReader.MobileUi.Preview` serves the real Ui in a browser (`CHVD_FF=phone|tablet|desktop|web`; desktop reports Windows, web the server portal). `tools/PixelProof` holds the Playwright scripts used to prove Windows renders unchanged (`COMBINED-HOOKS.md`). Neither ships.
 
 ## Writing a host
 See `PLATFORM-INTERFACE.md` §1-§2 and `HANDOFF.md`.

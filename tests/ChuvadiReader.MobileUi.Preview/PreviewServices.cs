@@ -9,24 +9,40 @@ using Path = System.IO.Path;
 
 namespace ChuvadiReader.MobileUi.Preview;
 
-/// <summary>Platform facts for the preview: Android phone / tablet, or Windows desktop.</summary>
-public sealed class PreviewPlatform(FormFactor formFactor) : IPlatformInfo
+/// <summary>Platform facts for the preview: Android phone / tablet, Windows desktop, or the Web portal
+/// (<paramref name="web"/>: server-side, no folders, account menu — for checking portal wording).</summary>
+public sealed class PreviewPlatform(FormFactor formFactor, bool web = false) : IPlatformInfo
 {
-    public PlatformKind Kind => formFactor == FormFactor.Desktop ? PlatformKind.Windows : PlatformKind.Android;
+    public PlatformKind Kind => web ? PlatformKind.Web
+        : formFactor == FormFactor.Desktop ? PlatformKind.Windows : PlatformKind.Android;
 
     public FormFactor FormFactor => formFactor;
 
     public event Action? FormFactorChanged { add { } remove { } }
 
-    public InputKinds Input => formFactor == FormFactor.Desktop
-        ? InputKinds.Mouse | InputKinds.Keyboard
-        : InputKinds.Touch;
+    public InputKinds Input => formFactor switch
+    {
+        FormFactor.Desktop => InputKinds.Mouse | InputKinds.Keyboard,
+        FormFactor.Tablet => InputKinds.Touch | InputKinds.Pen,   // 12e: a tablet with a pen
+        _ => InputKinds.Touch,
+    };
 
-    public ShellChrome Chrome => formFactor == FormFactor.Desktop
+    public ShellChrome Chrome => web ? new ShellChrome(WindowButtons.None, false, true, false, 0)
+        : formFactor == FormFactor.Desktop
         ? new ShellChrome(WindowButtons.Right, false, false, true, 0)
         : new ShellChrome(WindowButtons.None, false, false, false, 0);
 
-    public PlatformCapabilities Capabilities => FixedPlatformInfo.DesktopCapabilities;
+    public PlatformCapabilities Capabilities => web
+        ? FixedPlatformInfo.DesktopCapabilities with
+        {
+            PickFolders = false, SaveInPlace = false, WatchFolders = false, RevealInFolder = false,
+            SavesAsDownload = true, ServerSide = true,
+            // CHVD_DROP=0: the portal before its drop catcher is on (the Web host's D-89 setting until then).
+            DropFiles = Environment.GetEnvironmentVariable("CHVD_DROP") != "0",
+        }
+        : formFactor == FormFactor.Desktop
+        ? FixedPlatformInfo.DesktopCapabilities
+        : FixedPlatformInfo.DesktopCapabilities with { DropFiles = false }; // as the Android host reports
 
     public IKeyLabels Keys { get; } = new CtrlKeyLabels();
 }
@@ -89,8 +105,11 @@ public static class Fixtures
 {
     public static readonly string Folder = Directory.CreateTempSubdirectory("chvd-mobile-preview-").FullName;
 
-    public static string Document(string name, int pages)
+    public static string Document(string name, int pages) => Document(Folder, name, pages);
+
+    public static string Document(string folder, string name, int pages)
     {
+        Directory.CreateDirectory(folder);
         var b = PdfDocumentBuilder.Create();
         var widths = new[] { 1.0, .96, 1.0, .88, 1.0, .72, 1.0, .94, 1.0, .60, 1.0, .90, 1.0, .80 };
         for (var p = 1; p <= pages; p++)
@@ -108,8 +127,54 @@ public static class Fixtures
             }
         }
 
-        var path = Path.Combine(Folder, name);
+        var path = Path.Combine(folder, name);
         File.WriteAllBytes(path, b.ToByteArray());
         return path;
+    }
+}
+
+/// <summary>Preview stand-in for a host's own notices (Android ships the .NET runtime's).</summary>
+public sealed class PreviewHostNotices : IHostNotices
+{
+    public string? Title => ".NET runtime";
+
+    public string ReadText() => "PREVIEW: a host's own third-party notices appear here (Android: the .NET runtime and .NET for Android notices).";
+}
+
+/// <summary>Preview stand-in for the Web host's drop handling (D-89 A): stores each dropped file in a temp
+/// folder and opens it through the kit's router, as the Web host does with its working copies.</summary>
+public sealed class PreviewDroppedFiles(ChuvadiReader.Hosting.IncomingFiles incoming) : IDroppedFiles
+{
+    private static readonly string Folder = Path.Combine(Path.GetTempPath(), "chvd-preview-drops");
+
+    public bool IsAvailable => true;
+
+    public long MaxFileBytes => 50L * 1024 * 1024;
+
+    public async Task<IReadOnlyList<string>> ReceiveAsync(IReadOnlyList<DroppedFile> files, CancellationToken ct = default)
+    {
+        Directory.CreateDirectory(Folder);
+        var failures = new List<string>();
+        var stored = new List<string>();
+        foreach (var f in files)
+        {
+            if (!ChuvadiReader.Core.Documents.DocumentFormatExtensions.IsOpenable(f.Name))
+            {
+                failures.Add($"Couldn't upload {f.Name}: Chuvadi doesn't open this kind of file.");
+                continue;
+            }
+
+            var path = Path.Combine(Folder, Guid.NewGuid().ToString("N")[..8] + "-" + Path.GetFileName(f.Name));
+            await using (var source = f.OpenRead(ct))
+            await using (var target = File.Create(path))
+            {
+                await source.CopyToAsync(target, ct);
+            }
+
+            stored.Add(path);
+        }
+
+        incoming.Receive(stored);
+        return failures;
     }
 }

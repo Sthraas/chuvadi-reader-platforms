@@ -10,6 +10,7 @@
 @inject IEntitlements Entitlements
 @inject IJSRuntime JS
 @inject ChuvadiReader.Platform.IFileWriteBack WriteBack
+@inject ChuvadiReader.Platform.IPlatformInfo Platform
 
 <div class="redact-root mview">
     <div class="rd-col">
@@ -418,6 +419,7 @@
             try
             {
                 await _js.InvokeVoidAsync("init", _desk, _ref);
+                await FitWidthOnPhoneAsync();
             }
             catch { }
         }
@@ -425,6 +427,20 @@
         {
             // Re-observe in case the page list changed (new document opened).
             try { await _js.InvokeVoidAsync("observe"); } catch { }
+        }
+    }
+
+    // Phone (Portal & Android): open at fit width, not the desktop's 100 % (the page is wider than the
+    // screen). The width is measured by the phone's own script; tablets and desktops keep 100 %.
+    private async Task FitWidthOnPhoneAsync()
+    {
+        if (Platform.FormFactor != ChuvadiReader.Platform.FormFactor.Phone) return;
+        await using var mobile = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/ChuvadiReader.Ui/js/mobile.js");
+        var fit = await mobile.InvokeAsync<double>("fitWidthZoom", _desk);
+        if (fit > 0 && Math.Abs(fit - _zoom) > 0.005)
+        {
+            _zoom = fit;
+            StateHasChanged();
         }
     }
 
