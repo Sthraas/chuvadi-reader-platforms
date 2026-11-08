@@ -31,7 +31,7 @@ Every bug gets fixed; I re-verify on the fixing commit and mark it here.
 | B-19 | S4 | Linux | **D-110: option A** — Buttons on the left: top-bar brand cell widens past the left bar; divider no longer lines up (f7d0034) | → Foundation (exact diff, D-110 A; tested on Linux) |
 | B-20 | S4 | Linux | No printer / CUPS down: empty print dialog, no explanation | **fixed 606d01b** — re-verify |
 | B-21 | S3 | Linux | Show in folder: 5 s D-Bus timeout → `xdg-open` fallback → two file-manager windows | **fixed c9f5500** — re-verify |
-| B-22 | S4 | shared Ui/Core | No designed keyboard-focus style: each engine draws its own (GTK blue on Linux) | design option for the coordinator (pros/cons in the proposal) |
+| B-22 | S4 | shared Ui/Core | No designed keyboard-focus style: each engine draws its own (GTK blue on Linux) | → Foundation (D-123 A: theme-accent `:focus-visible` ring; exact diff S10, tested on Linux) |
 | B-23 | S4 | shared Ui/Core | Tab order starts with one "Send page N to a desk" button per page | → Foundation (exact diff, tested on Linux) |
 | K-01 | — | Linux | GNOME close-only layout showed all three buttons (known, 7 Nov) | **fixed f7d0034 — verified** |
 
@@ -198,6 +198,6 @@ Each fix has a test in `.github/workflows/linux.yml` / `tools/linux` (details: `
 | B-20 | 606d01b (test in CI: ffb2823) | `no-printer-test.py` with CUPS stopped: plain message, no dialog |
 | B-21 | c9f5500 (test: ffb2823) | `reveal-test.py`: a file manager answering after 8 s → one ShowItems, no xdg-open; none → one xdg-open |
 
-Shared (B-02 Ui part, B-03, B-07, B-08b, B-09a app part, B-10, B-11b, B-19, B-23) and D-101 are exact diffs in
-`docs/linux/PROPOSAL-shared-fixes-8nov.md` on `platform/linux`, tested on Linux with the diff applied; B-22 is a design option there (not in the diff); B-18 goes to the Reader chat's desktop revamp. They reach
+Shared (B-02 Ui part, B-03, B-07, B-08b, B-09a app part, B-10, B-11b, B-19, B-22, B-23) and D-101 are exact diffs in
+`docs/linux/PROPOSAL-shared-fixes-8nov.md` on `platform/linux`, tested on Linux with the diff applied; B-22 is S10 there (D-123 A); B-18 goes to the Reader chat's desktop revamp. They reach
 `platform/linux` with Foundation's next combined patch.
