@@ -26,7 +26,7 @@ Every bug gets fixed; I re-verify on the fixing commit and mark it here.
 | B-14 | S3 | Linux | Landscape pages print shrunk onto portrait paper (orientation forced to portrait) | **verified fixed f3d5978** — landscape page printed with `/Rotate 90`, ink 92 % × 89 % (was ~½ size); source still byte-identical to CUPS, 0 images |
 | B-15 | S3 | Linux | No user namespaces → app aborts with a GLib ERROR, no message | **verified fixed f3d5978** — Docker without namespaces: "Chuvadi can't start on this computer" dialog with reason and fix; Close → exit code 2, no abort |
 | B-16 | S2 | **shared Ui/Core** | Read-only home → unhandled exception at startup, no window | **verified fixed** — Linux wrapper f3d5978 + Core guards e468d1a: read-only home starts and opens the file |
-| B-17 | S3 | Linux | **D-110: option A** — `UseSystemResourceKeys=true` → users see resource keys (`UnauthorizedAccess_IODenied_Path`, `EOCDNotFound`) instead of messages | **verified fixed f3d5978** — "Access to the path '…/locked.pdf' is denied."; "End of Central Directory record could not be found." |
+| B-17 | S3 | Linux | **D-110: option A** — `UseSystemResourceKeys=true` → users see resource keys (`UnauthorizedAccess_IODenied_Path`, `EOCDNotFound`) instead of messages | **verified fixed f3d5978; WT-10 wording verified faffa10** — unreadable PDF: "Chuvadi couldn't read this file. It may be open in another app, or you may not have permission…" + collapsed Details (its .NET text is real since keys are gone; expanded by the Linux chat's test 34d) |
 | B-18 | S3 (design) | **shared Ui/Core** | Left bar at rest is the expanded 208 px labelled list; handout: 62 px icon rail, labels on hover | open — waits on Arun's design call (D-121) |
 | B-19 | S4 | Linux | **D-110: option A** — Buttons on the left: top-bar brand cell widens past the left bar; divider no longer lines up (f7d0034) | **verified fixed e468d1a** (Foundation 8th patch) — buttons left: top-left cell stays 210 px, in line with the left bar |
 | B-20 | S4 | Linux | No printer / CUPS down: empty print dialog, no explanation | **verified fixed f3d5978** — CUPS stopped: no empty dialog; toast "Chuvadi can't reach this computer's printing service (CUPS)… Settings › Printers" |
@@ -34,13 +34,14 @@ Every bug gets fixed; I re-verify on the fixing commit and mark it here.
 | B-22 | S4 | shared Ui/Core | No designed keyboard-focus style: each engine draws its own (GTK blue on Linux) | **verified fixed e468d1a** (Foundation 8th patch) — focus ring 2 px solid in the theme accent (#8a3a1c in light) |
 | B-23 | S4 | shared Ui/Core | Tab order starts with one "Send page N to a desk" button per page | **verified fixed e468d1a** (Foundation 8th patch) — Tab starts on the current page's strip (rotate, send, snapshot, bookmark), not one button per page |
 | B-24 | S2 | **shared Ui/Core** | A stalled read (hung network share) shows a blank Reader with no "Opening…" or Cancel, and blocks every later open | open — **D-130: Foundation's next combined patch** (shared PDF open path); repro `fixtures/stalled-source.sh` |
+| B-25 | S4 | **shared Ui/Core** | Excel viewer errors still use the old one-line wording (no WT-10 sentence + Details) | open — faffa10 |
 | K-01 | — | Linux | GNOME close-only layout showed all three buttons (known, 7 Nov) | **verified fixed f7d0034, re-verified f3d5978** (6 layouts) |
 
 Routing (coordinator, 8 Nov): **Linux** → the Linux chat. **shared Ui/Core** → Foundation's combined patch, as exact diffs from the Linux chat or Foundation. **library** → the coordinator compiles them for Arun (library coordinator).
 | Route | Bugs |
 |---|---|
 | Linux chat | B-01, B-04, B-05, B-06, B-12, B-13, B-14, B-15, B-17, B-19, B-20, B-21, and the Linux stanzas of B-02 |
-| shared Ui/Core | B-03, B-07, B-08b, B-10, B-11b, B-16, B-18, B-22, B-23, B-24, and the OFL texts next to the fonts in B-02 |
+| shared Ui/Core | B-03, B-07, B-08b, B-10, B-11b, B-16, B-18, B-22, B-23, B-24, B-25, and the OFL texts next to the fonts in B-02 |
 | library | B-08a (Chuvadi.Docs input limits), B-09a (Chuvadi.Sheets: don't materialise to the sheet's extent), B-11a (chuvadi-pdf: rebuild the xref on a bad `startxref`) |
 B-09's "no cancel / no timeout" half is the same fix as B-08b.
 
@@ -213,3 +214,8 @@ B-18 goes to the Reader chat's desktop revamp (it changes Windows too).
 **Actual.** A `slow.pdf` tab and a **blank Reader** — no "Opening…", no rails, no Cancel — for 25 s+. The second open never happens (driver `open` doesn't return in 20 s; still one tab). Same stall as `.xlsx`: "Opening…" shows, no Cancel (the Excel view has no `SlowOpenNote` yet). The UI itself stays responsive (JS answers throughout).
 **Likely cause.** The file is read before the viewer (and its `SlowOpenNote`) is mounted, inside the serial open path — so the 10 s timer never starts and the queue waits on the read. Fix: mount the viewer with "Opening…" + `SlowOpenNote` first, read the file off the open queue with the cancellation token, and let the next open proceed.
 Screenshot: `screenshots/B-24-stalled-pdf-blank.png`. Tools: `tools/t_cancel_pdf.py`, `tools/t_cancel_fifo.py`.
+
+## B-25 — Excel viewer errors don't follow WT-10 (S4, shared Ui/Core) — faffa10
+**Steps.** Open `notzip.xlsx` (bytes that aren't a zip).
+**Expected.** WT-10 wording as the PDF path now has: a plain sentence, with .NET's message under a collapsed **Details**.
+**Actual.** "Couldn't open this workbook: End of Central Directory record could not be found." — the technical text inline, no Details. Readable (not a resource key), so cosmetic. Screenshot: `screenshots/B-25-xlsx-old-wording.png`.
