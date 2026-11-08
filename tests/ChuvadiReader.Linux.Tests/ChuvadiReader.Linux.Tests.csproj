@@ -16,5 +16,6 @@
     <ProjectReference Include="..\..\src\ChuvadiReader.Platform\ChuvadiReader.Platform.csproj" />
     <!-- The Linux host's pure-.NET parts, compiled in directly (the host itself needs GTK to build). -->
     <Compile Include="..\..\src\ChuvadiReader.Linux\Platform\GtkButtonLayout.cs" Link="GtkButtonLayout.cs" />
+    <Compile Include="..\..\src\ChuvadiReader.Linux\Platform\CupsServer.cs" Link="CupsServer.cs" />
   </ItemGroup>
 </Project>

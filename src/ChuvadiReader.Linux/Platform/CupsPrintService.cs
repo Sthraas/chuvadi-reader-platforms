@@ -72,7 +72,7 @@ public sealed class CupsPrintService : IPrintService
         int queueCount;
         try
         {
-            queueCount = await Task.Run(() => CupsQueues.List(cancellationToken: ct).Count, ct);
+            queueCount = await Task.Run(() => Queues(ct).Count, ct);
         }
         catch (Exception ex) when (ex is IppException or IOException or System.Net.Http.HttpRequestException or TimeoutException)
         {
@@ -157,7 +157,7 @@ public sealed class CupsPrintService : IPrintService
         string? uri;
         try
         {
-            uri = CupsQueues.List(cancellationToken: ct)
+            uri = Queues(ct)
                 .FirstOrDefault(q => string.Equals(q.Name, printer, StringComparison.Ordinal))?.Uri;
         }
         catch (Exception ex) when (ex is IppException or IOException or System.Net.Http.HttpRequestException or TimeoutException)
@@ -263,6 +263,13 @@ public sealed class CupsPrintService : IPrintService
         return new CorePrintResult(PrintOutcome.Printed, pagesSent,
             pagesSent == 1 ? "Sent 1 page to the printer" : $"Sent {pagesSent} pages to the printer");
     }
+
+    /// <summary>The queues of the CUPS server this computer prints through: a separate server named in
+    /// CUPS_SERVER or client.conf (as lpstat and GTK's dialog use), else the local CUPS with what it browses.</summary>
+    private static IReadOnlyList<CupsQueue> Queues(CancellationToken ct) =>
+        CupsServer.Configured() is { } server
+            ? CupsQueues.List(server, cancellationToken: ct)
+            : CupsQueues.List(cancellationToken: ct);
 
     /// <summary>True when the dialog's orientation is a choice (landscape or a reverse); portrait is GTK's
     /// default, so it means "as the document is".</summary>

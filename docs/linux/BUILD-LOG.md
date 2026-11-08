@@ -515,3 +515,17 @@ B-16 now uses the kit's `FileAppStorage` (keeps settings in memory, `CannotSave`
 deleted. Results: Reader 187/187, host kit 59/59, Linux 25/25, Web Ui 33/33, Mobile Ui 16/16; full UI pass
 115/115 (step 35: 8 layouts + live changes, B-19 divider; 34b3 B-23; 34b4 B-22 accent ring in all five themes);
 B-16 read-only home as an ordinary user: PASS.
+
+### 41. Printing through a separate CUPS server (9 Nov)
+Print asks the CUPS server this computer prints through, read as lpstat and GTK's print dialog read it:
+`CUPS_SERVER`, then `ServerName` in `~/.cups/client.conf`, then in `/etc/cups/client.conf`
+(`Platform/CupsServer.cs`; `CupsQueues.List(server)`). Nothing set, or a socket path, keeps the local CUPS with
+the network printers it browses (`CupsQueues.List()`, as before). Tests: 19 parser tests (Linux 44/44);
+`tools/linux/remote-cups-test.py` with a stand-in server (a second cupsd on localhost:8631 with a cups-pdf
+queue) and the local CUPS stopped: nothing configured → the "can't reach" message; `CUPS_SERVER` → job completed
+there; `client.conf` → the same. The previous build fails both remote cases (no dialog), so the test catches it.
+
+Orientation (B-14) is unchanged. In Chuvadi.Print 1.0.0-rc.2, `PrintSettings.AutoRotate` only changes raster mode;
+in document mode (CUPS lays out the PDF, as Linux prints) `IppJobTicket.Build` still sends `orientation-requested`
+(3 for portrait) with it on, which is what shrinks landscape pages. Checked with a small program against the
+package; options in the report.

@@ -121,11 +121,13 @@ jobs:
       - name: Show in folder → one file-manager window, slow or missing file manager (B-21)
         run: python3 -I tools/linux/reveal-test.py "$PWD/uitest-build" "$PWD/ro-fixtures/five-pages.pdf" "$PWD/reveal"
 
-      - name: No printing service → Print explains itself, no empty dialog (B-20)
+      - name: No printing service → Print explains itself (B-20); a separate CUPS server is used (remote CUPS)
         run: |
           sudo systemctl stop cups.service cups.socket cups.path 2>/dev/null || sudo pkill -x cupsd || true
           status=0
           python3 -I tools/linux/no-printer-test.py "$PWD/uitest-build" "$PWD/ro-fixtures/five-pages.pdf" "$PWD/no-printer" || status=$?
+          # Print through a separate CUPS server (CUPS_SERVER, client.conf ServerName), with the local one stopped.
+          python3 -I tools/linux/remote-cups-test.py "$PWD/uitest-build" "$PWD/ro-fixtures/five-pages.pdf" "$PWD/remote-cups" || status=$?
           sudo systemctl start cups.service || sudo cupsd
           exit $status
 
@@ -138,6 +140,7 @@ jobs:
             no-userns
             readonly-home
             no-printer
+            remote-cups
             reveal
             smoke
             smoke-installed
