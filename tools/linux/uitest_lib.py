@@ -51,7 +51,7 @@ class App:
         for line in self.proc.stdout:
             self.replies.put(line.rstrip("\n"))
 
-    def restart(self, gtk_settings=None, log_name="app-2.log"):
+    def restart(self, gtk_settings=None, log_name="app-2.log", args=()):
         """A fresh app process with a fresh profile, on the same display and session bus. gtk_settings:
         lines for GTK's own settings file ($XDG_CONFIG_HOME/gtk-4.0/settings.ini), e.g. the desktop's
         window-button layout — what GNOME/KDE hand to GTK on a real desktop."""
@@ -69,7 +69,7 @@ class App:
                 f.write("[Settings]\n" + "\n".join(gtk_settings) + "\n")
         self.replies = queue.Queue()
         self.log_path = os.path.join(self.out, log_name)
-        self.launch()
+        self.launch(*args)
 
     def stop(self):
         try:

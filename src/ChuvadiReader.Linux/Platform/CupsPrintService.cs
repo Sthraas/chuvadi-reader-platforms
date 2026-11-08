@@ -182,39 +182,57 @@ public sealed class CupsPrintService : IPrintService
             job.WithPaper(paper);
         }
 
-        using var target = new IppDocumentTarget(uri).WithJobOptions(o =>
+        // The job ticket: the library maps the settings (Chuvadi.Print.Ipp's IppJobTicket, as IppDocumentTarget
+        // does), the dialog's CUPS options follow.
+        var extra = new List<IppAttribute>();
+        // Settings GTK's own CUPS printing passes as CUPS job attributes.
+        if (answer.GetValueOrDefault("page-set") is "even" or "odd")
         {
-            // Settings GTK's own CUPS printing passes as CUPS job attributes.
-            if (answer.GetValueOrDefault("page-set") is "even" or "odd")
-            {
-                o.AdditionalJobAttributes.Add(new IppAttribute("page-set", IppValue.Keyword(answer["page-set"])));
-            }
+            extra.Add(new IppAttribute("page-set", IppValue.Keyword(answer["page-set"])));
+        }
 
-            if (Int(answer, "reverse", 0) == 1)
-            {
-                o.AdditionalJobAttributes.Add(new IppAttribute("outputorder", IppValue.Keyword("reverse")));
-            }
+        if (Int(answer, "reverse", 0) == 1)
+        {
+            extra.Add(new IppAttribute("outputorder", IppValue.Keyword("reverse")));
+        }
 
-            var up = Int(answer, "number-up", 1);
-            if (up > 1)
-            {
-                o.AdditionalJobAttributes.Add(new IppAttribute("number-up", IppValue.Integer(up)));
-            }
+        var up = Int(answer, "number-up", 1);
+        if (up > 1)
+        {
+            extra.Add(new IppAttribute("number-up", IppValue.Integer(up)));
+        }
 
-            // The queue's options and the Job tab, as CUPS takes them (option name = attribute name).
-            foreach (var (key, value) in answer)
+        // The queue's options and the Job tab, as CUPS takes them (option name = attribute name).
+        foreach (var (key, value) in answer)
+        {
+            if (key.StartsWith("opt:", StringComparison.Ordinal) && QueueOption(key[4..], value) is { } attribute)
             {
-                if (key.StartsWith("opt:", StringComparison.Ordinal) && QueueOption(key[4..], value) is { } attribute)
-                {
-                    o.AdditionalJobAttributes.Add(attribute);
-                }
+                extra.Add(attribute);
             }
-        });
+        }
 
-        Chuvadi.Print.PrintResult sent;
         try
         {
-            sent = job.SubmitTo(target, ct);
+            using var client = new IppClient(uri);
+            var capabilities = new IppPrinterCapabilities(
+                client.GetPrinterAttributes(null, ct).Group(IppTag.PrinterAttributes) ?? new IppAttributeGroup(IppTag.PrinterAttributes));
+            var ticket = IppJobTicket.Build(job.Settings, capabilities, new IppJobOptions(), documentMode: true,
+                printerMakesCopies: true, pageCount, null, new List<string>());
+            if (!OrientationChosen(answer))
+            {
+                // B-14: orientation left at the dialog's default. Without orientation-requested CUPS turns each
+                // page to fit the sheet (a landscape page fills a portrait sheet); with "portrait" it shrinks
+                // landscape pages to half size. The library always sends it, so the host removes it here.
+                ticket.Remove("orientation-requested");
+            }
+
+            foreach (var attribute in extra)
+            {
+                ticket.Add(attribute);
+            }
+
+            using var document = new MemoryStream(pdf, writable: false);
+            client.PrintJob(document, "application/pdf", ticket, title, ct);
         }
         catch (OperationCanceledException)
         {
@@ -226,15 +244,15 @@ public sealed class CupsPrintService : IPrintService
             return new CorePrintResult(PrintOutcome.Failed, 0, "The printer didn't take the job: " + ex.Message);
         }
 
-        return sent.Status switch
-        {
-            PrintJobStatus.Failed => new CorePrintResult(PrintOutcome.Failed, 0, "The printer didn't take the job: " + sent.Error),
-            PrintJobStatus.Cancelled => Cancelled,
-            // Same wording as the Windows host.
-            _ => new CorePrintResult(PrintOutcome.Printed, pagesSent,
-                pagesSent == 1 ? "Sent 1 page to the printer" : $"Sent {pagesSent} pages to the printer"),
-        };
+        // Same wording as the Windows host.
+        return new CorePrintResult(PrintOutcome.Printed, pagesSent,
+            pagesSent == 1 ? "Sent 1 page to the printer" : $"Sent {pagesSent} pages to the printer");
     }
+
+    /// <summary>True when the dialog's orientation is a choice (landscape or a reverse); portrait is GTK's
+    /// default, so it means "as the document is".</summary>
+    internal static bool OrientationChosen(IReadOnlyDictionary<string, string> answer) =>
+        answer.GetValueOrDefault("orientation") is "landscape" or "reverse-landscape" or "reverse-portrait";
 
     private static readonly HashSet<string> HoldKeywords = new(StringComparer.Ordinal)
     {

@@ -21,6 +21,11 @@ internal static unsafe class GtkHost
 
     public static event Action<string[]>? FilesDropped;
 
+#if CHUVADI_UITEST
+    /// <summary>UI test build only: the same event the window's GTK drop target raises.</summary>
+    internal static void SimulateDrop(string[] paths) => FilesDropped?.Invoke(paths);
+#endif
+
     public static event Action<string>? ExternalLinkRequested;
 
     public static event Action? FirstPaint;

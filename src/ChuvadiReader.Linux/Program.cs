@@ -69,7 +69,8 @@ public static class Program
             IFileProvider files = Directory.Exists(wwwroot) ? new PhysicalFileProvider(wwwroot) : new NullFileProvider();
             var manager = new LinuxWebViewManager(services, files);
             GtkHost.Attach(manager);
-            WireWindow(services);
+            var opener = new DocumentOpener(services.GetRequiredService<OpenDocumentService>(), manager.Dispatcher);
+            WireWindow(services, opener);
 
             _ = manager.AddRootComponentAsync(typeof(ChuvadiReader.Ui.App), "#app", ParameterView.Empty);
             Mark("root component added");
@@ -84,7 +85,7 @@ public static class Program
                 GtkHost.FirstPaint += () => Mark("page loaded");
             }
 
-            OpenFromCommandLine(services, args);
+            OpenFromCommandLine(services, opener, args);
 #if CHUVADI_UITEST
             UiTestDriver.Start(services, manager);
 #endif
@@ -147,19 +148,17 @@ public static class Program
     };
 
     // Same list as the Open dialog (Core: DocumentFormatExtensions.OpenableExtensions), as on Windows.
-    private static bool IsSupportedFile(string path) => DocumentFormatExtensions.IsOpenable(path);
-
-    private static void WireWindow(IServiceProvider services)
+    private static void WireWindow(IServiceProvider services, DocumentOpener opener)
     {
         var links = services.GetRequiredService<IExternalLinks>();
         GtkHost.ExternalLinkRequested += url => _ = links.OpenAsync(url);
 
-        // Same rule as the Windows host: files dropped on the window open in the reader,
-        // or join the shelf when the Bench is open.
+        // Files dropped on the window: each in its own tab (B-06), or all onto the shelf when the Bench is
+        // open (the Windows host's rule for the Bench).
         GtkHost.FilesDropped += paths =>
         {
-            var supported = paths.Where(IsSupportedFile).ToArray();
-            if (supported.Length == 0)
+            var supported = DocumentOpener.Openable(paths);
+            if (supported.Count == 0)
             {
                 return;
             }
@@ -167,27 +166,25 @@ public static class Program
             var bench = services.GetRequiredService<BenchDropService>();
             if (bench.IsBenchActive)
             {
-                bench.Drop(supported);
+                bench.Drop([.. supported]);
                 return;
             }
 
-            services.GetRequiredService<OpenDocumentService>().Request(supported[0]);
+            _ = opener.OpenAsync(supported);
         };
     }
 
-    /// <summary>"chuvadi-reader file.pdf" (and the desktop entry's %F) opens the first supported file.</summary>
-    private static void OpenFromCommandLine(IServiceProvider services, string[] args)
+    /// <summary>"chuvadi-reader a.pdf b.docx …" (and the desktop entry's %F): every openable file, each in
+    /// its own tab, in the order given (B-04).</summary>
+    private static void OpenFromCommandLine(IServiceProvider services, DocumentOpener opener, string[] args)
     {
-        var first = args.Select(a => a.StartsWith("file://", StringComparison.Ordinal) ? new Uri(a).LocalPath : a)
-            .FirstOrDefault(a => File.Exists(a) && IsSupportedFile(a));
-        if (first is null)
+        var files = DocumentOpener.Openable(args);
+        if (files.Count == 0)
         {
             return;
         }
 
-        var path = Path.GetFullPath(first);
-        services.GetRequiredService<IAppReadySignal>().Ready +=
-            () => services.GetRequiredService<OpenDocumentService>().Request(path);
+        services.GetRequiredService<IAppReadySignal>().Ready += () => _ = opener.OpenAsync(files);
     }
 
     internal static void Mark(string stage)

@@ -7,6 +7,7 @@ Fails when:
   B-01  lintian --pedantic reports anything not overridden (E, W, I or P); a file's mode is wrong (files 0644,
         executable only the apphost and .NET's createdump; folders 0755)
   B-13  IntelliSense XML or precompressed .gz/.br copies are in /usr/lib/chuvadi-reader
+  B-17  the runtime is told to show resource keys instead of .NET's messages (UseSystemResourceKeys)
   B-02  a font file isn't in a copyright stanza of its own (not Files: *), or that stanza's Copyright doesn't
         name the holder in the font's own metadata (name ID 0), or its licence isn't OFL-1.1, or the OFL-1.1
         text is missing
@@ -72,6 +73,10 @@ for deb in sys.argv[1:]:
                 if rel.startswith(LIB) and (rel.endswith(".xml") or ((rel.endswith(".gz") or rel.endswith(".br"))
                                                                       and os.path.exists(p.rsplit(".", 1)[0]))):
                     fail(deb, "not needed at run time: " + rel)
+        # ── .NET's messages (B-17) ──
+        rc = open(os.path.join(root, LIB, "chuvadi-reader.runtimeconfig.json"), encoding="utf-8").read()
+        if re.search(r'"System\.Resources\.UseSystemResourceKeys"\s*:\s*true', rc):
+            fail(deb, "runtimeconfig turns .NET's messages into resource keys (UseSystemResourceKeys)")
         # ── fonts and their licence ──
         copyright_text = open(os.path.join(root, "usr/share/doc/chuvadi-reader/copyright"), encoding="utf-8").read()
         paras = stanzas(copyright_text)

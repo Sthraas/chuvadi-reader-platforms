@@ -9,7 +9,7 @@ Writes <out>/report.md, <out>/results.json and one screenshot per step.
 Every step also checks: the app is running, Blazor's error bar is hidden, and no new "Chuvadi error"
 is in the app log.
 """
-import glob, json, os, subprocess, sys, time, traceback
+import glob, json, os, re, subprocess, sys, time, traceback
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from uitest_lib import App  # noqa: E402
@@ -541,8 +541,19 @@ def print_pages():
         raise AssertionError("printed output contains images — not vector: " + "; ".join(images))
     if pages_seen != [2, 3, 4]:
         raise AssertionError(f"printed pages {pages_seen}, expected [2, 3, 4]")
+    # B-14: page 4 is landscape. With the dialog's orientation left as it is, CUPS must turn it to fill the
+    # portrait sheet (rotation 90), not print it at half size unturned.
+    rotations = []
+    for n in range(1, int(info.get("Pages", "0")) + 1):
+        page_text = subprocess.run(["pdftotext", "-f", str(n), "-l", str(n), out, "-"], capture_output=True, text=True).stdout
+        if "Page 4" in page_text:
+            rot = subprocess.run(["pdfinfo", "-f", str(n), "-l", str(n), out], capture_output=True, text=True).stdout
+            rotations.append(int(re.search(rf"Page\s+{n} rot:\s+(\d+)", rot).group(1)))
+    if not rotations or any(r not in (90, 270) for r in rotations):
+        raise AssertionError(f"landscape page 4 not turned to fill the sheet: rotations {rotations}")
     return (f"app says '{status}'; CUPS wrote {os.path.basename(out)}: {info.get('Pages')} pages ({info.get('Page size')}), "
-            f"pages with text {pages_seen}, fonts {[f.split()[0] for f in fonts]}, images: none (vector)")
+            f"pages with text {pages_seen}, landscape page 4 turned {rotations}, fonts {[f.split()[0] for f in fonts]}, "
+            "images: none (vector)")
 
 
 step("30-print-pages-2-4-two-copies", print_pages)
@@ -640,6 +651,71 @@ def close_tabs():
 
 
 step("34-close-all-tabs", close_tabs)
+
+
+def tab_names():
+    return app.js("return [...document.querySelectorAll('.rtab')].map(t=>t.innerText.trim().split('\\n')[0])")
+
+
+def open_several_from_command_line():
+    """B-04: chuvadi-reader a b c (the desktop entry's %F for a multi-file Open with) — each in its own tab."""
+    files = ["five-pages.pdf", "sample.docx", "sample.xlsx"]
+    app.restart(log_name="app-several.log", args=[os.path.join(FIX, f) for f in files])
+    app.wait(lambda: len(tab_names()) == 3, 30, "three tabs")
+    names = tab_names()
+    if [n for n in names] != files:
+        raise AssertionError(f"tabs {names}, expected {files} in order")
+    app.shot("34b-three-files-three-tabs")
+    return "tabs: " + ", ".join(names)
+
+
+step("34b-open-several-from-command-line", open_several_from_command_line)
+
+
+def drop_several():
+    """B-06: several files dropped on the window — each in its own tab (the window's drop handler, as GTK
+    calls it; a real drag from a file manager is checked by hand)."""
+    before = tab_names()
+    # Two files not open yet (a file that is already open goes to its tab, as with a single file).
+    with open(os.path.join(FIX, "five-pages.pdf"), "rb") as src, open(os.path.join(FIX, "second-copy.pdf"), "wb") as dst:
+        dst.write(src.read())
+    dropped = ["no-print.pdf", "second-copy.pdf"]
+    app.send("drop " + "\t".join(os.path.join(FIX, f) for f in dropped))
+    app.wait(lambda: len(tab_names()) == len(before) + 2, 30, "two more tabs")
+    names = tab_names()
+    if names[-2:] != dropped:
+        raise AssertionError(f"after the drop: {names}")
+    return f"{len(before)} tabs → {len(names)}: {', '.join(names[-2:])} added in order"
+
+
+step("34c-drop-several-files", drop_several)
+
+
+def error_message_is_a_sentence():
+    """B-17: .NET's own error messages reach the user, not resource keys. A PDF without read permission
+    (chmod 000) must say "Access to the path … is denied". Root can read any file, so as root this step only
+    reports; check-deb.py checks the cause (the runtime setting) in every run."""
+    if os.geteuid() == 0:
+        return "skipped as root (root reads chmod-000 files); the runtime setting is checked by check-deb.py"
+    locked = os.path.join(FIX, "locked.pdf")
+    with open(os.path.join(FIX, "five-pages.pdf"), "rb") as src, open(locked, "wb") as dst:
+        dst.write(src.read())
+    os.chmod(locked, 0)
+    try:
+        app.send("open " + locked)
+        msg = app.wait(lambda: app.js("var t=document.body.innerText; var i=t.indexOf('Could not open'); "
+                                      "return i < 0 ? null : t.slice(i, i + 200)"), 20, "error shown")
+    finally:
+        os.chmod(locked, 0o644)
+    if "UnauthorizedAccess_" in msg or "IODenied" in msg:
+        raise AssertionError("resource key shown: " + msg)
+    if "denied" not in msg:
+        raise AssertionError("no plain message: " + msg)
+    app.shot("34d-error-message")
+    return " ".join(msg.split())[:150]
+
+
+step("34d-error-message-not-a-resource-key", error_message_is_a_sentence)
 
 # The desktop's window-button layout, followed exactly (any subset, any order, either end) — the
 # setting GNOME (button-layout) and KDE hand to GTK, written to GTK's settings file for a fresh launch.
