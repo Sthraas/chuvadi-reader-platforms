@@ -30,6 +30,14 @@ PDF_NAME = "chuvadi-test.pdf"
 os.makedirs(OUT, exist_ok=True)
 results = []
 
+
+def webview_version():
+    """The WebView the app runs on (pages are sized with CSS zoom, whose measurement changed in
+    Chromium 128: worth knowing per emulator)."""
+    out = subprocess.run(["adb", "shell", "dumpsys", "webviewupdate"], capture_output=True, text=True).stdout
+    m = re.search(r"Current WebView package \(name, version\): \(([^,]+), ([^)]+)\)", out)
+    return {"package": m.group(1), "version": m.group(2)} if m else {"raw": out[:400]}
+
 STATE_JS = r"""
 (() => {
   const vis = e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < innerHeight; };
@@ -116,7 +124,10 @@ def to_screen(st, x, y):
 
 
 def touch(*args):
-    """Runs one gesture; returns False (and prints why) if the touch tool failed."""
+    """Runs one gesture; returns False (and prints why) if the touch tool failed. First clears the
+    emulator's own "<app> isn't responding" dialog (round 4: Pixel Launcher's sat over the app on
+    phone API 35 and took the double-tap); dump() taps its "Wait"."""
+    dump()
     r = subprocess.run([sys.executable, os.path.join(HERE, "touch.py"), *map(str, args)],
                        capture_output=True, text=True)
     print("  " + (r.stdout.strip() or f"touch.py {' '.join(map(str, args))}"))
@@ -233,6 +244,13 @@ st0 = wait_for(lambda s: s.get("pages", 0) >= 1 and counter_number(s) is not Non
 shot("g1-opened")
 check("Open with (ACTION_VIEW content://) opens the PDF in the Reader",
       st0.get("pages", 0) >= 1 and counter_number(st0) == 1, {k: st0.get(k) for k in ("shell", "pages", "counter", "fit")})
+
+WEBVIEW = webview_version()
+try:
+    WEBVIEW["userAgent"] = cdp.evaluate("navigator.userAgent")
+except SystemExit as e:
+    WEBVIEW["userAgent"] = str(e)
+print(f"WebView: {WEBVIEW.get('package')} {WEBVIEW.get('version')} — {WEBVIEW.get('userAgent')}")
 
 # ── 1b. What is wider than the desk? (phone Fit page overflow, for the Mobile UI chat) ──────────
 OVERWIDE_JS = r"""
@@ -368,7 +386,7 @@ if m:
               {"deskPages_before": st4.get("deskPages"), "deskPages_after": st5.get("deskPages"), "order": st5.get("order")})
 
 with open(os.path.join(OUT, "gestures.json"), "w") as f:
-    json.dump(results, f, indent=2)
+    json.dump({"webview": WEBVIEW, "results": results}, f, indent=2)
 failed = [r["check"] for r in results if not r["pass"]]
 print(f"{len(results) - len(failed)}/{len(results)} gesture checks passed")
 sys.exit(1 if failed else 0)

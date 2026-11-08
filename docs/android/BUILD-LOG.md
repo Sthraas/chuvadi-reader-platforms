@@ -494,3 +494,40 @@ capitalises on Enter (the search found 1/4).
   Platforms `-warnaserror` 0 warnings; tests 171 + 48 + 31 + 16 pass.
 - Note on "58 % → 200 % → 58 %": that is double-tap working as designed (zoom in, then back). The bug for Mobile UI
   is the page it lands on (phone: page 2 → 1 / 6 or 6 / 6; tablet stays on 2 / 6), see step 43.
+
+### 45. Round 4 — run 42481924551 (all four emulators)
+| Check | Phone 35 | Phone 36 | Tablet 35 | Tablet 36 |
+|---|---|---|---|---|
+| Smoke | PASS | PASS | PASS | PASS |
+| Swipe · pinch · Arrange · long-press drag | PASS | PASS | PASS | PASS |
+| Double-tap zoom / back | FAIL¹ | PASS | FAIL² | PASS |
+| Open with .docx / .xlsx while running (new tab, same activity + process) | PASS | PASS | PASS | PASS |
+| Share to Chuvadi | PASS | PASS | FAIL³ | FAIL³ |
+| Rotation · → · Ctrl = · Ctrl F · typing control · on-screen keyboard | PASS | PASS | PASS | PASS |
+| Print card → dialog; Save as PDF (4 pages); range 2-3 (2 pages) | PASS | PASS | PASS (all-pages check FAIL³) | ← |
+| L-8: no-print PDF → Print card locked with the reason | PASS | PASS | PASS | PASS |
+| Back closes the Print card (P-06) | **FAIL⁴** | **FAIL⁴** | **FAIL⁴** | **FAIL⁴** |
+| Phone: Back (key and edge gesture) closes the ⋮ sheet | PASS | PASS | — | — |
+| Back walks screens then leaves; relaunch same process | FAIL⁴ / PASS | ← | ← | ← |
+| D-89 Home says open, not drop | FAIL⁵ | FAIL⁵ | PASS | PASS |
+| Split screen in and out | PASS | PASS | PASS | PASS |
+| No crash / ANR in the app | PASS | PASS | PASS | PASS |
+1. Emulator noise: "Pixel Launcher isn't responding" sat over the app and took the taps. gestures.py now clears
+   system dialogs before every touch.
+2. Measurement: the page under the centre is a page laid out at 793 px inside a 147 px wrapper (API 35 only), see 6.
+3. Test: the tablet's page counter shows the number only ("1", no "/ 4"); the check now uses the page count.
+4. **Host bug, fixed.** BlazorWebView registers its own Back callback (WebView history) when its handler connects,
+   after the activity's; the dispatcher asks the newest first, so Back went to the WebView history and P-06 never ran
+   (the "dead" Backs were history steps within /reader). The activity now re-adds its callback after the WebView
+   initialises, when its handler changes, and on every resume (`PutBackFirst`). Sheets "closing" before was a side
+   effect of the history step.
+5. Test: phone Home has a "+ Open" button, not the sentence; no "drop" anywhere. The check now accepts "Open".
+6. **API 35 page sizing (for the Mobile UI chat / decision):** phone and tablet API 35 lay pages out at full size
+   (`.rpage`, 793 px, no transform) inside fit-sized wrappers (147 px), so Fit page shows tiny and measurements
+   disagree. The Ui sizes pages with CSS `zoom` (`--rpage-zoom`, and on Android `theme.js` zooms the root), and
+   Chromium changed how `zoom` reports sizes in 128. API 36 runs WebView 133 (correct). API 35's version wasn't in
+   the logs; gestures.py now records `dumpsys webviewupdate` and the user agent per emulator.
+- **Host fix, also:** relaunch showed one white frame (WebView default background); the WebView is now transparent
+  until the page paints, so the page colour behind it shows.
+- Phone "full screen again" picture was taken mid-animation (app in the top third, size already full); the check
+  passed. A 2 s settle wait before that picture now.

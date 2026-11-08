@@ -376,11 +376,12 @@ uri = media_uri(SHARE_PDF)
 print(am_as_shell("start", "-a", "android.intent.action.SEND", "-t", "application/pdf", "-d", str(uri),
                   "--eu", "android.intent.extra.STREAM", str(uri), "-p", PKG, "--grant-read-uri-permission").strip())
 tabs_before = safe_state().get("tabs") or 0
-st = wait_for(lambda s: SHARE_PDF.split(".")[0] in (s.get("tab") or "") and s.get("pages", 0) >= 1 and counter_total(s) == 4,
+# Pages from the page elements: the tablet's counter is a box with the page number only (no "/ 4").
+st = wait_for(lambda s: SHARE_PDF.split(".")[0] in (s.get("tab") or "") and s.get("pages", 0) == 4,
               60, "the shared PDF to open")
 shot("p3-shared")
 check("Share to Chuvadi (ACTION_SEND, EXTRA_STREAM) opens the PDF in a new tab",
-      SHARE_PDF.split(".")[0] in (st.get("tab") or "") and counter_total(st) == 4 and (st.get("tabs") or 0) == tabs_before + 1,
+      SHARE_PDF.split(".")[0] in (st.get("tab") or "") and st.get("pages") == 4 and (st.get("tabs") or 0) == tabs_before + 1,
       {**brief(st, "tab", "counter", "pages"), "tabs": [tabs_before, st.get("tabs")]})
 save_log("log-share.txt")
 
@@ -400,7 +401,7 @@ for _ in range(20):
 time.sleep(2)
 
 # ── 3. Rotation with a document open ─────────────────────────────────────────
-base = wait_for(lambda s: counter_total(s) == 4, 30, "the shared PDF")
+base = wait_for(lambda s: s.get("pages") == 4, 30, "the shared PDF")
 pid0 = pid()
 wide0 = base.get("innerW", 0) > base.get("innerH", 0)
 adb("shell", "cmd", "window", "user-rotation", "lock", "1")
@@ -588,7 +589,7 @@ def print_and_save(tag):
     return True, None, ev
 
 
-doc_pages = counter_total(safe_state())
+doc_pages = safe_state().get("pages")
 pc = open_print_card()
 shot("p7-print-card")
 check("Print opens the Print card", pc.get("printCard"), brief(pc, "printButton", "shell"))
@@ -697,9 +698,9 @@ home_text = home.get("text") or ""
 drop_words = sorted(set(re.findall(r"[^\n]*\b[Dd]rop(?:ped|ping|s)?\b[^\n]*", home_text)))
 shot("p10b-home-wording")
 check("Home wording says open, not drop (D-89 B, DropFiles false)",
-      home.get("route") == "/" and not drop_words and bool(re.search(r"Open (your first document|a document)", home_text)),
+      home.get("route") == "/" and not drop_words and bool(re.search(r"\bOpen\b", home_text)),
       {"route": home.get("route"), "dropLines": drop_words[:5],
-       "openLines": re.findall(r"[^\n]*Open (?:your first document|a document)[^\n]*", home_text)[:5]})
+       "openLines": re.findall(r"[^\n]*\bOpen\b[^\n]*", home_text)[:5]})
 
 
 # ── 8. Split screen ──────────────────────────────────────────────────────────
@@ -750,6 +751,7 @@ for name, run in exits:
     if back and "error" not in back and full_again(back):
         how = name
         break
+time.sleep(2)  # let the exit-split animation finish before the picture (round 4's was mid-transition)
 shot("p12-full-again")
 check("leaving split screen returns to the full window (same process)",
       how is not None and pid() == pid0,

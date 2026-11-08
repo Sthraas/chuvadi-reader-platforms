@@ -43,8 +43,12 @@ public sealed class MainActivity : MauiAppCompatActivity
         base.OnCreate(savedInstanceState);
         SystemBars.Apply(this);
 
-        // Back gesture: the Ui gets the first chance (close a sheet, card or drawer); otherwise
-        // Android's default (leave the app). Registered after MAUI's own, so it runs first.
+        // Back gesture: the Ui gets the first chance (close a sheet, card or drawer); otherwise the
+        // next handler: BlazorWebView's (back through the WebView's history), then Android's
+        // default (leave the app). The dispatcher asks the most recently added callback first, and
+        // BlazorWebView adds its own when its handler connects, after this; so ours is re-added
+        // then (MainPage) and on every resume (PutBackFirst). Round 4 found Back going to the
+        // WebView history while a card stayed open.
         _back = new BackCallback(this);
         OnBackPressedDispatcher.AddCallback(this, _back);
 
@@ -81,7 +85,20 @@ public sealed class MainActivity : MauiAppCompatActivity
     protected override void OnResume()
     {
         base.OnResume();
+        PutBackFirst();
         Service<AndroidLifecycle>()?.RaiseResumed();
+    }
+
+    /// <summary>Makes our Back callback the first one asked again (see OnCreate).</summary>
+    internal void PutBackFirst()
+    {
+        if (_back is null)
+        {
+            return;
+        }
+
+        _back.Remove();
+        OnBackPressedDispatcher.AddCallback(this, _back);
     }
 
     private static T? Service<T>()
