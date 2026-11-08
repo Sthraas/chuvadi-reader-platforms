@@ -51,6 +51,9 @@ Independent probe: `framewatch` (test tool) forks the app, polls the X root wind
 | Installed `.deb` (self-contained), cold | 12 | 405 / 469 | 1,323 / 1,441 | **1,630 / 1,782** | 1,724 / 1,844 |
 | **First launch for a new user** (fresh HOME + cold) | 10 | 328 / 354 | 1,253 / 1,372 | **2,934 / 3,129 / 2,854** ❌ B-12 | 3,008 / 3,218 |
 | Wayland (Weston, pixman), warm | 3 | 222–233 | 820–952 | not probed (no X root) | |
+| **f3d5978** — first launch, new user | 10 | 332 / 729 | 1,107 / 1,538 | **1,089 / 1,527 / 1,014** ✅ B-12 fixed | 1,116 / 1,568 |
+| **f3d5978** — warm, Home | 10 | 259 / 545 | 1,042 / 1,255 | **1,016 / 1,259 / 848** | 1,062 / 1,288 |
+| **f3d5978** — warm, PDF first page | 10 | 238 / 324 | 936 / 1,211 | **875 / 1,215 / 828** | 1,588 / 1,870 |
 
 Findings
 - ✅ Matches the Linux chat's numbers for what it measures (its "first render 0.97–1.07 s" ≈ my warm 1,039 median). But **"first render" is not pixels**: real content arrives **~220 ms later warm** and **~1.7 s later on a user's first launch**. Recommend the build log reports time-to-pixels too.
@@ -96,7 +99,7 @@ Findings
 | T4.8b | Print a file opened with its owner password | 🔒 can't open with a password (B-07) | |
 | T4.9 | Word / Excel viewing | ✅ `sample.docx` renders in the Word view; `.xlsx` in the grid; ⚠️ known: shared-string index shown as value (Sheets 2.0.2, D-87) | |
 | T4.10a | File dialogs (open/save) | ✅ GTK dialogs drive correctly | |
-| T4.10b | Real drag from another app (GTK 4 file-list drag source, xdotool), 2 files (db28319) | ❌ **B-06 confirmed live**: drop accepted, only the first file opens. No drop overlay while dragging — expected until Foundation's D-104 overlay lands (not on `platform/linux` yet); retest then | `screenshots/B-06-*` | |
+| T4.10b | Real drag from another app (GTK 4 file-list drag source, xdotool), 2 files (db28319) | ❌ **B-06 confirmed live**: drop accepted, only the first file opens. **Fixed f3d5978: 2 tabs ✅.** No overlay while dragging is correct: D-104 is the portal's overlay; a desktop overlay is option (c), noted for Arun | `screenshots/B-06-*` | |
 | T4.10c | Clipboard text | ✅ selected page text → Ctrl+C → `xclip` returns it exactly | |
 | T4.10d | Clipboard PNG (Snapshot → Copy to clipboard) | ✅ `image/png` (+ tiff/jpeg/bmp) offered; 543×362 PNG of real page pixels | `/home/claude/evidence/lt/clip/clip.png` |
 | T4.10e | Show in folder with real Nautilus 46 (db28319) | ⚠️ opens the right folder — ❌ **B-21**: when the file manager needs > 5 s for its first window the app times out, falls back to `xdg-open` and the user gets two windows (the fallback one without the file selected). Proven with `dbus-monitor` (call 0 s, fallback at 5.01 s, Nautilus's successful reply at 7.99 s) | `screenshots/B-21-*`, `evidence/reveal/dbus-monitor.log` | |
@@ -177,3 +180,23 @@ CI artifact `linux-arm64/deb/chuvadi-reader_1.0.0~preview_arm64.deb` from run 42
 1. The **7.9 MB vector CAD PDF** from the Reader chat's uploads — can Arun attach it here (or commit it to a test-fixtures path)? T5.3 is blocked without it.
 2. ~~B-05 contract~~ — answered: on `platform/foundation` since 6 Nov; Linux builds against it. (My error.)
 3. Routing done in BUGS.md (Linux / shared Ui/Core / library).
+
+---
+
+## Sign-off — Linux, f3d5978 (9 Nov 2026)
+
+**Ready (Linux side, verified by me on f3d5978).** Clean build (`-warnaserror`, 0 warnings) and tests (171 + 54 + 25); `.deb` self-contained and framework-dependent lintian-clean (`--pedantic`, 0 tags), installs/upgrades/purges on Ubuntu 24.04 and 26.04, desktop entry/MIME/icons valid, copyright correct for Sthraas and every font. Printing is vector (the source PDF goes to CUPS byte-identical; landscape pages rotate), no-print files refused, no-printer explained. Single instance on X11 and Wayland (token activation), several files from the command line, drops and hand-overs each in their own tab. Redaction removes the text. Split, extract, merge outputs correct. Clipboard text and PNG. Show in folder: one window. Read-only home, unreadable files, no namespaces, no network, 600 MB cap, en_IN/de_DE: all handled with plain messages. Five themes token-for-token with the handout; corners, button layouts (6), HiDPI 2× and fractional 1.25/1.5× correct. Startup: warm Home **1.0 s**, first PDF page **0.9 s**, a new user's first launch **1.1 s** (2-CPU, no-GPU sandbox). All 16 Linux-routed bugs (B-01, B-04–B-06, B-12–B-17, B-20, B-21, K-01, B-02 Linux part) **verified fixed**.
+
+**Waiting on Foundation's 8th patch (shared Ui/Core)** — I re-verify when the coordinator says it has landed: B-02 (OFL text next to the fonts), B-03, B-07 (password prompt), B-08b/B-10 (cancel, timeout, open queue), B-11b, B-16 (Core's guards), B-18, B-19, B-22, B-23.
+
+**Waiting on the library (via Arun):** B-08a Chuvadi.Docs input limits · B-09a Chuvadi.Sheets extent · B-11a chuvadi-pdf xref rebuild · Sheets 2.0.2 shared-string fix (D-87) · form filling and certificate signing (*Coming soon* in the Ui).
+
+**Waiting on Arun:** the 7.9 MB vector CAD PDF (T5.3); Windows end-to-end timings (D-51) for a side-by-side.
+
+**Manual items for a real machine** (not possible in this sandbox):
+1. Ubuntu 24.04 desktop with AppArmor on and a GPU: install the `.deb`, launch from the app grid, check the AppArmor profile loads and timings with a real GPU.
+2. GNOME (Wayland) and KDE Plasma: window buttons, drag-move, snap/tiling corners, minimise (my run of the UI pass's step 05 failed only for a missing tool; CI's pass covers it).
+3. Drag from Files/Dolphin onto the window; Show in folder with Files and Dolphin (selection highlighted).
+4. A real printer: landscape/portrait mix, copies, a file opened with its owner password.
+5. Fractional 125 %/150 % on a real HiDPI panel — judge text crispness (sizes already verified).
+6. ARM64 hardware (or the CI runner's screenshots, judged by me): launch and UI pass.

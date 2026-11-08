@@ -1,0 +1,10 @@
+cold-fresh-user-f3d5978 1 map=827 content=1527 settled=1568 colours=279 polls=219 maxgap=30 shown=728.9 pageloaded=1032.6 firstrender=1538.2
+cold-fresh-user-f3d5978 2 map=348 content=1059 settled=1084 colours=279 polls=194 maxgap=26 shown=315.0 pageloaded=633.1 firstrender=1060.1
+cold-fresh-user-f3d5978 3 map=352 content=1199 settled=1226 colours=279 polls=192 maxgap=25 shown=322.9 pageloaded=608.3 firstrender=1187.4
+cold-fresh-user-f3d5978 4 map=370 content=1051 settled=1084 colours=279 polls=194 maxgap=23 shown=345.0 pageloaded=615.9 firstrender=1069.4
+cold-fresh-user-f3d5978 5 map=347 content=1016 settled=1031 colours=279 polls=192 maxgap=27 shown=328.9 pageloaded=566.6 firstrender=1008.4
+cold-fresh-user-f3d5978 6 map=322 content=1014 settled=1031 colours=279 polls=187 maxgap=28 shown=294.7 pageloaded=526.8 firstrender=1007.0
+cold-fresh-user-f3d5978 7 map=339 content=1157 settled=1194 colours=279 polls=188 maxgap=27 shown=307.0 pageloaded=618.4 firstrender=1161.0
+cold-fresh-user-f3d5978 8 map=425 content=1119 settled=1149 colours=279 polls=206 maxgap=31 shown=342.1 pageloaded=636.4 firstrender=1144.9
+cold-fresh-user-f3d5978 9 map=539 content=1211 settled=1252 colours=279 polls=211 maxgap=31 shown=488.0 pageloaded=732.1 firstrender=1229.4
+cold-fresh-user-f3d5978 10 map=387 content=1055 settled=1079 colours=279 polls=199 maxgap=27 shown=335.8 pageloaded=582.8 firstrender=1055.6

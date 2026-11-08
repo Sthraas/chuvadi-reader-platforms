@@ -1,0 +1,10 @@
+warm-home-f3d5978 1 map=248 content=848 settled=873 colours=288 polls=173 maxgap=35 shown=223.5 pageloaded=410.6 firstrender=847.5
+warm-home-f3d5978 2 map=307 content=1010 settled=1077 colours=288 polls=184 maxgap=37 shown=256.6 pageloaded=500.0 firstrender=1056.5
+warm-home-f3d5978 3 map=325 content=1011 settled=1048 colours=288 polls=177 maxgap=37 shown=262.3 pageloaded=471.8 firstrender=988.9
+warm-home-f3d5978 4 map=337 content=1026 settled=1107 colours=288 polls=178 maxgap=142 shown=300.2 pageloaded=531.2 firstrender=1094.4
+warm-home-f3d5978 5 map=589 content=1259 settled=1288 colours=288 polls=207 maxgap=29 shown=544.7 pageloaded=726.2 firstrender=1254.7
+warm-home-f3d5978 6 map=256 content=851 settled=863 colours=288 polls=185 maxgap=23 shown=228.5 pageloaded=403.2 firstrender=833.2
+warm-home-f3d5978 7 map=266 content=913 settled=944 colours=288 polls=171 maxgap=33 shown=237.6 pageloaded=424.1 firstrender=906.3
+warm-home-f3d5978 8 map=394 content=1107 settled=1178 colours=288 polls=167 maxgap=120 shown=319.6 pageloaded=602.5 firstrender=1143.0
+warm-home-f3d5978 9 map=334 content=1075 settled=1104 colours=288 polls=183 maxgap=29 shown=309.1 pageloaded=534.3 firstrender=1070.3
+warm-home-f3d5978 10 map=280 content=1022 settled=1034 colours=288 polls=192 maxgap=34 shown=244.0 pageloaded=476.6 firstrender=1027.4
