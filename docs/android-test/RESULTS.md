@@ -50,20 +50,40 @@ software GPU on shared CI runners: compare between rounds, not with a phone in t
 | D-06 | Themes / system bars | **FAIL → AT-08** (system bars stay cream) | screenshots/r1/themes-phone-home-mark.png |
 | D-10 | Theme by a real Settings tap, kept after restart | **PASS** phone (R1c); tablet result was a test-tool error (taps not rotated), re-run R2 | R1c › function |
 
-## 4. Function (R1c, API 36, Debug fallback; round 2 re-runs with corrected tooling)
-| # | Case | Result |
-|---|---|---|
-| F-01c | Open with opens the PDF (phone, tablet) | **PASS** |
-| F-17 | Single instance: one activity after three arrivals | **PASS** |
-| F-14 | Rotation keeps document, page, process | **PASS** |
-| F-15 | Process death (`am kill` in background) → tabs come back | **PASS** |
-| F-16 | All trim-memory levels → alive and responsive | **PASS** |
-| R-10 | No crash / ANR / uncaught page error (Debug) | **PASS** |
-| F-10, R-02 | AES-256 files (user password; owner-only) | **"This PDF is damaged"** — the fixtures had `/P` unsigned (pypdf), i.e. the known library item **LIB-1**; R2 adds signed-`/P` fixtures to test the password path itself |
-| F-01a/b, F-02, F-03, F-11, F-12, D-08 | — | test-tool errors (selectors, tablet tap rotation); fixed, re-run R2 |
+## 4. Function — R2 (run 42533545934: Foundation 053e8e4 + Mobile UI 770bfdf + Android b731cfe), API 36, Debug fallback
+The shipped Release can't run (AT-03), and R2's test-only rooted Release didn't produce a package (its publish log stops after
+the AOT step; to look at), so these ran on the Debug x64 build of the same composition. Results apply to the look and logic, not
+to Release-only behaviour (trimming, AOT).
+| # | Case | Phone | Tablet |
+|---|---|---|---|
+| F-01a | Home Open → system picker (DocumentsUI) → picked file opens | **PASS** | **PASS** |
+| F-01b | Share to Chuvadi | test tool (am grant), fixed for R3 | same |
+| F-01c | Open with | **PASS** | **PASS** |
+| F-17 | Single instance (one activity after three arrivals) | **PASS** | **PASS** |
+| F-02 | Next page (phone: real swipe; tablet: Next page) | **PASS** | **PASS** |
+| F-03 | Find "zephyrine" | typing cut by the test's burst ("zene"), re-run R3 | **FAIL → AT-09** (1/1 but match not shown) |
+| F-11a/b | Print → Android dialog → Save as PDF; vector check | not reached (test: a toast covered the button), R3 | same |
+| F-11c | No-print PDF: Print refused with the reason | **PASS** ("This file's permissions don't allow printing.") | **PASS** |
+| R-02a | Owner-password-only AES-256 PDF opens without a prompt | **PASS** | **PASS** |
+| F-10 | User-password AES-256 PDF asks for the password (B-07 in Foundation f1e4126) | **PASS** | **PASS** |
+| F-14 | Rotation keeps document, page, process | **PASS** | **PASS** |
+| F-15 | Process death → tabs restored | **PASS** | **PASS** |
+| F-16 | Trim-memory levels → alive, responsive | **PASS** | **PASS** |
+| D-10 | Theme by a real Settings tap, kept after restart | **PASS** | **PASS** |
+| D-08 | On-screen keyboard: Find field stays above it | **PASS** (innerHeight 839 → 527) | **PASS** |
+| F-12 | Back closes the open sheet/card, same screen | **PASS** | **PASS** |
+| R-10 | No crash / ANR / uncaught page error | **PASS** | **PASS** |
+| B-12 | As-built Release starts | **FAIL → AT-03** (3 of 3 crash, R1c and R2) | same |
 
 ## 5. Robustness
 PENDING (round 3).
+
+## Blocked in CI: Reader on Android 15 (API 35)
+The API 35 image ships WebView 124, so the app correctly shows only its update screen (D-105). Updating it in CI from the API 36
+image's WebView failed twice: that WebView needs the Trichrome static library, which my donor job couldn't locate on the API 36
+image. Options for the coordinator: (a) keep trying a donor (Trichrome library), (b) a newer API 35 system image if one ships
+WebView ≥ 128, (c) accept API 36 as the Reader check and test API 35 only for the update screen — real Android 15 devices get
+WebView through Play. Recommendation: (c) now, (b) when such an image appears; (a) costs runner time with no sure end.
 
 ## Test-tool notes (my own bugs, fixed)
 - R1: the WebView donor took only the WebView `.apk`; the API 36 WebView needs the Trichrome static library, so the API 35

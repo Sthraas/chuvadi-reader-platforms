@@ -186,6 +186,10 @@ def back_to_app():
     time.sleep(2)
 
 
+def dismiss_toasts():
+    cdp.js("[...document.querySelectorAll('.toast button, [role=alert] button, [role=status] button')].forEach(b => b.click())")
+
+
 def esc():
     cdp.js("document.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', bubbles: true}))")
 
@@ -213,8 +217,9 @@ R.check("F-01a Home Open → system picker → file opens in the Reader", bool(h
 
 # F-01b Share to Chuvadi
 before_tabs = state().get("tabs") or 0
-as_shell_user(f"am start -a android.intent.action.SEND -t application/pdf --eu android.intent.extra.STREAM "
-              f"'{uris['mixed-landscape.pdf']}' -p {PKG} --grant-read-uri-permission")
+# `am` grants only the data URI, so the URI also goes in -d (a real sharing app's grant travels in ClipData).
+as_shell_user(f"am start -a android.intent.action.SEND -t application/pdf -d '{uris['mixed-landscape.pdf']}' "
+              f"--eu android.intent.extra.STREAM '{uris['mixed-landscape.pdf']}' -p {PKG} --grant-read-uri-permission")
 st = wait_state(lambda s: (s.get("tab") or "").lower().startswith("mixed") and s.get("rendered", 0) >= 1, 40, "share")
 R.check("F-01b Share to Chuvadi opens a new tab", (st.get("tab") or "").lower().startswith("mixed"),
         {"tabs_before": before_tabs, "state": st})
@@ -242,7 +247,9 @@ R.check("F-02 next page moves the counter", st1.get("counter") != st0.get("count
 # F-03 Find
 command("Find")
 time.sleep(1.5)
-sh("input text zephyrine")
+for ch in "zephyrine":  # one key at a time, as a person types
+    sh(f"input text {ch}")
+    time.sleep(0.25)
 time.sleep(0.4)
 sh("input keyevent KEYCODE_ENTER")
 time.sleep(2)
@@ -256,6 +263,7 @@ time.sleep(1)
 esc()
 
 # F-11 Print: vector output and no-print refusal
+dismiss_toasts()
 command("Print")
 time.sleep(1.5)
 shot("print-card")
@@ -380,6 +388,22 @@ field = cdp.js("(() => { const f = document.activeElement; if (!f) return null; 
 shot("keyboard-find")
 R.check("D-08 on-screen keyboard shows and the Find field stays above it",
         bool(field and field["bottom"] <= (field["vh"] or field["ih"])) and "true" in ime, {"ime": ime.strip(), "field": field})
+# Fast typing (a burst, like a quick typist or a keyboard's suggestion strip): the Find box vs a plain
+# control field added to the page for the test only.
+cdp.js("(() => { const f = document.activeElement; if (f && f.tagName === 'INPUT') { f.select(); } })()")
+sh("input keyevent KEYCODE_DEL")
+sh("input text burstwordtest")
+time.sleep(1.5)
+find_val = cdp.js("document.activeElement && document.activeElement.value")
+cdp.js("(() => { const i = document.createElement('input'); i.id = 'at-control'; i.style.cssText = 'position:fixed;top:120px;left:20px;z-index:99999;width:200px;height:40px';"
+       "document.body.appendChild(i); i.focus(); })()")
+time.sleep(0.8)
+sh("input text burstwordtest")
+time.sleep(1.5)
+ctl_val = cdp.js("document.getElementById('at-control').value")
+cdp.js("document.getElementById('at-control').remove()")
+R.check("F-03b fast typing: the Find box keeps every character, like a plain field", find_val == ctl_val == "burstwordtest",
+        {"find_box": find_val, "plain_field": ctl_val})
 sh("input keyevent KEYCODE_BACK")
 esc()
 

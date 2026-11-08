@@ -122,6 +122,14 @@ below a dark bottom bar; Palm and Indigo show a mismatched band.
 **Fix (proposal):** `SystemBars` follows the theme (theme-changed signal → window background / `isAppearanceLightStatusBars`),
 or the WebView draws under the bars and pads with `env(safe-area-inset-*)`.
 
+## AT-09 · S3 · Foundation (shared Ui) · open — Find reports the match but doesn't bring it into view
+**Steps:** tablet (API 36), open `doc-12p.pdf` (12 pages; the word "zephyrine" appears once, near the foot of page 3), Find,
+type `zephyrine`.
+**Expected:** 1/1, and the view moves so the highlighted match is on screen (page 3, foot).
+**Actual:** 1/1, but the view shows the foot of page 2 and the top of page 3; the match stays off screen and the page box still
+says 2. **Evidence:** R2 run 42533545934 › results-tablet-api36 › function/04-find.png (`screenshots/r1/r2-find-print.png`, left).
+Re-checked next round on phone too (phone typing in R2 was cut short by the test, see notes).
+
 ## Questions for the coordinator (not filed as bugs)
 - **Q-1 Same file opened again → new tab.** Opening the same PDF with Open with twelve times gave 13 tabs of `design-doc.pdf`
   (phone "13 of 13 tabs"), and Home › Recent lists `startup-doc.pdf` three times. Is that the Windows behaviour too? If Windows
