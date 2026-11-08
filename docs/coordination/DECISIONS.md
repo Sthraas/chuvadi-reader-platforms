@@ -323,5 +323,9 @@ Options considered:
 | D-128 | Foundation: RequiresPassword and PdfOpenOptions.Password | Keep RequiresPassword off the open path (measured: it doubles every PDF open; use it later for a Library lock badge). Keep OpenAsync(path, password, ct): it passes the password through the library without reading the whole file into memory. PR #11 moves to the ninth patch once it is green; the Docs/Sheets move comes as a later update |
 | — | Linux Test re-verify | Shared fixes verified on e468d1a: password prompt (wrong vs right), zip-bomb .docx refused at once (287 MB steady, was 4.5 GB), a stuck open no longer blocks others, damaged-PDF message, read-only home, top bar with buttons on the left, accent focus ring, Tab order. B-08b Cancel to be tested with far-cell.xlsx. Remaining: B-18 (Arun), library B-08a/B-09a, CAD PDF and Windows timings (Arun), six real-machine checks |
 
+| D-129 | Web Test O-3: a save that produces several files ("Split to folder") | A single .zip built with Chuvadi.Zip (Arun's library; processing goes through Chuvadi), not .NET's compression. Pros: one download; no browser multi-download prompt or Safari block. Cons: the person unzips |
+| — | Mac | M-16 first (it blocks most Mac Test function and robustness cases), then M-02 (files from Finder) |
+| — | Web portal UI | Q-3 (D-119 (c)) "this session" wording on Home's Storage map and shelves, now |
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).
