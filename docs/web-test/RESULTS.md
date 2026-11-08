@@ -111,7 +111,7 @@ Legend: ✅ pass · ❌ fail (bug linked) · ⚠️ pass with a note · ⏳ not 
 |---|---|---|
 | 8 Nov 20:45 | Branch heads after the coordinator's 20:40 decisions | `platform/web` still 31b063e (not rebased; lacks Foundation 584bbf2) → nothing to re-test in a running build yet. Source check of Foundation **63f37b1**, which the rebase will bring: status bar "processed on the server · kept in memory only · only you can see it" (WT-04); 12a pitch "…kept in memory only…" (WT-05, D-103 in 9fbed93); `PortalLegalLinks` in `AccountMenu.razor` (WT-06); `PhoneShell` wired in `MainLayout.razor` (WT-03). WT-02 not yet changed (`Reader.razor` still passes 1-based `CurPage` to `PrintCard`) — expected, it goes into the combined patch. All four to be re-run in browsers (3 engines, phone/tablet/desktop) once the Web chat rebases |
 
-## Session 2 — 9 Nov 2026, 01:30–02:45 IST
+## Session 2 — 9 Nov 2026, 01:30–02:20 IST
 ### Remaining cases from session 1 (build 31b063e, then regression on 1b32ad8)
 | ID | Result | Evidence |
 |---|---|---|
