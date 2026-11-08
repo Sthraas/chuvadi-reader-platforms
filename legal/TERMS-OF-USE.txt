@@ -12,7 +12,7 @@ These terms govern your use of the Chuvadi web portal (the "Portal"), operated b
 
 3. Your documents.
    - You keep all rights in the documents you upload. You give Sthraas only the permission needed to process them for you while you use the Portal.
-   - Your documents are processed on Chuvadi's servers in an encrypted working area that only your session can use. They are deleted when you sign out, when your session ends or expires, or if the session stops unexpectedly. Nothing you upload is kept after your session.
+   - Your documents are processed on Chuvadi's servers in a working area that only your session can use. They are kept in memory only and never written to disk. They are deleted when you sign out, when your session ends or expires, or if the session stops unexpectedly. Nothing you upload is kept after your session.
    - The Portal is not a storage service. Save or download anything you want to keep before you sign out.
    - How we handle personal data is described in the Chuvadi Privacy Notice.
 

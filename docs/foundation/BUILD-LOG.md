@@ -128,3 +128,7 @@
 ### 19. Sixth combined patch (8 Nov)
 - Mobile UI H-5 to H-12 (+ their current Phone files, the PhoneShell slot), Web UI H5 (merged by hand with H-5) and H6, D-96 touch tip. H-12 widened to every non-Windows platform (one rule, `PhaseZeroSamples`). `COMBINED-HOOKS-6.md`.
 - Proof: desktop identical (Library's "1m"/"2m" relative time and the one-pixel Reader artefact aside); phone, tablet and portal smoke clean; 273/273; 0 warnings.
+
+### 20. D-98 legal wording (8 Nov)
+- Terms of Use, Privacy Notice B6 and the App Store portal text: "encrypted working area" → "kept in memory only, never written to disk" (D-28: tmpfs). Still DRAFT. Kept as accurate: the encrypted sign-in cookie (ASP.NET Data Protection) and HTTPS.
+- Not changed (approved wording, D-20): PlatformText.ServerPrivacy still says "encrypted" on the portal (Settings footer, Library index hint, About › Network) — raised with the coordinator.
