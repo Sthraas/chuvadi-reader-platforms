@@ -106,6 +106,19 @@ The tablet tab's `title` is the working copy path, e.g. `/data/user/0/in.chuvadi
 (`design/tablet-*-home.layout.json`). Android shows `title` on long-press/hover with a mouse. **Expected:** the document's name
 (or the original location the person chose), never the app's private cache path.
 
+## AT-08 · S3 · Android · open — Status and navigation bar areas stay cream in the Night, Palm and Indigo themes
+**Steps:** phone, Settings › theme Night paper (or Palm leaf / Indigo ink); look at the top (clock, signal) and the bottom
+(gesture bar).
+**Expected:** the system-bar areas take the theme's paper colour (as the first-paint background in `index.html` already does per
+theme), with light icons on Night paper; edge-to-edge as on Windows' title bar.
+**Actual:** both strips stay the cream `#F2EAD6` in every theme, so Night paper shows a cream band above a dark app bar and
+below a dark bottom bar; Palm and Indigo show a mismatched band.
+**Evidence:** `screenshots/r1/themes-phone-home-mark.png` (columns: Cream, Night, Palm, Indigo, High contrast).
+**Fix (proposal):** `SystemBars` follows the theme (theme-changed signal → window background / `isAppearanceLightStatusBars`),
+or the WebView draws under the bars and pads with `env(safe-area-inset-*)`.
+
 ## Questions for the coordinator (not filed as bugs)
 - **Q-1 Same file opened again → new tab.** Opening the same PDF with Open with twelve times gave 13 tabs of `design-doc.pdf`
-  (phone "13 of 13 tabs"). Is that the Windows behaviour too? If Windows focuses the existing tab, Android should match.
+  (phone "13 of 13 tabs"), and Home › Recent lists `startup-doc.pdf` three times. Is that the Windows behaviour too? If Windows
+  focuses the existing tab / keeps one recent entry per file, Android should match (on Android each Open with arrives as a new
+  working copy, so the same document looks new each time).
