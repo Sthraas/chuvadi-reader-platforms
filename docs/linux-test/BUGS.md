@@ -182,7 +182,7 @@ Second instance: a non-zip `.xlsx` shows "Couldn't open this workbook: **EOCDNot
 
 ---
 
-## Linux chat — fixes for re-verification (8 Nov, `platform/linux` ffb2823)
+## Linux chat — fixes for re-verification (9 Nov: re-verify on `platform/linux` e468d1a)
 Each fix has a test in `.github/workflows/linux.yml` / `tools/linux` (details: `docs/linux/BUILD-LOG.md` §37).
 | Bug | Commit | Test |
 |---|---|---|
@@ -193,11 +193,15 @@ Each fix has a test in `.github/workflows/linux.yml` / `tools/linux` (details: `
 | B-12 | e8ca522 | UI step 34b2 (no GPU → compositing off); `first-launch.py` records the time (here: 4.7 s → 1.0 s on a fresh profile) |
 | B-14 | 4e9e244 | UI step 30: printed landscape page 4 has rotation 90 (fills the sheet) |
 | B-15 | e8ca522 | `no-userns-test.sh` (seccomp rule refusing user namespaces): message window, exit 2 |
-| B-16 | e8ca522 | `readonly-home-test.py` as an ordinary user: starts, opens the file, one notice |
+| B-16 | e8ca522; kit's `FileAppStorage` since 4144909 | `readonly-home-test.py` as an ordinary user: starts, opens the file, one notice |
 | B-17 | 4e9e244 | `check-deb.py` (runtimeconfig); UI step 34d as a non-root user (chmod 000 file → "Access to the path … is denied") |
 | B-20 | 606d01b (test in CI: ffb2823) | `no-printer-test.py` with CUPS stopped: plain message, no dialog |
 | B-21 | c9f5500 (test: ffb2823) | `reveal-test.py`: a file manager answering after 8 s → one ShowItems, no xdg-open; none → one xdg-open |
 
-Shared (B-02 Ui part, B-03, B-07, B-08b, B-09a app part, B-10, B-11b, B-19, B-22, B-23) and D-101 are exact diffs in
-`docs/linux/PROPOSAL-shared-fixes-8nov.md` on `platform/linux`, tested on Linux with the diff applied; B-22 is S10 there (D-123 A); B-18 goes to the Reader chat's desktop revamp. They reach
-`platform/linux` with Foundation's next combined patch.
+| D-101 | 4144909 (+ Foundation 839d39d) | UI step 35: three live layout changes followed without a restart |
+| B-02 (Ui), B-03, B-07, B-08b, B-09a, B-10, B-11b | Foundation 839d39d, merged in bad60d7 | Reader tests (`PdfPasswordTabTests`, `DamagedPdfTabTests`, `OfficePackageGuardTests`); `aes256.pdf`, `badxref.pdf`, `bomb.docx`, `far-cell.xlsx` in the app |
+| B-19 | Foundation 839d39d | UI step 35: divider within 1.5 px of the left bar in all 8 layouts |
+| B-22 | Foundation 839d39d | UI step 34b4: Tab ring is the theme accent in all five themes; none on a mouse click |
+| B-23 | Foundation 839d39d | UI step 34b3: no per-page buttons in the first Tab stops |
+
+B-18 goes to the Reader chat's desktop revamp (it changes Windows too).
