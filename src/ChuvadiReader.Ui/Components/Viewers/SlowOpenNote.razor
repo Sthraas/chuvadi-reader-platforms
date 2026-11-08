@@ -1,0 +1,58 @@
+@*
+    B-08b: what "Opening…" says when a file takes too long. Nothing for the first SlowAfter; then a note
+    with "Stop opening"; after GiveUpAfter, a plain message with "Close this tab". Stopping closes the tab.
+    The library can't cancel a load yet (library ask), so an abandoned load finishes in the background and
+    its result is dropped (TabsService disposes a late PDF session); the zip-bomb guard (B-08) bounds it.
+*@
+@implements IDisposable
+
+@if (_stage > 0)
+{
+    <div class="son @(_stage == 2 ? "son-late" : null)" role="status">
+        <span class="son-t">@(_stage == 2 ? GaveUp : Slow)</span>
+        @if (OnStop.HasDelegate)
+        {
+            <button type="button" class="son-btn" @onclick="OnStop">@(_stage == 2 ? "Close this tab" : "Stop opening")</button>
+        }
+    </div>
+}
+
+@code {
+    /// <summary>The note's texts (tests and other hosts use the same words).</summary>
+    public const string Slow = "This file is taking longer than usual to open.";
+    public const string GaveUp = "Chuvadi stopped waiting for this file. It may be too large or damaged.";
+
+    public static readonly TimeSpan SlowAfter = TimeSpan.FromSeconds(10);
+    public static readonly TimeSpan GiveUpAfter = TimeSpan.FromSeconds(60);
+
+    /// <summary>Stops opening: the host closes the tab.</summary>
+    [Parameter] public EventCallback OnStop { get; set; }
+
+    private readonly CancellationTokenSource _cts = new();
+    private int _stage;
+
+    protected override void OnInitialized() => _ = RunAsync(_cts.Token);
+
+    private async Task RunAsync(CancellationToken ct)
+    {
+        try
+        {
+            await Task.Delay(SlowAfter, ct);
+            _stage = 1;
+            await InvokeAsync(StateHasChanged);
+            await Task.Delay(GiveUpAfter - SlowAfter, ct);
+            _stage = 2;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (OperationCanceledException)
+        {
+            // opened (or the tab closed) in time
+        }
+    }
+
+    public void Dispose()
+    {
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+}

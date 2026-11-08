@@ -144,6 +144,54 @@ html[data-shell="tablet"] .tb-pg-box[aria-label="desk number"] + .tb-pg-total::a
     html[data-shell="tablet"] .bench-desks { --desk-cols: 2 !important; }
 }
 
+/* Arrange, portrait (12f): no Shelf column; the Shelf is the same bottom sheet as on the phone,
+   resting as a 52 px peek at the bottom edge (mobile.js opens / closes it). */
+@media (max-width: 999px) {
+    html[data-shell="tablet"] .bench-shelf:not(.hidden) {
+        position: fixed; left: calc(var(--sh-left, 72px) + env(safe-area-inset-left));
+        right: calc(var(--sh-tools, 72px) + var(--sh-view, 0px) + env(safe-area-inset-right));
+        bottom: env(safe-area-inset-bottom); z-index: 40;
+        width: auto; height: 60dvh; max-height: calc(100% - 120px); padding-top: 22px;
+        border: none; border-top: var(--chvd-stroke) solid var(--chvd-border); border-radius: 22px 22px 0 0;
+        box-shadow: 0 -10px 30px rgba(0, 0, 0, .14);
+    }
+    html[data-shell="tablet"] .bench-shelf:not(.hidden):not(.chvd-open) { height: 52px; overflow: hidden; cursor: pointer; }
+    html[data-shell="tablet"] .bench-shelf:not(.hidden)::before {
+        content: ""; position: absolute; top: 8px; left: 50%; width: 36px; height: 4px; margin-left: -18px;
+        border-radius: 2px; background: var(--chvd-border);
+    }
+    html[data-shell="tablet"] .bench-shelf:not(.hidden):not(.chvd-open) > :not(.shelf-head) { visibility: hidden; }
+    html[data-shell="tablet"] .bench-desks { padding-bottom: 76px; }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   Touch, phone and tablet (handout 12d–12j)
+   No scrollbars (none in any touch frame; a finger scrolls, and the desktop's styled scrollbar
+   would sit there permanently), no hover-only page curl, no zoom readout in the View rail. */
+html[data-shell="tablet"], html[data-shell="phone"] { scrollbar-width: none; }
+html[data-shell="tablet"] *, html[data-shell="phone"] * { scrollbar-width: none; }
+html[data-shell="tablet"] ::-webkit-scrollbar, html[data-shell="phone"] ::-webkit-scrollbar { width: 0; height: 0; }
+html[data-shell="tablet"] .rcurl, html[data-shell="phone"] .rcurl { display: none; }
+/* The desk's ··· menu holds the desk actions on touch (H-16): 44 px rows, a full-width size choice. */
+html[data-shell="tablet"] .desk-menu > button, html[data-shell="phone"] .desk-menu > button { min-height: 44px; font-size: 13.5px; }
+html[data-shell="tablet"] .desk-menu-size, html[data-shell="phone"] .desk-menu-size {
+    min-height: 44px; margin: 2px 0; padding: 0 10px; border: var(--chvd-stroke) solid var(--chvd-border);
+    border-radius: 8px; background: var(--chvd-surface-hi); color: var(--chvd-ink); font: 13.5px var(--chvd-sans-display);
+}
+html[data-shell="tablet"] .srail .rtext[title="Zoom"] { display: none; }
+/* 12e: the rail's primary action (Mark: Save as new; Protect: Save redacted copy; Arrange: Bind)
+   stays at the foot of the visible rail. The Reader's rails already end with it, but a long rail
+   scrolls it out of view on a tablet; touch users have no Ctrl S. */
+html[data-shell="tablet"] .srail-tools .rb.primary {
+    position: sticky; bottom: 0; z-index: 1; flex: none;
+    box-shadow: 0 -12px 0 0 var(--chvd-surface-hi), 0 12px 0 0 var(--chvd-surface-hi);   /* covers icons scrolling past */
+}
+/* Disabled ("nothing to save") as a solid paler fill, not transparency, so nothing shows through. */
+html[data-shell="tablet"] .srail-tools .rb.primary:disabled {
+    opacity: 1; color: var(--chvd-on-accent);
+    background: color-mix(in srgb, var(--chvd-binding) 45%, var(--chvd-surface-hi));
+}
+
 /* ════════════════════════════════════════════════════════════════════════════
    Phone — 12g (Read), 12h (Mark), 12i (Arrange), 12j (Protect + View sheet)
    The phone shell (PhoneShell.razor) replaces the top bar, left bar and status bar; the mode
@@ -252,6 +300,14 @@ html[data-shell="phone"] {
 .ph-sheet-t { font-family: var(--chvd-serif-display); font-size: 21px; color: var(--chvd-ink); }
 .ph-sheet-a { border: none; background: transparent; color: var(--chvd-binding); font-size: 13px; min-height: 44px; padding: 0 2px 0 12px; cursor: pointer; font-family: var(--chvd-sans-display); }
 .ph-sheet-body { overflow-y: auto; display: flex; flex-direction: column; }
+/* 12j: the View sheet sits above the tool strip and the bottom bar, with no dimming, so the page
+   stays in view while the view changes. The scrim is still there (clear) to close it with a tap. */
+.ph-scrim.ph-docked { background: transparent; animation: none; }
+.ph-sheet.ph-docked {
+    bottom: calc(var(--ph-nav) + env(safe-area-inset-bottom)); padding-bottom: 10px;
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, .10);
+}
+.ph-shell:has(.ph-strip) .ph-sheet.ph-docked { bottom: calc(var(--ph-nav) + var(--ph-strip) + env(safe-area-inset-bottom)); }
 .ph-sheet-h { font-family: var(--chvd-mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--chvd-ink-muted); padding: 14px 0 6px; }
 .ph-row {
     display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 0;
@@ -278,6 +334,11 @@ html[data-shell="phone"] {
 /* Mode views on a phone: the rails fold into the strip / sheet; the page uses the full width. */
 html[data-shell="phone"] .mview-rails { display: none; }
 html[data-shell="phone"] .rdesk { padding: 12px 0 24px; }
+/* 12g–12j: the page fills the width (12 px each side: reader.js measureFit reads --rfit-pad-x, H-14)
+   and sits 12 px under the app bar. Paged reading still snaps a page per screen, but from the top,
+   not centred in the screen as on the desktop. */
+html[data-shell="phone"] .rdesk { --rfit-pad-x: 24px; }
+html[data-shell="phone"] .rdesk.snap:not(.two):not(.zoomed) .rpage-wrap { justify-content: flex-start; padding-top: 12px; scroll-snap-align: start; }
 
 /* Pages & outline drawer and Arrange's Shelf: a sheet that rises from the bottom bar. */
 html[data-shell="phone"] .mdrawer,
@@ -297,6 +358,11 @@ html[data-shell="phone"] .bench-shelf:not(.hidden)::before {
 }
 html[data-shell="phone"] .bench-shelf:not(.hidden):not(.chvd-open) > :not(.shelf-head) { visibility: hidden; }
 html[data-shell="phone"] .bench-desks { padding-bottom: 76px; }
+/* 12i: the FAB is Add desk, so no inline Add desk tile; the desk's ··· is plain (no box); the FAB
+   steps aside while the Shelf sheet is open (its page grid is underneath). */
+html[data-shell="phone"] .bench-desks .desk-add { display: none; }
+html[data-shell="phone"] .desk-more { border-color: transparent; background: transparent; box-shadow: none; }
+html[data-shell="phone"] .ph-shell:has(.bench-shelf.chvd-open) .ph-fab { display: none; }
 html[data-shell="phone"] .mdrawer-tabs { height: 48px; }
 html[data-shell="phone"] .mdrawer-x { min-width: 44px; min-height: 44px; justify-content: center; align-items: center; }
 html[data-shell="phone"] .mdrawer-body { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 18px; align-content: flex-start; }
@@ -339,7 +405,7 @@ html[data-shell="phone"] .desk-ord,
 html[data-shell="phone"] .desk-dup,
 html[data-shell="phone"] .desk-clear,
 html[data-shell="phone"] .desk-del,
-html[data-shell="phone"] .desk-foot { display: none; }
+/* (The desk footer isn't rendered on touch: its actions are in the desk's ··· menu, H-16.) */
 html[data-shell="phone"] .desk-name { font-size: 17px; }
 html[data-shell="phone"] .desk-count { font-family: var(--chvd-mono); font-size: 10.5px; color: var(--chvd-ink-muted); }
 html[data-shell="phone"] .desk-more { width: 44px; height: 44px; }

@@ -74,6 +74,7 @@
 
     [Parameter] public IPdfSession? Session { get; set; }
 
+    /// <summary>Zero-based page in view (<c>ReaderTab.CurrentPageIndex</c>).</summary>
     [Parameter] public int CurrentPage { get; set; }
 
     /// <summary>The latest straight-line measurement (null = nothing measured yet).</summary>

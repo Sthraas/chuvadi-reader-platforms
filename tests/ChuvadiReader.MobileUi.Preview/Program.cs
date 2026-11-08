@@ -7,10 +7,12 @@ using ChuvadiReader.Platform;
 
 // TESTING ONLY. CHVD_FF = phone | tablet | desktop | web (default phone). Desktop reports Windows so the
 // desktop chrome renders exactly as the WPF host shows it; phone and tablet report Android.
+// linux: the desktop reporting Linux, whose window-button layout can be changed live with
+// POST /__preview/button-layout?gtk=close,minimize:maximize (D-101's ChromeChanged).
 var ff = (Environment.GetEnvironmentVariable("CHVD_FF") ?? "phone").ToLowerInvariant() switch
 {
     "tablet" => FormFactor.Tablet,
-    "desktop" or "web" => FormFactor.Desktop,
+    "desktop" or "web" or "linux" => FormFactor.Desktop,
     _ => FormFactor.Phone,
 };
 
@@ -24,7 +26,9 @@ builder.Services.AddSingleton<IFilePicker, FixturePicker>();
 builder.Services.AddSingleton<IImageClipboard, NoClipboard>();
 builder.Services.AddSingleton<IClipboard, NoClipboard>();
 var web = Environment.GetEnvironmentVariable("CHVD_FF") == "web";
-builder.Services.AddSingleton<IPlatformInfo>(new PreviewPlatform(ff, web));
+var linux = Environment.GetEnvironmentVariable("CHVD_FF") == "linux";
+var platform = new PreviewPlatform(ff, web, linux);
+builder.Services.AddSingleton<IPlatformInfo>(platform);
 if (ff != FormFactor.Desktop)
 {
     // Stands in for Android's bundled .NET runtime notices (IHostNotices).
@@ -38,6 +42,14 @@ if (web)
 }
 
 var app = builder.Build();
+if (linux)
+{
+    app.MapPost("/__preview/button-layout", (string gtk) =>
+    {
+        platform.SetButtonLayout(gtk);
+        return Results.Ok();
+    });
+}
 app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapRazorComponents<ChuvadiReader.MobileUi.Preview.Components.HostPage>()

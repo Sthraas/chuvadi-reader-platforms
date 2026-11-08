@@ -3,8 +3,8 @@
     action on the right, 44 px rows. Tap the scrim, the action or the handle to close; Android back
     closes it too (PhoneShell). The ⋮ menu uses the same sheet without a title.
 *@
-<div class="ph-scrim" @onclick="OnClose"></div>
-<section class="ph-sheet" role="dialog" aria-modal="true" aria-label="@(Title ?? "Menu")">
+<div class="ph-scrim @(Docked ? "ph-docked" : null)" @onclick="OnClose"></div>
+<section class="ph-sheet @(Docked ? "ph-docked" : null)" role="dialog" aria-modal="true" aria-label="@(Title ?? "Menu")">
     <button class="ph-handle" @onclick="OnClose" aria-label="Close"><span></span></button>
     @if (Title is not null)
     {
@@ -24,6 +24,9 @@
 @code {
     [Parameter] public string? Title { get; set; }
     [Parameter] public string? Action { get; set; }
+
+    /// <summary>12j: sit above the tool strip and the bottom bar, without dimming the page.</summary>
+    [Parameter] public bool Docked { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public RenderFragment? ChildContent { get; set; }
 }

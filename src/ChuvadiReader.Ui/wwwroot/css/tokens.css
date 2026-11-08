@@ -180,3 +180,8 @@
 @media (prefers-reduced-motion: reduce) {
     :root { --chvd-quick: 0ms; --chvd-base: 0ms; }
 }
+
+/* B-22 (D-123): one keyboard-focus ring on every platform, in the theme's accent, instead of each engine's
+   own (Chromium's on Windows, GTK's blue on Linux). Keyboard only (:focus-visible), so a click draws nothing;
+   components with their own focus style (find box, pager, inputs that recolour their border) keep it. */
+:focus-visible { outline: 2px solid var(--chvd-binding); outline-offset: 2px; }

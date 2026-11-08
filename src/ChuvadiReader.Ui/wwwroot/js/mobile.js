@@ -89,6 +89,12 @@ function interactive(el) {
 
 function isPhone() { return document.documentElement.getAttribute('data-shell') === 'phone'; }
 
+// The Shelf is a bottom sheet on the phone, and on a tablet in portrait (12f: no Shelf column there).
+function shelfIsSheet() {
+    const shell = document.documentElement.getAttribute('data-shell');
+    return shell === 'phone' || (shell === 'tablet' && window.matchMedia('(max-width: 999px)').matches);
+}
+
 // A desk whose pages fit sideways pans only vertically, so a sideways drag is ours (swipe).
 function markFits() {
     for (const d of document.querySelectorAll('.rdesk')) {
@@ -142,7 +148,7 @@ function onTouchEnd(e) {
 
     // Phone Arrange: swipe up on the Shelf peek opens it, swipe down on its header closes it.
     const sh = s.target.closest ? s.target.closest('.bench-shelf') : null;
-    if (sh && isPhone() && Math.abs(dy) > SWIPE_MIN && Math.abs(dy) > 2 * Math.abs(dx)) {
+    if (sh && shelfIsSheet() && Math.abs(dy) > SWIPE_MIN && Math.abs(dy) > 2 * Math.abs(dx)) {
         if (dy < 0) sh.classList.add('chvd-open');
         else if (s.target.closest('.shelf-head') || sh.scrollTop <= 0) sh.classList.remove('chvd-open');
         return;
@@ -196,7 +202,7 @@ function onUp(e) {
 
     // Phone Arrange: the Shelf rests as a peek; a tap on its header (or the peek) opens / closes it.
     const shelf = t.target.closest ? t.target.closest('.bench-shelf') : null;
-    if (shelf && isPhone() && (!shelf.classList.contains('chvd-open') || t.target.closest('.shelf-head'))) {
+    if (shelf && shelfIsSheet() && (!shelf.classList.contains('chvd-open') || t.target.closest('.shelf-head'))) {
         shelf.classList.toggle('chvd-open');
         return;
     }
@@ -250,7 +256,7 @@ function armPress() {
     // desks it covered (all of them in landscape) are there to drop on. bench.js already holds the
     // press, so the drag carries on.
     const sheet = press.target.closest ? press.target.closest('.bench-shelf.chvd-open') : null;
-    if (sheet && isPhone()) requestAnimationFrame(() => sheet.classList.remove('chvd-open'));
+    if (sheet && shelfIsSheet()) requestAnimationFrame(() => sheet.classList.remove('chvd-open'));
 }
 
 function replayDown(p) {

@@ -290,7 +290,7 @@
         <div class="rempty">
             <Icon Name="file-pdf" Size="40" />
             <div class="rempty-t">Open a document to start reading</div>
-            <button class="rempty-btn" @onclick="OpenViaPicker">Fetch…</button>
+            <button class="rempty-btn" @onclick="OpenViaPicker">@OpenAnotherLabel</button>
         </div>
     }
     else if (tab.IsLoading)
@@ -298,6 +298,36 @@
         <div class="rempty">
             <div class="rload-icon"><Icon Name="file-pdf" Size="40" /></div>
             <div class="rempty-t">Opening @tab.FileName…</div>
+            <SlowOpenNote OnStop="StopOpening" />
+        </div>
+    }
+    else if (tab.NeedsPassword)
+    {
+        @* B-07: a password-protected PDF asks for its password, as Word and Excel tabs do. *@
+        <UnlockCard Kind="PDF" Error="@tab.PasswordError" Busy="tab.IsLoading" OnUnlock="pw => Tabs.UnlockAsync(tab.Id, pw)" />
+    }
+    else if (tab.IsDamaged)
+    {
+        @* B-11: the handout's "Can't open · damaged file" state (States & Feedback 8e). *@
+        <div class="rempty">
+            <Icon Name="warning" Size="40" />
+            <div class="rempty-t">This PDF is damaged</div>
+            <div class="rempty-sub">Chuvadi couldn't read this file, maybe because a download or copy didn't finish. Chuvadi can try to rebuild it as a new copy.</div>
+            <div class="rempty-acts">
+                <button class="rempty-btn" @onclick="TryRecovery" disabled="@_recovering">@(_recovering ? "Repairing…" : "Try to repair (new copy)")</button>
+                @if (FileManager.IsAvailable)
+                {
+                    <button class="rempty-btn" @onclick="() => FileManager.RevealAsync(tab.Path)">Show in folder</button>
+                }
+            </div>
+            @if (_recoverStatus is not null)
+            {
+                <div class="rempty-sub">@_recoverStatus</div>
+            }
+            @if (!string.IsNullOrEmpty(tab.ErrorDetail))
+            {
+                <details class="rempty-sub"><summary>Details</summary>@tab.ErrorDetail</details>
+            }
         </div>
     }
     else if (tab.Error is not null)
@@ -305,7 +335,11 @@
         <div class="rempty">
             <Icon Name="file-pdf" Size="40" />
             <div class="rempty-t">@tab.Error</div>
-            <button class="rempty-btn" @onclick="OpenViaPicker">Fetch…</button>
+            <button class="rempty-btn" @onclick="OpenViaPicker">@OpenAnotherLabel</button>
+            @if (!string.IsNullOrEmpty(tab.ErrorDetail))
+            {
+                <details class="rempty-sub"><summary>Details</summary>@tab.ErrorDetail</details>
+            }
         </div>
     }
     else if (viewOnly)
@@ -314,19 +348,19 @@
             @switch (tab.Format)
             {
                 case DocumentFormat.Docx:
-                    <DocxView @ref="_viewer" Path="@tab.Path" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" />
+                    <DocxView @ref="_viewer" Path="@tab.Path" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" OnStopOpening="StopOpening" />
                     break;
                 case DocumentFormat.Xlsx:
-                    <XlsxView @ref="_viewer" Path="@tab.Path" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" />
+                    <XlsxView @ref="_viewer" Path="@tab.Path" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" OnStopOpening="StopOpening" />
                     break;
                 case DocumentFormat.Markdown:
-                    <MarkdownView @ref="_viewer" Path="@tab.Path" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" />
+                    <MarkdownView @ref="_viewer" Path="@tab.Path" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" OnStopOpening="StopOpening" />
                     break;
                 case DocumentFormat.Html:
-                    <HtmlView @ref="_viewer" Path="@tab.Path" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" />
+                    <HtmlView @ref="_viewer" Path="@tab.Path" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" OnStopOpening="StopOpening" />
                     break;
                 default:
-                    <TextView @ref="_viewer" Path="@tab.Path" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" />
+                    <TextView @ref="_viewer" Path="@tab.Path" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" OnStopOpening="StopOpening" />
                     break;
             }
         </div>
@@ -560,7 +594,8 @@
                     </div>
                     @if (doc is not null)
                     {
-                        <button class="rpage-send" title="Send page @(n + 1) to a desk"
+                        @* B-23: a hover control on every page; out of the Tab order, so Tab reaches the rails first. *@
+                        <button class="rpage-send" title="Send page @(n + 1) to a desk" tabindex="-1"
                                 @onclick="() => ToggleSendMenu(n)" @onclick:stopPropagation="true">
                             <Icon Name="grid-view" Size="14" />
                         </button>
@@ -749,19 +784,19 @@
             @switch (_card)
             {
                 case "layers":
-                    <LayersCard Path="@tab.Path" Session="@tab.Session" CurrentPage="@CurPage" OnClose="CloseCard" OnMessage="OnCardMessage" OnLayersChanged="OnLayersChanged" />
+                    <LayersCard Path="@tab.Path" Session="@tab.Session" CurrentPage="@tab.CurrentPageIndex" OnClose="CloseCard" OnMessage="OnCardMessage" OnLayersChanged="OnLayersChanged" />
                     break;
                 case "measure":
-                    <MeasureCard Path="@tab.Path" Session="@tab.Session" CurrentPage="@CurPage" OnClose="CloseMeasure" OnMessage="OnCardMessage" Measurement="@_measure" OnClear="ClearMeasure" />
+                    <MeasureCard Path="@tab.Path" Session="@tab.Session" CurrentPage="@tab.CurrentPageIndex" OnClose="CloseMeasure" OnMessage="OnCardMessage" Measurement="@_measure" OnClear="ClearMeasure" />
                     break;
                 case "signatures":
-                    <SignaturesCard Path="@tab.Path" Session="@tab.Session" CurrentPage="@CurPage" OnClose="CloseCard" OnMessage="OnCardMessage" OnReport="OnSigReport" />
+                    <SignaturesCard Path="@tab.Path" Session="@tab.Session" CurrentPage="@tab.CurrentPageIndex" OnClose="CloseCard" OnMessage="OnCardMessage" OnReport="OnSigReport" />
                     break;
                 case "print":
-                    <PrintCard Path="@tab.Path" Session="@tab.Session" CurrentPage="@CurPage" OnClose="CloseCard" OnMessage="OnCardMessage" />
+                    <PrintCard Path="@tab.Path" Session="@tab.Session" CurrentPage="@tab.CurrentPageIndex" OnClose="CloseCard" OnMessage="OnCardMessage" />
                     break;
                 case "password":
-                    <PasswordCard Path="@tab.Path" Session="@tab.Session" CurrentPage="@CurPage" OnClose="CloseCard" OnMessage="OnCardMessage" OnSaved="OnProtectedSaved" />
+                    <PasswordCard Path="@tab.Path" Session="@tab.Session" CurrentPage="@tab.CurrentPageIndex" OnClose="CloseCard" OnMessage="OnCardMessage" OnSaved="OnProtectedSaved" />
                     break;
                 case "cert":
                     <FloatCard Title="Sign with certificate" Meta="always a new file" OnClose="CloseCard">
@@ -1459,6 +1494,19 @@
     private ReaderTab? Tab => Tabs.Active;
     private PdfDocumentVm? Doc => Tab?.Session?.Document;
     private int CurPage => Tab?.CurrentPage ?? 1;
+
+    // WT-10: the portal uploads rather than opening local files (as MainLayout's "Upload", U-11);
+    // other platforms keep "Fetch…".
+    // B-08b: "Stop opening" / "Close this tab" on a slow open closes the tab being opened.
+    private async Task StopOpening()
+    {
+        if (Tabs.Active is { } t)
+        {
+            await Tabs.CloseAsync(t.Id);
+        }
+    }
+
+    private string OpenAnotherLabel => Platform.Kind == ChuvadiReader.Platform.PlatformKind.Web ? "Upload…" : "Fetch…";
     private double CurScale => Tab?.Scale ?? 1.0;
     private string Zoom => CurScale.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
 
@@ -3327,12 +3375,13 @@
 
             if (!_initiallyFitted.Contains(tab.Id))
             {
-                // First time this document is shown — open it fitted to the page.
+                // First time this document is shown — open it fitted to the page; on a phone, fitted to
+                // the width (Portal & Android 12g–12j: the page fills the screen's width).
                 _initiallyFitted.Add(tab.Id);
                 _restoreScroll = false;
                 tab.TwoPage = false;
                 tab.Continuous = false;
-                await ApplyFit(ReaderFitMode.Page);
+                await ApplyFit(Platform.FormFactor == ChuvadiReader.Platform.FormFactor.Phone ? ReaderFitMode.Width : ReaderFitMode.Page);
             }
             else if (_restoreScroll)
             {

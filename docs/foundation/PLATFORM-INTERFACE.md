@@ -42,7 +42,7 @@ New contracts (`ChuvadiReader.Platform`):
 
 | Interface | Purpose | Desktop default in the kit |
 |---|---|---|
-| `IPlatformInfo` | `Kind`, `FormFactor` (+`FormFactorChanged`), `Input`, `Chrome`, `Capabilities`, `Keys` | `FixedPlatformInfo` |
+| `IPlatformInfo` | `Kind`, `FormFactor` (+`FormFactorChanged`), `Input`, `Chrome` (+`ChromeChanged`, D-101), `Capabilities`, `Keys` | `FixedPlatformInfo` |
 | `IFileWriteBack` | after a write to a picked/opened path, send it to its real destination | `NoFileWriteBack` (registered) |
 | `IAppPaths` | app-data, working (temp) and default save folders | `DesktopAppPaths` |
 | `IAccount` | user chip, Sangam sign-in/out | `LocalAccount` |
@@ -76,6 +76,31 @@ New contracts (`ChuvadiReader.Platform`):
 **`ShellLayout`** (Desktop / Tablet / Phone / Portal) is the single value the Ui switches chrome on, derived by `ShellLayouts.From(kind, formFactor)`: Web → Portal; otherwise Tablet/Phone/Desktop from the form factor. It is cascaded as `PlatformState.Shell` and written as `<html data-shell>` (see `FOR-UI-CHATS.md`).
 
 The Ui turns these into attributes on `<html>` (`data-shell`, `data-platform`, `data-form-factor`, `data-input`) so CSS for the new components can follow the design (e.g. 72/72/60 px rails on tablet), and picks new components for the chrome that differs (§5). Existing desktop markup stays as is.
+
+### Live chrome changes — `ChromeChanged` (D-101)
+
+`IPlatformInfo.ChromeChanged` tells the Ui that `Chrome` now returns a new value. The Ui redraws the top bar: the window buttons, from `Chrome.ButtonLayout`, or `Chrome.Buttons` when that is null. Everything else stays as it is: open tabs, scroll position, dialogs. Nothing reloads.
+
+```csharp
+/// Raised after Chrome returns a new value (D-101). Raise it on the host's UI thread, as FormFactorChanged.
+event Action? ChromeChanged { add { } remove { } }   // default: does nothing
+```
+
+- **Who raises it:** today only Linux. The user changes the button layout in GNOME Tweaks or KDE settings, which changes GTK's `gtk-decoration-layout`, and the window follows it at once ("follow the desktop" at every moment, option B of `docs/linux/PROPOSAL-window-button-layout.md`).
+- **Other hosts change nothing:** the member has a default body, so Windows, macOS, Android, Web, `FixedPlatformInfo` and every other existing `IPlatformInfo` compile and behave as before without declaring it.
+- **The Ui listens only on non-Windows platforms**, as for `FormFactorChanged`. Windows renders exactly as before (27/27 identical) and adds no startup work.
+
+**For the Linux host (all the Linux chat wires):**
+1. Declare the event: `public event Action? ChromeChanged;`.
+2. Watch GTK's setting, e.g. `notify::gtk-decoration-layout` on `GtkSettings`, which also fires when GNOME or KDE change it.
+3. On a change, on the GTK main thread: parse the new value into a `WindowButtonLayout` (left of the `:` → `Left`, right → `Right`; `minimize`, `maximize`, `close` in order; skip `appmenu`, `icon`, `menu`, `spacer`). Make `Chrome` return `Chrome with { ButtonLayout = newLayout }`, then raise `ChromeChanged`.
+4. Skip raising it when the parsed layout is the same as before. A redraw is cheap, but the setting can fire more than once per change.
+
+The Ui marshals onto its own dispatcher (`InvokeAsync`), so a host that raises the event from another thread still works. The UI thread is the rule, for consistency with `FormFactorChanged`.
+
+**Tests:**
+- `tests/ChuvadiReader.Hosting.Tests/ChromeChangedTests.cs`: the default does nothing for a host that never changes its chrome; listeners see the new layout when it is raised and stop after unsubscribing.
+- `tools/PixelProof/chrome-changed.js`: drives the real Ui in the preview's Linux mode (`CHVD_FF=linux`, where `POST /__preview/button-layout?gtk=…` stands in for the GTK watcher). Six layouts are changed live without reloading: the default, `close:`, `close,minimize:maximize`, `appmenu:close`, `:` and the default again. Each time, the buttons at each end of the top bar match, with no page errors.
 
 ## 3. The file model — decision F-1
 
