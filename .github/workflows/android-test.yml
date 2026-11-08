@@ -114,6 +114,7 @@ jobs:
       - name: Test-only Release with the AT-03 fix (ChuvadiReader.Platform rooted) — never shipped
         working-directory: reader
         run: |
+          rm -rf src/ChuvadiReader.Android/obj/Release src/ChuvadiReader.Android/bin/Release
           sed -i 's#</Project>#  <ItemGroup><TrimmerRootAssembly Include="ChuvadiReader.Platform" /></ItemGroup>\n</Project>#' src/ChuvadiReader.Android/ChuvadiReader.Android.csproj
           set +e
           # Warnings stay visible but don't stop this test-only build (the shipped build above is the warnings gate).

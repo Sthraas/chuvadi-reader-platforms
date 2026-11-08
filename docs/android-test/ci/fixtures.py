@@ -4,6 +4,7 @@
     fixtures.py <out-dir>
 """
 import io
+import re
 import os
 import random
 import sys
@@ -63,11 +64,23 @@ def encrypt(src, dst, user="", owner="owner-secret", perms=None):
     r = PdfReader(src)
     w = PdfWriter(clone_from=r)
     kw = {"user_password": user, "owner_password": owner, "algorithm": "AES-256"}
-    if perms is not None:
-        kw["permissions_flag"] = perms
+    if perms is None:
+        perms = P.all()
+    kw["permissions_flag"] = perms
     w.encrypt(**kw)
+    buf = io.BytesIO()
+    w.write(buf)
+    data = buf.getvalue()
+    # pypdf writes /P unsigned (e.g. 4294967292), which chuvadi-pdf rejects (known library item LIB-1).
+    # The main fixture uses the PDF spec's signed form (same byte length kept by padding with spaces);
+    # the unsigned original is kept as <name>-unsignedP.pdf.
+    m = re.search(rb"/P (\d{6,})", data)
+    open(dst.replace(".pdf", "-unsignedP.pdf"), "wb").write(data)
+    if m:
+        signed = str(int(m.group(1)) - (1 << 32)).encode()
+        data = data.replace(m.group(0), (b"/P " + signed).ljust(len(m.group(0))), 1)
     with open(dst, "wb") as f:
-        w.write(f)
+        f.write(data)
 
 
 def image_doc(path, px=6000):

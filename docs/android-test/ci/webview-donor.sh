@@ -14,7 +14,9 @@ for p in com.google.android.trichromelibrary com.google.android.webview; do
 done
 # Trichrome library is a static shared library (pm hides it): find its .apk on disk.
 i=0
-for path in $(adb shell 'find /data/app /product /system /system_ext -name "*.apk" 2>/dev/null' | tr -d '\r' | grep -i trichrome); do
+adb shell id > "$OUT/id.txt"
+adb shell 'find / -name "*.apk" 2>/dev/null' | tr -d '\r' | grep -i -E "trichrome|webview" | tee "$OUT/apks-found.txt"
+for path in $(grep -i trichrome "$OUT/apks-found.txt"); do
   adb pull "$path" "$OUT/com.google.android.trichromelibrary-$i.apk" && i=$((i+1))
 done
 adb shell pm list libraries > "$OUT/libraries-36.txt"

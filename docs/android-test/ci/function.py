@@ -65,18 +65,34 @@ def to_screen(x, y):
 
 
 def tap(*labels, sel=None):
-    """Real finger tap on the first visible control whose label starts with one of `labels`."""
+    """Finger tap (`input tap`: a real touch through InputManager, rotation-aware) on the first visible
+    control whose label starts with one of `labels`."""
     hit = find(*labels, sel=sel)
     if not hit:
         return None
     sx, sy = to_screen(hit["x"], hit["y"])
-    touch("tap", sx, sy)
+    sh(f"input tap {sx} {sy}")
+    time.sleep(0.8)
     return hit
 
 
 def tap_css(x, y):
     sx, sy = to_screen(x, y)
-    touch("tap", sx, sy)
+    sh(f"input tap {sx} {sy}")
+    time.sleep(0.8)
+
+
+def is_phone():
+    return cdp.js("document.documentElement.getAttribute('data-shell')") == "phone"
+
+
+def command(name):
+    """A document command the way a person reaches it: phone ⋮ sheet row, tablet rail / left bar."""
+    if is_phone():
+        tap("More", sel=".ph-ib")
+        time.sleep(1)
+        return tap(name, sel=".ph-row")
+    return tap(name, name + " (Ctrl", sel=".rb, .lb-btn, .tb-doc, button")
 
 
 def state():
@@ -186,7 +202,7 @@ uris = {n: push_media(os.path.join(FX, n)) for n in
 cdp.js("Blazor.navigateTo('/')")
 time.sleep(1.5)
 shot("home")
-hit = tap("Open", "+ Open", "Open a file", "Open…")
+hit = tap("Open a document", sel=".ph-fab") if is_phone() else tap("Choose a document to open", "Open (Ctrl O)")
 time.sleep(3)
 shot("picker")
 picked = saf_pick("form.pdf")
@@ -212,14 +228,20 @@ R.check("F-17 single instance: one activity record after three arrivals", F17 ==
 
 # F-02 Page navigation by the pager buttons
 st0 = state()
-tap("Next page", "Next")
-time.sleep(1)
+if is_phone():
+    d = cdp.js("(() => { const r = [...document.querySelectorAll('.rdesk')].find(e => e.getBoundingClientRect().width > 0).getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2, r.width]; })()")
+    x1, y1 = to_screen(d[0] + d[2] * 0.35, d[1])
+    x2, _ = to_screen(d[0] - d[2] * 0.35, d[1])
+    touch("swipe", x1, y1, x2, y1, 250)
+else:
+    tap("Next page")
+time.sleep(1.5)
 st1 = state()
 R.check("F-02 next page moves the counter", st1.get("counter") != st0.get("counter"), {"before": st0.get("counter"), "after": st1.get("counter")})
 
 # F-03 Find
-tap("Find", "Search")
-time.sleep(1.2)
+command("Find")
+time.sleep(1.5)
 sh("input text zephyrine")
 time.sleep(0.4)
 sh("input keyevent KEYCODE_ENTER")
@@ -234,11 +256,8 @@ time.sleep(1)
 esc()
 
 # F-11 Print: vector output and no-print refusal
-tap("Print", "Document")
-time.sleep(1)
-if not state().get("cards") or "Print" not in (state().get("cards") or []):
-    tap("Print")
-    time.sleep(1)
+command("Print")
+time.sleep(1.5)
 shot("print-card")
 t0 = int(sh("date +%s").strip())
 pr = tap("Print", sel="section.chvd-card .footer button")
@@ -278,10 +297,8 @@ esc()
 open_with(uris["enc-noprint-owner.pdf"])
 st = wait_state(lambda s: (s.get("tab") or "").lower().startswith("enc-noprint") and s.get("rendered", 0) >= 1, 40, "no-print opens")
 R.check("R-02a owner-password (no user password) PDF opens without a prompt", st.get("rendered", 0) >= 1, st)
-tap("Print", "Document")
-time.sleep(1)
-tap("Print")
-time.sleep(1)
+command("Print")
+time.sleep(1.5)
 btn = find("Print", sel="section.chvd-card .footer button")
 shot("noprint-card")
 R.check("F-11c a no-print PDF's Print is refused with a reason", bool(btn and btn["disabled"]), btn)
@@ -299,8 +316,7 @@ esc()
 # F-14 Rotation with an open document and a card open
 open_with(uris["doc-12p.pdf"])
 wait_state(lambda s: (s.get("tab") or "").lower().startswith("doc-12p"), 30, "doc")
-tap("Next page", "Next")
-tap("Next page", "Next")
+tap("Next page")
 before = state()
 set_rotation(1 - portrait_rotation())
 time.sleep(2)
@@ -356,7 +372,7 @@ tap("Use Cream paper", "Cream paper")
 # D-08 On-screen keyboard over Find (field stays visible)
 open_with(uris["doc-12p.pdf"])
 wait_state(lambda s: s.get("rendered", 0) >= 1, 30, "doc")
-tap("Find", "Search")
+command("Find")
 time.sleep(2)
 ime = sh("dumpsys input_method | grep -E 'mInputShown|mIsInputViewShown'")
 field = cdp.js("(() => { const f = document.activeElement; if (!f) return null; const r = f.getBoundingClientRect();"
@@ -368,7 +384,7 @@ sh("input keyevent KEYCODE_BACK")
 esc()
 
 # F-12 Back closes a sheet/card first, then walks out
-tap("More") if state().get("shell") == "phone" else tap("Document")
+tap("More", sel=".ph-ib") if is_phone() else command("Print")
 time.sleep(1)
 had = state()
 sh("input keyevent KEYCODE_BACK")
