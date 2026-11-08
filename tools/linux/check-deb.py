@@ -13,7 +13,7 @@ Fails when:
         text is missing
 Needs: lintian, python3-fonttools, python3-brotli (test tools).
 """
-import fnmatch, os, re, stat, subprocess, sys, tarfile, tempfile
+import fnmatch, json, os, re, stat, subprocess, sys, tarfile, tempfile
 
 from fontTools.ttLib import TTFont
 
@@ -77,6 +77,21 @@ for deb in sys.argv[1:]:
         rc = open(os.path.join(root, LIB, "chuvadi-reader.runtimeconfig.json"), encoding="utf-8").read()
         if re.search(r'"System\.Resources\.UseSystemResourceKeys"\s*:\s*true', rc):
             fail(deb, "runtimeconfig turns .NET's messages into resource keys (UseSystemResourceKeys)")
+        # ── Arun's libraries are the versions the build names (a stale ReadyToRun image once shipped Sheets
+        #    1.1.2 under a deps.json that said 2.0.2) ──
+        deps_path = os.path.join(root, LIB, "chuvadi-reader.deps.json")
+        libraries = json.load(open(deps_path, encoding="utf-8"))["libraries"]
+        for key, info in libraries.items():
+            name, version = key.split("/", 1)
+            if info.get("type") != "package" or not name.startswith(("Chuvadi.", "LiPicons.")):
+                continue
+            dll = os.path.join(root, LIB, name + ".dll")
+            if not os.path.exists(dll):
+                continue  # a package without an assembly of its own name (resources only)
+            found = {v.split(b"+")[0].decode() for v in
+                     re.findall(rb"\x00[\x05-\x60](\d+\.\d+\.\d+(?:-[\w.]+)?(?:\+[\w.]*)?)\x00\x00", open(dll, "rb").read())}
+            if version not in found:
+                fail(deb, f"{name}.dll is version {', '.join(sorted(found)) or '?'}, but the build names {version}")
         # ── fonts and their licence ──
         copyright_text = open(os.path.join(root, "usr/share/doc/chuvadi-reader/copyright"), encoding="utf-8").read()
         paras = stanzas(copyright_text)

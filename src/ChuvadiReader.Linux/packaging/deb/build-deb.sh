@@ -42,7 +42,9 @@ lib="$stage/usr/lib/$pkg"
 mkdir -p "$lib" "$stage/usr/bin" "$stage/usr/share/applications" "$stage/usr/share/metainfo" \
          "$stage/usr/share/doc/$pkg" "$stage/etc/apparmor.d" "$stage/DEBIAN"
 
-# 1. Publish (ReadyToRun, D-50).
+# 1. Publish (ReadyToRun, D-50). ReadyToRun keeps its compiled images in obj/ and recompiles only when an input
+#    is newer, so a library update whose DLL is dated earlier (a release asset) would ship the old image: clear it.
+rm -rf "$project"/obj/Release/net10.0/*/R2R
 selfc=$([ "$mode" = "self-contained" ] && echo true || echo false)
 dotnet publish "$project/ChuvadiReader.Linux.csproj" -c Release -r "$rid" --self-contained "$selfc" \
     -p:PublishReadyToRun=true -o "$lib" -warnaserror -nologo -v quiet
