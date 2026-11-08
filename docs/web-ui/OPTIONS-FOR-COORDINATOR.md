@@ -137,7 +137,7 @@ public static string CommandTip(IPlatformInfo platform) =>
 
 Recommendation: **(a)**. Not built until decided (it touches `AccountMenu`, which the Foundation edited for Unit — I would send the change as a small diff on its current copy).
 
-## U-16 The 12a sign-in pitch still says "encrypted at rest" (D-98 follow-up)
+## ✔ decided (a), D-103 — done session 10 — U-16 The 12a sign-in pitch still says "encrypted at rest" (D-98 follow-up)
 D-98 changed the status bar (and the draft Terms) because, under D-28, documents live only in memory and memory itself is not encrypted. The same claim is in the 12a pitch (`PortalSignIn`, D-31 kept it): "…On the portal, files are processed on our server, **encrypted at rest**, and visible only to you." Not changed yet — the decision named only the status bar.
 - **(a) Same wording as D-98:** "…On the portal, files are processed on our server, **kept in memory only**, and visible only to you." Pros: true; matches the status bar and the promises ("Files live only for your session, then are wiped"). Cons: departs from the handout text (as D-98 already does).
 - **(b) Drop the clause:** "…files are processed on our server and visible only to you." Pros: shortest. Cons: loses a reassurance that is true.
@@ -145,7 +145,7 @@ D-98 changed the status bar (and the draft Terms) because, under D-28, documents
 
 Recommendation **(a)** — a one-word-group change in my file, ready as soon as you say.
 
-## D-89 Home drop overlay — checked (Foundation's `PortalDropCatcher`, on foundation since the fifth patch)
+## ✔ decided (b), D-104 — diff sent session 10 — D-89 Home drop overlay — checked (Foundation's `PortalDropCatcher`, on foundation since the fifth patch)
 Behaviour is right: catches only file drags (`types` includes "Files"), lets image-only drags through to the Reader, never lets the browser open a dropped file, clears on drop, `dragend` and window blur, and is rendered only on the portal (`IsPortal && DropFiles`; desktop and Android never). Multi-file: up to 64 per drop, the rest reported.
 **One gap against the handout:** the catcher is **invisible by design** ("nothing to see — the desktop window shows nothing either"), but the handout draws a drag-over state (Walkthrough "Drop to open": dashed 2 px binding border inset 24 px, radius 14, light wash, upload icon, "Drop to open" in Instrument Serif 28 px). Options:
 - **(a) Keep it invisible.** Pros: same as the desktop today; nothing to build. Cons: on the web there is no sign that the page — not the browser — will take the file, until it opens.
@@ -153,6 +153,14 @@ Behaviour is right: catches only file drags (`types` includes "Files"), lets ima
 - **(c) Both portal and desktop.** Cons: desktop needs work in the Windows host (WebView drop), outside this chat.
 
 Recommendation **(b)**. It is the Foundation's component; I can send the CSS + markup as a diff for it if you prefer.
+
+## U-17 "Drop to open" over Home's own drop zone (found while proving D-104)
+The handout draws "Drop to open" over a document. On **Home**, the page already has its own drop zone in the middle ("Drop your first document here", States 8b), so while a file is dragged the overlay's icon and title sit on top of the zone's icon and title, seen through the 55 % wash — two upload icons, two titles (`screenshots/chromium-drop-over.png`; in Night paper the Home zone also shows its own drag highlight, `webkit-drop-over-dark.png`). Elsewhere (Library, Settings, a document) it reads cleanly.
+- **(a) Keep as built** — exactly the handout's panel everywhere. Pros: literal handout; no more change. Cons: the doubled text on Home, where people drop most.
+- **(b) While a drag is on, Home's drop zone hides its own contents** (the zone's frame stays): `portal-drop.js` also toggles a class on `<html>` (e.g. `chvd-dragging`), and one CSS rule in the Home styles hides `.dropzone > *` under it. Pros: one clean "Drop to open" everywhere; the handout's panel unchanged; desktop untouched (the class is only set by the portal script). Cons: touches the Foundation's script and the Home styles (two more small diffs).
+- **(c) No overlay on Home** — Home keeps 8b's zone as the visible target. Pros: uses the designed 8b state there. Cons: the drop is still caught full-window, so the visible target and the real one differ; inconsistent between pages.
+
+Recommendation **(b)**. Not built until decided.
 
 ## D-54 (chuvadi-pdf 3.31.2) — what I will check when the Foundation's overlay lands
 Handout references: **Walkthrough "Drop to open"** (drag-over state) and **States & Feedback 8b** ("Home with nothing yet").
@@ -163,6 +171,14 @@ Handout references: **Walkthrough "Drop to open"** (drag-over state) and **State
 5. Dropping several files opens each in its own tab (D-83); a non-supported type shows the 8e-style "Can't open" message, not a silent no-op.
 6. Phone and touch tablet: no drag-over state (no drag source); the 8b zone acts as the Upload button.
 7. Desktop (Windows profile) pixel-identical; Android keeps option B wording.
+
+## U-17 "Drop to open" over Home's own drop zone (found while proving D-104)
+The handout draws "Drop to open" over a document. On **Home**, the page already has its own drop zone in the middle ("Drop your first document here", States 8b), so while a file is dragged the overlay's icon and title sit on top of the zone's icon and title, seen through the 55 % wash — two upload icons, two titles (`screenshots/chromium-drop-over.png`; in Night paper the Home zone also shows its own drag highlight, `webkit-drop-over-dark.png`). Elsewhere (Library, Settings, a document) it reads cleanly.
+- **(a) Keep as built** — exactly the handout's panel everywhere. Pros: literal handout; no more change. Cons: the doubled text on Home, where people drop most.
+- **(b) While a drag is on, Home's drop zone hides its own contents** (the zone's frame stays): `portal-drop.js` also toggles a class on `<html>` (e.g. `chvd-dragging`), and one CSS rule in the Home styles hides `.dropzone > *` under it. Pros: one clean "Drop to open" everywhere; the handout's panel unchanged; desktop untouched (the class is only set by the portal script). Cons: touches the Foundation's script and the Home styles (two more small diffs).
+- **(c) No overlay on Home** — Home keeps 8b's zone as the visible target. Pros: uses the designed 8b state there. Cons: the drop is still caught full-window, so the visible target and the real one differ; inconsistent between pages.
+
+Recommendation **(b)**. Not built until decided.
 
 ## D-54 (chuvadi-pdf 3.31.2)
 Landed on `platform/foundation` (be4498a) during this session; `platform/web-ui` is rebased onto it and re-checked (BUILD-LOG session 2 §7).

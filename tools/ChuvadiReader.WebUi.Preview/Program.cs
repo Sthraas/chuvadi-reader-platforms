@@ -17,6 +17,10 @@ builder.Services.AddScoped<NoClipboard>();
 builder.Services.AddScoped<IImageClipboard>(sp => sp.GetRequiredService<NoClipboard>());
 builder.Services.AddScoped<IClipboard>(sp => sp.GetRequiredService<NoClipboard>());
 builder.Services.AddScoped<IAccount, FakeSangamAccount>();
+if ((platformName ?? "web").Equals("web", StringComparison.OrdinalIgnoreCase))
+{
+    builder.Services.AddScoped<IDroppedFiles, PreviewDroppedFiles>();
+}
 builder.Services.AddSingleton(PreviewPlatforms.From(platformName, Environment.GetEnvironmentVariable("PREVIEW_FORMFACTOR")));
 builder.Services.AddSingleton(new PortalLinks(PortalLinks.PlaceholderDesktopAppUrl, "https://sangam.example/account", "/terms", "/privacy"));
 

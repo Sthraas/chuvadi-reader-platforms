@@ -36,6 +36,13 @@ public class SignInTextTests
     }
 
     [Fact]
+    public void Pitch_says_kept_in_memory_not_encrypted_at_rest_D98_D103()
+    {
+        Assert.Contains("kept in memory only", PortalSignIn.PitchText);
+        Assert.DoesNotContain("encrypted at rest", PortalSignIn.PitchText);
+    }
+
+    [Fact]
     public void No_promise_claims_per_user_storage_or_delete()
     {
         Assert.DoesNotContain(PortalSignIn.PromiseTexts, t => t.Contains("per-user storage", StringComparison.OrdinalIgnoreCase));
