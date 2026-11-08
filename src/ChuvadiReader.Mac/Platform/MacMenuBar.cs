@@ -35,12 +35,20 @@ internal static class MacMenuBar
         "c", "v", "x", "a", "z", "q", "h", "m", ",", "`",
     };
 
-    private static string _signature = string.Empty;
+    /// <summary>The Ui's Settings page command (MainLayout "Go to" group).</summary>
+    private const string SettingsId = "go.settings";
 
-    /// <summary>Rebuilds the menu bar when the set of commands changes. Enabled state is not part of
+    private static string _signature = string.Empty;
+    private static int _builds;
+
+    /// <summary>Rebuilds the menu bar whenever the set of commands changes. Enabled state is not part of
     /// the signature — it is checked each time a menu opens (AppDelegate.ValidateCommand).</summary>
     public static void Watch(IAppCommands commands)
     {
+        // AppKit adds its own "Enter Full Screen" (⌃⌘F) to any menu titled View; Chuvadi's Immersive
+        // takes ⌃⌘F instead (decision 6 Nov, Mac Test M-01). This default is how a Mac app opts out.
+        NSUserDefaults.StandardUserDefaults.SetBool(false, "NSFullScreenMenuItemEverywhere");
+
         commands.Changed += () =>
         {
             var sig = Signature(commands);
@@ -50,8 +58,27 @@ internal static class MacMenuBar
             }
 
             _signature = sig;
-            UIApplication.SharedApplication.BeginInvokeOnMainThread(() => UIMenuSystem.MainSystem.SetNeedsRebuild());
+            RequestRebuild("commands-changed");
         };
+    }
+
+    /// <summary>Asks UIKit to call BuildMenu again (main thread).</summary>
+    public static void RequestRebuild(string reason)
+    {
+        void Rebuild()
+        {
+            MacSmoke.Log("menu-rebuild " + reason);
+            UIMenuSystem.MainSystem.SetNeedsRebuild();
+        }
+
+        if (NSThread.IsMain)
+        {
+            Rebuild();
+        }
+        else
+        {
+            UIApplication.SharedApplication.BeginInvokeOnMainThread(Rebuild);
+        }
     }
 
     private static string Signature(IAppCommands commands)
@@ -64,6 +91,22 @@ internal static class MacMenuBar
            ?? commands.Commands.FirstOrDefault(c => c.Id == id);
 
     public static void Build(IUIMenuBuilder builder, IAppCommands source)
+    {
+        _builds++;
+        try
+        {
+            BuildCore(builder, source);
+            MacSmoke.Log($"menu-built #{_builds} commands={source.Commands.Count} document={source.DocumentMenu.Count}");
+        }
+        catch (Exception ex)
+        {
+            // A failed rebuild must never take the app down; the log says why (CI smoke run).
+            MacSmoke.Log($"menu-build-failed #{_builds}: {ex.GetType().Name}: {ex.Message}");
+            Console.Error.WriteLine("Chuvadi: menu build failed: " + ex);
+        }
+    }
+
+    private static void BuildCore(IUIMenuBuilder builder, IAppCommands source)
     {
         // Menus that don't fit Chuvadi: Format, and Edit's text tools. Edit › Find is removed so
         // ⌘F reaches Chuvadi's own Find, as Ctrl F does on Windows.
@@ -127,6 +170,23 @@ internal static class MacMenuBar
 
         var document = UIMenu.Create("Document", null, UIMenuIdentifier.None, (UIMenuOptions)0, doc.ToArray());
         builder.InsertSiblingMenuAfter(document, UIMenuIdentifier.View.GetConstant()!);
+
+        // Chuvadi menu: Settings… ⌘, (Mac Test M-11), where every Mac app has it.
+        if (Find(source, SettingsId) is not null)
+        {
+            var settings = UIKeyCommand.Create((NSString)"Settings…", null, new Selector(ActionSelector), (NSString)",",
+                UIKeyModifierFlags.Command, new NSString(SettingsId));
+            if (builder.GetMenu(UIMenuIdentifier.Preferences.GetConstant()!) is not null)
+            {
+                builder.ReplaceChildrenOfMenu(UIMenuIdentifier.Preferences.GetConstant()!, _ => new UIMenuElement[] { settings });
+            }
+            else
+            {
+                builder.InsertSiblingMenuAfter(
+                    UIMenu.Create(string.Empty, null, UIMenuIdentifier.None, UIMenuOptions.DisplayInline, new UIMenuElement[] { settings }),
+                    UIMenuIdentifier.About.GetConstant()!);
+            }
+        }
 
         // Help keeps only macOS's own menu search field.
         builder.ReplaceChildrenOfMenu(UIMenuIdentifier.Help.GetConstant()!, _ => Array.Empty<UIMenuElement>());

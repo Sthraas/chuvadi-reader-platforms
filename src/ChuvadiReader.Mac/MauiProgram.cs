@@ -60,12 +60,29 @@ public static class MauiProgram
         services.AddSingleton<MacUiScale>();
         services.AddSingleton<IUiScale>(sp => sp.GetRequiredService<MacUiScale>());
 
-        // Files opened with Chuvadi from Finder: at launch (scene connect) and while running.
+        // Files opened with Chuvadi from Finder, the Dock or `open` (Mac Test M-02): macOS uses the scene
+        // events (SceneDelegate, Info.plist scene manifest) — at launch in the connection options, while
+        // running as open-URL contexts. The app-level open-URL and launch options are routed too, in case
+        // a macOS version hands a file over that way. All go to the kit's IncomingFiles.
         builder.ConfigureLifecycleEvents(events => events.AddiOS(ios => ios
-            .SceneWillConnect((_, _, options) => Incoming(options.UrlContexts))
+            .SceneWillConnect((_, _, options) => Incoming(options.UrlContexts?.ToArray().Select(c => c.Url)))
             .SceneOpenUrl((_, contexts) =>
             {
-                Incoming(contexts);
+                Incoming(contexts?.ToArray().Select(c => c.Url));
+                return true;
+            })
+            .OpenUrl((_, url, _) =>
+            {
+                Incoming(new[] { url });
+                return true;
+            })
+            .FinishedLaunching((_, options) =>
+            {
+                if (options?[UIKit.UIApplication.LaunchOptionsUrlKey] is Foundation.NSUrl url)
+                {
+                    Incoming(new[] { url });
+                }
+
                 return true;
             })));
 
@@ -77,13 +94,15 @@ public static class MauiProgram
 
     private static IServiceProvider? _services;
 
-    private static void Incoming(Foundation.NSSet<UIKit.UIOpenUrlContext>? contexts)
+    private static void Incoming(IEnumerable<Foundation.NSUrl>? urls)
     {
-        if (contexts is null || contexts.Count == 0 || _services is null)
+        var list = urls?.Where(u => u is not null).ToArray() ?? Array.Empty<Foundation.NSUrl>();
+        if (list.Length == 0 || _services is null)
         {
             return;
         }
 
-        MacFileArrivals.Route(_services, contexts.ToArray().Select(c => c.Url));
+        MacSmoke.Log("files-arrived " + string.Join(" ", list.Select(u => Path.GetFileName(u.Path ?? string.Empty))));
+        MacFileArrivals.Route(_services, list);
     }
 }

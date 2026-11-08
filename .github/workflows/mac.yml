@@ -89,6 +89,12 @@ jobs:
           for f in LICENSE.txt EULA.txt THIRD-PARTY-NOTICES.txt DOTNET-RUNTIME-THIRD-PARTY-NOTICES.txt DOTNET-MACCATALYST-LICENSE.txt; do
             [ -s "$R/$f" ] || { echo "missing: legal/$f"; exit 1; }
           done
+          # M-12: every legal file is 0644 (no executable bit).
+          for f in "$R"/*.txt; do m=$(stat -f %Lp "$f"); [ "$m" = "644" ] || { echo "mode $m: $f"; exit 1; }; done
+          # M-05: the app icon is compiled into the bundle and named in Info.plist.
+          [ -s "$APP/Contents/Resources/Assets.car" ] || { echo "no Assets.car (app icon)"; exit 1; }
+          ICON=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIconName' "$APP/Contents/Info.plist") || { echo "no CFBundleIconName"; exit 1; }
+          echo "CFBundleIconName: $ICON"; ls -la "$APP/Contents/Resources" | grep -iE 'Assets.car|\.icns' || true
           cmp LICENSE "$R/LICENSE.txt"
           cmp legal/EULA.txt "$R/EULA.txt"
           cmp legal/THIRD-PARTY-NOTICES.txt "$R/THIRD-PARTY-NOTICES.txt"
@@ -108,17 +114,20 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Verify both architectures
+        if: ${{ !cancelled() }}
         run: |
           ARCHS=$(lipo -archs "$BIN")
           echo "architectures: $ARCHS"
           [[ "$ARCHS" == *arm64* && "$ARCHS" == *x86_64* ]] || { echo "not universal"; exit 1; }
 
       - name: Ad-hoc sign (no developer account; arm64 code must carry a signature to run)
+        if: ${{ !cancelled() }}
         run: |
           codesign --force --deep --sign - --entitlements src/ChuvadiReader.Mac/Platforms/MacCatalyst/Entitlements.plist "$APP"
           codesign --verify --deep --strict --verbose=2 "$APP"
 
       - name: Smoke run (launch to first render, record startup)
+        if: ${{ !cancelled() }}
         run: |
           set +e
           # Launched through LaunchServices (open), as a person double-clicking it would: a Mac
@@ -136,6 +145,21 @@ jobs:
             grep CHUVADI_STARTUP smoke.log
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
+      # Mac Test M-01 … M-07, M-11: files at launch and while running, menu bar, Settings, geometry,
+      # clean quit, startup breakdown — one real launch, every check reported (.github/scripts/mac-smoke.sh).
+      - name: Smoke run (files, menu bar, window, quit)
+        if: ${{ !cancelled() }}
+        run: |
+          .github/scripts/mac-smoke.sh "$APP" 2>&1 | tee smoke-checks.txt
+          RC=${PIPESTATUS[0]}
+          {
+            echo "### Mac smoke checks"
+            echo '```'
+            grep -E '^(PASS|FAIL)|^== ' smoke-checks.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit $RC
 
       - name: Package
         run: |
@@ -157,4 +181,6 @@ jobs:
           path: |
             **/test-results.trx
             smoke.log
+            smoke-files.log
+            smoke-checks.txt
           if-no-files-found: ignore

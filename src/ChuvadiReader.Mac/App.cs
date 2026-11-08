@@ -16,6 +16,13 @@ public sealed class App : Application
             StartupTimeline.Mark("first-render");
             StartupTimeline.Flush();
 
+            // The Ui has now registered its commands: make sure the menu bar is built from them (M-01).
+            UIKit.UIApplication.SharedApplication.BeginInvokeOnMainThread(() =>
+            {
+                MacMenuBar.RequestRebuild("ui-ready");
+                MacSmoke.Start(_services, MainPage.WebKitView);
+            });
+
             // CI smoke run: launch, reach the first Blazor render, report, quit.
             if (Environment.GetEnvironmentVariable("CHUVADI_SMOKE_EXIT") == "1")
             {
