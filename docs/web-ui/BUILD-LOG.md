@@ -218,3 +218,14 @@ Diff for the Foundation: `proposal/web-ui-drop-overlay.patch` (catcher markup + 
 
 ### 4. Build and tests
 Build `-warnaserror` 0 warnings; tests 16 + 54 + 33 + 171 = **274 pass**.
+
+## 2026-11-08 — session 11 (coordinator 19:50: U-17 b / D-109)
+
+### 1. Checked all branches
+`platform/foundation` 9fbed93 (part 2a: **H7, the D-103 pitch and the drop overlay applied** — `git apply -R --check` of both patches succeeds), `main` 19116b6 (D-108, D-109), `platform/mobile-ui` a20f6d1, `platform/web` 31b063e. No `platform/web-test` yet. Rebased onto 9fbed93: clean; my `src` equals the Foundation's.
+
+### 2. U-17 (b)
+Diff for the Foundation: `proposal/web-ui-home-drop-zone.patch` — `portal-drop.js` toggles `chvd-dragging` on `<html>` with the catcher's `on`; one rule in `Dashboard.razor.css` hides Home's zone contents (`visibility`, frame kept). Proved in three browsers, Cream and Night paper; Windows unaffected (HOOKS). Foundation files reverted on this branch.
+
+### 3. Build and tests
+Build `-warnaserror` 0 warnings; tests below.

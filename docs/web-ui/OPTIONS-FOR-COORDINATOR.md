@@ -154,13 +154,13 @@ Behaviour is right: catches only file drags (`types` includes "Files"), lets ima
 
 Recommendation **(b)**. It is the Foundation's component; I can send the CSS + markup as a diff for it if you prefer.
 
-## U-17 "Drop to open" over Home's own drop zone (found while proving D-104)
+## U-17 "Drop to open" over Home's own drop zone — **decided (b), D-109**
 The handout draws "Drop to open" over a document. On **Home**, the page already has its own drop zone in the middle ("Drop your first document here", States 8b), so while a file is dragged the overlay's icon and title sit on top of the zone's icon and title, seen through the 55 % wash — two upload icons, two titles (`screenshots/chromium-drop-over.png`; in Night paper the Home zone also shows its own drag highlight, `webkit-drop-over-dark.png`). Elsewhere (Library, Settings, a document) it reads cleanly.
 - **(a) Keep as built** — exactly the handout's panel everywhere. Pros: literal handout; no more change. Cons: the doubled text on Home, where people drop most.
 - **(b) While a drag is on, Home's drop zone hides its own contents** (the zone's frame stays): `portal-drop.js` also toggles a class on `<html>` (e.g. `chvd-dragging`), and one CSS rule in the Home styles hides `.dropzone > *` under it. Pros: one clean "Drop to open" everywhere; the handout's panel unchanged; desktop untouched (the class is only set by the portal script). Cons: touches the Foundation's script and the Home styles (two more small diffs).
 - **(c) No overlay on Home** — Home keeps 8b's zone as the visible target. Pros: uses the designed 8b state there. Cons: the drop is still caught full-window, so the visible target and the real one differ; inconsistent between pages.
 
-Recommendation **(b)**. Not built until decided.
+Recommendation **(b)**. **Decided (b), D-109** — sent to the Foundation as `proposal/web-ui-home-drop-zone.patch` (HOOKS).
 
 ## D-54 (chuvadi-pdf 3.31.2) — what I will check when the Foundation's overlay lands
 Handout references: **Walkthrough "Drop to open"** (drag-over state) and **States & Feedback 8b** ("Home with nothing yet").
@@ -171,14 +171,6 @@ Handout references: **Walkthrough "Drop to open"** (drag-over state) and **State
 5. Dropping several files opens each in its own tab (D-83); a non-supported type shows the 8e-style "Can't open" message, not a silent no-op.
 6. Phone and touch tablet: no drag-over state (no drag source); the 8b zone acts as the Upload button.
 7. Desktop (Windows profile) pixel-identical; Android keeps option B wording.
-
-## U-17 "Drop to open" over Home's own drop zone (found while proving D-104)
-The handout draws "Drop to open" over a document. On **Home**, the page already has its own drop zone in the middle ("Drop your first document here", States 8b), so while a file is dragged the overlay's icon and title sit on top of the zone's icon and title, seen through the 55 % wash — two upload icons, two titles (`screenshots/chromium-drop-over.png`; in Night paper the Home zone also shows its own drag highlight, `webkit-drop-over-dark.png`). Elsewhere (Library, Settings, a document) it reads cleanly.
-- **(a) Keep as built** — exactly the handout's panel everywhere. Pros: literal handout; no more change. Cons: the doubled text on Home, where people drop most.
-- **(b) While a drag is on, Home's drop zone hides its own contents** (the zone's frame stays): `portal-drop.js` also toggles a class on `<html>` (e.g. `chvd-dragging`), and one CSS rule in the Home styles hides `.dropzone > *` under it. Pros: one clean "Drop to open" everywhere; the handout's panel unchanged; desktop untouched (the class is only set by the portal script). Cons: touches the Foundation's script and the Home styles (two more small diffs).
-- **(c) No overlay on Home** — Home keeps 8b's zone as the visible target. Pros: uses the designed 8b state there. Cons: the drop is still caught full-window, so the visible target and the real one differ; inconsistent between pages.
-
-Recommendation **(b)**. Not built until decided.
 
 ## D-54 (chuvadi-pdf 3.31.2)
 Landed on `platform/foundation` (be4498a) during this session; `platform/web-ui` is rebased onto it and re-checked (BUILD-LOG session 2 §7).

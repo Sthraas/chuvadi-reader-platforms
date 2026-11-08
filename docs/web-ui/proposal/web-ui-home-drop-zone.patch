@@ -1,0 +1,40 @@
+diff --git a/src/ChuvadiReader.Ui/Pages/Dashboard.razor.css b/src/ChuvadiReader.Ui/Pages/Dashboard.razor.css
+index 1d8bc70..3e3b796 100644
+--- a/src/ChuvadiReader.Ui/Pages/Dashboard.razor.css
++++ b/src/ChuvadiReader.Ui/Pages/Dashboard.razor.css
+@@ -68,6 +68,9 @@
+ button.drop:hover { border-color: var(--chvd-binding); }
+ button.drop:focus-visible { outline: 2px solid var(--chvd-binding); outline-offset: 2px; }
+ .drop.first { height: auto; min-height: 220px; cursor: default; }
++/* D-109 (U-17 b): on the portal, while files are dragged over the window ("Drop to open" showing), the
++   zone keeps its frame but hides its own icon and text. The class is set only by portal-drop.js. */
++html.chvd-dragging .drop > * { visibility: hidden; }
+ .drop-ic { display: flex; color: var(--chvd-binding); }
+ .drop-title { font-family: var(--chvd-serif-display); font-size: 26px; color: var(--chvd-ink); text-align: center; }
+ .drop-sub { font-size: var(--chvd-fs-body); color: var(--chvd-ink-soft); text-align: center; }
+diff --git a/src/ChuvadiReader.Ui/wwwroot/js/portal-drop.js b/src/ChuvadiReader.Ui/wwwroot/js/portal-drop.js
+index f473604..9bcd298 100644
+--- a/src/ChuvadiReader.Ui/wwwroot/js/portal-drop.js
++++ b/src/ChuvadiReader.Ui/wwwroot/js/portal-drop.js
+@@ -13,8 +13,11 @@ const hasFiles = (dt) => !!dt && Array.from(dt.types || []).includes('Files');
+ export function attach(root) {
+     const input = root.querySelector('input[type=file]');
+     let depth = 0;
+-    const on = () => root.classList.add('on');
+-    const off = () => { depth = 0; root.classList.remove('on'); };
++    // D-109 (U-17 b): the same state on <html>, so Home's own drop zone can step aside while the
++    // "Drop to open" panel shows (one title, not two).
++    const html = document.documentElement;
++    const on = () => { root.classList.add('on'); html.classList.add('chvd-dragging'); };
++    const off = () => { depth = 0; root.classList.remove('on'); html.classList.remove('chvd-dragging'); };
+ 
+     const enter = (e) => {
+         if (!hasFiles(e.dataTransfer) || isImageOnly(e.dataTransfer)) return;
+@@ -46,6 +49,7 @@ export function attach(root) {
+ 
+     return {
+         dispose() {
++            html.classList.remove('chvd-dragging');
+             document.removeEventListener('dragenter', enter, true);
+             document.removeEventListener('dragleave', leave, true);
+             document.removeEventListener('dragover', over, true);

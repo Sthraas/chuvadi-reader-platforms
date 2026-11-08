@@ -11,20 +11,21 @@ Consequences on my side (this branch):
 ## Applied by the Foundation (sixth combined patch, foundation 8098695)
 - Mobile UI's PhoneShell slot (1a27cd6), **H5** (phone account block) and **H6** (Settings › Account `PortalAccountRows`). Patches kept in `proposal/` for the record.
 
-## Still to apply — H7: status-bar wording (D-98)
-**`proposal/web-ui-hooks-7-status-text.patch`** — `Layout/MainLayout.razor`, one line, text only: "processed on the server · **encrypted at rest** · only you can see it" → "processed on the server · **kept in memory only** · only you can see it". Styling untouched (same span, dot and classes). Desktop branch ("offline · on this device") unchanged, so Windows is unaffected. Applies cleanly to foundation 8098695.
-The same line in the phone account block (`PortalPhoneAccount`, my file) is already changed on this branch.
+## Applied by the Foundation (part 2a, foundation 9fbed93)
+- **H7** status-bar wording (D-98) and the **"Drop to open" overlay** (D-104 b) — checked: `git apply -R --check` of both patches succeeds on 9fbed93, and the 12a pitch (D-103) is as sent. Patches kept in `proposal/` for the record.
 
-## Still to apply — "Drop to open" on the portal (D-104 b)
-**`proposal/web-ui-drop-overlay.patch`** — the Foundation's `Components/Platform/Portal/PortalDropCatcher.razor` (+6/−3) and `.razor.css` (+16/−1), against foundation **f6607a3** (applies cleanly). Adds the handout's Walkthrough "Drop to open" panel inside the catcher, shown only while the catcher is `on` (documents dragged over the window); no file-name line (browsers don't expose names during a drag). No script or logic change.
+## Still to apply — Home's drop zone during a drag (U-17 b, D-109)
+**`proposal/web-ui-home-drop-zone.patch`** — against foundation **9fbed93** (applies cleanly), two of the Foundation's files:
+- `wwwroot/js/portal-drop.js` (+4/−2): when the catcher turns `on`, also add `chvd-dragging` to `<html>`; remove it in `off` and in `dispose`.
+- `Pages/Dashboard.razor.css` (+3): `html.chvd-dragging .drop > * { visibility: hidden; }` — Home's zone (first-run `.drop.first` and the regular `button.drop`) keeps its frame and size; only its contents hide, so one clean "Drop to open" shows. `visibility`, not `display`, so nothing moves.
 
-Proofs (preview host, Web profile with a fake `IDroppedFiles`; Chromium / Firefox / WebKit, 1280×720):
-- Computed style while dragging a PDF, identical in all three: `border: 2px dashed rgb(138, 58, 28)`, radius 14 px, background rgb(251, 247, 236) at 0.55, inset 24 px (left/top 24), title "Instrument Serif" 28 px — the handout's values. Night paper: border `#e08a52` (theme tokens).
-- Shown: on a PDF drag-enter. Hidden: at rest, for an image-only drag (left to the Reader), after drag-leave, after window blur.
-- The element under the panel's centre while dragging is the catcher's `INPUT type=file` in all three browsers — the panel (`pointer-events: none`) never takes the drop.
-- No console errors. Windows profile: server-rendered markup of `/`, `/library`, `/settings` identical with and without the patch (the catcher is never rendered on desktop or Android).
-- Screenshots: `screenshots/handout-drop.png` (the handout frame), `chromium-drop-over.png`, `webkit-drop-over-dark.png`.
-- Open point: U-17 (Home's own drop zone shows through the panel).
+The handout's panel is unchanged. Only the portal script sets the class, so desktop and Android are untouched.
+
+Proofs (preview, Web profile; Chromium / Firefox / WebKit, 1280×720; patch applied locally, then reverted):
+- PDF drag-enter, both zones (first-run and regular): `<html>` gets the class, zone children `visibility: hidden`, zone frame still `1px dashed`, overlay `display: flex`. Identical in all three browsers.
+- Restored (class off, children visible): at rest, after drag-leave, after window blur. Image-only drag: never set.
+- Windows profile (5102): a PDF drag never sets the class; Home screenshots with and without the patch are pixel-identical in Firefox and WebKit outside the clock; Chromium differs by a 3×4 px speck that also differs between two runs of the same build (noise).
+- No console errors. Screenshots: `screenshots/chromium-u17-home-drag.png`, `screenshots/webkit-u17-home-drag-dark.png` (Night paper).
 
 ## Later hooks (not proposed yet)
 - `SangamGate` on "Sign with certificate" (desktop) — D-33: deferred until a desktop Sangam client exists.
