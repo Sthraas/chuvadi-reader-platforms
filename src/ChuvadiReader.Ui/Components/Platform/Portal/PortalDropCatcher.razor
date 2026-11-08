@@ -7,9 +7,9 @@
 @implements IAsyncDisposable
 
 @*
-    D-89 A: drag-and-drop on the web portal. While documents are dragged over the window, an invisible
-    full-window file input takes the drop (Blazor's own InputFile; nothing to see — the desktop window
-    shows nothing either). Image-only drags pass through, so the Reader can still place a dropped image
+    D-89 A: drag-and-drop on the web portal. While documents are dragged over the window, a full-window
+    file input takes the drop (Blazor's own InputFile, itself invisible), and the handout's "Drop to open"
+    panel shows above it (D-104 b; pointer-events none, so the drop still lands in the input). Image-only drags pass through, so the Reader can still place a dropped image
     on a page. Drops anywhere else are stopped, so the browser never opens the file and leaves the app.
     Rendered by MainLayout only on the portal, when the Web host provides IDroppedFiles.
 *@
@@ -17,6 +17,12 @@
 {
     <div class="pdrop" @ref="_root">
         <InputFile multiple accept="@Accept" OnChange="OnFilesAsync" class="pdrop-input" tabindex="-1" aria-hidden="true" title="Drop to upload" />
+        @* D-104 (b): the handout's "Drop to open" state (Walkthrough), shown while documents are dragged
+           over the window (the "on" class). No file-name line: browsers don't expose names during a drag. *@
+        <div class="pdrop-show" aria-hidden="true">
+            <span class="pdrop-ic"><Icon Name="upload" Size="34" /></span>
+            <span class="pdrop-t">Drop to open</span>
+        </div>
     </div>
 }
 

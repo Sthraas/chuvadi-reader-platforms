@@ -1,4 +1,18 @@
-/* Invisible full-window drop target, active only while documents are dragged over the window. */
+/* Full-window drop target, active only while documents are dragged over the window. */
 .pdrop { position: fixed; inset: 0; z-index: 2147483000; pointer-events: none; }
 .pdrop.on { pointer-events: auto; cursor: copy; }
 .pdrop ::deep .pdrop-input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: copy; }
+
+/* D-104 (b) — the handout's "Drop to open" state (Walkthrough): inset 24 px, 2 px dashed binding border,
+   radius 14, surface wash at 55 % (Cream: rgba(251,247,236,.55), as drawn), upload icon 34 px in the
+   binding colour, "Drop to open" in Instrument Serif 28 px. Theme tokens, so all five themes follow. */
+.pdrop-show {
+    position: absolute; inset: 24px; display: none; pointer-events: none;
+    flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+    border: 2px dashed var(--chvd-binding); border-radius: 14px;
+    background: color-mix(in srgb, var(--chvd-surface-hi) 55%, transparent);
+    color: var(--chvd-ink);
+}
+.pdrop.on .pdrop-show { display: flex; }
+.pdrop-ic { display: flex; color: var(--chvd-binding); }
+.pdrop-t { font-family: var(--chvd-serif-display); font-size: 28px; line-height: 1.1; }
