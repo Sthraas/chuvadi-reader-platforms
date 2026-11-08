@@ -60,12 +60,30 @@ public sealed class CupsPrintService : IPrintService
         // The file's own permissions say "no printing" (D-66, L-8): refuse before any dialog opens.
         if (!allowPrint)
         {
-            return new CorePrintResult(PrintOutcome.Failed, 0, NotAllowedMessage);
+            return new CorePrintResult(PrintOutcome.Failed, 0, PrintPermission.Refused);
         }
 
         if (!PageRangeParser.TryParse(request.PageRange, pageCount, request.CurrentPage, out var pages, out var rangeError))
         {
             return new CorePrintResult(PrintOutcome.Failed, 0, rangeError);
+        }
+
+        // B-20: no printer, or CUPS not running: say so instead of opening an empty dialog.
+        int queueCount;
+        try
+        {
+            queueCount = await Task.Run(() => CupsQueues.List(cancellationToken: ct).Count, ct);
+        }
+        catch (Exception ex) when (ex is IppException or IOException or System.Net.Http.HttpRequestException or TimeoutException)
+        {
+            return new CorePrintResult(PrintOutcome.Unavailable, 0,
+                "Chuvadi can't reach this computer's printing service (CUPS), so there's nothing to print to. Check that printing is set up in Settings › Printers.");
+        }
+
+        if (queueCount == 0)
+        {
+            return new CorePrintResult(PrintOutcome.Unavailable, 0,
+                "No printers are set up on this computer. Add one in Settings › Printers, then print again.");
         }
 
         var title = request.JobName ?? Path.GetFileName(pdfPath);
@@ -78,9 +96,6 @@ public sealed class CupsPrintService : IPrintService
         return await Task.Run(() => Submit(pdf, pageCount, title, request, answer, ct), ct);
     }
 
-    /// <summary>Shown when a file's permissions forbid printing.</summary>
-    internal const string NotAllowedMessage = "This file's permissions don't allow printing.";
-
     /// <summary>The PDF bytes to send, the page count, and whether the file's permissions allow
     /// printing (a file without encryption always does). A file with an open password is sent
     /// decrypted (CUPS can't open it), made in memory with the same library calls Core uses; nothing
@@ -90,7 +105,7 @@ public sealed class CupsPrintService : IPrintService
         if (string.IsNullOrEmpty(password))
         {
             using var doc = PdfDocument.Open(path);
-            if (doc.Encryption is { AllowPrint: false })
+            if (!PrintPermission.Allows(doc))
             {
                 return ([], doc.PageCount, false);
             }
@@ -99,7 +114,7 @@ public sealed class CupsPrintService : IPrintService
         }
 
         using var protectedDoc = PdfDocument.Open(path, password);
-        if (protectedDoc.Encryption is { AllowPrint: false })
+        if (!PrintPermission.Allows(protectedDoc))
         {
             return ([], protectedDoc.PageCount, false);
         }

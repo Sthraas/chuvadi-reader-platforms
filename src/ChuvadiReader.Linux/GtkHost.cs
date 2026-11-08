@@ -21,8 +21,6 @@ internal static unsafe class GtkHost
 
     public static event Action<string[]>? FilesDropped;
 
-    /// <summary>Files a later launch handed to this running copy (single instance, B-05).</summary>
-    public static event Action<string[]>? InstanceOpen;
 
 #if CHUVADI_UITEST
     /// <summary>UI test build only: the same event the window's GTK drop target raises.</summary>
@@ -55,6 +53,52 @@ internal static unsafe class GtkHost
     }
 
     public static void Attach(LinuxWebViewManager manager) => _manager = manager;
+
+    /// <summary>
+    /// Runs <paramref name="action"/> on the GTK main thread and waits up to <paramref name="wait"/> for it to
+    /// start. If it hasn't started by then (the UI is stuck), it is cancelled so it never runs late, and the
+    /// result is false — the kit's single-instance rule F-1 (DesktopSingleInstance.StartListening).
+    /// </summary>
+    public static bool RunOnMain(Action action, TimeSpan wait)
+    {
+        if (IsMainThread)
+        {
+            action();
+            return true;
+        }
+
+        var state = 0; // 0 waiting, 1 started, 2 cancelled
+        var done = new ManualResetEventSlim();
+        Post(() =>
+        {
+            if (Interlocked.CompareExchange(ref state, 1, 0) != 0)
+            {
+                return;
+            }
+
+            try
+            {
+                action();
+            }
+            finally
+            {
+                done.Set();
+            }
+        });
+
+        if (done.Wait(wait))
+        {
+            return true;
+        }
+
+        if (Interlocked.CompareExchange(ref state, 2, 0) == 0)
+        {
+            return false;
+        }
+
+        done.Wait(); // it started in time: let it finish
+        return true;
+    }
 
     /// <summary>Runs <paramref name="action"/> on the GTK main thread (inline if already there).</summary>
     public static void Post(Action action)
@@ -190,9 +234,6 @@ internal static unsafe class GtkHost
                 case Native.WindowEvent.JsResult when text is not null:
                     var nl = text.IndexOf('\n');
                     JsResult?.Invoke(int.Parse(text.AsSpan(0, nl), System.Globalization.CultureInfo.InvariantCulture), text[(nl + 1)..]);
-                    break;
-                case Native.WindowEvent.InstanceOpen:
-                    InstanceOpen?.Invoke((text ?? string.Empty).Split('\n', StringSplitOptions.RemoveEmptyEntries));
                     break;
                 case Native.WindowEvent.FirstPaint:
                     FirstPaint?.Invoke();

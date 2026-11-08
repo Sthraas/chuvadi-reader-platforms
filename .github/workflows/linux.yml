@@ -117,6 +117,14 @@ jobs:
           python3 -I tools/linux/make-fixtures.py "$PWD/ro-fixtures"
           python3 -I tools/linux/readonly-home-test.py "$PWD/uitest-build" "$PWD/ro-fixtures/five-pages.pdf" "$PWD/readonly-home"
 
+      - name: No printing service → Print explains itself, no empty dialog (B-20)
+        run: |
+          sudo systemctl stop cups.service cups.socket cups.path 2>/dev/null || sudo pkill -x cupsd || true
+          status=0
+          python3 -I tools/linux/no-printer-test.py "$PWD/uitest-build" "$PWD/ro-fixtures/five-pages.pdf" "$PWD/no-printer" || status=$?
+          sudo systemctl start cups.service || sudo cupsd
+          exit $status
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -125,6 +133,7 @@ jobs:
             first-launch.txt
             no-userns
             readonly-home
+            no-printer
             smoke
             smoke-installed
             uitest

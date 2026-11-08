@@ -41,23 +41,10 @@ public static class Program
 
         try
         {
-            // B-05 (D-83): one Chuvadi per session. A later launch hands its files to the running copy, which
-            // opens each in a new tab and comes forward, and ends here without a window.
-            var launchFiles = DocumentOpener.Openable(args);
-            if (Native.InstanceClaim(AppId) == 0)
-            {
-                var token = Environment.GetEnvironmentVariable("XDG_ACTIVATION_TOKEN")
-                            ?? Environment.GetEnvironmentVariable("DESKTOP_STARTUP_ID") ?? string.Empty;
-                if (Native.InstanceForward(AppId, string.Join('\n', launchFiles), token) != 0)
-                {
-                    Mark("handed over to the running copy");
-                    return 0;
-                }
-
-                // The running copy didn't answer: start on our own rather than lose the files.
-            }
-
-            Mark("instance");
+            // Single instance (D-83: L-A, F-1; the kit's DesktopSingleInstance): the election (a lock file in
+            // $XDG_RUNTIME_DIR) runs on its own thread while GTK starts; a launch that handed its files to the
+            // running copy ends below, before building anything or showing a window.
+            var claim = DesktopSingleInstance.ClaimAsync(args);
             if (!GtkHost.Init())
             {
                 Console.Error.WriteLine("Chuvadi needs a graphical session (no display was found).");
@@ -70,9 +57,19 @@ public static class Program
             // (~10 ms of bubblewrap); the answer is needed before the web view exists.
             var sandbox = Task.Run(() => (Ok: Native.SandboxCheck(out var detail), Detail: detail));
 
-            var paths = new LinuxAppPaths(); // XDG config folder; Documents for saves
+            var instance = claim.GetAwaiter().GetResult();
+            if (instance.Role == InstanceRole.HandedOver)
+            {
+                Mark("handed over to the running copy");
+                instance.Dispose();
+                return 0;
+            }
+
+            Mark("instance " + instance.Role);
+
+            var paths = new DesktopAppPaths(); // XDG config folder; Documents for saves (the kit's fallback)
             var storage = new ResilientAppStorage(paths.AppDataFolder); // B-16: survives an unwritable home
-            var services = BuildServices(paths, storage, LinuxPlatformInfo.Create());
+            var services = BuildServices(paths, storage, LinuxPlatformInfo.Create(), instance);
             Mark("services");
 
             var (sandboxOk, sandboxDetail) = sandbox.GetAwaiter().GetResult();
@@ -107,8 +104,8 @@ public static class Program
             IFileProvider files = Directory.Exists(wwwroot) ? new PhysicalFileProvider(wwwroot) : new NullFileProvider();
             var manager = new LinuxWebViewManager(services, files);
             GtkHost.Attach(manager);
-            var opener = new DocumentOpener(services.GetRequiredService<OpenDocumentService>(), manager.Dispatcher);
-            WireWindow(services, opener);
+            var incoming = services.GetRequiredService<IncomingFiles>();
+            WireWindow(services, incoming, instance);
 
             _ = manager.AddRootComponentAsync(typeof(ChuvadiReader.Ui.App), "#app", ParameterView.Empty);
             Mark("root component added");
@@ -123,9 +120,11 @@ public static class Program
                 GtkHost.FirstPaint += () => Mark("page loaded");
             }
 
-            OpenFromCommandLine(services, opener, launchFiles);
-            GtkHost.InstanceOpen += paths => _ = opener.OpenAsync(DocumentOpener.Openable(paths));
-            services.GetRequiredService<IAppReadySignal>().Ready += () => GtkHost.Post(Native.InstanceReady);
+            // "chuvadi-reader a.pdf b.docx …" and the desktop entry's %F (B-04): every file, each in its own tab,
+            // in order (the kit's router holds them until the first render).
+            incoming.Receive(args.Select(a => a.StartsWith("file://", StringComparison.Ordinal) ? new Uri(a).LocalPath : a));
+            // A later launch's files arrive after the first paint (the socket starts then, off the critical path).
+            services.GetRequiredService<IAppReadySignal>().Ready += () => instance.StartListening(GtkHost.RunOnMain);
             WarnWhenSettingsCantBeSaved(services, storage, manager);
 #if CHUVADI_UITEST
             UiTestDriver.Start(services, manager);
@@ -139,6 +138,7 @@ public static class Program
             // disposal a moment, then end, as the Windows app ends when its window closes.
             var disposed = manager.DisposeAsync().AsTask().Wait(TimeSpan.FromSeconds(1));
             Mark(disposed ? "disposed" : "disposal still waiting on the page; exiting");
+            instance.Dispose(); // frees the lock file and socket for the next launch
             return 0;
         }
         catch (Exception ex)
@@ -154,7 +154,7 @@ public static class Program
     private const bool DevTools = false;
 #endif
 
-    private static ServiceProvider BuildServices(IAppPaths paths, ResilientAppStorage storage, IPlatformInfo platform)
+    private static ServiceProvider BuildServices(IAppPaths paths, ResilientAppStorage storage, IPlatformInfo platform, IAppInstance instance)
     {
         var services = new ServiceCollection();
         services.AddBlazorWebView();
@@ -166,6 +166,7 @@ public static class Program
         services.AddSingleton<IAppPaths>(paths);
         services.AddSingleton<IAppStorage>(storage);
         services.AddSingleton<IPlatformInfo>(platform);
+        services.AddSingleton(instance);
         services.AddSingleton<IUiScale, LinuxUiScale>();
         services.AddSingleton<IExternalLinks, LinuxExternalLinks>();
         services.AddSingleton<IWindowControls, LinuxWindowControls>();
@@ -189,42 +190,18 @@ public static class Program
     };
 
     // Same list as the Open dialog (Core: DocumentFormatExtensions.OpenableExtensions), as on Windows.
-    private static void WireWindow(IServiceProvider services, DocumentOpener opener)
+    private static void WireWindow(IServiceProvider services, IncomingFiles incoming, DesktopSingleInstance instance)
     {
         var links = services.GetRequiredService<IExternalLinks>();
         GtkHost.ExternalLinkRequested += url => _ = links.OpenAsync(url);
 
-        // Files dropped on the window: each in its own tab (B-06), or all onto the shelf when the Bench is
-        // open (the Windows host's rule for the Bench).
-        GtkHost.FilesDropped += paths =>
-        {
-            var supported = DocumentOpener.Openable(paths);
-            if (supported.Count == 0)
-            {
-                return;
-            }
+        // Files dropped on the window (B-06): the kit's router — all onto the shelf when the Bench is open,
+        // else each in its own tab, in order.
+        GtkHost.FilesDropped += paths => incoming.Receive(paths);
 
-            var bench = services.GetRequiredService<BenchDropService>();
-            if (bench.IsBenchActive)
-            {
-                bench.Drop([.. supported]);
-                return;
-            }
-
-            _ = opener.OpenAsync(supported);
-        };
-    }
-
-    /// <summary>"chuvadi-reader a.pdf b.docx …" (and the desktop entry's %F): every openable file, each in
-    /// its own tab, in the order given (B-04).</summary>
-    private static void OpenFromCommandLine(IServiceProvider services, DocumentOpener opener, IReadOnlyList<string> files)
-    {
-        if (files.Count == 0)
-        {
-            return;
-        }
-
-        services.GetRequiredService<IAppReadySignal>().Ready += () => _ = opener.OpenAsync(files);
+        // A file arrived from another launch (or from outside): bring the window forward, with the launcher's
+        // activation token when it sent one (Wayland's xdg-activation; X11 startup id).
+        incoming.Delivered += () => GtkHost.Post(() => Native.Present(instance.ActivationToken));
     }
 
     /// <summary>B-16: one notice when settings can't be written (read-only or full home folder); the app keeps

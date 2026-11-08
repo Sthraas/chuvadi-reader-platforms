@@ -40,7 +40,6 @@ enum
     CHVD_EVENT_DIALOG_RESULT = 6,     /* payload "<token>" then one chosen path per line (none = cancelled) */
     CHVD_EVENT_PRINT_RESULT = 7,      /* payload "<token>" then key=value lines (none = cancelled) */
     CHVD_EVENT_JS_RESULT = 8,         /* payload "<token>" then the result as JSON, or "!<error>" (UI test builds) */
-    CHVD_EVENT_INSTANCE_OPEN = 9,     /* payload: files another launch handed over, one per line (B-05) */
 };
 
 typedef void (*chvd_scheme_fn)(void *request, const char *uri);
@@ -68,12 +67,6 @@ static struct
 
     gint wake_pending;
     gboolean no_gpu; /* no DRM render node: GTK and WebKit render on the CPU */
-
-    /* Single instance (B-05): the session bus connection that owns the app's name, and hand-overs that
-     * arrived before the host was ready for them. */
-    GDBusConnection *bus;
-    gboolean instance_ready;
-    GPtrArray *instance_pending; /* of gchar* payloads */
 } S;
 
 /* ── main loop ──────────────────────────────────────────────────────────── */
@@ -976,162 +969,21 @@ CHVD_EXPORT void chvd_show_error(const char *title, const char *detail)
     g_object_unref(dialog);
 }
 
-/* ── Single instance (B-05, D-83 L-A) ─────────────────────────────────────────────────────────────────
- * The first copy owns the app ID on the session bus and serves one method; a later launch hands its files
- * to it and exits. No session bus: every launch runs on its own (nothing is lost). */
-
-#define CHVD_INSTANCE_PATH "/in/chuvadi/Reader"
-#define CHVD_INSTANCE_IFACE "in.chuvadi.Reader.Instance"
-
-static const char instance_xml[] =
-    "<node><interface name='" CHVD_INSTANCE_IFACE "'>"
-    "<method name='Open'><arg type='as' name='files' direction='in'/>"
-    "<arg type='s' name='activation_token' direction='in'/></method>"
-    "</interface></node>";
-
-static void instance_deliver(const char *payload)
+/* Brings the window to the front for a file handed over by another launch (single instance, the kit's
+ * DesktopSingleInstance). token: the launcher's activation token (Wayland's XDG_ACTIVATION_TOKEN, X11's
+ * startup id) so the desktop lets the window come forward; NULL when the launcher gave none. Main thread. */
+CHVD_EXPORT void chvd_present(const char *token)
 {
-    if (S.window)
+    if (!S.window)
     {
-        gtk_window_present(S.window);
-    }
-
-    S.event(CHVD_EVENT_INSTANCE_OPEN, payload);
-}
-
-static void on_instance_call(GDBusConnection *connection, const char *sender, const char *path, const char *iface,
-                             const char *method, GVariant *params, GDBusMethodInvocation *invocation, gpointer data)
-{
-    if (g_strcmp0(method, "Open") != 0)
-    {
-        g_dbus_method_invocation_return_dbus_error(invocation, "org.freedesktop.DBus.Error.UnknownMethod", method);
         return;
     }
 
-    g_autofree const char **files = NULL;
-    const char *token = NULL;
-    g_variant_get(params, "(^a&s&s)", &files, &token);
-    GString *payload = g_string_new(NULL);
-    for (const char **f = files; f && *f; f++)
-    {
-        g_string_append(payload, *f);
-        g_string_append_c(payload, '\n');
-    }
-
-    /* Raise the running window with the launcher's activation token (Wayland's xdg-activation; X11's
-     * startup id), so the desktop lets it come forward. */
-    if (S.window && token && *token)
+    if (token && *token)
     {
         gtk_window_set_startup_id(S.window, token);
     }
-
-    if (S.instance_ready)
-    {
-        instance_deliver(payload->str);
-    }
-    else
-    {
-        if (!S.instance_pending)
-        {
-            S.instance_pending = g_ptr_array_new_with_free_func(g_free);
-        }
-        g_ptr_array_add(S.instance_pending, g_strdup(payload->str));
-    }
-
-    g_string_free(payload, TRUE);
-    g_dbus_method_invocation_return_value(invocation, NULL);
-}
-
-static const GDBusInterfaceVTable instance_vtable = {on_instance_call, NULL, NULL, {0}};
-
-/* Claims the app's name on the session bus. 1 = this is the first copy (it now serves Open), 0 = another
- * copy owns it (hand the files over with chvd_instance_forward), -1 = no session bus (run on its own).
- * Call before chvd_init; ~1 ms. */
-CHVD_EXPORT int chvd_instance_claim(const char *app_id)
-{
-    GError *error = NULL;
-    S.bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
-    if (!S.bus)
-    {
-        g_clear_error(&error);
-        return -1;
-    }
-
-    GVariant *reply = g_dbus_connection_call_sync(S.bus, "org.freedesktop.DBus", "/org/freedesktop/DBus",
-                                                  "org.freedesktop.DBus", "RequestName",
-                                                  g_variant_new("(su)", app_id, 0x4 /* DO_NOT_QUEUE */),
-                                                  G_VARIANT_TYPE("(u)"), G_DBUS_CALL_FLAGS_NONE, 2000, NULL, &error);
-    if (!reply)
-    {
-        g_clear_error(&error);
-        return -1;
-    }
-
-    guint32 result = 0;
-    g_variant_get(reply, "(u)", &result);
-    g_variant_unref(reply);
-    if (result != 1 /* PRIMARY_OWNER */ && result != 4 /* ALREADY_OWNER */)
-    {
-        return 0;
-    }
-
-    GDBusNodeInfo *info = g_dbus_node_info_new_for_xml(instance_xml, NULL);
-    guint id = g_dbus_connection_register_object(S.bus, CHVD_INSTANCE_PATH, info->interfaces[0], &instance_vtable,
-                                                 NULL, NULL, &error);
-    g_dbus_node_info_unref(info);
-    if (!id)
-    {
-        g_clear_error(&error);
-    }
-    return 1;
-}
-
-/* Hands files (one per line) and the launcher's activation token to the running copy. 1 = delivered. */
-CHVD_EXPORT int chvd_instance_forward(const char *app_id, const char *files, const char *token)
-{
-    if (!S.bus)
-    {
-        return 0;
-    }
-
-    g_auto(GStrv) list = g_strsplit(files ? files : "", "\n", -1);
-    GVariantBuilder builder;
-    g_variant_builder_init(&builder, G_VARIANT_TYPE("as"));
-    for (char **f = list; f && *f; f++)
-    {
-        if (**f)
-        {
-            g_variant_builder_add(&builder, "s", *f);
-        }
-    }
-
-    GError *error = NULL;
-    GVariant *reply = g_dbus_connection_call_sync(S.bus, app_id, CHVD_INSTANCE_PATH, CHVD_INSTANCE_IFACE, "Open",
-                                                  g_variant_new("(ass)", &builder, token ? token : ""), NULL,
-                                                  G_DBUS_CALL_FLAGS_NONE, 5000, NULL, &error);
-    if (!reply)
-    {
-        g_clear_error(&error);
-        return 0;
-    }
-
-    g_variant_unref(reply);
-    return 1;
-}
-
-/* The host is ready for hand-overs (its window and open path exist): deliver any that arrived earlier. */
-CHVD_EXPORT void chvd_instance_ready(void)
-{
-    S.instance_ready = TRUE;
-    if (S.instance_pending)
-    {
-        for (guint i = 0; i < S.instance_pending->len; i++)
-        {
-            instance_deliver(g_ptr_array_index(S.instance_pending, i));
-        }
-        g_ptr_array_free(S.instance_pending, TRUE);
-        S.instance_pending = NULL;
-    }
+    gtk_window_present(S.window);
 }
 
 /* What the host decided at start-up (UI tests read it): bit 0 = no GPU (no DRM render node), bit 1 = WebKit's
