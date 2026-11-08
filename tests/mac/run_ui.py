@@ -701,19 +701,24 @@ def t3_5():
     ok2, _ = open_doc(f"{FX}/second.pdf")
     ev = {"docs_opened": [ok, ok2]}
     _, ev["before"] = drive("winstate", NAME)
-    # Immersive: ⌃⌘F (Mac binding) and F11 (what the Ui shows)
+    # Immersive is an in-app mode on every platform (chrome hidden, "exit" button); ⌃⌘F is its Mac key.
     drive("key", "ctrl+cmd+f")
     time.sleep(2.5)
-    _, ev["immersive_ctrl_cmd_f"] = drive("winstate", NAME)
     ev["immersive-shot"] = shot("light-reader-immersive")
-    drive("key", "escape")
-    time.sleep(2)
-    drive("key", "f11")
-    time.sleep(2.5)
-    _, ev["immersive_f11"] = drive("winstate", NAME)
-    ev["f11-shot"] = screen("screen-after-f11")
+    ev["immersive_on_ctrl_cmd_f"] = find("exit", timeout=2)[0] == 0
     drive("key", "escape")
     time.sleep(1.5)
+    ev["escape_leaves"] = find("exit", timeout=1)[0] != 0
+    if not ev["escape_leaves"]:
+        press("exit")
+        time.sleep(1.5)
+    drive("key", "f11")
+    time.sleep(2)
+    ev["f11_enters"] = find("exit", timeout=1)[0] == 0
+    if ev["f11_enters"]:
+        press("exit")
+        time.sleep(1.5)
+    _, ev["window_after"] = drive("winstate", NAME)
     drive("activate", NAME)
     # Next tab: the Ui says ⌘Tab (macOS app switcher); try ⌃Tab, the Mac convention
     t_a = axdump("tabs-before")
@@ -738,9 +743,9 @@ def t3_5():
     drive("setwin", NAME, "minimized", "false")
     time.sleep(1)
     ev["dock"] = screen("screen-with-dock")
-    full = "fullscreen=true" in ev["immersive_ctrl_cmd_f"]
-    record("T3.5 window + immersive + keys", "pass" if full and ev["ctrl_tab_changed_screen"] and ev["minimized"] else "fail",
-           f"⌃⌘F full screen={full}; ⌃Tab switches tab={ev['ctrl_tab_changed_screen']}; minimise={ev['minimized']}", **ev)
+    record("T3.5 window + immersive + keys", "pass" if ev["immersive_on_ctrl_cmd_f"] and ev["escape_leaves"] and ev["minimized"] else "fail",
+           f"⌃⌘F → Immersive={ev['immersive_on_ctrl_cmd_f']}; Esc leaves={ev['escape_leaves']}; F11 enters={ev['f11_enters']}; "
+           f"⌃Tab switches tab={ev['ctrl_tab_changed_screen']} (M-08, shared); minimise={ev['minimized']}", **ev)
     quit_app()
 
 
@@ -769,12 +774,14 @@ def t4_12():
     launch(settle=4)
     ok, _ = open_doc(f"{FX}/five-pages.pdf")
     sh("pbcopy < /dev/null")
-    run_cmd("Copy file path")
+    rc, o = menu("File", "Copy file path")
+    time.sleep(1.5)
     _, pb = sh("pbpaste")
     good = pb.strip() in (f"{FX}/five-pages.pdf", os.path.realpath(f"{FX}/five-pages.pdf"))
     record("T4.12 copy file path (text clipboard)", "pass" if good else "fail", f"doc opened={ok}; pasteboard: {pb[:200]!r}")
     # image: Snapshot a region → copies PNG?
-    run_cmd("Snapshot a region")
+    menu("View", "Snapshot a region")
+    time.sleep(1)
     w = window_up(5)
     m = re.search(r"\t(\d+),(\d+) (\d+)x(\d+)", w or "")
     if m:
@@ -787,8 +794,8 @@ def t4_12():
         time.sleep(1.5)
     _, types = drive("pasteboard", f"{OUT}/pasteboard")
     record("T4.12b snapshot → image clipboard", "info", types, shot=shot("after-snapshot"))
-    run_cmd("Show in folder")
-    time.sleep(3)
+    menu("File", "Show in folder")
+    time.sleep(4)
     _, sel = sh(["osascript", "-e", 'tell application "Finder" to get POSIX path of (item 1 of (get selection) as alias)'], timeout=20)
     drive("axdump", "Finder", f"{OUT}/ax/finder-after-reveal.txt", timeout=60)
     ok2 = sel.strip().endswith("five-pages.pdf")
@@ -833,7 +840,7 @@ def t4_7():
     time.sleep(2)
     ev["card"] = shot("print-card")
     axdump("print-card")
-    rc, ev["card-press"] = press("Print", role="AXButton", index=-1)
+    rc, ev["card-press"] = press("Print 2 pages", contains=True)
     time.sleep(4)
     ev["panel"] = screen("print-panel")
     axdump("print-panel")
