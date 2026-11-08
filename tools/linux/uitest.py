@@ -787,7 +787,7 @@ step("34c2-second-launch-opens-in-running-window", second_launch)
 
 def error_message_is_a_sentence():
     """B-17: .NET's own error messages reach the user, not resource keys. A PDF without read permission
-    (chmod 000) must say "Access to the path … is denied". Root can read any file, so as root this step only
+    (chmod 000) shows the plain sentence, and Details says "Access to the path … is denied". Root can read any file, so as root this step only
     reports; check-deb.py checks the cause (the runtime setting) in every run."""
     if os.geteuid() == 0:
         return "skipped as root (root reads chmod-000 files); the runtime setting is checked by check-deb.py"
@@ -797,16 +797,20 @@ def error_message_is_a_sentence():
     os.chmod(locked, 0)
     try:
         app.send("open " + locked)
-        msg = app.wait(lambda: app.js("var t=document.body.innerText; var i=t.indexOf('Could not open'); "
-                                      "return i < 0 ? null : t.slice(i, i + 200)"), 20, "error shown")
+        # WT-10 (Foundation's eighth patch): a plain sentence, with the system's own text under Details.
+        msg = app.wait(lambda: app.js("var t=document.body.innerText; var i=t.indexOf(\"couldn't read this file\"); "
+                                      "return i < 0 ? null : t.slice(i, i + 160)"), 20, "error shown")
+        detail = app.js("var d=[...document.querySelectorAll('details.rempty-sub')].pop(); return d ? d.textContent : null")
     finally:
         os.chmod(locked, 0o644)
-    if "UnauthorizedAccess_" in msg or "IODenied" in msg:
-        raise AssertionError("resource key shown: " + msg)
-    if "denied" not in msg:
-        raise AssertionError("no plain message: " + msg)
+    if not detail:
+        raise AssertionError("no Details under: " + msg)
+    if "UnauthorizedAccess_" in detail or "IODenied" in detail:
+        raise AssertionError("resource key under Details: " + detail)
+    if "denied" not in detail:
+        raise AssertionError("Details doesn't carry the system's message: " + detail)
     app.shot("34d-error-message")
-    return " ".join(msg.split())[:150]
+    return " ".join(msg.split())[:90] + " | Details: " + " ".join(detail.split())[:110]
 
 
 step("34d-error-message-not-a-resource-key", error_message_is_a_sentence)
