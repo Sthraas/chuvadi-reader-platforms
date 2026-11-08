@@ -104,4 +104,27 @@ public sealed class TestChatFixesTests
         Assert.NotNull(next.Session);
         Assert.Same(next, Assert.Single(tabs.Tabs));
     }
+
+    // ── B-07: the prompt follows the library's PasswordSupplied (missing vs wrong) ──
+
+    private sealed class LockedReader(bool passwordSupplied) : IPdfReader
+    {
+        public Task<IPdfSession> OpenAsync(string path, string fileName, string? password = null, CancellationToken cancellationToken = default, bool transparentBackground = false) =>
+            throw new Chuvadi.Pdf.Primitives.PdfPasswordRequiredException(passwordSupplied);
+    }
+
+    [Theory]
+    [InlineData(false, null)]                       // none given: just the prompt
+    [InlineData(true, TabsService.WrongPassword)]   // one given and it didn't open the file
+    public async Task The_password_prompt_says_wrong_only_when_the_library_says_a_password_was_given(bool supplied, string? expected)
+    {
+        var tabs = new TabsService(new LockedReader(supplied), new MemoryStorage());
+
+        var tab = await tabs.OpenAsync(TestPdf.TextPage("Locked"), "locked.pdf", DocumentFormat.Pdf);
+
+        Assert.True(tab.NeedsPassword);
+        Assert.Equal(expected, tab.PasswordError);
+        Assert.Null(tab.Session);
+        Assert.Null(tab.Error);
+    }
 }
