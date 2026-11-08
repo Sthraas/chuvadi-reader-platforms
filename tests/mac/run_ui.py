@@ -134,10 +134,20 @@ def window_up(timeout=30):
     return None
 
 
+LAUNCHES = [0]
+
+
 def launch(*files, settle=3.0, fresh=False):
+    """Launches through LaunchServices with the app's stdout/stderr kept (unhandled .NET exceptions land there)."""
     if fresh:
         quit_app()
-    sh(["open", "-a", APP, *files], timeout=30)
+    if not pids():
+        LAUNCHES[0] += 1
+        os.makedirs(f"{OUT}/applogs", exist_ok=True)
+        lp = f"{OUT}/applogs/{LAUNCHES[0]:03d}.txt"
+        sh(["open", "--stdout", lp, "--stderr", lp, "-a", APP, *files], timeout=30)
+    else:
+        sh(["open", "-a", APP, *files], timeout=30)
     w = window_up()
     time.sleep(settle)
     drive("activate", NAME)
@@ -263,14 +273,24 @@ def screen(name):
     return f"shots/{name}.png"
 
 
-def open_doc(path, settle=4.0, label=None):
-    """Opens a document through Chuvadi's own Open panel (⌘O → ⇧⌘G → path). Returns (opened, first_page_ms)."""
+def open_doc(path, settle=4.0, label=None, how="button"):
+    """Opens a document through Chuvadi's own Open panel: the left bar's Open button (or ⌘O), then ⇧⌘G in the
+    panel and the path. Returns (opened, first_page_ms). Leaves a screen capture of the panel the first time."""
     if not pids():
         launch(settle=3)
     drive("activate", NAME)
     time.sleep(0.3)
-    drive("key", "cmd+o")
-    time.sleep(2.0)
+    if how == "key":
+        drive("key", "cmd+o")
+    else:
+        rc, o = press("Open ⌘O")
+        if rc != 0:
+            press("Open document")
+    time.sleep(2.5)
+    global PANEL_SHOT
+    if not PANEL_SHOT:
+        PANEL_SHOT = screen("open-panel-" + how)
+        drive("windows")
     drive("key", "cmd+shift+g")
     time.sleep(1.0)
     drive("type", path)
@@ -291,6 +311,9 @@ def open_doc(path, settle=4.0, label=None):
     return rc == 0, ms
 
 
+PANEL_SHOT = None
+
+
 def run_cmd(label, settle=1.5):
     """Runs a command through the ⌘K bar, as a person would: ⌘K, type, Return."""
     drive("activate", NAME)
@@ -304,6 +327,62 @@ def run_cmd(label, settle=1.5):
 
 def ax_text(name):
     return axdump(name)
+
+
+def ui_error():
+    """True when Blazor's "An error occurred. Reload" bar is showing (an unhandled exception in the Ui)."""
+    rc, _ = find("Reload", timeout=1)
+    return rc == 0
+
+
+def app_log():
+    try:
+        return open(f"{OUT}/applogs/{LAUNCHES[0]:03d}.txt", errors="replace").read()
+    except Exception:
+        return ""
+
+
+def exceptions_in(text):
+    out = []
+    lines = text.splitlines()
+    for i, l in enumerate(lines):
+        if re.search(r"Exception|Unhandled|crit:|fail:", l):
+            out.append("\n".join(lines[i:i + 14]))
+    return out[:6]
+
+
+@case("T4.0b Settings page")
+def t4_0b():
+    reset_state({"theme": "light"})
+    launch(settle=4)
+    clean = not ui_error()
+    press("Settings")
+    time.sleep(3)
+    err = ui_error()
+    s = shot("settings-fresh")
+    axdump("settings-fresh")
+    time.sleep(1)
+    record("T4.0b Settings page", "fail" if err else "pass",
+           f"Ui clean before={clean}; error bar after pressing Settings={err}", shot=s, exceptions=exceptions_in(app_log()))
+    quit_app()
+
+
+@case("T4.0c single keys on Home and Reader")
+def t4_0c():
+    bad = {}
+    keys = list("abcdefghijklmnopqrstuvwxyz0123456789") + ["-", "=", "/", ".", ",", "[", "]", "space", "escape", "return", "tab"]
+    reset_state({"theme": "light"})
+    launch(settle=4)
+    for k in keys:
+        drive("key", k)
+        time.sleep(0.4)
+        if ui_error():
+            bad[k] = exceptions_in(app_log())[-1:] if exceptions_in(app_log()) else []
+            shot("key-error-" + k)
+            quit_app()
+            launch(settle=4)
+    quit_app()
+    record("T4.0c single keys on Home", "fail" if bad else "pass", f"keys that break the Ui: {list(bad)}" if bad else "no key breaks the Ui", details=bad)
 
 
 # ───────────────────────────── T1.6 / T2 ─────────────────────────────
@@ -420,14 +499,19 @@ def t5_10():
         new = sorted(set(crash_reports()) - set(before))
         ev[how] = {"new_crash_reports": new, "screen": screen(f"after-quit-{how.replace('+', '')}")}
         try:
-            ev[how]["stdout_tail"] = open(log_path, errors="replace").read()[-3000:]
+            ev[how]["stdout_tail"] = open(log_path, errors="replace").read()[-12000:]
         except Exception:
             pass
         for n in new:
             shutil.copy(f"{DIAG}/{n}", f"{OUT}/logs-{n}")
         quit_app(force=True)
         sh(["osascript", "-e", 'tell application "System Events" to keystroke return'], timeout=10)  # dismiss "quit unexpectedly"
-    crashed = [k for k, v in ev.items() if v["new_crash_reports"]]
+    crashed = [k for k, v in ev.items() if v["new_crash_reports"] or "Terminating app due to uncaught exception" in v.get("stdout_tail", "")
+               or "Got a SIGABRT" in v.get("stdout_tail", "")]
+    for k, v in ev.items():
+        m = re.search(r"Terminating app due to uncaught exception '([^']+)'", v.get("stdout_tail", ""))
+        if m:
+            v["exception"] = m.group(1)
     record("T5.10 quit", "fail" if crashed else "pass", f"crash report written on quit via: {crashed}" if crashed else "clean quit both ways", **ev)
 
 
@@ -555,6 +639,54 @@ def t3_3():
     record("T3.3 interface size", "info", "125 % and 150 %", shots=ev)
 
 
+def top_crop(name, h=90):
+    """Bytes of the top strip of a window capture (tabs live there; the clock does not)."""
+    from struct import unpack
+    p = f"{OUT}/shots/{name}.png"
+    drive("capture", NAME, p)
+    try:
+        import zlib
+        return open(p, "rb").read()  # fallback: whole file
+    except Exception:
+        return b""
+
+
+@case("T4.0 keyboard reaches the app at launch")
+def t4_0():
+    reset_state({"theme": "light"})
+    launch(settle=4)
+    n0 = len(axdump("kbd-before").splitlines())
+    drive("key", "cmd+k")
+    time.sleep(1.5)
+    t1 = axdump("kbd-after-cmdk")
+    opened_without_click = len(t1.splitlines()) != n0 or "Find or do anything" in t1 and "AXTextField" in t1
+    s1 = shot("kbd-after-cmdk-no-click")
+    drive("key", "escape")
+    time.sleep(0.5)
+    w = window_up(5)
+    m = re.search(r"\t(\d+),(\d+) (\d+)x(\d+)", w or "")
+    if m:
+        x, y, wd, ht = map(int, m.groups())
+        drive("click", x + wd // 2, y + ht - 60)  # an empty spot low in the page
+        time.sleep(0.8)
+    drive("key", "cmd+k")
+    time.sleep(1.5)
+    t2 = axdump("kbd-after-click-cmdk")
+    opened_after_click = len(t2.splitlines()) != n0
+    s2 = shot("kbd-after-click-cmdk")
+    drive("key", "escape")
+    drive("key", "cmd+o")
+    time.sleep(2.5)
+    sc = screen("kbd-after-cmdo")
+    _, wins = drive("windows")
+    panel = sum(1 for l in wins.splitlines() if l.startswith(NAME + "\t") and "layer=0" in l) > 1
+    drive("key", "escape")
+    record("T4.0 keyboard reaches the app at launch", "pass" if opened_without_click and panel else "fail",
+           f"⌘K before any click opens the bar={opened_without_click}; after a click={opened_after_click}; ⌘O opens a panel={panel}",
+           shots=[s1, s2, sc], windows=wins)
+    quit_app()
+
+
 @case("T3.5 window + immersive + keys")
 def t3_5():
     reset_state({"theme": "light"})
@@ -578,11 +710,15 @@ def t3_5():
     time.sleep(1.5)
     drive("activate", NAME)
     # Next tab: the Ui says ⌘Tab (macOS app switcher); try ⌃Tab, the Mac convention
-    a = open(f"{OUT}/shots/" + shot("tabs-before").split("/")[-1], "rb").read()
+    t_a = axdump("tabs-before")
+    shot("tabs-before")
     drive("key", "ctrl+tab")
     time.sleep(1.5)
-    b = open(f"{OUT}/shots/" + shot("tabs-after-ctrl-tab").split("/")[-1], "rb").read()
-    ev["ctrl_tab_changed_screen"] = a != b
+    t_b = axdump("tabs-after-ctrl-tab")
+    shot("tabs-after-ctrl-tab")
+    # the page counter / title in the top bar differs between five-pages.pdf (active last opened = second.pdf) and the other
+    strip = lambda t: "\n".join(l for l in t.splitlines() if not re.search(r"\d{2}:\d{2}:\d{2}", l))
+    ev["ctrl_tab_changed_screen"] = strip(t_a) != strip(t_b)
     # traffic lights
     press("Zoom")
     time.sleep(1.5)
@@ -966,10 +1102,23 @@ def t5_5():
 
 
 def main():
+    if A.suite == "diag":
+        t4_0b()
+        t4_0()
+        reset_state({"theme": "light"})
+        launch(settle=4)
+        ok, _ = open_doc(f"{FX}/five-pages.pdf")
+        record("diag open panel", "pass" if ok else "fail", f"opened={ok}", exceptions=exceptions_in(app_log()), shot=shot("diag-after-open"))
+        quit_app()
+        t4_0c()
+        t5_10()
+        return
     _, trust = drive("trust")
     record("env", "info", trust.replace("\n", "; "), sw=sh("sw_vers")[1], arch=sh("uname -m")[1],
            cpu=sh("sysctl -n machdep.cpu.brand_string")[1], displays=drive("displays")[1])
     t1_6()
+    t4_0b()
+    t4_0()
     t5_10()
     t3_7()
     t4_14()
@@ -979,6 +1128,7 @@ def main():
     t3_5()
     t2(A.runs)
     if A.suite == "full":
+        t4_0c()
         t3_1()
         t3_2()
         t3_3()

@@ -134,7 +134,8 @@ for rel, f in R["files"].items():
     mins = sorted(set(re.findall(r"minos (\S+)", lc)))
     plats = sorted(set(re.findall(r"platform (\S+)", lc)))
     _, libs = run("otool", "-L", p)
-    linked = [l.strip().split(" (")[0] for l in libs.splitlines()[1:]]
+    # universal binaries print a "<path> (architecture …):" header per slice — not a dependency
+    linked = [l.strip().split(" (")[0] for l in libs.splitlines()[1:] if not l.rstrip().endswith(":")]
     R["machos"][rel] = {"archs": archs, "minos": mins, "platform": plats, "linked": sorted(set(linked))}
     if not ("arm64" in archs and "x86_64" in archs):
         single_arch.append(f"{rel}: {archs}")
