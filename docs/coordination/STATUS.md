@@ -1,6 +1,6 @@
 # Programme status
 
-_Last updated: 9 Nov 2026, 02:30 IST. All chats running._
+_Last updated: 9 Nov 2026, 02:45 IST. All chats running._
 
 **All chats running in parallel (D-125, Arun).**
 
@@ -10,7 +10,7 @@ _Last updated: 9 Nov 2026, 02:30 IST. All chats running._
 
 | Chat | State |
 |---|---|
-| Foundation | Eighth patch landed: platform/foundation 839d39d (green on 6); PR #11 at 50182a4 (green). Footer lines need deleting again by Arun. B-18 waits on Arun (D-121) |
+| Foundation | platform/foundation f1e4126 (ninth patch, green on 6; PR #11 moved); next: B-24 stall fix (D-130); Docs/Sheets move waits on Arun |
 | Mac | Working through M-01..M-12 |
 | Linux | Merged Foundation 839d39d (bad60d7); full Xvfb pass running, then push |
 | Android | Rebased on 839d39d; smoke check; waiting for Android Test bugs |

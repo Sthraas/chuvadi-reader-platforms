@@ -327,5 +327,7 @@ Options considered:
 | — | Mac | M-16 first (it blocks most Mac Test function and robustness cases), then M-02 (files from Finder) |
 | — | Web portal UI | Q-3 (D-119 (c)) "this session" wording on Home's Storage map and shelves, now |
 
+| D-130 | Linux Test B-24 (S2): a PDF that never delivers data blanks the Reader and blocks every later open | Shared open path, so into Foundation's next combined patch (a Linux-only patch would split the code). The fix keeps "Opening…" and Cancel visible during a stall, Cancel frees the slot, and later opens are never blocked; the test uses a stalled stream. B-08b accepted on the code for now; Cancel is re-verified together with B-24 |
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).
