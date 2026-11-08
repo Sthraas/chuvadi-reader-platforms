@@ -13,8 +13,11 @@ const hasFiles = (dt) => !!dt && Array.from(dt.types || []).includes('Files');
 export function attach(root) {
     const input = root.querySelector('input[type=file]');
     let depth = 0;
-    const on = () => root.classList.add('on');
-    const off = () => { depth = 0; root.classList.remove('on'); };
+    // D-109 (U-17 b): the same state on <html>, so Home's own drop zone can step aside while the
+    // "Drop to open" panel shows (one title, not two).
+    const html = document.documentElement;
+    const on = () => { root.classList.add('on'); html.classList.add('chvd-dragging'); };
+    const off = () => { depth = 0; root.classList.remove('on'); html.classList.remove('chvd-dragging'); };
 
     const enter = (e) => {
         if (!hasFiles(e.dataTransfer) || isImageOnly(e.dataTransfer)) return;
@@ -46,6 +49,7 @@ export function attach(root) {
 
     return {
         dispose() {
+            html.classList.remove('chvd-dragging');
             document.removeEventListener('dragenter', enter, true);
             document.removeEventListener('dragleave', leave, true);
             document.removeEventListener('dragover', over, true);

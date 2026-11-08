@@ -43,6 +43,9 @@ public abstract class ViewerBase : ComponentBase, IAsyncDisposable
     /// <summary>One-line description for the status bar, e.g. "Markdown · rendered · 186 words".</summary>
     [Parameter] public EventCallback<string> OnStatus { get; set; }
 
+    /// <summary>"Stop opening" on a slow open (B-08b): the Reader closes the tab.</summary>
+    [Parameter] public EventCallback OnStopOpening { get; set; }
+
     /// <summary>Go to page / section / line / sheet <paramref name="index"/> (1-based).</summary>
     public abstract Task GoToAsync(int index);
 

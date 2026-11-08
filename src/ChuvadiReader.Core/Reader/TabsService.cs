@@ -25,8 +25,29 @@ public sealed class ReaderTab
 
     public string? Error { get; set; }
 
+    /// <summary>The PDF is password-protected and waits for its password (B-07).</summary>
+    public bool NeedsPassword { get; set; }
+
+    /// <summary>The password that opened this tab's PDF. Memory only, for this tab (as Word/Excel); never persisted.</summary>
+    public string? Password { get; set; }
+
+    /// <summary>Set when the last password tried didn't open the file.</summary>
+    public string? PasswordError { get; set; }
+
+    /// <summary>The PDF couldn't be parsed (damaged or not really a PDF) — B-11. <see cref="Error"/> holds the
+    /// plain message; <see cref="ErrorDetail"/> the library's own text, for "Details".</summary>
+    public bool IsDamaged { get; set; }
+
+    public string? ErrorDetail { get; set; }
+
     // Per-tab view-state, persisted so switching (and restarting) lands where you left off.
+    /// <summary>The page in view, 1-based as shown ("page 1 of 13").</summary>
     public int CurrentPage { get; set; } = 1;
+
+    /// <summary>The page in view as a zero-based index, for code that indexes pages (print "Current",
+    /// Measure, Layers, Signatures, Password cards). WT-02: passing <see cref="CurrentPage"/> there printed
+    /// the next page.</summary>
+    public int CurrentPageIndex => Math.Max(CurrentPage - 1, 0);
 
     public double Scale { get; set; } = 1.0;
 
@@ -390,6 +411,9 @@ public sealed class TabsService
         }
     }
 
+    /// <summary>Shown when a document can't be opened for a reason other than damage, a password or access (WT-10).</summary>
+    public const string OpenFailed = "This file is damaged or isn't a PDF Chuvadi can read.";
+
     private async Task EnsureLoadedAsync(ReaderTab tab, CancellationToken ct)
     {
         if (tab.IsLoaded || tab.IsLoading)
@@ -413,25 +437,76 @@ public sealed class TabsService
 
         tab.IsLoading = true;
         tab.Error = null;
+        tab.ErrorDetail = null;
+        tab.IsDamaged = false;
         Changed?.Invoke();
 
         try
         {
-            tab.Session = await _reader.OpenAsync(tab.Path, tab.FileName, null, ct, transparentBackground: true).ConfigureAwait(false);
+            var session = await _reader.OpenAsync(tab.Path, tab.FileName, tab.Password, ct, transparentBackground: true).ConfigureAwait(false);
+            if (!_tabs.Contains(tab))
+            {
+                session.Dispose(); // B-08b: the tab was closed ("Stop opening") while it opened
+                return;
+            }
+
+            tab.Session = session;
+            tab.NeedsPassword = false;
+            tab.PasswordError = null;
             if (tab.CurrentPage > tab.Session.Document.PageCount)
             {
                 tab.CurrentPage = 1;
                 tab.ScrollTop = 0;
             }
         }
-        catch (Exception ex)
+        catch (Chuvadi.Pdf.Primitives.PdfPasswordRequiredException)
         {
-            tab.Error = $"Could not open this document. {ex.Message}";
+            // B-07: ask for the password (the library throws this for a missing and for a wrong one).
+            tab.PasswordError = tab.Password is null ? null : "That password doesn't open this file.";
+            tab.Password = null;
+            tab.NeedsPassword = true;
+        }
+        catch (Exception ex) when (ex is Chuvadi.Pdf.Primitives.PdfParseException or Chuvadi.Pdf.Primitives.PdfCorruptionException)
+        {
+            // B-11: the handout's damaged-file state, not the parser's text (kept under Details).
+            tab.IsDamaged = true;
+            tab.Error = "This PDF is damaged";
+            tab.ErrorDetail = ex.Message;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // WT-10: a plain sentence; the system's own text stays under Details.
+            tab.Error = "Chuvadi couldn't read this file. It may be open in another app, or you may not have permission to read it.";
+            tab.ErrorDetail = ex.Message;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // WT-10 / B-11b: the parser's text (e.g. "Invalid integer '4294965240' at offset 3927…") is detail.
+            tab.Error = OpenFailed;
+            tab.ErrorDetail = ex.Message;
         }
         finally
         {
             tab.IsLoading = false;
             Changed?.Invoke();
+        }
+    }
+
+    /// <summary>Opens a password-protected PDF tab with <paramref name="password"/> (kept in memory for this tab only).</summary>
+    public async Task UnlockAsync(string id, string password, CancellationToken ct = default)
+    {
+        var tab = _tabs.FirstOrDefault(t => t.Id == id);
+        if (tab is null || !tab.NeedsPassword)
+        {
+            return;
+        }
+
+        tab.Password = password;
+        await EnsureLoadedAsync(tab, ct).ConfigureAwait(false);
+        if (tab.Session is not null)
+        {
+            DropOtherCaches(tab);
+            await PersistAsync(ct).ConfigureAwait(false);
         }
     }
 
