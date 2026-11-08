@@ -26,10 +26,10 @@ case "$FF" in *-base)
 *)
   # Copy the working tree (tracked + new files), not .git.
   (cd "$ROOT" && git ls-files -co --exclude-standard -z | xargs -0 -I{} sh -c 'if [ -e "$1" ]; then cp --parents "$1" "$0"; fi' "$SCRATCH" {})
-  # Each mobile-ui-hooks-N.patch is the full set; apply only the highest N (as Android's compose.sh does).
-  p=$(ls "$ROOT"/docs/mobile-ui/proposal/mobile-ui-hooks-*.patch | sort -V | tail -1)
-  # Skip it once Foundation has landed it (the tree already contains every hunk).
-  if (cd "$SCRATCH" && git apply --check -R "$p" 2>/dev/null); then echo "hooks: $(basename "$p") already in the tree"; else (cd "$SCRATCH" && git apply "$p"); fi
+  # Outstanding hooks only: proposal/mobile-ui-hooks-N.patch (highest N, the full outstanding set, as
+  # Android's compose.sh takes it). Landed sets move to proposal/landed/.
+  p=$(ls "$ROOT"/docs/mobile-ui/proposal/mobile-ui-hooks-*.patch 2>/dev/null | sort -V | tail -1)
+  if [ -n "$p" ]; then (cd "$SCRATCH" && git apply "$p"); else echo "hooks: none outstanding"; fi
   export CHVD_FF="$FF"
   ;;
 esac

@@ -142,7 +142,7 @@ async def main():
             await pg.locator(".lb-mode:nth-of-type(3)").click()
         await pg.wait_for_timeout(1800)
         before = await pg.evaluate("document.querySelectorAll('.desk [data-bench-id]').length")
-        if phone:
+        if phone or W < 1000:   # the Shelf is a bottom sheet there (tablet under 1000 px: a peek)
             await pg.locator(".bench-shelf .shelf-head").first.tap(); await pg.wait_for_timeout(700)
         # Bring a Shelf page into view inside the sheet (in phone landscape the sheet's tools come first).
         await pg.evaluate("document.querySelector('[data-shelf]')?.scrollIntoView({block: 'center'})")

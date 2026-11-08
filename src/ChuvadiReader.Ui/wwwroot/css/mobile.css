@@ -90,13 +90,33 @@ html[data-shell="tablet"] .rtab-more {
 /* 12d shows only the active tab and the +N count: Open is in the left bar, Close in Document ▾. */
 html[data-shell="tablet"] .topbar .rtab-add,
 html[data-shell="tablet"] .topbar .rtabs-actions { display: none; }
-html[data-shell="tablet"] .tb-pager { height: 40px; padding: 0 4px; gap: 4px; border-radius: 10px; font-size: 13px; }
+html[data-shell="tablet"] .tb-pager { height: 40px; padding: 0 4px; gap: 10px; border-radius: 10px; font-size: 13px; }
 html[data-shell="tablet"] .tb-pg-btn { width: 36px; height: 36px; }
 html[data-shell="tablet"] .tb-pg-btn svg { width: 18px; height: 18px; }
 html[data-shell="tablet"] .tb-pg-box { width: 34px; height: 28px; border-radius: 6px; font-size: 13px; }
 html[data-shell="tablet"] .tb-doc { height: 40px; padding: 0 12px; font-size: 14px; }
 html[data-shell="tablet"] .tb-cmd { width: 40px; height: 40px; padding: 0; justify-content: center; border: none; background: transparent; color: var(--chvd-ink); }
 html[data-shell="tablet"] .tb-cmd svg { width: 19px; height: 19px; }
+/* Touch targets (AT-06): the top bar keeps its look; invisible ::after areas, and a transparent
+   border on the page box, bring each control to about 44 px without moving anything. */
+html[data-shell="tablet"] .tb-brand,
+html[data-shell="tablet"] .tb-pg-btn,
+html[data-shell="tablet"] .tb-doc,
+html[data-shell="tablet"] .tb-cmd { position: relative; }
+html[data-shell="tablet"] .tb-brand::after { content: ""; position: absolute; inset: -11px -4px; }
+html[data-shell="tablet"] .tb-pg-btn::after { content: ""; position: absolute; inset: -4px -5px -4px -8px; }
+html[data-shell="tablet"] .tb-pg-btn:last-child::after { inset: -4px -8px -4px -5px; }
+html[data-shell="tablet"] .tb-doc::after,
+html[data-shell="tablet"] .tb-cmd::after { content: ""; position: absolute; inset: -2px; }
+html[data-shell="tablet"] .tb-pg-box {
+    width: 44px; height: 44px; margin: -8px -5px; border-width: 8px 5px; border-color: transparent; border-radius: 11px / 14px;
+    background-clip: padding-box; box-shadow: inset 0 0 0 var(--chvd-stroke) var(--chvd-border);
+}
+html[data-shell="tablet"] .tb-pg-box:focus { outline: none; box-shadow: inset 0 0 0 1.5px var(--chvd-binding); }
+html[data-shell="tablet"] .desk-more { position: relative; }
+html[data-shell="tablet"] .desk-more::after { content: ""; position: absolute; inset: -15px -9px; z-index: 1; }
+html[data-shell="phone"] .desk-name,
+html[data-shell="tablet"] .desk-name { padding-block: 11px; margin-block: -8px; }   /* 44 px to tap, same layout */
 html[data-shell="tablet"] .tb-cmd-t,
 html[data-shell="tablet"] .tb-cmd .kbd,
 html[data-shell="tablet"] .topbar .tb-icon,
@@ -234,6 +254,8 @@ html[data-shell="phone"] {
     background: var(--chvd-surface-mid); border: var(--chvd-stroke) solid var(--chvd-border-soft); border-radius: 9px;
     font-family: var(--chvd-mono); font-size: 12px; color: var(--chvd-ink); cursor: pointer; white-space: nowrap;
 }
+.ph-pager { position: relative; }
+.ph-pager::after { content: ""; position: absolute; inset: -5px 0; }   /* 44 px target (AT-06) */
 .ph-pager-act:disabled { opacity: .45; cursor: default; }
 .ph-pager-in { width: 64px; text-align: center; user-select: text; -webkit-user-select: text; }
 .ph-pager-in:focus { outline: 1.5px solid var(--chvd-binding); outline-offset: 0; }
@@ -295,6 +317,8 @@ html[data-shell="phone"] {
     animation: ph-rise var(--chvd-base) var(--chvd-ease);
 }
 .ph-handle { align-self: center; display: flex; align-items: center; justify-content: center; width: 64px; height: 20px; margin: -4px 0 -6px; border: none; background: transparent; cursor: pointer; }
+.ph-handle { position: relative; }
+.ph-handle::after { content: ""; position: absolute; inset: -12px 0; }   /* 44 px target (AT-06) */
 .ph-handle span { width: 36px; height: 4px; border-radius: 2px; background: var(--chvd-border); }
 .ph-sheet-hd { display: flex; justify-content: space-between; align-items: baseline; }
 .ph-sheet-t { font-family: var(--chvd-serif-display); font-size: 21px; color: var(--chvd-ink); }
@@ -432,10 +456,11 @@ html[data-shell="phone"] .desk-add { min-height: 88px; }
    ════════════════════════════════════════════════════════════════════════════ */
 .ph-lab { font-family: var(--chvd-sans-display); font-size: 12px; line-height: 1; white-space: nowrap; }
 .ph-av {
-    flex: none; width: 32px; height: 32px; margin: 6px 12px 6px 6px; border: none; outline: 6px solid transparent; /* 44 px target */ border-radius: 16px; cursor: pointer;
+    flex: none; width: 32px; height: 32px; margin: 6px 12px 6px 6px; border: none; border-radius: 16px; cursor: pointer; position: relative;
     display: flex; align-items: center; justify-content: center;
     background: var(--chvd-binding); color: var(--chvd-on-accent); font: 500 12px var(--chvd-mono);
 }
+.ph-av::after { content: ""; position: absolute; inset: -6px; }   /* 44 px target (AT-06) */
 .ph-search {
     display: flex; align-items: center; gap: 10px; width: calc(100% - 36px); height: 46px; margin: 14px 18px 0;
     padding: 0 14px; box-sizing: border-box; border-radius: 12px; cursor: pointer; text-align: left;

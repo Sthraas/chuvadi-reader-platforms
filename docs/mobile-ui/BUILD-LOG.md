@@ -355,3 +355,31 @@ Evidence:
     PhoneShell, waiting for the Web rebase.
   - WT-09 (no-print reason only in a hover tooltip) is an existing file, routed to Arun.
   - Linux and Mac lists have no touch items.
+
+## 9 Nov: Android Test AT-04, AT-05, AT-06; Foundation 053e8e4 merged
+- Merged Foundation 053e8e4. The landed combined patches (hooks-3, 4, 5) no longer applied either way
+  after the ninth and tenth patches, so preview.sh (and Android's `compose.sh`) would fail on them:
+  moved to `proposal/landed/`; preview.sh applies only the outstanding `mobile-ui-hooks-N.patch`.
+- **AT-04** → **H-17** (Bench): the touch desk header is name · chips · N pg · ···; the small buttons
+  move into the ··· menu with labels. `mobile-ui-hooks-6.patch`.
+- **AT-06** (targets under 44 dp), mobile.css only, no look change:
+  - tablet top bar: brand, ‹ ›, Document, search get invisible `::after` areas; the page box gets a
+    transparent border (44 × 44, same visible box); the pager gap is 10 px (was 4) so the box and the
+    arrows don't overlap. Tablet desk ··· gets a 44 px area.
+  - phone: avatar (the old `outline` gave no hit area, now `::after`), pager chip, sheet handle.
+  - both: the desk name field is 44 px tall to tap, same layout.
+  - The Library `.libp-go` / `.tagchip` already had `::after` areas; AT-06 measured the boxes.
+  - Audit (elementFromPoint ±21 px from each control's centre): nothing under 42 px on tablet Read /
+    Arrange (800×1280, 1280×800 Read), phone Read / Arrange / Home.
+  - Not in AT-06 but seen: the tablet-landscape Shelf (docked, ≥1000 px) keeps its desktop-size
+    controls (16–28 px). Left for a decision.
+- **AT-05** is not a portrait or touch layout issue: the screenshot is Arrange, and Arrange registers
+  no Document menu on any platform (desktop too); `Document ▾` shows in Read portrait. 12f draws it in
+  Arrange. Needs a decision on what it holds there.
+- gestures.py: the tablet-portrait drag test opens the Shelf peek first (it failed on a closed peek;
+  the app was fine).
+- Results:
+  - 305 tests (191 + 16 + 59 + 39) on the patched tree.
+  - Desktop before/after (Foundation vs this branch + H-17): clock only on Read, Mark, Arrange, Home
+    and the open desk menu.
+  - Touch gestures and checks pass at 800×1280, 1280×800, 412×915, 915×412; 0 console errors.

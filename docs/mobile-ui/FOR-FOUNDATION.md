@@ -1,8 +1,33 @@
-# Mobile app UI → Foundation: hooks and hand-off (updated 8 Nov, 18:51 IST)
+# Mobile app UI → Foundation: hooks and hand-off (updated 9 Nov)
 
-## Outstanding for Foundation: nothing (9 Nov)
-H-14 and H-16 landed in the eighth combined patch (63f37b1, 839d39d), exactly as written. The record
-of both follows.
+## Outstanding for Foundation: H-17 (`proposal/mobile-ui-hooks-6.patch`)
+Android Test **AT-04**: on touch the desk header still shows the desktop row (swatch 16 px, BM, All,
+Inv, ← →, duplicate, Clear, delete; 16–20 px targets). 12f / 12i draw only the name, the page count
+and ···. `mobile-ui-hooks-6.patch` = H-17 alone; it applies cleanly to Foundation 053e8e4.
+Landed combined sets now live in `proposal/landed/`, so Android's `compose.sh` only ever sees the
+outstanding one.
+
+### H-17: the desk header's small buttons move into the ··· menu on touch (12f, 12i)
+(`Ui/Pages/Bench.razor`, +31 / −2)
+- On Tablet and Phone (`TouchDesks`, from H-16) the header renders: name · chips (№, A4/LTR) ·
+  "N pg" · ···. The colour swatch, BM, All / Inv, ← →, duplicate, Clear and delete aren't rendered.
+- They join the ··· menu, labelled, through `DeskMenuDo` (same methods, no logic duplicated):
+  - top: Select all pages, Invert selection (when the desk has pages), Bookmarks on Bind: on/off,
+    Desk colour (opens the existing palette), Move desk left / right, Duplicate desk;
+  - foot, after Bind desk: Delete all pages (when it has pages), Delete desk.
+- Desktop: the header is exactly as today (`@if (!TouchDesks)` around the removed buttons; Read,
+  Mark, Arrange, Home and the open desk menu are clock-only at 1440×900).
+- **For:** 12f / 12i as drawn; every removed control stays reachable with a label; one file, reusing
+  H-16's flag and helper.
+- **Against:** one more tap for those actions on touch; Delete desk sits in a menu rather than as a
+  visible icon (it's still the last item, after a separator).
+- Icons: the menu uses LiPicon keys that exist (`check`, `refresh`, `bookmark`, `circle`,
+  `arrow-left`, `arrow-right`, `copy`, `trash`). **Heads-up, not in the patch:** `Icon.razor` maps
+  `swatches` → `palette`, and LiPicons 1.1.0 has no `palette` key, so anything asking for `swatches`
+  draws nothing. Worth a look by whoever owns Icon.razor.
+
+## Landed: H-14 and H-16 (eighth combined patch, 63f37b1, 839d39d), exactly as written
+The record of both follows.
 
 ## Outstanding for Foundation: H-14 and H-16 (`proposal/mobile-ui-hooks-5.patch`)
 Coordinator decisions D-111 to D-114 (8 Nov 20:22). `mobile-ui-hooks-5.patch` = H-14 + H-16, which
