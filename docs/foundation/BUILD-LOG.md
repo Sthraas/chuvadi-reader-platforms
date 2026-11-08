@@ -161,3 +161,6 @@
 
 ### 29. Eleventh combined patch (9 Nov, D-136)
 - Chuvadi.Docs 2.0.0 and Chuvadi.Sheets 2.0.2 (release assets of docs-v2.0.0 / sheets-v2.0.2, SHA-256 in `PACKAGES-DOCS-SHEETS-2.md`), namespaces to `.Model`, table cells from `TableCell.Blocks`, whitespace shown as in the file. Library limits (Docs 20 MB / 64 MB; Sheets ForUntrustedInput) and cancellation (token, 60 s) replace Core's guard; viewers stop waiting at once. Corpus with independent expected values: old 18 wrong, new 0. 313/313; 24/27 + About (versions). `COMBINED-HOOKS-11.md`.
+
+### 30. Eleventh combined patch, part 2 (9 Nov, D-137)
+- Word limits keyed on `ServerSide`: portal 20/64 MB, desktop and mobile 100/400 MB (a 30 MB picture opens locally, is refused on the server). List markers from `Document.GetListLabels()`; Symbol/Wingdings bullets drawn as Unicode shapes. 324/324; 26/27 + Home artefact.
