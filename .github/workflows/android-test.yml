@@ -1,0 +1,170 @@
+name: Android Test
+
+# The Android Test chat's independent checks (D-122). Started by hand only, one run per round:
+#   gh workflow run android-test.yml --ref platform/android-test -f emulators=all -f suites=startup,design
+# Builds the composition from clean (Foundation + Mobile UI + Android host, at the refs below), audits the
+# packages, then runs the chosen suites on the chosen emulators with the shipped Release .apk.
+# Every tool here (setup actions, emulator runner, bundletool, reportlab/pypdf, websocket-client) is test
+# tooling only; nothing from it ships (programme rule 3).
+
+on:
+  workflow_dispatch:
+    inputs:
+      emulators:
+        description: "all, none, or a comma list of phone-35, phone-36, tablet-35, tablet-36"
+        required: true
+        default: all
+      suites:
+        description: "comma list of startup, design, function, robust"
+        required: true
+        default: startup,design
+      foundation_ref:
+        description: "platform/foundation commit"
+        required: true
+        default: 839d39d9b68fb6f1afa99d1375b00e1b6e03dff9
+      mobileui_ref:
+        description: "platform/mobile-ui commit"
+        required: true
+        default: 95b9d799349c6e83d11d8ab77c8b81c219de4f7a
+      android_ref:
+        description: "platform/android commit"
+        required: true
+        default: 7ec801764b791ba7d5881060baa579edd76c43cd
+
+concurrency:
+  group: android-test
+  cancel-in-progress: false
+
+env:
+  DOTNET_NOLOGO: '1'
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+
+jobs:
+  build:
+    name: build from clean + package audit
+    runs-on: ubuntu-latest
+    outputs:
+      emulators: ${{ steps.plan.outputs.emulators }}
+    steps:
+      - name: Plan
+        id: plan
+        env:
+          WANT: ${{ inputs.emulators }}
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          profiles = {"phone": "pixel_7", "tablet": "pixel_tablet"}
+          every = [f"{d}-{a}" for d in ("phone", "tablet") for a in (35, 36)]
+          want = os.environ["WANT"].replace(" ", "").lower()
+          names = every if want == "all" else [] if want in ("", "none") else want.split(",")
+          assert all(n in every for n in names), names
+          print("emulators=" + json.dumps([{"device": n.split("-")[0], "api": int(n.split("-")[1]), "profile": profiles[n.split("-")[0]]} for n in names]))
+          PY
+      - uses: actions/checkout@v4
+        with: { path: test }
+      - uses: actions/checkout@v4
+        with: { ref: '${{ inputs.android_ref }}', path: android }
+      - uses: actions/checkout@v4
+        with: { ref: '${{ inputs.foundation_ref }}', path: reader, fetch-depth: 0 }
+      - name: Compose (the Android chat's own compose.sh, unchanged)
+        run: bash android/docs/android/integration/compose.sh reader ${{ inputs.mobileui_ref }} android 2>&1 | tee compose.txt
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: '10.0.x' }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '21' }
+      - run: dotnet workload install maui-android
+      - name: Restore (Reader's ci/packages feed + nuget.org)
+        working-directory: reader
+        run: dotnet restore src/ChuvadiReader.Android/ChuvadiReader.Android.csproj --configfile ci/nuget.config 2>&1 | tee ../restore.txt
+      - name: Android SDK packages
+        working-directory: reader
+        run: dotnet build -t:InstallAndroidDependencies -f net10.0-android --no-restore src/ChuvadiReader.Android/ChuvadiReader.Android.csproj -p:AndroidSdkDirectory=$ANDROID_HOME -p:AcceptAndroidSDKLicenses=True > ../sdk.txt 2>&1
+      - name: Publish Release (.aab + .apk), timed, warnings counted
+        working-directory: reader
+        run: |
+          start=$(date +%s)
+          dotnet publish src/ChuvadiReader.Android/ChuvadiReader.Android.csproj -c Release -f net10.0-android --no-restore -p:AndroidSdkDirectory=$ANDROID_HOME -bl:../release.binlog 2>&1 | tee ../publish-release.txt
+          echo "release publish seconds: $(( $(date +%s) - start ))" | tee -a ../publish-release.txt
+          grep -E "[0-9]+ Warning\(s\)|[0-9]+ Error\(s\)" ../publish-release.txt | tail -2
+      - name: Debug x64 .apk (fallback for page-level checks only)
+        working-directory: reader
+        run: dotnet build src/ChuvadiReader.Android/ChuvadiReader.Android.csproj -c Debug -f net10.0-android -p:RuntimeIdentifier=android-x64 -p:EmbedAssembliesIntoApk=true -p:RestoreConfigFile=ci/nuget.config -p:AndroidSdkDirectory=$ANDROID_HOME > ../build-debug.txt 2>&1; tail -3 ../build-debug.txt
+      - name: Collect packages
+        run: |
+          mkdir -p out
+          find reader/src/ChuvadiReader.Android/bin/Release -name '*-Signed.apk' -exec cp {} out/chuvadi-reader-release.apk \;
+          find reader/src/ChuvadiReader.Android/bin/Release -name '*-Signed.aab' -exec cp {} out/chuvadi-reader-release.aab \;
+          find reader/src/ChuvadiReader.Android/bin/Debug -name '*-Signed.apk' -exec cp {} out/chuvadi-reader-debug-x64.apk \;
+          ls -la out; sha256sum out/*
+      - name: Package audit
+        run: mkdir -p audit && (bash test/docs/android-test/ci/audit.sh reader out audit 2>&1 | tee audit/run.txt) || true
+      - name: Keep build evidence
+        if: always()
+        run: mkdir -p audit && cp compose.txt restore.txt publish-release.txt build-debug.txt sdk.txt release.binlog audit/ 2>/dev/null; git -C reader log -1 --format='foundation %H' >> audit/refs.txt; echo "mobileui ${{ inputs.mobileui_ref }} android ${{ inputs.android_ref }}" >> audit/refs.txt
+      - uses: actions/upload-artifact@v4
+        with: { name: android-packages, path: out/, if-no-files-found: error }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: audit, path: audit/ }
+
+  webview-donor:
+    name: WebView donor (API 36 image's WebView, for the API 35 emulators)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: contains(inputs.emulators, '35') || inputs.emulators == 'all'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules; sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          script: bash docs/android-test/ci/webview-donor.sh donor
+      - uses: actions/upload-artifact@v4
+        with: { name: webview-donor, path: donor/ }
+
+  emulator:
+    name: ${{ matrix.device }} API ${{ matrix.api }}
+    needs: [build, webview-donor]
+    if: always() && needs.build.result == 'success' && needs.build.outputs.emulators != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.build.outputs.emulators) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { name: android-packages, path: out }
+      - uses: actions/download-artifact@v4
+        if: matrix.api == 35
+        continue-on-error: true
+        with: { name: webview-donor, path: donor }
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules; sudo udevadm trigger --name-match=kvm
+      - name: Test tooling (never shipped)
+        run: pip install websocket-client==1.8.0 reportlab==4.2.5 pypdf==5.1.0 pillow
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          target: google_apis
+          arch: x86_64
+          profile: ${{ matrix.profile }}
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -memory 4096
+          pre-emulator-launch-script: |
+            sed -i '/^hw.keyboard=/d' ~/.android/avd/test.avd/config.ini 2>/dev/null || true
+            echo 'hw.keyboard=no' >> ~/.android/avd/test.avd/config.ini
+          script: bash docs/android-test/ci/run-emulator.sh out donor results/${{ matrix.device }}-api${{ matrix.api }} "${{ inputs.suites }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: 'results-${{ matrix.device }}-api${{ matrix.api }}', path: results/ }
