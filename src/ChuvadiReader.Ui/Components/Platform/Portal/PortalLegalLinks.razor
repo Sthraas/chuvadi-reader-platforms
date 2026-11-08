@@ -1,0 +1,32 @@
+@namespace ChuvadiReader.Ui.Components.Platform.Portal
+@inject PortalLinks Links
+
+@*
+    "Terms of use · Privacy" — one line, used under the sign-in card (12a, U-13 a / D-86), at the foot of
+    the account card (12b, U-15 a / D-97) and of the phone account block. Each link is hidden when its
+    URL is null; nothing renders when both are. Links open a new tab so the portal session stays put.
+*@
+@if (Links.TermsUrl is not null || Links.PrivacyUrl is not null)
+{
+    <span class="pll">
+        @if (Links.TermsUrl is { } terms)
+        {
+            <a href="@terms" target="_blank" rel="noopener" @onclick="Clicked">Terms of use</a>
+        }
+        @if (Links.TermsUrl is not null && Links.PrivacyUrl is not null)
+        {
+            <span aria-hidden="true"> · </span>
+        }
+        @if (Links.PrivacyUrl is { } privacy)
+        {
+            <a href="@privacy" target="_blank" rel="noopener" @onclick="Clicked">Privacy</a>
+        }
+    </span>
+}
+
+@code {
+    /// <summary>Raised when a link is used (menus close themselves).</summary>
+    [Parameter] public EventCallback OnClick { get; set; }
+
+    private Task Clicked() => OnClick.InvokeAsync();
+}

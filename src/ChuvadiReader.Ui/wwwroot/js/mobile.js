@@ -277,8 +277,11 @@ export async function fitWidthZoom(desk) {
     for (let i = 0; i < 20 && !desk.querySelector('.rpage svg'); i++) await new Promise(r => setTimeout(r, 75));
     const page = desk.querySelector('.rpage');
     if (!page) return 0;
-    const z = parseFloat(getComputedStyle(desk).getPropertyValue('--rpage-zoom')) || 1;
-    const natW = page.getBoundingClientRect().width / z;
+    // The page's width at 100 %: from the SVG's own width ("595pt"), else offsetWidth (layout size,
+    // unzoomed). Not the box ÷ zoom: older WebViews (Android API 35) report a CSS-zoomed box unzoomed.
+    const svg = page.querySelector('svg');
+    const m = svg && /^\s*([\d.]+)\s*(pt|px)?\s*$/.exec(svg.getAttribute('width') || '');
+    const natW = m ? parseFloat(m[1]) * (m[2] === 'pt' ? 96 / 72 : 1) : page.offsetWidth;
     if (!natW) return 0;
     const fit = (desk.clientWidth - 32) / natW;
     return Math.max(0.3, Math.min(4, Math.floor(fit * 100) / 100));

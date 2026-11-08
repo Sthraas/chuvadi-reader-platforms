@@ -132,3 +132,6 @@
 ### 20. D-98 legal wording (8 Nov)
 - Terms of Use, Privacy Notice B6 and the App Store portal text: "encrypted working area" → "kept in memory only, never written to disk" (D-28: tmpfs). Still DRAFT. Kept as accurate: the encrypted sign-in cookie (ASP.NET Data Protection) and HTTPS.
 - Not changed (approved wording, D-20): PlatformText.ServerPrivacy still says "encrypted" on the portal (Settings footer, Library index hint, About › Network) — raised with the coordinator.
+
+### 21. Seventh combined patch, part 1 (8 Nov)
+- H-13 (Mobile UI), Web H7 + Portal files (PortalLegalLinks), Linux window-button layout (shared diff unchanged). 27/27 desktop identical; portal/phone smoke clean; 273/273. Part 2 waits for D-101 (live chrome event) and D-104 (drop overlay). `COMBINED-HOOKS-7.md`.
