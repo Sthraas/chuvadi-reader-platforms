@@ -187,3 +187,20 @@ Build `-warnaserror` 0 warnings; tests Mobile UI 15 + Hosting 48 + Web UI 32 + R
 
 ## 2026-11-07 — session 8 (D-93: CI back, repo public)
 Rebased onto `platform/foundation` 4819d66 (new CI rules: docs-only pushes run nothing, newer push cancels older). Local: 0 warnings, 266 tests pass. CI `platforms` run 42314281411 (dispatched, head 5c37e62): **success** — shared on ubuntu x64, ubuntu ARM64, macOS, Windows; windows-app; pack-check.
+
+## 2026-11-08 — session 9 (coordinator 8 Nov 18:40: finish U-15; D-98 status wording)
+
+### 1. Checked all branches
+`platform/foundation` 8098695 (sixth combined patch: **PhoneShell slot, H5 and H6 applied**), `platform/web` 31b063e (drop: Web half of D-89 A), `platform/mobile-ui` 2678dd2, `main` c92e758 (D-94 to D-100; D-97 = U-15 a, D-98 = wording, D-100 Web Test chat). Rebased onto 8098695: clean; my committed Portal files equal the Foundation's copies.
+
+### 2. U-15 (a) built
+New `PortalLegalLinks` ("Terms of use · Privacy", each hidden when its URL is null; opens a new tab; reports clicks so menus close). Used under the sign-in card (replaces the inline markup), as a footer under Sign out in `AccountMenu`, and at the foot of `PortalPhoneAccount`. Wrapper divs owned by each host, hidden when empty.
+
+### 3. D-98
+`PortalPhoneAccount` server line → "processed on the server · kept in memory only · only you can see it". Status bar is MainLayout's → `proposal/web-ui-hooks-7-status-text.patch` (H7, text only). The 12a pitch's "encrypted at rest" raised as U-16 (not changed).
+
+### 4. D-89 overlay check
+Foundation's `PortalDropCatcher` behaviour matches the check list; it is invisible by design while the handout draws a "Drop to open" state → options in OPTIONS (recommend b).
+
+### 5. Verification
+Build `-warnaserror` 0 warnings; tests 16 + 54 + 32 + 171 = **273 pass**. With H7 applied locally: Chromium / Firefox / WebKit — desktop status bar shows the D-98 text; account card footer shows "Terms of use · Privacy" and using a link closes the card; phone (390×844, on the Foundation's real slot + H5) shows the memory line and the footer under Sign out; no console errors.
