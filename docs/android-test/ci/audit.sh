@@ -4,7 +4,7 @@
 # Writes manifest, permissions, signing, sizes, ABIs, AOT/R2R evidence, every managed assembly,
 # every Java package in the dex, native libraries, notices assets; and audit.json with the checks.
 set -uo pipefail
-READER="$1"; PKGS="$2"; OUT="$3"
+READER="$(cd "$1" && pwd)"; PKGS="$(cd "$2" && pwd)"; mkdir -p "$3"; OUT="$(cd "$3" && pwd)"
 mkdir -p "$OUT"
 BT="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)"
 APK="$PKGS/chuvadi-reader-release.apk"; AAB="$PKGS/chuvadi-reader-release.aab"
@@ -57,7 +57,7 @@ checks["package id is the placeholder in.chuvadi.reader"] = "package: name='in.c
 checks["minSdkVersion 35"] = "minSdkVersion:'35'" in badging
 checks["targetSdkVersion 36"] = "targetSdkVersion:'36'" in badging
 checks["not debuggable"] = "application-debuggable" not in badging
-checks["allowBackup false"] = bool(re.search(r"allowBackup.*=\(type 0x12\)0x0", xml))
+checks["allowBackup false"] = bool(re.search(r"allowBackup\(0x[0-9a-f]+\)=(false|\(type 0x12\)0x0)", xml))
 checks["no cleartext traffic allowed"] = "usesCleartextTraffic" not in xml or bool(re.search(r"usesCleartextTraffic.*0x0", xml))
 checks["signed with a debug/test key only (no upload key yet)"] = "Android Debug" in signer
 checks["no INTERNET permission"] = "android.permission.INTERNET" not in perms
