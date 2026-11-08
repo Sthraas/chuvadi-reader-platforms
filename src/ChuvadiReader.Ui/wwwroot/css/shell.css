@@ -68,6 +68,9 @@
     transition: width var(--chvd-base);
 }
 .topbar.lb-open .tb-brandbox { width: calc(var(--sh-left-open) - 12px); }
+/* Left-hand window buttons inside the brand cell (B-19): the cell keeps its width; the wordmark follows the
+   buttons. Only a collapsed left bar with more buttons than fit lets the cell grow, never clipping a button. */
+.tb-brandbox { gap: 10px; min-width: max-content; }
 .tb-left { align-self: stretch; }
 .topbar:not(.lb-open) .tb-brand { margin: 0 auto 0 4px; }
 .tb-mid { display: flex; justify-content: center; }

@@ -143,7 +143,16 @@ public interface IPlatformInfo
 
     InputKinds Input { get; }
 
+    /// <summary>The window chrome the Ui draws. Can change at run time (Linux: the desktop's button layout,
+    /// GTK's <c>gtk-decoration-layout</c>, changed in GNOME Tweaks or KDE settings); see <see cref="ChromeChanged"/>.</summary>
     ShellChrome Chrome { get; }
+
+    /// <summary>
+    /// Raised after <see cref="Chrome"/> returns a new value (D-101). Raise it on the host's UI thread, as
+    /// <see cref="FormFactorChanged"/>; the Ui redraws the top bar (window buttons). Hosts whose chrome never
+    /// changes don't declare it: the default does nothing. The Ui listens only on non-Windows platforms.
+    /// </summary>
+    event Action? ChromeChanged { add { } remove { } }
 
     PlatformCapabilities Capabilities { get; }
 

@@ -11,10 +11,39 @@ namespace ChuvadiReader.MobileUi.Preview;
 
 /// <summary>Platform facts for the preview: Android phone / tablet, Windows desktop, or the Web portal
 /// (<paramref name="web"/>: server-side, no folders, account menu — for checking portal wording).</summary>
-public sealed class PreviewPlatform(FormFactor formFactor, bool web = false) : IPlatformInfo
+public sealed class PreviewPlatform(FormFactor formFactor, bool web = false, bool linux = false) : IPlatformInfo
 {
+    private WindowButtonLayout? _layout = linux ? GtkLayout("appmenu:minimize,maximize,close") : null;
+
     public PlatformKind Kind => web ? PlatformKind.Web
+        : linux ? PlatformKind.Linux
         : formFactor == FormFactor.Desktop ? PlatformKind.Windows : PlatformKind.Android;
+
+    /// <inheritdoc />
+    public event Action? ChromeChanged;
+
+    /// <summary>Linux mode (CHVD_FF=linux): stands in for the Linux host's GTK settings watcher (D-101).</summary>
+    public void SetButtonLayout(string gtkDecorationLayout)
+    {
+        _layout = GtkLayout(gtkDecorationLayout);
+        ChromeChanged?.Invoke();
+    }
+
+    /// <summary>"close,minimize:maximize" → left [Close, Minimize], right [Maximize]; other names (appmenu, icon,
+    /// menu, spacer) are skipped. The preview's stand-in; the Linux host reads GTK's setting itself.</summary>
+    public static WindowButtonLayout GtkLayout(string value)
+    {
+        var sides = value.Split(':');
+        return new WindowButtonLayout(Buttons(sides[0]), sides.Length > 1 ? Buttons(sides[1]) : []);
+
+        static WindowButton[] Buttons(string side) => side.Split(',').Select(n => n.Trim() switch
+        {
+            "minimize" => (WindowButton?)WindowButton.Minimize,
+            "maximize" => WindowButton.Maximize,
+            "close" => WindowButton.Close,
+            _ => null,
+        }).OfType<WindowButton>().ToArray();
+    }
 
     public FormFactor FormFactor => formFactor;
 
@@ -27,7 +56,8 @@ public sealed class PreviewPlatform(FormFactor formFactor, bool web = false) : I
         _ => InputKinds.Touch,
     };
 
-    public ShellChrome Chrome => web ? new ShellChrome(WindowButtons.None, false, true, false, 0)
+    public ShellChrome Chrome => linux ? new ShellChrome(WindowButtons.Right, false, false, true, 12) { ButtonLayout = _layout }
+        : web ? new ShellChrome(WindowButtons.None, false, true, false, 0)
         : formFactor == FormFactor.Desktop
         ? new ShellChrome(WindowButtons.Right, false, false, true, 0)
         : new ShellChrome(WindowButtons.None, false, false, false, 0);

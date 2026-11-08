@@ -17,6 +17,12 @@
         </button>
     </header>
 
+    @if (!Available)
+    {
+        @* WT-09: the reason as text, not only a tooltip (there is no hover on touch). *@
+        <p class="refused" role="status">@UnavailableText</p>
+    }
+
     <fieldset class="body" disabled="@(!Available || _printing)">
         <div class="seg" role="radiogroup" aria-label="Pages">
             <button type="button" role="radio" aria-checked="@(Mode == RangeMode.All ? "true" : "false")" class="@(Mode == RangeMode.All ? "on" : null)" @onclick="() => Mode = RangeMode.All">All</button>

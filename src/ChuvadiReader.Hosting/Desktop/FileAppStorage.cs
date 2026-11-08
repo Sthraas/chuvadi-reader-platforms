@@ -14,6 +14,9 @@ namespace ChuvadiReader.Hosting.Desktop;
 /// Pure BCL (System.Text.Json). Shared by the desktop and Android hosts.
 /// Writes go to a temporary file beside it that then replaces settings.json, so a crash or
 /// power cut mid-write leaves the previous settings intact instead of a truncated file.
+/// <para>B-16: a folder that can't be created or written (a read-only home, a locked-down or kiosk profile, a
+/// full disk) never stops the app. Values are kept in memory for the session, settings already on disk are
+/// still read, and <see cref="CannotSave"/> is raised once so the host can tell the person.</para>
 /// </summary>
 public sealed class FileAppStorage : IAppStorage
 {
@@ -21,12 +24,31 @@ public sealed class FileAppStorage : IAppStorage
     private readonly SemaphoreSlim _gate = new(1, 1);
     private Dictionary<string, string> _cache = new();
     private bool _loaded;
+    private int _cannotSave;
 
     public FileAppStorage(string directory)
     {
-        Directory.CreateDirectory(directory);
         _file = Path.Combine(directory, "settings.json");
+        try
+        {
+            Directory.CreateDirectory(directory);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            CannotSaveReason = e.Message;
+            _cannotSave = 1;
+        }
     }
+
+    /// <summary>False once settings can't be written; they are then kept in memory for this session.</summary>
+    public bool CanSave => Volatile.Read(ref _cannotSave) == 0;
+
+    /// <summary>Why settings can't be saved (the system's text), or null while saving works.</summary>
+    public string? CannotSaveReason { get; private set; }
+
+    /// <summary>Raised once, on the first save that can't be written (with the reason). Raised on the saving
+    /// thread; a folder that couldn't be created is reported by <see cref="CanSave"/> from the start.</summary>
+    public event Action<string>? CannotSave;
 
     public async Task<string?> GetAsync(string key, CancellationToken ct = default)
     {
@@ -44,16 +66,16 @@ public sealed class FileAppStorage : IAppStorage
             {
                 if (!_loaded)
                 {
-                    if (File.Exists(_file))
+                    try
                     {
-                        try
+                        if (File.Exists(_file))
                         {
                             _cache = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(_file)) ?? new();
                         }
-                        catch (JsonException)
-                        {
-                            _cache = new();
-                        }
+                    }
+                    catch (Exception e) when (e is JsonException or IOException or UnauthorizedAccessException)
+                    {
+                        _cache = new(); // unreadable: start from defaults
                     }
 
                     _loaded = true;
@@ -71,18 +93,38 @@ public sealed class FileAppStorage : IAppStorage
     public async Task SetAsync(string key, string value, CancellationToken ct = default)
     {
         await EnsureLoadedAsync(ct).ConfigureAwait(false);
+        string? failed = null;
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             _cache[key] = value;
-            var json = JsonSerializer.Serialize(_cache);
-            var temp = _file + ".tmp";
-            await File.WriteAllTextAsync(temp, json, ct).ConfigureAwait(false);
-            File.Move(temp, _file, overwrite: true);
+            if (CanSave)
+            {
+                var json = JsonSerializer.Serialize(_cache);
+                var temp = _file + ".tmp";
+                try
+                {
+                    await File.WriteAllTextAsync(temp, json, ct).ConfigureAwait(false);
+                    File.Move(temp, _file, overwrite: true);
+                }
+                catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+                {
+                    if (Interlocked.Exchange(ref _cannotSave, 1) == 0)
+                    {
+                        CannotSaveReason = e.Message;
+                        failed = e.Message;
+                    }
+                }
+            }
         }
         finally
         {
             _gate.Release();
+        }
+
+        if (failed is not null)
+        {
+            CannotSave?.Invoke(failed); // outside the gate, so a handler may read settings
         }
     }
 
@@ -101,17 +143,17 @@ public sealed class FileAppStorage : IAppStorage
                 return;
             }
 
-            if (File.Exists(_file))
+            try
             {
-                try
+                if (File.Exists(_file))
                 {
                     var json = await File.ReadAllTextAsync(_file, ct).ConfigureAwait(false);
                     _cache = JsonSerializer.Deserialize<Dictionary<string, string>>(json) ?? new();
                 }
-                catch (JsonException)
-                {
-                    _cache = new();
-                }
+            }
+            catch (Exception e) when (e is JsonException or IOException or UnauthorizedAccessException)
+            {
+                _cache = new(); // unreadable: start from defaults
             }
 
             _loaded = true;
