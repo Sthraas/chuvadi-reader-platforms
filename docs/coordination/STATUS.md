@@ -1,6 +1,6 @@
 # Programme status
 
-_Last updated: 9 Nov 2026, 02:45 IST. All chats running._
+_Last updated: 9 Nov 2026, 03:10 IST. All chats running; browser connection dropped at 03:08 (relays queued)._
 
 **All chats running in parallel (D-125, Arun).**
 
