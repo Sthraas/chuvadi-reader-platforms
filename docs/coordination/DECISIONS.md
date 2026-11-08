@@ -341,5 +341,7 @@ Options considered:
 | D-134 | D-111 rail heading | Arun (confirmed 03:40): the tool rail heading says "TOOLS" as in the handout, on every platform. The Reader chat changes Windows (Arun relays); platforms inherit through the shared Ui |
 | D-135 | D-112 Save on the Mark rail, desktop | Arun: yes. Save at the foot of the Mark rail on desktop too, as in the handout. The Reader chat adds it on Windows; Mobile UI's touch-only version merges into the shared one |
 
+| D-136 | Who moves Docs and Sheets (item 2) | Arun: (a). Foundation moves Chuvadi.Docs 1.1.0 → 2.0.0 and Chuvadi.Sheets 1.1.2 → 2.0.2 inside PR #11, including the Core code changes (namespace rename, old zip API retired), packs both from their release tags into ci/packages with SHA-256s, and wires Docs limits (MaxPartBytes ~20 MB, MaxTotalUncompressedBytes ~64 MB, timed token also passed to Paragraphs etc.) and the Sheets XlsxReaderOptions.CancellationToken into open/Cancel. The Reader chat must not make the same change (Arun relays); it picks this up when PR #11 merges. Replaces D-87 |
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).
