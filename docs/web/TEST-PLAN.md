@@ -60,7 +60,9 @@ The Web projects aren't in `ChuvadiReader.Platforms.slnx` on purpose: that solut
 | F-20 | Planned restart banner | Operator file → banner in every tab, including later arrivals; gone when the time passes or the file is removed | U `MaintenanceTests`, `GatewayMaintenanceTests`; M (runbook §8.9) |
 | F-21 | Drop a file anywhere on the portal (D-89) | The browser never opens the file or leaves Chuvadi: documents go to the drop catcher (F-22); a drop that misses it is cancelled. An image dropped onto a page in the Reader still adds it (the Reader's own drop) | E `flows.py` (a stray drop is cancelled); M with a real file from the desktop on each browser in §5 |
 | F-22 | Drop documents on the portal (D-89 A) | Each dropped file streams to the session's working copy (tmpfs, D-28) through the upload's own checks (S-7: types, content matches the extension, size, owner-only folder) and opens in its own tab (or on the Bench shelf when it's open). A refused file gives one short message and leaves nothing behind. Several files at once, up to 64 | U `DroppedFilesTests`; E `flows.py` (a fake PDF refused with its message; a real PDF opens in the Reader, through a worker); M: drag one and several real files from the desktop, an image onto a Reader page, and a 300 MB file (refused) on each browser in §5 |
-| F-23 | Privacy link on the sign-in page (D-86 "link them from 12a") | 12a shows "Terms of use"; Privacy is one switch away on that page. A separate Privacy link needs the Web portal UI's sign-in component | **P**: question to the coordinator |
+| F-23 | Privacy link on the sign-in page and account menu (D-86, D-97) | "Terms of use · Privacy" on 12a and in the account menu footer; `/privacy` opens before sign-in | U `SangamSignInTests`; E (Web Test) |
+| F-24 | Save that writes several files (D-129, WT-16): "Split to folder", Scatter, export pages | One `.zip` download, named after what the files share ("report.zip"), holding every file byte for byte with its folder path; one file goes as itself; committing again sends nothing new; no multi-download prompt, nothing for Safari to block | U `ZipSaveTests`; E `flows.py` (split: one .zip of every page, 4 engines); M Safari on Mac and iPhone (§5a) |
+| F-25 | Word and Excel limits (D-136, D-137: the portal keeps the strict Word limits) | A normal .docx opens as in the file; a .docx showing a picture over 20 MB, or unpacking to more than 64 MB (a zip bomb), says "too large to open"; the worker stays up | E `office_limits.py` (4 engines); Foundation `OfficeViewTests` pin the figures |
 
 ## 2. Security checks
 
@@ -215,6 +217,12 @@ Found and fixed while running this plan:
 **9 Nov, early (on `platform/foundation` @ `f1e4126`; WT-14, WT-15):**
 - Web 156/156 (new: http Sangam refused in Production, https starts).
 - `sangam_signin.py` in WebKit against a local Sangam: 5 runs, 13/13 each (WT-14 fix: waits for the signed-out page, not network idle).
+
+**9 Nov, morning (on `platform/foundation` @ `1016987`; WT-16, D-137):**
+- Shared solution `-warnaserror`, 0 warnings, and its tests; Web tests (new: `ZipSaveTests`).
+- `flows.py` 10/10 in Chrome, Firefox, WebKit and Chromium: split to folder gives one `sample.zip` of all 33 pages.
+- `office_limits.py` 6/6 in all four engines (Firefox 4 runs clean).
+- `check-package.sh`: pass.
 
 ## 8. Known gaps
 - The legal texts are drafts and say not to publish until counsel has reviewed them: V-7 blocks go-live until the DRAFT lines are gone.

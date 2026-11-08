@@ -137,6 +137,31 @@ with sync_playwright() as p:
     check("merged pdf downloads", d.suggested_filename == "merged.pdf" and head == b"%PDF-",
           "%s %d bytes" % (d.suggested_filename, os.path.getsize(target)))
 
+    # 4. split every page to a folder -> one .zip (D-129, WT-16), not one download per page
+    page.goto(base + "/split")
+    with page.expect_file_chooser(timeout=15000) as fc:
+        page.click("text=Choose file")
+    fc.value.set_files(pdf)
+    page.wait_for_selector("button.tbtn-go:not([disabled])", timeout=30000)
+    downloads = []
+    page.on("download", lambda d: downloads.append(d))
+    with page.expect_download(timeout=60000) as dl:
+        page.click("button.tbtn-go")
+    d = dl.value
+    target = os.path.join(out, "downloaded-" + d.suggested_filename)
+    d.save_as(target)
+    page.wait_for_timeout(3000)  # any further per-page download would have started by now
+    import zipfile
+    try:
+        with zipfile.ZipFile(target) as z:  # test-only check that other tools open it
+            names = z.namelist()
+            pdfs = [n for n in names if n.endswith(".pdf") and z.read(n)[:5] == b"%PDF-"]
+    except zipfile.BadZipFile:
+        names, pdfs = [], []
+    check("split to folder downloads one zip of every page",
+          d.suggested_filename.endswith(".zip") and len(downloads) == 1 and len(pdfs) == len(names) >= 2,
+          "%s, %d download(s), %d entries" % (d.suggested_filename, len(downloads), len(names)))
+
     check("no console errors", not errors, "; ".join(errors[:3]))
     b.close()
 

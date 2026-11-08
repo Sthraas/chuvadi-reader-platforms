@@ -59,12 +59,19 @@ public sealed class OutboxDelivery : IAsyncDisposable
         }
     }
 
-    /// <summary>Creates a new, watched folder inside the outbox.</summary>
-    public string NewFolder()
+    /// <summary>Creates a new folder inside the outbox. A save folder (<paramref name="collect"/> false) is
+    /// watched and each file in it downloads when finished. A folder picked for several files
+    /// (<paramref name="collect"/> true, D-129) isn't: its files wait for the write-back call, which
+    /// sends them together as one .zip.</summary>
+    public string NewFolder(bool collect = false)
     {
         var dir = Path.Combine(_space.Outbox, Convert.ToHexStringLower(System.Security.Cryptography.RandomNumberGenerator.GetBytes(8)));
         SpaceLayout.CreatePrivateDirectory(dir);
-        Watch(dir);
+        if (!collect)
+        {
+            Watch(dir);
+        }
+
         return dir;
     }
 
@@ -89,16 +96,43 @@ public sealed class OutboxDelivery : IAsyncDisposable
         }
     }
 
-    /// <summary>Delivers a file, or every file in a folder, now (the write-back call). A version
-    /// already delivered is not sent again.</summary>
+    /// <summary>Delivers a file, or a folder's files, now (the write-back call). A folder with two or more
+    /// new files goes as one .zip (D-129); a single new file goes as itself. A version already delivered
+    /// is not sent again.</summary>
     public async Task<WriteBackResult> DeliverAsync(string path, CancellationToken ct = default)
     {
-        var files = Directory.Exists(path)
+        var isFolder = Directory.Exists(path);
+        var files = isFolder
             ? Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories).ToList()
             : File.Exists(path) ? [path] : [];
         if (files.Count == 0)
         {
             return new WriteBackResult(WriteBackOutcome.Failed, "There was nothing to download.");
+        }
+
+        if (isFolder)
+        {
+            var fresh = new List<(string File, string Key)>();
+            foreach (var file in files)
+            {
+                if (VersionKey(file) is { } key)
+                {
+                    lock (_lock)
+                    {
+                        if (!_delivered.Contains(key))
+                        {
+                            fresh.Add((file, key));
+                        }
+                    }
+                }
+            }
+
+            if (fresh.Count >= 2)
+            {
+                return await SendZipAsync(path, fresh, ct).ConfigureAwait(false);
+            }
+
+            files = fresh.Select(f => f.File).ToList();
         }
 
         foreach (var file in files)
@@ -188,6 +222,40 @@ public sealed class OutboxDelivery : IAsyncDisposable
                 await SendAsync(file, ct).ConfigureAwait(false);
             }
         }
+    }
+
+    private async Task<WriteBackResult> SendZipAsync(string folder, List<(string File, string Key)> fresh, CancellationToken ct)
+    {
+        lock (_lock)
+        {
+            if (fresh.Any(f => !_delivered.Add(f.Key)))
+            {
+                fresh.ForEach(f => _delivered.Remove(f.Key));
+                return new WriteBackResult(WriteBackOutcome.Done); // the same files are going out already
+            }
+        }
+
+        var into = Path.Combine(_space.Outbox, "zip-" + Convert.ToHexStringLower(System.Security.Cryptography.RandomNumberGenerator.GetBytes(8)));
+        try
+        {
+            SpaceLayout.CreatePrivateDirectory(into); // not watched: the zip goes out once, here
+            var zip = await ZipBundle.WriteAsync(folder, fresh.Select(f => f.File).ToList(), into, ct).ConfigureAwait(false);
+            if (await SendAsync(zip, ct).ConfigureAwait(false))
+            {
+                return new WriteBackResult(WriteBackOutcome.Done);
+            }
+        }
+        catch (IOException ex)
+        {
+            _log.LogWarning("Could not build the zip for {Count} files: {Message}", fresh.Count, ex.Message);
+        }
+
+        lock (_lock)
+        {
+            fresh.ForEach(f => _delivered.Remove(f.Key));
+        }
+
+        return new WriteBackResult(WriteBackOutcome.Failed, "The browser didn't take the download.");
     }
 
     private async Task<bool> SendAsync(string file, CancellationToken ct)

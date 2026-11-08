@@ -15,6 +15,8 @@
 
   <ItemGroup>
     <!-- The shared host kit (Foundation): Core's services + platform contracts, registered per connection. -->
+    <!-- D-129 (O-3): several files from one save go to the browser as one .zip, written by Arun's own library. -->
+    <PackageReference Include="Chuvadi.Zip" Version="1.0.0" />
     <ProjectReference Include="..\ChuvadiReader.Hosting\ChuvadiReader.Hosting.csproj" />
     <ProjectReference Include="..\ChuvadiReader.Platform\ChuvadiReader.Platform.csproj" />
     <ProjectReference Include="..\ChuvadiReader.Ui\ChuvadiReader.Ui.csproj" />

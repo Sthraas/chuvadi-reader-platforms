@@ -64,11 +64,12 @@ public sealed class WebFilePicker : IFilePicker
     public Task<string?> PickSaveImageAsync(string suggestedName, CancellationToken ct = default)
         => SaveAsync(suggestedName, ".png", "image", ct);
 
-    /// <summary>A fresh outbox folder; every file the Reader writes into it is downloaded.</summary>
+    /// <summary>A fresh outbox folder. What the Reader writes into it goes to the browser when the save
+    /// commits it: several files as one .zip, a single file as itself (D-129).</summary>
     public async Task<string?> PickFolderAsync(CancellationToken ct = default)
     {
         await _space.EnsureAsync(ct).ConfigureAwait(false);
-        return _outbox.NewFolder();
+        return _outbox.NewFolder(collect: true);
     }
 
     private async Task<string?> SaveAsync(string suggestedName, string extension, string fallback, CancellationToken ct)

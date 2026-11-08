@@ -18,6 +18,7 @@ Blazor Server portal for Chuvadi Reader: the unchanged `ChuvadiReader.Ui` render
 - Test plan for the Web Test chat: `TEST-PLAN.md`.
 - On `platform/foundation` @ `4819d66`. D-89 A: documents dropped on the portal stream into the session's working copy through the upload's own checks and open in the Reader (`WebDroppedFiles`, `DropFiles = true`).
 - On `platform/foundation` @ `63f37b1` (seventh and eighth patches: phone shell, D-98 wording, legal links in the account menu). Fixes for the Web Test chat's WT-01, 07, 08, 11, 12, 13 and O-1, O-2 (BUILD-LOG step 25).
+- On `platform/foundation` @ `1016987`. Several files from one save download as one .zip, written with Chuvadi.Zip (D-129); the strict Word limits hold on the portal (D-137). BUILD-LOG step 27.
 - Next: the Web Test chat's re-checks. Domain and E2E stay last (Arun).
 
 ## Build and test
