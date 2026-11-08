@@ -58,13 +58,15 @@ public sealed class MacFilePicker : IFilePicker
         return n.EndsWith(ext, StringComparison.OrdinalIgnoreCase) ? n : n + ext;
     }
 
+    /// <summary>
+    /// Runs a panel on the main thread's next run-loop turn — always, even when called on the main thread.
+    /// The Ui calls the picker from a click handler, which runs inside WebKit's script-message callback; a
+    /// modal panel run right there nests a run loop inside Blazor's event dispatch, Blazor's next messages
+    /// arrive re-entrantly and its renderer fails ("An error occurred" — Mac Test M-16). Posted, the click
+    /// handler returns to WebKit first and the panel runs from a clean turn of the loop.
+    /// </summary>
     private static Task<T> OnMain<T>(Func<T> func)
     {
-        if (NSThread.IsMain)
-        {
-            return Task.FromResult(func());
-        }
-
         var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
         UIApplication.SharedApplication.BeginInvokeOnMainThread(() =>
         {
