@@ -24,6 +24,14 @@ os.chmod(os.path.join(bindir, "xdg-open"), stat.S_IRWXU)
 failures = []
 
 
+def system_python():
+    """The system Python whose GObject binding loads (python3-gi is built for the distribution's Python)."""
+    for exe in ("/usr/bin/python3", "/usr/bin/python3.12", "/usr/bin/python3.13"):
+        if os.path.exists(exe) and subprocess.run([exe, "-c", "import gi"], capture_output=True).returncode == 0:
+            return exe
+    sys.exit("FAIL: no system Python with python3-gi for the stand-in file manager")
+
+
 def run(case, delay):
     calls = os.path.join(OUT, f"showitems-{case}.log")
     for p in (calls, opened):
@@ -34,14 +42,20 @@ def run(case, delay):
     fm = None
     try:
         if delay is not None:
-            fm = subprocess.Popen(["/usr/bin/python3", os.path.join(HERE, "fake-filemanager.py"), calls, str(delay)],
+            fm = subprocess.Popen([system_python(), os.path.join(HERE, "fake-filemanager.py"), calls, str(delay)],
                                   env=app.env)
             time.sleep(1.5)
+            owner = subprocess.run(["dbus-send", "--session", "--print-reply", "--dest=org.freedesktop.DBus", "/",
+                                    "org.freedesktop.DBus.NameHasOwner", "string:org.freedesktop.FileManager1"],
+                                   env=app.env, capture_output=True, text=True).stdout
+            if fm.poll() is not None or "true" not in owner:
+                failures.append("the stand-in file manager didn't start")
+                return
         app.launch(PDF)
         name = os.path.basename(PDF)
         app.wait(lambda: app.js(f"return [...document.querySelectorAll('.rtab')].some(t => t.innerText.includes('{name}'))"), 30, "tab")
         time.sleep(1)
-        ids = [c["id"] for c in app.commands() if "folder" in c["label"].lower() and "show" in c["label"].lower()]
+        ids = [c["Id"] for c in app.commands() if c["Id"] == "doc.reveal" and c["Enabled"]]
         if not ids:
             failures.append(f"{case}: no Show in folder command")
             return

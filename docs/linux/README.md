@@ -18,11 +18,13 @@ chuvadi-reader (apphost, .NET 10, ReadyToRun)
 | Web view | WebKitGTK 6.0, ephemeral session (nothing written to disk), pinch zoom off, Inspect Element in Debug builds only |
 | Assets | `app://localhost/` URI scheme, answered in-process by Microsoft's `WebViewManager` (part of .NET's Blazor) |
 | JS ↔ .NET | `window.external.sendMessage/receiveMessage` (what `blazor.webview.js` expects); one ordered queue to the page |
-| Files | GTK file dialogs (`GtkFileDialog`) — real paths; window drop; `chuvadi-reader file.pdf` and the desktop entry's `%F` |
+| Files | GTK file dialogs (`GtkFileDialog`) — real paths; window drop; `chuvadi-reader a.pdf b.docx …` and the desktop entry's `%F` — every file in its own tab (the kit's `IncomingFiles`) |
+| One copy | The kit's single instance (a lock file and a Unix socket in `$XDG_RUNTIME_DIR`): a later launch hands its files to the running window, which comes forward with the launcher's activation token |
 | Clipboard | GDK clipboard, text and PNG |
-| Show in folder | the file manager over D-Bus (`org.freedesktop.FileManager1.ShowItems`), else the folder with `xdg-open` |
-| Printing | Print card → GTK print dialog → the PDF as-is to the CUPS queue over IPP (`Chuvadi.Print.Ipp`); no rendering to images. A file whose permissions forbid printing is refused before the dialog |
-| Folders | settings in `~/.config/Chuvadi` (XDG), saves under `~/Documents/Chuvadi Documents` |
+| Show in folder | the file manager over D-Bus (`org.freedesktop.FileManager1.ShowItems`); the folder with `xdg-open` only when there is no file manager |
+| Printing | Print card → GTK print dialog → the PDF as-is to the CUPS queue over IPP (`Chuvadi.Print.Ipp`); no rendering to images, so there is no "Print to File" (it would re-render the PDF). Pages keep their own orientation unless the dialog chooses one. A file whose permissions forbid printing is refused; with no printer (or CUPS stopped) Print says so instead of opening an empty dialog |
+| Folders | settings in `~/.config/Chuvadi` (XDG; kept in memory with one notice when the home folder can't be written), saves under `~/Documents/Chuvadi Documents` |
+| Start-up | without a GPU: GTK's CPU renderer and WebKit's compositing off (no shader compiling on a first launch); without user namespaces (WebKit's sandbox can't start): a plain message and exit code 2 — the sandbox is never switched off |
 
 No third-party code: only .NET, GTK, GLib, WebKitGTK and CUPS (OS components) and Arun's Chuvadi libraries.
 
@@ -87,7 +89,9 @@ tools/linux/compare-design.py uitest-build <out dir>    # Linux vs Chromium (Web
 
 The UI test build adds `UiTestDriver` (commands on stdin); the shipped build never contains it. The full
 pass needs Xvfb, mutter, xdotool, xclip, ImageMagick, poppler-utils, qpdf (makes the no-printing fixture) and
-a default CUPS queue that writes PDFs (cups-pdf); the comparison also needs Python Playwright with Chromium — all test tools. CI
+a default CUPS queue that writes PDFs (cups-pdf). More checks, each for one fixed bug: `check-deb.py` (lintian
+--pedantic clean, file modes, font copyright), `no-userns-test.sh`, `readonly-home-test.py` (as an ordinary
+user), `no-printer-test.py` (CUPS stopped), `reveal-test.py`, `first-launch.py` (records the time); the comparison also needs Python Playwright with Chromium — all test tools. CI
 (`.github/workflows/linux.yml`) runs, on x64 and ARM64: build, tests, publish, the launch test, both
 `.deb` packages, install + launch of the installed app, and the full UI pass.
 

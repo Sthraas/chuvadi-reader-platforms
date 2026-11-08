@@ -466,3 +466,33 @@ every other host.
 
 The Linux Test chat (`platform/linux-test`, 9ef12c4) has a test plan and no `BUGS.md` yet; its T3.4 covers
 this layout bug.
+
+## 2026-11-08 — Session 4 (cont.): the Linux Test chat's bugs (B-01 to B-23), Foundation's patches merged
+
+### 37. Every Linux bug fixed with a test
+| Bug | Fix | Test | Commit |
+|---|---|---|---|
+| B-01 lintian | file modes (0644, apphost/createdump 0755), stripped shim, `changelog.gz`, man page, md5sums, unused precompressed copies dropped; overrides with reasons for Microsoft's binaries, the app's web fonts, LiPi's licence and `index.html` | `tools/linux/check-deb.py`: `lintian --pedantic` must report nothing un-overridden; file modes | 043e490 |
+| B-02 (Linux) | copyright: one stanza per font family with the holder from the font's own metadata, `License: OFL-1.1` and the full OFL text | check-deb.py: every font file has its own stanza naming its holder; OFL text present | 043e490 |
+| B-04, B-06 | every file from the command line, the desktop entry's `%F` or a drop opens in its own tab, in order (now through the kit's `IncomingFiles`) | UI steps 34b, 34c | 4e9e244 → 606d01b |
+| B-05 | single instance: the kit's `DesktopSingleInstance` (L-A: lock file + Unix socket, F-1), claimed on a thread during start-up; a later launch hands over and exits; the window comes forward with the launcher's activation token | UI step 34c2 (hand-over in 0.11 s, one window) | 606d01b (replaces my D-Bus version, 29db68a) |
+| B-12 | no GPU → WebKit compositing off (D-110 A); first launch on a fresh profile: 4.7 s → 1.0 s to real content (6 runs each) | UI step 34b2 (the choice); `first-launch.py` records the time in CI | e8ca522 |
+| B-13 | no IntelliSense XML (project setting + package script) | check-deb.py | 043e490 |
+| B-14 | landscape pages: the ticket's `orientation-requested` is removed unless the dialog chose one, so CUPS turns each page to fit (measured: rot 90, full size) | UI step 30: printed page 4 is turned | 4e9e244 |
+| B-15 | bubblewrap probed once (in parallel with services, 0.6 ms on the critical path) before any web view; if it can't start: a plain message window and exit 2 (D-110 A: never switch the sandbox off) | `no-userns-test.sh` under a seccomp rule refusing user namespaces (as Docker's default) | e8ca522 |
+| B-16 | `ResilientAppStorage`: settings in memory when the folder can't be written, one error notice | `readonly-home-test.py` as an ordinary user | e8ca522 |
+| B-17 | `UseSystemResourceKeys` removed | check-deb.py (runtimeconfig); UI step 34d on non-root runners | 4e9e244 |
+| B-20 | no printer / CUPS down: a plain message, no empty dialog | `no-printer-test.py` with CUPS stopped | 606d01b |
+| B-21 | Show in folder falls back to `xdg-open` only when there's no file manager on the bus, never on a slow one (30 s) | `reveal-test.py`: an 8-second stand-in file manager → 1 call, no fallback; none → 1 fallback | c9f5500 |
+
+Shared ones (B-02 OFL texts in the Ui, B-03, B-07, B-08b, B-10, B-11b, B-19, B-23, and D-101) are exact diffs in
+`PROPOSAL-shared-fixes-8nov.md` for Foundation's next combined patch; library asks are listed there too.
+B-18 (left bar resting state) belongs to the Reader chat's desktop revamp (it changes Windows too); B-22 (focus
+style) is a design option for the coordinator.
+
+### 38. Foundation's second to seventh combined patches merged (ec9de75)
+No conflicts; the shared code on `platform/linux` is now identical to `platform/foundation` (9fbed93). Applied to
+the Linux host: `LinuxAppPaths` deleted (the kit's `DesktopAppPaths` has the fallback); the Print packages are
+the centrally adopted copies (same SHA-256s); print refusal uses Core's `PrintPermission` text; single instance
+and the open router are the kit's. The Print card now locks itself for a no-printing file (Foundation), so UI step
+31 checks the locked card; the Linux print service refuses too.

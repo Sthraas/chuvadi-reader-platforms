@@ -587,7 +587,8 @@ def print_not_allowed():
     app.key("ctrl+p")
     time.sleep(1.2)
     card = "section[aria-label=Print]"
-    reason = app.wait(lambda: app.js(f"var c=document.querySelector({json.dumps(card)}); return c && c.innerText.includes(\"permissions don't allow printing\") ? 'shown' : null"), 10, "the reason on the card")
+    # The locked card gives the reason as its tooltip (title), on the card and on the Print button.
+    reason = app.wait(lambda: app.js(f"var c=document.querySelector({json.dumps(card)}); return c && (c.title || '').includes(\"permissions don't allow printing\") ? c.title : null"), 10, "the reason on the card")
     disabled = app.js(f"var b=document.querySelector({json.dumps(card + ' button.primary')}); return !!b && b.disabled")
     if not disabled:
         raise AssertionError("the Print button is enabled for a no-printing file")
@@ -599,7 +600,7 @@ def print_not_allowed():
         raise AssertionError("a job reached CUPS for a no-printing file")
     app.shot("31-print-not-allowed")
     dismiss()
-    return f"reason {reason} on the card; Print disabled; no print dialog; nothing sent to CUPS"
+    return f"card locked: '{reason}'; Print disabled; no print dialog; nothing sent to CUPS"
 
 
 step("31-print-not-allowed", print_not_allowed)
