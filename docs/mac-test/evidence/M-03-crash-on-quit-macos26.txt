@@ -1,0 +1,37 @@
+Crash report (excerpt) — macOS 26.7.2, Apple M1 (Virtual), run 42487095203, 2026-11-08 14:02:30 UTC
+exception: {'codes': '0x0000000000000000, 0x0000000000000000', 'rawCodes': [0, 0], 'type': 'EXC_CRASH', 'signal': 'SIGABRT'}
+termination: Abort trap: 6
+
+Last exception backtrace:
+  CoreFoundation  __exceptionPreprocess
+  libobjc.A.dylib  objc_exception_throw
+  ChuvadiReader.Mac  log_callback(char const*, char const*, char const*, int, void*)
+  ChuvadiReader.Mac  -[Microsoft_Maui_Platform_PageViewController traitCollectionDidChange:]
+  UIKitCore  -[UIViewController _traitCollectionDidChange:]
+  UIKitCore  -[UIViewController _updateTraitsIfNecessarySchedulingPropagation:]
+  UIKitCore  -[UIView _wrappedProcessTraitChanges:withBehavior:]
+  UIKitCore  -[UIView _wrappedProcessTraitChanges:withBehavior:]
+  UIKitCore  -[UIView _wrappedProcessTraitChanges:withBehavior:]
+  UIKitCore  -[UIView _wrappedProcessTraitChanges:withBehavior:]
+  UIKitCore  -[UIView(AdditionalLayoutSupport) _withUnsatisfiableConstraintsLoggingSuspendedIfEngineDelegateExists:]
+  UIKitCore  -[UIView _processChangesFromOldTraits:toCurrentTraits:withBehavior:]
+  UIKitCore  -[UIView _updateTraitCollectionAndProcessChangesWithBehavior:previousCollection:]
+  UIKitCore  -[UIView(CALayerDelegate) _performPreLayoutUpdateOfLayer:]
+  QuartzCore  CA::Layer::perform_update_(CA::Layer*, CALayer*, unsigned int, CA::LayerUpdateReason, CA::Transaction*)
+  QuartzCore  CA::Layer::update_if_needed_(CA::Transaction*, CA::LayerUpdateReason)
+  QuartzCore  CA::Context::commit_transaction(CA::Transaction*, double, double*)
+  QuartzCore  CA::Transaction::commit()
+  QuartzCore  CA::Transaction::flush_as_runloop_observer(bool)
+  UIKitCore  _UIApplicationFlushCATransaction
+  UIKitCore  __setupUpdateSequence_block_invoke_2
+  UIKitCore  _UIUpdateSequenceRunNext
+  UIKitCore  schedulerStepScheduledMainSectionContinue
+  UpdateCycle  UC::DriverCore::continueProcessing()
+  CoreFoundation  __CFMachPortPerform
+  CoreFoundation  __CFRUNLOOP_IS_CALLING_OUT_TO_A_SOURCE1_PERFORM_FUNCTION__
+  CoreFoundation  __CFRunLoopDoSource1
+  CoreFoundation  __CFRunLoopRun
+  CoreFoundation  _CFRunLoopRunSpecificWithOptions
+  AppKit  -[NSPersistentUIManager _waitForPendingChangesToFinish]
+  AppKit  -[NSPersistentUIManager discardAllPersistentStateAndClose]
+  AppKit  -[NSApplication _pushPersistentStateTerminationGeneration]

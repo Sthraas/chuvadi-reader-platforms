@@ -1,0 +1,607 @@
+[
+  {
+    "items" : [
+      {
+        "enabled" : true,
+        "title" : "About This Mac"
+      },
+      {
+        "enabled" : true,
+        "title" : "System Information"
+      },
+      {
+        "title" : "",
+        "enabled" : false,
+        "separator" : true
+      },
+      {
+        "title" : "System Settings…, 1 update",
+        "enabled" : true
+      },
+      {
+        "title" : "App Store",
+        "enabled" : true
+      },
+      {
+        "title" : "",
+        "enabled" : false,
+        "separator" : true
+      },
+      {
+        "title" : "Recent Items",
+        "items" : [
+          {
+            "enabled" : false,
+            "title" : "Applications"
+          },
+          {
+            "title" : "Chuvadi",
+            "enabled" : true
+          },
+          {
+            "title" : "Show “Chuvadi” in Finder",
+            "enabled" : true
+          },
+          {
+            "enabled" : true,
+            "title" : "Installer"
+          },
+          {
+            "title" : "Show “Installer” in Finder",
+            "enabled" : true
+          },
+          {
+            "title" : "System Settings",
+            "enabled" : true
+          },
+          {
+            "title" : "Show “System Settings” in Finder",
+            "enabled" : true
+          },
+          {
+            "separator" : true,
+            "title" : "",
+            "enabled" : false
+          },
+          {
+            "title" : "Documents",
+            "enabled" : false
+          },
+          {
+            "enabled" : true,
+            "title" : "AnkaGuestAddons.pkg"
+          },
+          {
+            "title" : "Show “AnkaGuestAddons.pkg” in Finder",
+            "enabled" : true
+          },
+          {
+            "enabled" : true,
+            "title" : "five-pages.pdf"
+          },
+          {
+            "title" : "Show “five-pages.pdf” in Finder",
+            "enabled" : true
+          },
+          {
+            "enabled" : false,
+            "title" : "",
+            "separator" : true
+          },
+          {
+            "enabled" : false,
+            "title" : "Servers"
+          },
+          {
+            "separator" : true,
+            "title" : "",
+            "enabled" : false
+          },
+          {
+            "title" : "Clear Menu",
+            "enabled" : true
+          }
+        ],
+        "enabled" : true
+      },
+      {
+        "enabled" : false,
+        "separator" : true,
+        "title" : ""
+      },
+      {
+        "shortcut" : "⌥⌘⎋",
+        "enabled" : true,
+        "title" : "Force Quit…"
+      },
+      {
+        "title" : "Force Quit Chuvadi",
+        "enabled" : true,
+        "shortcut" : "⌥⇧⌘⎋"
+      },
+      {
+        "separator" : true,
+        "title" : "",
+        "enabled" : false
+      },
+      {
+        "enabled" : true,
+        "title" : "Sleep"
+      },
+      {
+        "enabled" : true,
+        "title" : "Restart…"
+      },
+      {
+        "enabled" : true,
+        "title" : "Restart"
+      },
+      {
+        "enabled" : true,
+        "title" : "Shut Down…"
+      },
+      {
+        "title" : "Shut Down",
+        "enabled" : true
+      },
+      {
+        "title" : "",
+        "enabled" : false,
+        "separator" : true
+      },
+      {
+        "enabled" : true,
+        "title" : "Lock Screen",
+        "shortcut" : "⌃⌘Q"
+      },
+      {
+        "shortcut" : "⇧⌘Q",
+        "title" : "Log Out Anka…",
+        "enabled" : true
+      },
+      {
+        "enabled" : true,
+        "title" : "Log Out Anka",
+        "shortcut" : "⌥⇧⌘Q"
+      },
+      {
+        "enabled" : false,
+        "separator" : true,
+        "title" : ""
+      }
+    ],
+    "title" : "Apple"
+  },
+  {
+    "title" : "Chuvadi",
+    "items" : [
+      {
+        "title" : "About Chuvadi",
+        "enabled" : true
+      },
+      {
+        "title" : "",
+        "separator" : true,
+        "enabled" : false
+      },
+      {
+        "title" : "",
+        "enabled" : false,
+        "separator" : true
+      },
+      {
+        "title" : "Services",
+        "items" : [
+          {
+            "title" : "",
+            "separator" : true,
+            "enabled" : false
+          },
+          {
+            "enabled" : true,
+            "title" : "Development"
+          },
+          {
+            "title" : "Activity Monitor",
+            "enabled" : true
+          },
+          {
+            "enabled" : true,
+            "title" : "Allocations & Leaks"
+          },
+          {
+            "title" : "File Activity",
+            "enabled" : true
+          },
+          {
+            "title" : "System Trace",
+            "enabled" : true
+          },
+          {
+            "enabled" : true,
+            "title" : "Time Profile Active Application"
+          },
+          {
+            "enabled" : true,
+            "title" : "Time Profile App Under Mouse"
+          },
+          {
+            "enabled" : true,
+            "title" : "Time Profile Entire System"
+          }
+        ],
+        "enabled" : true
+      },
+      {
+        "title" : "",
+        "enabled" : false,
+        "separator" : true
+      },
+      {
+        "enabled" : true,
+        "shortcut" : "⌘H",
+        "title" : "Hide Chuvadi"
+      },
+      {
+        "title" : "Hide Others",
+        "enabled" : true,
+        "shortcut" : "⌥⌘H"
+      },
+      {
+        "title" : "Show All",
+        "enabled" : false
+      },
+      {
+        "separator" : true,
+        "title" : "",
+        "enabled" : false
+      },
+      {
+        "enabled" : true,
+        "shortcut" : "⌘Q",
+        "title" : "Quit Chuvadi"
+      },
+      {
+        "title" : "Quit and Keep Windows",
+        "enabled" : true,
+        "shortcut" : "⌥⌘Q"
+      }
+    ]
+  },
+  {
+    "title" : "File",
+    "items" : [
+
+    ]
+  },
+  {
+    "title" : "Edit",
+    "items" : [
+      {
+        "shortcut" : "⌘Z",
+        "enabled" : false,
+        "title" : "Undo"
+      },
+      {
+        "shortcut" : "⇧⌘Z",
+        "title" : "Redo",
+        "enabled" : false
+      },
+      {
+        "title" : "",
+        "enabled" : false,
+        "separator" : true
+      },
+      {
+        "title" : "Cut",
+        "shortcut" : "⌘X",
+        "enabled" : false
+      },
+      {
+        "enabled" : false,
+        "shortcut" : "⌘C",
+        "title" : "Copy"
+      },
+      {
+        "title" : "Paste",
+        "enabled" : false,
+        "shortcut" : "⌘V"
+      },
+      {
+        "enabled" : false,
+        "title" : "Paste and Match Style",
+        "shortcut" : "⌥⇧⌘V"
+      },
+      {
+        "title" : "Delete",
+        "enabled" : false
+      },
+      {
+        "enabled" : false,
+        "title" : "Select All",
+        "shortcut" : "⌘A"
+      },
+      {
+        "title" : "",
+        "enabled" : false,
+        "separator" : true
+      },
+      {
+        "title" : "Speech",
+        "enabled" : true,
+        "items" : [
+          {
+            "enabled" : true,
+            "title" : "Start Speaking"
+          },
+          {
+            "title" : "Stop Speaking",
+            "enabled" : false
+          }
+        ]
+      },
+      {
+        "title" : "",
+        "enabled" : false,
+        "separator" : true
+      },
+      {
+        "items" : [
+          {
+            "enabled" : false,
+            "title" : "Contact…"
+          },
+          {
+            "title" : "Passwords…",
+            "enabled" : false
+          }
+        ],
+        "enabled" : true,
+        "title" : "AutoFill"
+      },
+      {
+        "title" : "Start Dictation…",
+        "shortcut" : "D",
+        "enabled" : true
+      },
+      {
+        "shortcut" : "E",
+        "title" : "Emoji & Symbols",
+        "enabled" : true
+      }
+    ]
+  },
+  {
+    "title" : "View",
+    "items" : [
+      {
+        "enabled" : true,
+        "shortcut" : "⌘K",
+        "title" : "Find or do anything…"
+      },
+      {
+        "enabled" : true,
+        "title" : "Enter Full Screen",
+        "shortcut" : "F"
+      }
+    ]
+  },
+  {
+    "items" : [
+
+    ],
+    "title" : "Document"
+  },
+  {
+    "items" : [
+      {
+        "title" : "Minimize",
+        "enabled" : true,
+        "shortcut" : "⌘M"
+      },
+      {
+        "title" : "Minimize All",
+        "enabled" : true,
+        "shortcut" : "⌥⌘M"
+      },
+      {
+        "title" : "Zoom",
+        "enabled" : true
+      },
+      {
+        "enabled" : true,
+        "title" : "Zoom All"
+      },
+      {
+        "shortcut" : "⌃F",
+        "enabled" : true,
+        "title" : "Fill"
+      },
+      {
+        "enabled" : true,
+        "shortcut" : "⌃C",
+        "title" : "Center"
+      },
+      {
+        "separator" : true,
+        "title" : "",
+        "enabled" : false
+      },
+      {
+        "title" : "Move & Resize",
+        "enabled" : true,
+        "items" : [
+          {
+            "enabled" : false,
+            "title" : "Halves"
+          },
+          {
+            "title" : "Left",
+            "enabled" : true,
+            "shortcut" : "⌃#123"
+          },
+          {
+            "shortcut" : "⌃#124",
+            "title" : "Right",
+            "enabled" : true
+          },
+          {
+            "enabled" : true,
+            "shortcut" : "⌃#126",
+            "title" : "Top"
+          },
+          {
+            "shortcut" : "⌃#125",
+            "title" : "Bottom",
+            "enabled" : true
+          },
+          {
+            "separator" : true,
+            "title" : "",
+            "enabled" : false
+          },
+          {
+            "title" : "Quarters",
+            "enabled" : false
+          },
+          {
+            "enabled" : true,
+            "title" : "Top Left"
+          },
+          {
+            "title" : "Top Right",
+            "enabled" : true
+          },
+          {
+            "enabled" : true,
+            "title" : "Bottom Left"
+          },
+          {
+            "title" : "Bottom Right",
+            "enabled" : true
+          },
+          {
+            "title" : "",
+            "enabled" : false,
+            "separator" : true
+          },
+          {
+            "enabled" : false,
+            "title" : "Arrange"
+          },
+          {
+            "shortcut" : "⌃⇧#123",
+            "title" : "Left & Right",
+            "enabled" : true
+          },
+          {
+            "shortcut" : "⌃⌥⇧#123",
+            "title" : "Left & Quarters",
+            "enabled" : true
+          },
+          {
+            "enabled" : true,
+            "shortcut" : "⌃⇧#124",
+            "title" : "Right & Left"
+          },
+          {
+            "shortcut" : "⌃⌥⇧#124",
+            "title" : "Right & Quarters",
+            "enabled" : true
+          },
+          {
+            "enabled" : true,
+            "title" : "Top & Bottom",
+            "shortcut" : "⌃⇧#126"
+          },
+          {
+            "title" : "Top & Quarters",
+            "enabled" : true,
+            "shortcut" : "⌃⌥⇧#126"
+          },
+          {
+            "shortcut" : "⌃⇧#125",
+            "enabled" : true,
+            "title" : "Bottom & Top"
+          },
+          {
+            "title" : "Bottom & Quarters",
+            "shortcut" : "⌃⌥⇧#125",
+            "enabled" : true
+          },
+          {
+            "title" : "Quarters",
+            "enabled" : true
+          },
+          {
+            "separator" : true,
+            "title" : "",
+            "enabled" : false
+          },
+          {
+            "title" : "Return to Previous Size",
+            "enabled" : false,
+            "shortcut" : "⌃R"
+          }
+        ]
+      },
+      {
+        "enabled" : true,
+        "items" : [
+          {
+            "title" : "Left of Screen",
+            "enabled" : true
+          },
+          {
+            "enabled" : true,
+            "title" : "Right of Screen"
+          }
+        ],
+        "title" : "Full Screen Tile"
+      },
+      {
+        "separator" : true,
+        "title" : "",
+        "enabled" : false
+      },
+      {
+        "title" : "Remove Window from Set",
+        "enabled" : false
+      },
+      {
+        "separator" : true,
+        "enabled" : false,
+        "title" : ""
+      },
+      {
+        "title" : "Bring All to Front",
+        "enabled" : true
+      },
+      {
+        "title" : "Arrange in Front",
+        "enabled" : true
+      },
+      {
+        "separator" : true,
+        "title" : "",
+        "enabled" : false
+      },
+      {
+        "enabled" : true,
+        "mark" : "✓",
+        "title" : "Chuvadi"
+      }
+    ],
+    "title" : "Window"
+  },
+  {
+    "title" : "Help",
+    "items" : [
+      {
+        "title" : "",
+        "enabled" : true,
+        "separator" : true
+      }
+    ]
+  }
+]
