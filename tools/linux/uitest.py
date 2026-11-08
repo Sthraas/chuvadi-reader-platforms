@@ -672,6 +672,23 @@ def open_several_from_command_line():
 step("34b-open-several-from-command-line", open_several_from_command_line)
 
 
+def render_choice():
+    """B-12: without a GPU, WebKit's GL compositing is off (else Mesa compiles its shaders on the CPU on a
+    person's first launch: seconds of blank window). With a GPU, WebKit's default stays."""
+    info = app.send("render-info")
+    gpu = bool(glob.glob("/dev/dri/renderD*"))
+    if info["noGpu"] == gpu:
+        raise AssertionError(f"host's GPU check {info} disagrees with /dev/dri ({'GPU' if gpu else 'no GPU'})")
+    if info["noGpu"] and not info["compositingOff"]:
+        raise AssertionError("no GPU, but WebKit compositing is on")
+    if not info["noGpu"] and info["compositingOff"] and "WEBKIT_DISABLE_COMPOSITING_MODE" not in os.environ:
+        raise AssertionError("GPU present, but compositing was turned off")
+    return f"{'no GPU' if info['noGpu'] else 'GPU'}: WebKit compositing {'off' if info['compositingOff'] else 'on (default)'}"
+
+
+step("34b2-render-choice-without-gpu", render_choice)
+
+
 def drop_several():
     """B-06: several files dropped on the window — each in its own tab (the window's drop handler, as GTK
     calls it; a real drag from a file manager is checked by hand)."""

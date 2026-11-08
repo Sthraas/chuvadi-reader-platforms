@@ -16,6 +16,7 @@ namespace ChuvadiReader.Linux;
 ///   commands             → [{id,label,group,keys,enabled}…] (the Ctrl K registry, IAppCommands)
 ///   invoke &lt;id&gt;          → true | false | "pending" (still running after 2 s, e.g. waiting in a dialog)
 ///   open &lt;path&gt;          → true (as a file arriving from outside: OpenDocumentService.Request)
+///   render-info          → {"noGpu":…,"compositingOff":…} (what the host chose at start-up, B-12)
 ///   drop &lt;p1&gt;\t&lt;p2&gt;…    → true (the window's drop handler, with these paths, as GTK's drop target calls it)
 /// tools/linux/uitest.py drives it.
 /// </summary>
@@ -116,6 +117,14 @@ internal static class UiTestDriver
             case "open":
                 await manager.Dispatcher.InvokeAsync(() => services.GetRequiredService<OpenDocumentService>().Request(arg));
                 return "true";
+
+            case "render-info":
+            {
+                var tcs = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+                GtkHost.Post(() => tcs.SetResult(Native.RenderInfo()));
+                var info = await tcs.Task.WaitAsync(TimeSpan.FromSeconds(10));
+                return JsonSerializer.Serialize(new { noGpu = (info & 1) != 0, compositingOff = (info & 2) != 0 });
+            }
 
             case "drop":
                 GtkHost.Post(() => GtkHost.SimulateDrop(arg.Split('\t', StringSplitOptions.RemoveEmptyEntries)));

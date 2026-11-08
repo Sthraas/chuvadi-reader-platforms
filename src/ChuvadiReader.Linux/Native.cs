@@ -81,6 +81,31 @@ internal static unsafe partial class Native
     [LibraryImport(Lib, EntryPoint = "chvd_clipboard_set_text", StringMarshalling = StringMarshalling.Utf8)]
     public static partial void ClipboardSetText(string text);
 
+    [LibraryImport(Lib, EntryPoint = "chvd_sandbox_check")]
+    private static partial int SandboxCheck(byte* buf, int size);
+
+    /// <summary>Whether WebKit's sandbox (bubblewrap) can start here; <paramref name="detail"/> = bwrap's message if not.</summary>
+    public static bool SandboxCheck(out string detail)
+    {
+        Span<byte> buf = stackalloc byte[512];
+        int ok;
+        fixed (byte* p = buf)
+        {
+            ok = SandboxCheck(p, buf.Length);
+        }
+
+        var len = buf.IndexOf((byte)0);
+        detail = System.Text.Encoding.UTF8.GetString(len < 0 ? buf : buf[..len]);
+        return ok != 0;
+    }
+
+    [LibraryImport(Lib, EntryPoint = "chvd_show_error", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial void ShowError(string title, string detail);
+
+    /// <summary>Bit 0: no GPU; bit 1: WebKit compositing off (hardware acceleration policy "never").</summary>
+    [LibraryImport(Lib, EntryPoint = "chvd_render_info")]
+    public static partial int RenderInfo();
+
     [LibraryImport(Lib, EntryPoint = "chvd_button_layout")]
     private static partial int ButtonLayout(byte* buf, int size);
 

@@ -38,7 +38,7 @@ jobs:
 
       # Build: SDK, GTK 4, WebKitGTK 6.0, dpkg-dev. Test only (never shipped): Xvfb, mutter, ImageMagick,
       # xdotool, xclip, x11-utils, poppler-utils, CUPS + cups-pdf, xdg-utils, qpdf (makes the no-printing fixture),
-      # lintian + python3-fonttools/brotli (package check).
+      # lintian + python3-fonttools/brotli (package check), python3-seccomp (no-user-namespace test).
       - name: Install build and test packages (Ubuntu)
         timeout-minutes: 15
         run: |
@@ -46,7 +46,7 @@ jobs:
           sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 install -y -qq dotnet-sdk-10.0 \
             libgtk-4-dev libwebkitgtk-6.0-dev dpkg-dev \
             xvfb mutter imagemagick dbus-x11 xdotool xclip x11-utils poppler-utils cups cups-pdf xdg-utils qpdf \
-            lintian python3-fonttools python3-brotli
+            lintian python3-fonttools python3-brotli python3-seccomp
           dotnet --info | head -8
 
       # Packages: the committed ci/packages feed (byte-identical to the Windows app), coordinator D-01,
@@ -79,6 +79,12 @@ jobs:
       - name: Launch test under Xvfb
         run: bash tools/linux/smoke.sh "$PWD/publish" "$PWD/smoke" 3
 
+      - name: No user namespaces → a plain message and exit 2, not an abort (B-15)
+        run: bash tools/linux/no-userns-test.sh "$PWD/publish" "$PWD/no-userns"
+
+      - name: First launch per person, no GPU (B-12; recorded, not a pass/fail threshold)
+        run: python3 -I tools/linux/first-launch.py "$PWD/publish" 5 | tee first-launch.txt
+
       - name: Build the .deb packages (self-contained default, and framework-dependent)
         run: |
           bash src/ChuvadiReader.Linux/packaging/deb/build-deb.sh "$PWD/deb"
@@ -106,11 +112,19 @@ jobs:
         timeout-minutes: 40
         run: python3 -I -u tools/linux/uitest.py "$PWD/uitest-build" "$PWD/uitest" --cups-out "$HOME/PDF"
 
+      - name: Read-only home → starts, opens the file, one notice (B-16; the runner's user isn't root)
+        run: |
+          python3 -I tools/linux/make-fixtures.py "$PWD/ro-fixtures"
+          python3 -I tools/linux/readonly-home-test.py "$PWD/uitest-build" "$PWD/ro-fixtures/five-pages.pdf" "$PWD/readonly-home"
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: linux-${{ matrix.arch }}
           path: |
+            first-launch.txt
+            no-userns
+            readonly-home
             smoke
             smoke-installed
             uitest

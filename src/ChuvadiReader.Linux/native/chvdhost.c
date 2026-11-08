@@ -66,6 +66,7 @@ static struct
     guint32 press_time;
 
     gint wake_pending;
+    gboolean no_gpu; /* no DRM render node: GTK and WebKit render on the CPU */
 } S;
 
 /* ── main loop ──────────────────────────────────────────────────────────── */
@@ -106,7 +107,8 @@ CHVD_EXPORT int chvd_init(chvd_scheme_fn scheme, chvd_message_fn message, chvd_w
      * software (llvmpipe) and cost ~460 ms before the window shows and ~700 ms to first render
      * (measured, docs/linux/BUILD-LOG.md). Its CPU renderer is then the fast one. With a GPU, GTK's
      * default stays. The person's own GSK_RENDERER always wins. */
-    if (!g_getenv("GSK_RENDERER") && !has_render_node())
+    S.no_gpu = !has_render_node();
+    if (!g_getenv("GSK_RENDERER") && S.no_gpu)
     {
         g_setenv("GSK_RENDERER", "cairo", FALSE);
     }
@@ -498,6 +500,14 @@ CHVD_EXPORT int chvd_create_window(const char *title, const char *app_id, int wi
     webkit_settings_set_javascript_can_access_clipboard(settings, TRUE);
     webkit_settings_set_enable_back_forward_navigation_gestures(settings, FALSE);
     webkit_settings_set_enable_page_cache(settings, FALSE);
+    /* B-12: without a GPU, WebKit's GL compositing runs in software, and on a person's first launch Mesa
+     * compiles its shaders on the CPU first (again after every Mesa update): measured 4.7 s before the
+     * page shows on a fresh profile, 1.5 s with compositing off (BUILD-LOG §37). With a GPU, WebKit's
+     * default stays; WEBKIT_DISABLE_COMPOSITING_MODE set by the person still applies either way. */
+    if (S.no_gpu)
+    {
+        webkit_settings_set_hardware_acceleration_policy(settings, WEBKIT_HARDWARE_ACCELERATION_POLICY_NEVER);
+    }
 
     /* Ephemeral session: nothing is written to disk (no profile, cache or web storage), so an
      * updated app can never be served a previous version's assets. App state lives in .NET
@@ -893,6 +903,86 @@ CHVD_EXPORT int chvd_button_layout(char *buf, int size)
     }
     g_free(layout);
     return len;
+}
+
+/* B-15: WebKit renders pages inside a sandbox (bubblewrap) that needs unprivileged user namespaces. Where
+ * they're unavailable (a hardened kernel, Docker's default seccomp, Ubuntu 24.04+ without the AppArmor
+ * profile) WebKit aborts with a GLib error and no window. This runs bubblewrap once the way WebKit does
+ * (same namespace switches), before any web view exists. Returns 1 when it starts (or when there's nothing
+ * to check: no bwrap, or the person turned WebKit's sandbox off), 0 otherwise with bwrap's message in buf. */
+CHVD_EXPORT int chvd_sandbox_check(char *buf, int size)
+{
+    if (buf && size > 0)
+    {
+        buf[0] = 0;
+    }
+
+    if (g_getenv("WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS"))
+    {
+        return 1;
+    }
+
+    gchar *bwrap = g_find_program_in_path("bwrap");
+    if (!bwrap)
+    {
+        return 1;
+    }
+
+    gchar *argv[] = {bwrap, "--ro-bind", "/", "/", "--unshare-user", "--unshare-pid", "--unshare-ipc",
+                     "--unshare-uts", "--unshare-cgroup-try", "--die-with-parent", "/bin/true", NULL};
+    gchar *err = NULL;
+    gint status = 0;
+    GError *error = NULL;
+    gboolean ran = g_spawn_sync(NULL, argv, NULL, G_SPAWN_STDOUT_TO_DEV_NULL, NULL, NULL, NULL, &err, &status, &error);
+    gboolean ok = ran && g_spawn_check_wait_status(status, NULL);
+    if (!ok && buf && size > 0)
+    {
+        g_strlcpy(buf, error ? error->message : (err && *err ? g_strstrip(err) : "bubblewrap could not start"), (gsize)size);
+    }
+
+    g_clear_error(&error);
+    g_free(err);
+    g_free(bwrap);
+    return ok ? 1 : 0;
+}
+
+static void on_alert_done(GObject *source, GAsyncResult *result, gpointer loop)
+{
+    gtk_alert_dialog_choose_finish(GTK_ALERT_DIALOG(source), result, NULL);
+    g_main_loop_quit(loop);
+}
+
+/* A plain message window for a problem that stops Chuvadi before its own window exists (B-15). Blocks until
+ * the person closes it. Main thread, after chvd_init. */
+CHVD_EXPORT void chvd_show_error(const char *title, const char *detail)
+{
+    GtkAlertDialog *dialog = gtk_alert_dialog_new("%s", title);
+    gtk_alert_dialog_set_detail(dialog, detail);
+    const char *buttons[] = {"Close", NULL};
+    gtk_alert_dialog_set_buttons(dialog, buttons);
+    gtk_alert_dialog_set_cancel_button(dialog, 0);
+    gtk_alert_dialog_set_default_button(dialog, 0);
+    GMainLoop *loop = g_main_loop_new(NULL, FALSE);
+    gtk_alert_dialog_choose(dialog, NULL, NULL, on_alert_done, loop);
+    g_main_loop_run(loop);
+    g_main_loop_unref(loop);
+    g_object_unref(dialog);
+}
+
+/* What the host decided at start-up (UI tests read it): bit 0 = no GPU (no DRM render node), bit 1 = WebKit's
+ * hardware acceleration policy is "never" (compositing off). Main thread, after chvd_create_window. */
+CHVD_EXPORT int chvd_render_info(void)
+{
+    int info = S.no_gpu ? 1 : 0;
+    if (S.view)
+    {
+        WebKitSettings *settings = webkit_web_view_get_settings(S.view);
+        if (webkit_settings_get_hardware_acceleration_policy(settings) == WEBKIT_HARDWARE_ACCELERATION_POLICY_NEVER)
+        {
+            info |= 2;
+        }
+    }
+    return info;
 }
 
 /* "Show in folder": asks the desktop's file manager to open the folder with the file selected

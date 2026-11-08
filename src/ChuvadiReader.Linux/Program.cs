@@ -49,10 +49,31 @@ public static class Program
 
             Mark("gtk init");
 
+            // B-15: whether WebKit's sandbox can start, checked in parallel with building the services
+            // (~10 ms of bubblewrap); the answer is needed before the web view exists.
+            var sandbox = Task.Run(() => (Ok: Native.SandboxCheck(out var detail), Detail: detail));
+
             var paths = new LinuxAppPaths(); // XDG config folder; Documents for saves
-            var storage = new FileAppStorage(paths.AppDataFolder);
+            var storage = new ResilientAppStorage(paths.AppDataFolder); // B-16: survives an unwritable home
             var services = BuildServices(paths, storage, LinuxPlatformInfo.Create());
             Mark("services");
+
+            var (sandboxOk, sandboxDetail) = sandbox.GetAwaiter().GetResult();
+            if (!sandboxOk)
+            {
+                // WebKit would abort with no window. Say why, plainly, and end cleanly.
+                const string title = "Chuvadi can't start on this computer";
+                const string detail =
+                    "Chuvadi shows documents inside a protected area (a sandbox) that needs \"user namespaces\", " +
+                    "and they're switched off here.\n\n" +
+                    "On Ubuntu 24.04 or later, reinstall the chuvadi-reader package (its security profile allows them). " +
+                    "Otherwise, ask whoever manages this computer to allow unprivileged user namespaces.";
+                Console.Error.WriteLine($"Chuvadi: {title}. The sandbox couldn't start: {sandboxDetail}");
+                Native.ShowError(title, detail + "\n\nDetails: " + sandboxDetail);
+                return 2;
+            }
+
+            Mark("sandbox check");
 
             var theme = (storage.GetSync("theme") ?? string.Empty).Trim().ToLowerInvariant();
             if (Native.CreateWindow("Chuvadi", AppId, 1100, 720, PrePaintColour(theme), DevTools ? 1 : 0) == 0)
@@ -86,6 +107,7 @@ public static class Program
             }
 
             OpenFromCommandLine(services, opener, args);
+            WarnWhenSettingsCantBeSaved(services, storage, manager);
 #if CHUVADI_UITEST
             UiTestDriver.Start(services, manager);
 #endif
@@ -113,7 +135,7 @@ public static class Program
     private const bool DevTools = false;
 #endif
 
-    private static ServiceProvider BuildServices(IAppPaths paths, FileAppStorage storage, IPlatformInfo platform)
+    private static ServiceProvider BuildServices(IAppPaths paths, ResilientAppStorage storage, IPlatformInfo platform)
     {
         var services = new ServiceCollection();
         services.AddBlazorWebView();
@@ -185,6 +207,33 @@ public static class Program
         }
 
         services.GetRequiredService<IAppReadySignal>().Ready += () => _ = opener.OpenAsync(files);
+    }
+
+    /// <summary>B-16: one notice when settings can't be written (read-only or full home folder); the app keeps
+    /// working with them in memory.</summary>
+    private static void WarnWhenSettingsCantBeSaved(IServiceProvider services, ResilientAppStorage storage, LinuxWebViewManager manager)
+    {
+        var shell = services.GetRequiredService<ShellService>();
+        var warned = 0;
+        void Warn(string reason)
+        {
+            if (Interlocked.Exchange(ref warned, 1) == 0)
+            {
+                _ = manager.Dispatcher.InvokeAsync(() => shell.Notify(
+                    $"Chuvadi can't save its settings on this computer ({reason.TrimEnd('.', ' ')}). Changes last until you close it.",
+                    isError: true));
+            }
+        }
+
+        services.GetRequiredService<IAppReadySignal>().Ready += () =>
+        {
+            if (!storage.Saving)
+            {
+                Warn(storage.Reason ?? "the settings folder can't be written");
+            }
+
+            storage.CannotSave += Warn;
+        };
     }
 
     internal static void Mark(string stage)
