@@ -3,12 +3,13 @@
 @inject ShellService Shell
 @inject TabsService Tabs
 @inject NavigationManager Nav
-@inject IServiceProvider Services
+@inject IAppLifecycle Life
+@inject UserProfileService Profile
 @inject IJSRuntime JS
 
 @*
     Android phone shell — Portal & Android 12g-12j. Rendered by MainLayout in place of the top bar,
-    left bar and status bar when the layout is Phone (MainLayout hook). The rails fold:
+    left bar and status bar when Platform.Shell() is Phone (hook H-1). The rails fold:
       * left bar  → bottom bar (Read · Mark · Arrange · Protect); Open, Find, Library, Settings → ⋮
       * Tools rail → tool strip above the bottom bar, Mark and Protect only
       * View rail → pinch / double-tap / swipe (mobile.js) + the View sheet from ⋮
@@ -17,10 +18,27 @@
 *@
 
 <div class="ph-shell" data-mode="@ModeKey">
-    <PhoneAppBar OnBack="Back" OnMenu="() => ShowSheet(PhoneSheetKind.Menu)" OnDocView="OnDocView" PageTitle="@PageTitle" />
+    <PhoneAppBar OnBack="Back" OnMenu="() => ShowSheet(PhoneSheetKind.Menu)" OnTitle="() => ShowSheet(PhoneSheetKind.Tabs)"
+                 OnDocView="OnDocView" PageTitle="@PageTitle" Initials="@(OnHome ? Initials : null)"
+                 OnAvatar='() => Go?.Invoke("/settings?section=account")' />
 
     <main class="content ph-content">
-        @ChildContent
+        @if (OnHome)
+        {
+            @* 4a: "Find or do anything…" (MainLayout's Find, the command bar). Home places the same button
+               below its count line through the "PhoneHomeSearch" slot (Dashboard hook H-10); this copy shows
+               only until a page has placed it (mobile.css, :has). *@
+            @HomeSearch
+        }
+        <CascadingValue Name="PhoneHomeSearch" Value="@(OnHome ? HomeSearch : null)">
+            @ChildContent
+        </CascadingValue>
+        @if (OnHome && Open is not null)
+        {
+            <button class="ph-fab ph-fab-ext" @onclick="() => Then(Open)" aria-label="@(OpenLabel == "Open" ? "Open a document" : OpenLabel)">
+                <Icon Name="plus" Size="18" /><span>@OpenLabel</span>
+            </button>
+        }
         @if (Fab is { } fab)
         {
             <button class="ph-fab" disabled="@(!fab.IsEnabled)" title="@(fab.DisabledReason ?? fab.Label)" aria-label="@fab.Label"
@@ -35,6 +53,32 @@
         <PhoneToolStrip Items="items" Active="@_activeTool" OnPick="PickTool" />
     }
 
+    @if (!OnDocView)
+    {
+        @* Off-document (4a, D-45): Home · Library · Tabs · N · Settings. *@
+        <nav class="ph-nav ph-nav-dest" aria-label="Places">
+            @foreach (var (path, icon, label) in Places)
+            {
+                var pth = path;
+                var on = IsAt(pth);
+                <button class="ph-nav-b @(on ? "on" : null)" aria-current="@(on ? "page" : null)" title="@label" @onclick="() => Go?.Invoke(pth)">
+                    <span class="ph-pill"><Icon Name="@icon" Size="20" /></span>
+                    <span class="ph-lab">@label</span>
+                </button>
+            }
+            <button class="ph-nav-b" disabled="@(Tabs.Tabs.Count == 0)" title="@(Tabs.Tabs.Count == 0 ? "No documents open" : $"Open tabs · {Tabs.Tabs.Count}")"
+                    @onclick="() => ShowSheet(PhoneSheetKind.Tabs)">
+                <span class="ph-pill"><Icon Name="copy" Size="20" /></span>
+                <span class="ph-lab">@(Tabs.Tabs.Count == 0 ? "Tabs" : $"Tabs · {Tabs.Tabs.Count}")</span>
+            </button>
+            <button class="ph-nav-b @(IsAt("/settings") ? "on" : null)" aria-current="@(IsAt("/settings") ? "page" : null)" title="Settings" @onclick='() => Go?.Invoke("/settings")'>
+                <span class="ph-pill"><Icon Name="settings" Size="20" /></span>
+                <span class="ph-lab">Settings</span>
+            </button>
+        </nav>
+    }
+    else
+    {
     <nav class="ph-nav" aria-label="Modes">
         @foreach (var (mode, icon, label) in Modes)
         {
@@ -48,11 +92,12 @@
             </button>
         }
     </nav>
+    }
 
     @if (_sheet == PhoneSheetKind.Menu)
     {
         <PhoneSheet Title="@null" OnClose="Close">
-            <button class="ph-row" @onclick="() => Then(Open)"><Icon Name="folder" Size="18" /><span class="ph-row-l">Open</span></button>
+            <button class="ph-row" @onclick="() => Then(Open)"><Icon Name="@OpenIcon" Size="18" /><span class="ph-row-l">@OpenLabel</span></button>
             <button class="ph-row" @onclick="() => Then(Find)"><Icon Name="find-in-page" Size="18" /><span class="ph-row-l">Find</span></button>
             <button class="ph-row" @onclick='() => Then(() => { Go?.Invoke("/library"); return Task.CompletedTask; })'><Icon Name="library" Size="18" /><span class="ph-row-l">Library</span></button>
             <button class="ph-row" @onclick='() => Then(() => { Go?.Invoke("/settings"); return Task.CompletedTask; })'><Icon Name="settings" Size="18" /><span class="ph-row-l">Settings</span></button>
@@ -80,6 +125,29 @@
                     </button>
                 }
             }
+            @MenuFooter?.Invoke(EventCallback.Factory.Create(this, Close))
+        </PhoneSheet>
+    }
+    else if (_sheet == PhoneSheetKind.Tabs)
+    {
+        @* D-43: tap the title → the open tabs; tap one to switch, × closes it (MainLayout's own
+           CloseTab, so unsaved changes are asked about exactly as on desktop). *@
+        <PhoneSheet Title="Tabs" Action="Done" OnClose="Close">
+            @foreach (var t in Tabs.Tabs)
+            {
+                var tab = t;
+                var on = tab.Id == Tabs.Active?.Id;
+                <div class="ph-row ph-tab @(on ? "on" : null)" @key="tab.Id">
+                    <button class="ph-tab-b" @onclick="() => Then(() => SwitchTab is null ? Task.CompletedTask : SwitchTab(tab.Id))"
+                            aria-current="@(on ? "true" : null)" title="@tab.Path">
+                        <Icon Name="@tab.Format.IconName()" Size="18" />
+                        <span class="ph-row-l">@tab.FileName</span>
+                        <span class="ph-row-v">@(tab.IsLoading ? "opening…" : tab.Error is not null ? "couldn't open" : $"p {tab.CurrentPage}")</span>
+                    </button>
+                    <button class="ph-ib ph-tab-x" @onclick="() => CloseOne(tab.Id)" aria-label="@($"Close {tab.FileName}")"><Icon Name="x" Size="16" /></button>
+                </div>
+            }
+            <button class="ph-row" @onclick="() => Then(Open)"><Icon Name="plus" Size="18" /><span class="ph-row-l">Open…</span></button>
         </PhoneSheet>
     }
     else if (_sheet == PhoneSheetKind.View)
@@ -105,6 +173,20 @@
 @code {
     [Parameter] public RenderFragment? ChildContent { get; set; }
 
+    /// <summary>Home's search button (4a). Cascaded as "PhoneHomeSearch" so Home can place it under its count line.</summary>
+    private RenderFragment HomeSearch => __builder =>
+    {
+        <button class="ph-search" @onclick="() => Then(Find)"><Icon Name="find-in-page" Size="18" /><span>Find or do anything…</span></button>
+    };
+
+    /// <summary>Label and icon of the ⋮ menu's Open row ("Upload" / "upload" on the Web portal).</summary>
+    [Parameter] public string OpenLabel { get; set; } = "Open";
+
+    [Parameter] public string OpenIcon { get; set; } = "folder";
+
+    /// <summary>Rows added at the foot of the ⋮ menu (the Web portal's account block). The argument closes the sheet.</summary>
+    [Parameter] public RenderFragment<EventCallback>? MenuFooter { get; set; }
+
     /// <summary>MainLayout's own mode switch (RequestMode).</summary>
     [Parameter] public Func<DocMode, Task>? RequestMode { get; set; }
 
@@ -120,6 +202,12 @@
     /// <summary>MainLayout's Go(path).</summary>
     [Parameter] public Action<string>? Go { get; set; }
 
+    /// <summary>MainLayout's SwitchTab(id).</summary>
+    [Parameter] public Func<string, Task>? SwitchTab { get; set; }
+
+    /// <summary>MainLayout's CloseTab(id) — asks about unsaved changes.</summary>
+    [Parameter] public Func<string, Task>? CloseTab { get; set; }
+
     /// <summary>True on the Reader, Arrange and Protect views (MainLayout.OnDocView).</summary>
     [Parameter] public bool OnDocView { get; set; }
 
@@ -131,21 +219,49 @@
         (DocMode.Protect, "redact", "Protect"),
     };
 
+    // Home and Library; Tabs and Settings are drawn after them (Tabs opens a sheet, not a page).
+    private static readonly (string Path, string Icon, string Label)[] Places =
+    {
+        ("/", "home", "Home"),
+        ("/library", "library", "Library"),
+    };
+
+    private string CurrentPath => "/" + Nav.ToBaseRelativePath(Nav.Uri).Split('?', '#')[0].Trim('/');
+
+    private bool IsAt(string path) => path == "/"
+        ? CurrentPath == "/"
+        : CurrentPath.StartsWith(path, StringComparison.OrdinalIgnoreCase);
+
+    private bool OnHome => !OnDocView && CurrentPath == "/";
+
+    private bool InSettingsSection =>
+        IsAt("/settings") && Nav.Uri.Contains("section=", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>4a's avatar: initials of the preferred name, else none (the icon shows).</summary>
+    private string Initials
+    {
+        get
+        {
+            var parts = (Profile.Name ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            return parts.Length switch
+            {
+                0 => string.Empty,
+                1 => parts[0][..1].ToUpperInvariant(),
+                _ => (parts[0][..1] + parts[^1][..1]).ToUpperInvariant(),
+            };
+        }
+    }
+
     private PhoneSheetKind _sheet;
     private string? _activeTool;
     private DocMode _toolMode;
-    private IAppLifecycle? _life;
 
     protected override void OnInitialized()
     {
         Shell.Changed += OnChanged;
         Tabs.Changed += OnChanged;
         Nav.LocationChanged += OnLocation;
-        _life = Services.GetService(typeof(IAppLifecycle)) as IAppLifecycle;
-        if (_life is not null)
-        {
-            _life.BackRequested += OnBackRequested;
-        }
+        Life.BackRequested += OnBackRequested;
     }
 
     private string ModeKey => OnDocView ? Shell.Mode.ToString().ToLowerInvariant() : "none";
@@ -223,6 +339,7 @@
         {
             DocMode.Mark => PhoneCommands.Find(Shell.Commands, new[] { PhoneCommands.MarkPrimary }),
             DocMode.Arrange => PhoneCommands.Find(Shell.Commands, new[] { PhoneCommands.ArrangePrimary }),
+            DocMode.Protect => PhoneCommands.Find(Shell.Commands, new[] { PhoneCommands.ProtectPrimary }),
             _ => null,
         };
 
@@ -290,6 +407,19 @@
     // ── sheets, back, navigation ──────────────────────────────────────────
     private void ShowSheet(PhoneSheetKind kind) => _sheet = kind;
 
+    private async Task CloseOne(string id)
+    {
+        if (CloseTab is not null)
+        {
+            await CloseTab(id);
+        }
+
+        if (Tabs.Tabs.Count == 0)
+        {
+            _sheet = PhoneSheetKind.None;
+        }
+    }
+
     private void Close() => _sheet = PhoneSheetKind.None;
 
     private async Task Then(Func<Task>? action)
@@ -326,7 +456,8 @@
             return;
         }
 
-        Go?.Invoke("/");
+        // A Settings section goes back to the section list (Settings A, D-45); elsewhere, Home.
+        Go?.Invoke(InSettingsSection ? "/settings" : "/");
     }
 
     /// <summary>Android back: a sheet closes first; then the host's default.</summary>
@@ -366,10 +497,7 @@
         Shell.Changed -= OnChanged;
         Tabs.Changed -= OnChanged;
         Nav.LocationChanged -= OnLocation;
-        if (_life is not null)
-        {
-            _life.BackRequested -= OnBackRequested;
-        }
+        Life.BackRequested -= OnBackRequested;
 
         if (_js is not null)
         {

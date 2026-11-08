@@ -13,11 +13,11 @@ public sealed class PinnedService
 
     private readonly bool _samples;
 
-    /// <param name="platform">The host. No Phase 0 samples on a server (Web H8). Desktop unchanged.</param>
+    /// <param name="platform">The host. Phase 0 samples only on Windows (<see cref="PhaseZeroSamples"/>).</param>
     public PinnedService(IAppStorage storage, IPlatformInfo? platform = null)
     {
         _storage = storage;
-        _samples = platform?.Capabilities.ServerSide != true;
+        _samples = PhaseZeroSamples.Shown(platform);
     }
 
     public IReadOnlyList<PinnedItem> Items => _items;
@@ -64,7 +64,15 @@ public sealed class WatchedFolderService
     private const string StorageKey = "watched-folder";
     private readonly IAppStorage _storage;
 
-    public WatchedFolderService(IAppStorage storage) => _storage = storage;
+    private readonly bool _samples;
+
+    /// <param name="platform">The host. The Phase 0 sample folder only on Windows (<see cref="PhaseZeroSamples"/>):
+    /// it doesn't exist anywhere else.</param>
+    public WatchedFolderService(IAppStorage storage, IPlatformInfo? platform = null)
+    {
+        _storage = storage;
+        _samples = PhaseZeroSamples.Shown(platform);
+    }
 
     public string? FolderPath { get; private set; }
 
@@ -78,7 +86,7 @@ public sealed class WatchedFolderService
     {
         FolderPath = await _storage.GetAsync(StorageKey, ct).ConfigureAwait(false);
 
-        if (string.IsNullOrWhiteSpace(FolderPath))
+        if (string.IsNullOrWhiteSpace(FolderPath) && _samples)
         {
             FolderPath = "~/Documents/Chuvadi";
             DocumentCount = 8;

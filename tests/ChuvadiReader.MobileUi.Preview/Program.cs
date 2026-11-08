@@ -15,7 +15,9 @@ var ff = (Environment.GetEnvironmentVariable("CHVD_FF") ?? "phone").ToLowerInvar
 };
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddRazorComponents().AddInteractiveServerComponents();
+// One screenshot = one browser session; app state is process-wide (like the desktop app), so drop a
+// session's components the moment its browser closes instead of keeping them registered for minutes.
+builder.Services.AddRazorComponents().AddInteractiveServerComponents(o => o.DisconnectedCircuitRetentionPeriod = TimeSpan.Zero);
 builder.Services.AddChuvadiReader(AppStateLifetime.Process);
 builder.Services.AddSingleton<IAppStorage, MemoryStorage>();
 builder.Services.AddSingleton<IFilePicker, FixturePicker>();
@@ -45,7 +47,29 @@ app.MapRazorComponents<ChuvadiReader.MobileUi.Preview.Components.HostPage>()
 // Two documents open, like 12g ("1 of 2 tabs" here; the frame shows 4).
 var tabs = app.Services.GetRequiredService<TabsService>();
 var shell = app.Services.GetRequiredService<ShellService>();
+// A small library in category folders, so Library's list and shelf have something to show.
+var lib = app.Services.GetRequiredService<SaveFolderService>().BaseFolder;
+foreach (var (cat, name, pages) in new[]
+{
+    ("Clinical", "lab-report-meena-r.pdf", 4), ("Clinical", "discharge-summary.pdf", 12), ("Clinical", "ot-checklist-v3.pdf", 3),
+    ("Finance", "insurance-claims.pdf", 9), ("Finance", "tariff-2026.pdf", 48), ("Legal", "consent-form-signed.pdf", 2),
+    ("Legal", "vendor-agreement.pdf", 18),
+})
+{
+    if (!File.Exists(Path.Combine(lib, cat, name)))
+    {
+        Fixtures.Document(Path.Combine(lib, cat), name, pages);
+    }
+}
+
 await tabs.RestoreAsync();   // as Dashboard/Reader do first, so the fixtures aren't added twice
+// CHVD_EMPTY=1: a fresh install — no open tabs, so Home shows its first-run box (D-89, H-12).
+if (Environment.GetEnvironmentVariable("CHVD_EMPTY") == "1")
+{
+    app.Run();
+    return;
+}
+
 var a = Fixtures.Document("discharge-summary.pdf", 13);
 var b = Fixtures.Document("lab-report.pdf", 4);
 await tabs.OpenAsync(b, Path.GetFileName(b), DocumentFormat.Pdf);

@@ -53,10 +53,23 @@
                 <button type="submit" class="psi-submit" disabled="@(Busy || !CanSubmit)">Sign in</button>
             }
             <span class="psi-foot">Prefer to keep files on your computer? <a href="@Links.DesktopAppUrl" target="_blank" rel="noopener">Download the desktop app</a> — no sign-in needed to read.</span>
-            @if (Links.TermsUrl is { } terms)
+            @if (Links.TermsUrl is not null || Links.PrivacyUrl is not null)
             {
-                @* Licence terms (coordinator, 7 Nov): proprietary, free for everyone; the EULA is the Foundation's. *@
-                <span class="psi-foot psi-terms"><a href="@terms" target="_blank" rel="noopener">Terms of use</a></span>
+                @* Legal links (U-13 a; D-86): the Foundation's drafts, served before sign-in by the Web host. *@
+                <span class="psi-foot psi-terms">
+                    @if (Links.TermsUrl is { } terms)
+                    {
+                        <a href="@terms" target="_blank" rel="noopener">Terms of use</a>
+                    }
+                    @if (Links.TermsUrl is not null && Links.PrivacyUrl is not null)
+                    {
+                        <span aria-hidden="true"> · </span>
+                    }
+                    @if (Links.PrivacyUrl is { } privacy)
+                    {
+                        <a href="@privacy" target="_blank" rel="noopener">Privacy</a>
+                    }
+                </span>
             }
         </form>
     </section>

@@ -18,11 +18,12 @@ public sealed class RecentFilesService
     private readonly bool _samples;
 
     /// <param name="platform">The host. No Phase 0 samples on a server (Web H8): every portal session
-    /// starts empty and the sample files don't exist there. Desktop unchanged.</param>
+    /// starts empty and the sample files don't exist there. Only Windows shows them
+    /// (<see cref="PhaseZeroSamples"/>): elsewhere a fresh install shows the first-run box.</param>
     public RecentFilesService(IAppStorage storage, IPlatformInfo? platform = null)
     {
         _storage = storage;
-        _samples = platform?.Capabilities.ServerSide != true;
+        _samples = PhaseZeroSamples.Shown(platform);
     }
 
     public IReadOnlyList<RecentItem> Items => _items;

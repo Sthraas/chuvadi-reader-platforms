@@ -55,9 +55,11 @@ public static class PhoneCommands
         new("Loupe", "loupe", "v.loupe"),
     };
 
-    /// <summary>The floating primary action: Mark → Save as new PDF (12h); Arrange → Add desk (12i).</summary>
+    /// <summary>The floating primary action: Mark → Save as new PDF (12h); Arrange → Add desk (12i);
+    /// Protect → Save redacted copy (D-46; registered only by the redaction view).</summary>
     public const string MarkPrimary = "m.saveas";
     public const string ArrangePrimary = "a.desk";
+    public const string ProtectPrimary = "rd.save";
 
     /// <summary>12i: "Bind all" sits where the page counter is.</summary>
     public const string ArrangeBind = "a.bind";
@@ -67,7 +69,7 @@ public static class PhoneCommands
         Mark.SelectMany(i => i.CommandIds)
             .Concat(Protect.SelectMany(i => i.CommandIds))
             .Concat(View.SelectMany(r => r.CommandIds))
-            .Append(MarkPrimary).Append(ArrangePrimary).Append(ArrangeBind)
+            .Append(MarkPrimary).Append(ArrangePrimary).Append(ProtectPrimary).Append(ArrangeBind)
             .Distinct();
 
     /// <summary>First registered command among <paramref name="ids"/>, or null.</summary>

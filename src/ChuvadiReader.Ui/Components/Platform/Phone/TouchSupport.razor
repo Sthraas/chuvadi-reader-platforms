@@ -1,66 +1,77 @@
-@using ChuvadiReader.Ui.Components.Platform
 @implements IAsyncDisposable
 @inject IJSRuntime JS
+@inject IPlatformInfo Info
 @inject ShellService Shell
-@inject TabsService Tabs
-@inject ChuvadiReader.Platform.IPlatformInfo Platform
 
 @*
-    Touch behaviour for the tablet and phone shells (hook H-2): renders nothing; loads mobile.js,
-    which turns touch into what the desktop already understands —
-      * pinch → the Reader's own cursor-anchored zoom (Ctrl + wheel on the page desk)
-      * double-tap → Fit width ⇄ Fit page;  swipe (when the page fits) → next / previous page
+    Touch behaviour for the tablet and phone shells: renders nothing; loads mobile.js, which adds what
+    the desktop code lacks on a touchscreen —
+      * swipe on a page that fits sideways → next / previous page (Read)
       * tap on the canvas → shows the per-page strip (the desktop shows it on hover)
       * Arrange: long-press a page to drag it; a quick swipe scrolls the desks instead
-    MainLayout renders this only for the tablet and phone layouts, so desktop and portal pay nothing.
+    Pinch and double-tap zoom are reader.js's own (handout 12g: "pinch, double-tap and swipe do
+    zoom and paging"); the tablet desk counter is Bench's (D-46). MainLayout renders this only for
+    the tablet and phone layouts, so Windows and the portal pay nothing.
 *@
 
 @code {
     private IJSObjectReference? _js;
     private DotNetObjectReference<TouchSupport>? _self;
     private bool _on;
+    private bool _arrange;
 
-    private bool Wanted => ChuvadiReader.Platform.ShellLayouts.Shell(Platform) is ChuvadiReader.Platform.ShellLayout.Tablet or ChuvadiReader.Platform.ShellLayout.Phone;
+    private bool Wanted => Info.Shell() is ShellLayout.Tablet or ShellLayout.Phone;
+
+    private bool InArrange => Wanted && Shell.Mode == DocMode.Arrange;
+
+    // Fold / unfold, split screen: a component without parameters isn't re-rendered by its parent.
+    protected override void OnInitialized()
+    {
+        Info.FormFactorChanged += OnChanged;
+        Shell.Changed += OnModeMaybeChanged;
+    }
+
+    private void OnChanged() => _ = InvokeAsync(StateHasChanged);
+
+    private void OnModeMaybeChanged()
+    {
+        if (InArrange != _arrange)
+        {
+            _ = InvokeAsync(StateHasChanged);
+        }
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (Wanted == _on)
-        {
-            return;
-        }
-
         try
         {
-            _js ??= await JS.InvokeAsync<IJSObjectReference>("import", "./_content/ChuvadiReader.Ui/js/mobile.js");
-            if (Wanted)
+            if (Wanted != _on)
             {
-                _self ??= DotNetObjectReference.Create(this);
-                await _js.InvokeVoidAsync("initTouch", _self);
-            }
-            else
-            {
-                await _js.InvokeVoidAsync("disposeTouch");
+                _js ??= await JS.InvokeAsync<IJSObjectReference>("import", "./_content/ChuvadiReader.Ui/js/mobile.js");
+                if (Wanted)
+                {
+                    _self ??= DotNetObjectReference.Create(this);
+                    await _js.InvokeVoidAsync("initTouch", _self);
+                }
+                else
+                {
+                    await _js.InvokeVoidAsync("disposeTouch");
+                    _arrange = false;
+                }
+
+                _on = Wanted;
             }
 
-            _on = Wanted;
+            // Long-press drag needs its blocking touchmove listener in place before the press starts.
+            if (_on && _js is not null && InArrange != _arrange)
+            {
+                _arrange = InArrange;
+                await _js.InvokeVoidAsync("setArrange", _arrange);
+            }
         }
         catch (JSDisconnectedException)
         {
         }
-    }
-
-    /// <summary>Double-tap on the page (Read): Fit width ⇄ Fit page.</summary>
-    [JSInvokable]
-    public Task OnDoubleTap()
-    {
-        if (Shell.Mode != DocMode.Read)
-        {
-            return Task.CompletedTask;
-        }
-
-        var id = Tabs.Active?.FitMode == ReaderFitMode.Width ? "v.fitp" : "v.fitw";
-        var cmd = Shell.Commands.FirstOrDefault(c => c.Id == id);
-        return cmd is { IsEnabled: true } ? InvokeAsync(cmd.Run) : Task.CompletedTask;
     }
 
     /// <summary>Horizontal swipe on a page that fits (Read): next (+1) or previous (−1) page or spread.</summary>
@@ -73,11 +84,18 @@
         }
 
         var target = Shell.CounterCurrent + Math.Sign(direction) * Shell.CounterStep;
+        if (target < 1 || target > Shell.CounterTotal)
+        {
+            return Task.CompletedTask;
+        }
+
         return InvokeAsync(() => Shell.GoToAsync(target));
     }
 
     public async ValueTask DisposeAsync()
     {
+        Info.FormFactorChanged -= OnChanged;
+        Shell.Changed -= OnModeMaybeChanged;
         _self?.Dispose();
         if (_js is null)
         {

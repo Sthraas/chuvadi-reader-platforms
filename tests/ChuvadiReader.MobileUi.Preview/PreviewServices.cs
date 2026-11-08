@@ -20,9 +20,12 @@ public sealed class PreviewPlatform(FormFactor formFactor, bool web = false) : I
 
     public event Action? FormFactorChanged { add { } remove { } }
 
-    public InputKinds Input => formFactor == FormFactor.Desktop
-        ? InputKinds.Mouse | InputKinds.Keyboard
-        : InputKinds.Touch;
+    public InputKinds Input => formFactor switch
+    {
+        FormFactor.Desktop => InputKinds.Mouse | InputKinds.Keyboard,
+        FormFactor.Tablet => InputKinds.Touch | InputKinds.Pen,   // 12e: a tablet with a pen
+        _ => InputKinds.Touch,
+    };
 
     public ShellChrome Chrome => web ? new ShellChrome(WindowButtons.None, false, true, false, 0)
         : formFactor == FormFactor.Desktop
@@ -102,8 +105,11 @@ public static class Fixtures
 {
     public static readonly string Folder = Directory.CreateTempSubdirectory("chvd-mobile-preview-").FullName;
 
-    public static string Document(string name, int pages)
+    public static string Document(string name, int pages) => Document(Folder, name, pages);
+
+    public static string Document(string folder, string name, int pages)
     {
+        Directory.CreateDirectory(folder);
         var b = PdfDocumentBuilder.Create();
         var widths = new[] { 1.0, .96, 1.0, .88, 1.0, .72, 1.0, .94, 1.0, .60, 1.0, .90, 1.0, .80 };
         for (var p = 1; p <= pages; p++)
@@ -121,7 +127,7 @@ public static class Fixtures
             }
         }
 
-        var path = Path.Combine(Folder, name);
+        var path = Path.Combine(folder, name);
         File.WriteAllBytes(path, b.ToByteArray());
         return path;
     }
