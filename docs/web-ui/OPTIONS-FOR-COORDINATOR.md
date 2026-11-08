@@ -174,3 +174,6 @@ Handout references: **Walkthrough "Drop to open"** (drag-over state) and **State
 
 ## D-54 (chuvadi-pdf 3.31.2)
 Landed on `platform/foundation` (be4498a) during this session; `platform/web-ui` is rebased onto it and re-checked (BUILD-LOG session 2 §7).
+
+## ✔ decided (c) — Q-3 (Web Test) Home's Storage map and Library shelf on the portal, D-119
+Confirmed: **no layout change is needed**, so (c) applies. Diff: `proposal/web-ui-home-session-note.patch`, which adds " · this session" to the two counts ("0 pdfs · this session"). Proofs in HOOKS. I left "Your shelves are empty — open the Library" as it is: it's true for the session, and the count above it now says "this session".

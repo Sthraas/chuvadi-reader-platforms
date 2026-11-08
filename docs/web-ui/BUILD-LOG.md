@@ -232,3 +232,24 @@ Build `-warnaserror` 0 warnings; tests below.
 
 ### 4. Push (coordinator 20:22: no force)
 The rebased branch no longer followed GitHub's cd03fac, and the force push was refused. I merged cd03fac in with no change to the files (`-s ours`). The ten files that differed were all the Foundation's 9fbed93 work, which this branch already has. Merge commit e27a52a was pushed normally, and CI run 42491908079 is green. Authorship stays Arun's; commits are not re-signed (signing is Arun's choice later).
+
+## 2026-11-09 — session 12 (coordinator 01:30: check against 839d39d; Web Test look bugs; Q-3 / D-119)
+
+### 1. Checked all branches
+`platform/foundation` 839d39d (eighth combined patch: 63f37b1 has **U-17**, 839d39d has the Test chats' shared fixes), `platform/web-test` e6014d7 (BUGS.md WT-01 to WT-13), `main` 0f48211, `platform/mobile-ui` 95b9d79, `platform/web` 31b063e (not rebased yet). Merged 839d39d into this branch (a merge, not a rebase, so no force push). My `src` equals the Foundation's.
+
+### 2. My changes on 839d39d (Chromium / Firefox / WebKit)
+- `git apply -R --check` succeeds for H7, the drop overlay and U-17.
+- 12a: the pitch says "kept in memory only" (Fraunces 15 px). The three D-31 promises are as decided. "Terms of use · Privacy" sits under the card.
+- Status bar: "processed on the server · kept in memory only · only you can see it" (H7).
+- Account card: "Terms of use · Privacy" footer (12.5 px), linking `/terms` and `/privacy` in a new tab (U-15).
+- Phone: in the Reader, the ⋮ sheet shows the account block, the memory line, Get the desktop app, Account settings, Sign out, and "Terms of use · Privacy" at the foot. Phone Home now has the avatar (Mobile UI, handout 4a), which leads to Settings › Account with my rows (H6).
+
+### 3. Web Test look bugs
+WT-04 (status-bar wording), WT-05 (12a pitch) and WT-06 (account footer) are fixed in the Foundation and render correctly in the preview. They're still open on `platform/web` until the Web chat rebases. WT-03 (phone shell): the PhoneShell renders at 390×844 in the preview; re-test after the rebase. WT-10 label: Reader's couldn't-open button says "Upload…" on the Web (839d39d). Nothing else in WT-01 to WT-13 is mine.
+
+### 4. Q-3 (D-119 c)
+No layout change is needed → `proposal/web-ui-home-session-note.patch` ("0 pdfs · this session" on the two counts). Measured in 3 browsers × 3 sizes; Windows pixel-identical (HOOKS).
+
+### 5. Build and tests
+Build `-warnaserror` 0 warnings (with and without the patch); tests 16 + 59 + 33 + 187 = **295 pass**.
