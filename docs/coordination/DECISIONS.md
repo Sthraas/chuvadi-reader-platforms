@@ -311,5 +311,12 @@ Options considered:
 |---|---|---|
 | D-125 | Run all chats in parallel (Arun, 01:26 IST) | Replaces D-124. All eleven chats resumed at 01:30 IST; the Mac chat was given Mac Test's M-01..M-12 (S1 M-03 crash on quit; S2 M-01 empty menu bar, M-02 files from macOS never open). If the usage limit stops chats again, the coordinator tells Arun at once and resumes as soon as it clears |
 
+## 9 Nov 2026 01:55 — library coordinator's answers (relayed by Arun)
+| # | Item | Decision |
+|---|---|---|
+| D-126 | Use the library features that already exist | Foundation (ninth patch): B-07 open-password prompt via PdfDocument.RequiresPassword / PdfOpenOptions.Password / PdfPasswordRequiredException.PasswordSupplied; "Try to repair" via PdfRepairer.Repair; Sheets open cancel via XlsxReaderOptions.CancellationToken (if Core's Sheets version has it). Linux: print orientation via PrintSettings.AutoRotate (unless the person chose one); remote CUPS via CupsQueues.List(serverUri) from client.conf ServerName / CUPS_SERVER, plus local browsing as now |
+| — | Answers back to the library | Print: the app calls CupsQueues.List(cancellationToken) (localhost only). Desktops use local CUPS with network browsing, and offices may point at a separate server via client.conf / CUPS_SERVER; ask: List() honours client.conf and CUPS_SERVER by default, as lpstat does. Sheets extent: Core uses Workbook.Load with its own grid (not SheetsLayout); test files committed by Linux Test under docs/linux-test/fixtures/ |
+| — | Pending Arun | Who moves Docs (1.1.0 → 1.2.0/2.0.0, for zip-bomb limits and cancel) and Sheets (1.1.2 → 2.0.2): Foundation inside PR #11, or the Reader chat (D-87). Layout.Pdf pin PR [3.31.2, 4.0) is in Arun's queue to merge |
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).
