@@ -222,5 +222,13 @@ Options considered:
 | — | Linux | Bug: on GNOME's close-only button layout, minimise and maximise still show; Linux chat fixing (the button layout must be followed exactly) |
 | — | Web | The 04:55 message didn't arrive; resent at 05:50 with D-86, D-89 and D-93 |
 
+## 8 Nov 2026 18:40 check-in — coordinator (restart after the 7–8 Nov stoppage)
+| # | Item | Decision |
+|---|---|---|
+| D-98 | Wording "encrypted at rest" (portal status bar) and "encrypted working area" (draft terms) | Change both to accurate wording. Under D-28 documents live in memory only (tmpfs), are never written to disk, and swap is encrypted, but memory itself isn't encrypted. Status bar: "processed on the server · kept in memory only · only you can see it" (Web portal UI). Draft Terms and Privacy: "kept in memory only, never written to disk" (Foundation's legal drafts; still DRAFT for counsel). Pros: truthful, safer under DPDP, matches what the build does. Cons: differs from the handout's text, which predates D-28 (the kickoff allowed a wording change with pros and cons) |
+| D-99 | Mac Test chat | Opened. Tests on GitHub macOS runners (public repo, free); real-Mac items stay in REAL-MAC-CHECKS.md for the friend's Mac |
+| D-100 | Web Test chat | Opened. The Web plan is built (D-86, D-89 done; 142/142, CI green on 31b063e); starts from docs/web/TEST-PLAN.md. B5/B6 (domain, E2E) stay last |
+| — | Stoppage | 7 Nov ~06:00 to 8 Nov 18:12 IST: usage limit, then subscription paused; Arun paid. Restart staggered to avoid hitting the limit again; check-ins now every 15 minutes (Arun) |
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).
