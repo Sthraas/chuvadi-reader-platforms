@@ -619,3 +619,5 @@ same screen; no crash), smoke pass. With round 6 (API 36 phone and tablet, all c
   without a full round. This rebase: one emulator, phone API 36, smoke.
 - Note for the next full round: H-14 makes the phone open at Fit width (not Fit page); gestures.py's swipe and
   double-tap read the fit from the page, so they will show it.
+- Smoke check, run 42518163924 (phone API 36, `suite=smoke`): build pass, smoke pass on 839d39d + 95b9d79.
+- Android Test chat opened (`platform/android-test`, ee4f66c): BUGS.md has none filed yet (its round 1 running).
