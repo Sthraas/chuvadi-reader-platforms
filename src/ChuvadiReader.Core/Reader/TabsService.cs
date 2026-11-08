@@ -23,6 +23,9 @@ public sealed class ReaderTab
 
     public bool IsLoading { get; set; }
 
+    /// <summary>Cancels this tab's PDF open while it is loading (B-24); closing the tab cancels it.</summary>
+    internal CancellationTokenSource? OpenCancel { get; set; }
+
     public string? Error { get; set; }
 
     /// <summary>The PDF is password-protected and waits for its password (B-07).</summary>
@@ -139,7 +142,11 @@ public sealed class TabsService
         Changed?.Invoke();
 
         await EnsureLoadedAsync(tab, ct).ConfigureAwait(false);
-        DropOtherCaches(tab);
+        if (ReferenceEquals(Active, tab))
+        {
+            DropOtherCaches(tab); // B-24: opens can overlap now; never drop the newer active tab's cache
+        }
+
         await PersistAsync(ct).ConfigureAwait(false);
         return tab;
     }
@@ -207,7 +214,7 @@ public sealed class TabsService
         }
 
         var tab = _tabs[idx];
-        tab.Session?.Dispose();
+        Release(tab);
         _tabs.RemoveAt(idx);
 
         if (ReferenceEquals(Active, tab))
@@ -239,7 +246,7 @@ public sealed class TabsService
         {
             if (!ReferenceEquals(tab, keep))
             {
-                tab.Session?.Dispose();
+                Release(tab);
             }
         }
 
@@ -253,7 +260,7 @@ public sealed class TabsService
     {
         foreach (var tab in _tabs)
         {
-            tab.Session?.Dispose();
+            Release(tab);
         }
 
         _tabs.Clear();
@@ -411,6 +418,29 @@ public sealed class TabsService
         }
     }
 
+    /// <summary>Drops a tab's document, and stops waiting for it if it is still opening (B-24).</summary>
+    private static void Release(ReaderTab tab)
+    {
+        try
+        {
+            tab.OpenCancel?.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // the open just finished
+        }
+
+        tab.Session?.Dispose();
+    }
+
+    /// <summary>An abandoned open may still complete later; its document is closed then, never shown.</summary>
+    private static void DisposeWhenDone(Task<IPdfSession> open) =>
+        _ = open.ContinueWith(
+            t => t.Result.Dispose(),
+            CancellationToken.None,
+            TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
+
     /// <summary>Shown under the password field when the password given doesn't open the PDF (B-07).</summary>
     public const string WrongPassword = "That password doesn't open this file.";
 
@@ -421,13 +451,6 @@ public sealed class TabsService
     {
         if (tab.IsLoaded || tab.IsLoading)
         {
-            return;
-        }
-
-        if (!File.Exists(tab.Path))
-        {
-            tab.Error = $"File not found: {tab.Path}";
-            Changed?.Invoke();
             return;
         }
 
@@ -442,11 +465,33 @@ public sealed class TabsService
         tab.Error = null;
         tab.ErrorDetail = null;
         tab.IsDamaged = false;
-        Changed?.Invoke();
+        using var cancel = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        tab.OpenCancel = cancel;
+        Changed?.Invoke(); // "Opening…" shows now, before anything touches the file
+
+        // B-24: the file is touched only on a pool thread. A source that never delivers data (a hung
+        // network mount, an unplugged USB stick, a FIFO) can block even File.Exists or open(2) — the
+        // library's open runs synchronously until its first await — and on the caller's thread that
+        // froze the Reader and every later open. Closing the tab cancels the wait at once; the stuck
+        // read finishes (or not) on its own, and anything it opens later is disposed (DisposeWhenDone).
+        var path = tab.Path;
+        var password = tab.Password;
+        var token = cancel.Token;
+        var open = Task.Run(
+            async () =>
+            {
+                if (!File.Exists(path))
+                {
+                    throw new FileNotFoundException(null, path);
+                }
+
+                return await _reader.OpenAsync(path, tab.FileName, password, token, transparentBackground: true).ConfigureAwait(false);
+            },
+            CancellationToken.None);
 
         try
         {
-            var session = await _reader.OpenAsync(tab.Path, tab.FileName, tab.Password, ct, transparentBackground: true).ConfigureAwait(false);
+            var session = await open.WaitAsync(cancel.Token).ConfigureAwait(false);
             if (!_tabs.Contains(tab))
             {
                 session.Dispose(); // B-08b: the tab was closed ("Stop opening") while it opened
@@ -461,6 +506,14 @@ public sealed class TabsService
                 tab.CurrentPage = 1;
                 tab.ScrollTop = 0;
             }
+        }
+        catch (OperationCanceledException) when (cancel.IsCancellationRequested)
+        {
+            DisposeWhenDone(open); // B-24: stopped while the file was still being read
+        }
+        catch (FileNotFoundException)
+        {
+            tab.Error = $"File not found: {tab.Path}";
         }
         catch (Chuvadi.Pdf.Primitives.PdfPasswordRequiredException ex)
         {
@@ -492,6 +545,7 @@ public sealed class TabsService
         }
         finally
         {
+            tab.OpenCancel = null;
             tab.IsLoading = false;
             Changed?.Invoke();
         }
