@@ -1,0 +1,36 @@
+diff --git a/src/ChuvadiReader.Ui/Pages/Reader.razor b/src/ChuvadiReader.Ui/Pages/Reader.razor
+index 41fbaa8..aa80bff 100644
+--- a/src/ChuvadiReader.Ui/Pages/Reader.razor
++++ b/src/ChuvadiReader.Ui/Pages/Reader.razor
+@@ -3327,12 +3327,13 @@
+ 
+             if (!_initiallyFitted.Contains(tab.Id))
+             {
+-                // First time this document is shown — open it fitted to the page.
++                // First time this document is shown — open it fitted to the page; on a phone, fitted to
++                // the width (Portal & Android 12g–12j: the page fills the screen's width).
+                 _initiallyFitted.Add(tab.Id);
+                 _restoreScroll = false;
+                 tab.TwoPage = false;
+                 tab.Continuous = false;
+-                await ApplyFit(ReaderFitMode.Page);
++                await ApplyFit(Platform.FormFactor == ChuvadiReader.Platform.FormFactor.Phone ? ReaderFitMode.Width : ReaderFitMode.Page);
+             }
+             else if (_restoreScroll)
+             {
+diff --git a/src/ChuvadiReader.Ui/wwwroot/js/reader.js b/src/ChuvadiReader.Ui/wwwroot/js/reader.js
+index cfca028..98b8077 100644
+--- a/src/ChuvadiReader.Ui/wwwroot/js/reader.js
++++ b/src/ChuvadiReader.Ui/wwwroot/js/reader.js
+@@ -544,7 +544,10 @@ export async function measureFit(deskEl, mode) {
+     const { natW, natH } = naturalSize(page);
+     if (!natW || !natH) return 0;
+     const cols = deskEl.classList.contains('two') ? 2 : 1;
+-    const gap = 18, padX = 60, padY = 44;
++    // Side padding the fit leaves: 60 px on the desktop; a shell can set --rfit-pad-x on the desk
++    // (the phone: 24 px, so the page fills the screen's width as in Portal & Android 12g).
++    const padX = parseFloat(getComputedStyle(deskEl).getPropertyValue('--rfit-pad-x')) || 60;
++    const gap = 18, padY = 44;
+     const perPageW = (deskEl.clientWidth - padX - (cols - 1) * gap) / cols;
+     const s = mode === 'width'
+         ? perPageW / natW

@@ -1,45 +1,69 @@
 # Mobile app UI → Foundation: hooks and hand-off (updated 8 Nov, 18:51 IST)
 
-## Outstanding for Foundation: H-13 only (`proposal/mobile-ui-hooks-4.patch`)
-H-5 to H-12 and the PhoneShell slot landed in the **sixth combined patch** (584bbf2). Checked on this
-branch after merging 8098695:
-- H-6 to H-11 are exactly as written.
-- H-5 was merged with the Web UI's H5: PhoneShell gets `SwitchTab` / `CloseTab`.
-- H-12 became `PhaseZeroSamples.Shown` (samples on Windows only), which covers Android.
+## Outstanding for Foundation: H-14 only (`proposal/mobile-ui-hooks-5.patch`)
+H-13 landed in the seventh combined patch (cd9b72d, exactly as written); merged here with 9fbed93.
 
-**H-13: `Ui/wwwroot/js/reader.js`, bug fix (Android round 3), +58 / −8**, applies cleanly to 8098695.
-Three bugs, each reproduced headless on 8098695 and passing with H-13:
-
-| Bug (round 3) | Cause | Fix | Before → after (test) |
-|---|---|---|---|
-| Double-tap on page 2 zooms into page **3**; the counter reads **1** | (a) `anchorZoom` scaled the whole scroll offset, including the fixed gaps between pages, so it drifts by a page or more at 200 %. (b) The visible page was picked from ratios kept only at threshold crossings and relative to each page's height: a page filling the view at 200 % is ~0.34 of itself and lost to a stale ratio | (a) Anchor on the page under the finger: the same spot of the same page stays under it (vertical from the unzoomed `.rpage-wrap`, sideways from the page, as `zoomToRect` already does). (b) Pick the page covering the most of the view **in pixels, measured now**; also re-check on scroll | gestures.py "double-tap on page 2 stays on page 2": phone FAIL (under 2→3→2, counter 2→1→2) → PASS on phone portrait, landscape and tablet |
-| Phone API 35: Fit page **147 px** in a 402 px desk | `measureFit` used `getBoundingClientRect ÷ zoom`; older WebViews report a CSS-zoomed box **unzoomed**, so after the first fit the natural size came out ×2.25 | `naturalSize(page)`: the rendered SVG's own `width` / `height` ("595pt"), else `offsetWidth` / `offsetHeight`. Never box ÷ zoom | checks.py fakes the API 35 behaviour: fit 0.444 → **0.197** (FAIL) → 0.444 (PASS) |
-
-- Pinch and Ctrl-wheel use the same `anchorZoom`, so they now also keep the point under the finger /
-  cursor at high zoom.
+**H-14: the phone opens a document fitted to the width, edge to edge as in 12g–12j**
+(`Ui/Pages/Reader.razor` + `Ui/wwwroot/js/reader.js`, +7 / −3; applies cleanly to 9fbed93)
+- Reader: a new document's first fit is `Width` on a phone (`Page` elsewhere, unchanged), so the View
+  sheet's check sits on **Fit width**, as in 12j.
+- reader.js `measureFit` reads its side padding from `--rfit-pad-x` on the desk (default **60 px**, as
+  today). mobile.css sets 24 px on the phone, so the page is 12 px from each edge, as in 12g.
 - **For:**
-  - It fixes what round 3 saw on the devices.
-  - One file; the desktop at rest is unchanged: Read ×2, Arrange, Mark clock only; Home 12 pixels of
-    1-level noise.
-  - All desktop checks pass (→ paging, Print, fit before render, fit under an old WebView).
+  - It matches the handout's Read, Mark and Protect frames.
+  - On a tall phone, Fit page and Fit width were the same 0.444 because of the 60 px padding, so the
+    padding is what actually changes the picture.
+  - The desktop default is untouched: Read ×2 and Mark clock-only; Arrange and Home ≤ 8 pixels of 1-level
+    noise.
 - **Against:**
-  - The page counter now also updates from the (200 ms throttled) scroll handler: one more interop call
-    per 200 ms while scrolling, on every platform.
-  - Anchoring now depends on `elementFromPoint` finding a page. It falls back to the old maths in the
-    gaps.
-- **Alternatives:**
-  - Finer observer thresholds (0, 0.05 … 1) instead of the scroll re-check: fewer code paths, but at
-    500 % a page filling the view is still ~0.15 of itself, so stale ratios can still win. Not
-    recommended.
-  - Fixing anchoring in mobile.js only: the drift is in reader.js's zoom, shared with desktop pinch and
-    Ctrl-wheel, so the fix belongs there.
-- Also fixed in my own file: `mobile.js fitWidthZoom` (Redact on a phone, H-7) had the same box ÷ zoom
-  measurement; it now uses the SVG's width too.
-- Tooling: each `mobile-ui-hooks-N.patch` is a full outstanding set, and preview.sh now applies only the
-  highest N (as Android's compose.sh does). hooks-3 (H-5 to H-12) is landed; hooks-4 = H-13.
+  - One more CSS hook in reader.js.
+  - Phone landscape (no handout frame) also opens at Fit width, so the page scrolls rather than fitting
+    the short height.
+- **Alternative:** keep Fit page and only shrink the padding. The picture is the same in portrait, but
+  the View sheet would tick Fit page while 12j ticks Fit width.
 
-Evidence (8098695 + this branch + H-13): 0 warnings; tests 171 + 54 + 32 + 16 = **273 pass**;
-`screens/2026-11-08/desktop-compare.txt`.
+## Round 5/6 screenshots vs the handout (8 Nov) — what changed here, and what needs a decision
+Compared frame by frame (`screens/2026-11-08/handout-compare/`).
+- Round 6 device shots (API 36): 12g Read, 12i Arrange, 12d tablet Read, tablet Arrange (landscape).
+- Frames round 6 doesn't cover were shot headless at the device sizes: 12e, 12f portrait, 12h, 12j.
+
+Fixed in my files (no hook):
+
+| Frame | Difference | Fix |
+|---|---|---|
+| 12g 12h 12j | Page not edge to edge; centred mid-screen | H-14, and pages top-aligned 12 px under the bar while paging (mobile.css) |
+| 12d 12g | Desktop-styled scrollbar on the desk | No scrollbars on phone / tablet (none in any touch frame) |
+| 12d 12e 12g | Page-curl corner (decorative, "lifts on hover") | Hidden on touch: hover-only, and not in the frames |
+| 12d 12e | "58%" zoom readout in the View rail | Hidden on the tablet (not in 12d / 12e) |
+| 12j | View sheet covered the strip and bar, and dimmed the page | `PhoneSheet Docked`: the sheet sits above the strip and bar with a clear scrim |
+| 12i | Inline "Add desk" tile *and* the FAB | Tile hidden on the phone (the FAB is Add desk) |
+| 12i | Desk "···" in a bordered box | Plain, as drawn |
+| 12i | FAB floating over the open Shelf's page grid | FAB steps aside while the Shelf is open |
+| 12f | Shelf as a 175 px column in tablet portrait | The phone's Shelf sheet (52 px peek; tap or swipe up), stopping at the tools rail |
+
+Checked and **not** a difference: View-sheet rows are 44 px in the handout too (measured in the rendered
+handout); the tablet rails already scroll, so long rails are reachable; "/ row" is the Bench's own
+desks-per-row label; Mark's sub-line and greyed tools are state.
+
+**Needs a decision (existing files; nothing changed):**
+1. **Rail heading "TOOLS".** Both handouts (Side Rails and 12d / 12e / 12f) label the tools rail
+   "TOOLS"; the Reader and Bench write the mode name ("READ", "MARK", "ARRANGE") on every platform.
+   - (a) Keep the mode name: no change.
+   - (b) "TOOLS" everywhere: follows the handouts, but changes the desktop (3 strings).
+   - Recommend asking Arun; it changes Windows.
+2. **Mark rail: "Save as new" at its foot** (12e). The Reader's Mark rail has more tools (shapes, arrow,
+   undo / redo / delete) and no Save there; Save is in Document ⌄.
+   - (a) Leave it.
+   - (b) A Save button at the rail's foot (Reader hook, all platforms).
+   - Recommend (b) if Arun wants 12e exactly.
+3. **"More view options" (sliders) in the View rail** isn't in 12d. I kept it: it opens the View card
+   (text size, colours…), which has no other entry point on the tablet.
+4. **Tablet portrait Arrange: the desk toolbar** (Image, Blank, Reverse, Watermark, Bind…) isn't in 12f.
+   Its actions exist nowhere else (the desk's ··· has only templates), so it stays.
+   - (a) Keep it as is.
+   - (b) Icons only in portrait (smaller; loses the labels).
+   - (c) Move the actions into the desk's ··· menu on touch (Bench hook).
+   - Recommend (c) for the handout look without losing anything; it needs Bench edits.
 
 ## CI on this branch (D-93, 7 Nov 05:20)
 - The 23:36 UTC run failed on `shared (windows-latest)`: 4 tests in `SingleInstanceTests` (Foundation's

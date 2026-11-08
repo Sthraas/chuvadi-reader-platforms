@@ -305,3 +305,26 @@ Evidence:
   - 273 tests; desktop clock-only, apart from 12 pixels of 1-level noise on Home.
 - Merged Foundation 8098695: one conflict, in mobile.js (Foundation carried my earlier copy); kept
   mine. H-5 and H-12 landed in merged / generalised form, intent checked.
+
+## 8 Nov, evening: round 5/6 screenshots vs the handout → fixes, H-14
+- Round 6 artefacts (run 42488183117, API 36 phone and tablet; API 35 shows the D-105 WebView screen).
+- Handout frames 12d–12j rendered from `Portal & Android.dc.html`; headless shots for the frames round 6
+  doesn't cover.
+- Fixed (mobile.css, PhoneSheet, PhoneShell, mobile.js):
+  - no touch scrollbars; page curl and View-rail zoom readout hidden on touch;
+  - View sheet docked above the strip and bar (no dimming);
+  - phone Arrange: no inline Add desk, plain ···, FAB hides while the Shelf is open;
+  - tablet portrait: the Shelf is a bottom sheet (no column);
+  - phone pages top-aligned.
+- **H-14** (Reader + reader.js): phone opens at Fit width; the fit's side padding comes from
+  `--rfit-pad-x` (phone 24 px), so the page is edge to edge with 12 px margins.
+- Checked rather than assumed:
+  - Handout sheet rows are 44 px (measured), so mine match.
+  - Tablet rails already scroll.
+  - "/ row" is a Bench label.
+- Merged Foundation 9fbed93 (seventh combined patch, H-13 as written).
+- Results:
+  - 274 tests with H-14; desktop clock-only apart from ≤ 8 pixels of 1-level noise.
+  - 39 gesture and platform checks pass; 0 console errors.
+- Four decisions for the coordinator (FOR-FOUNDATION.md): the TOOLS heading, Save at the Mark rail's
+  foot, the More view options button, the tablet-portrait desk toolbar.

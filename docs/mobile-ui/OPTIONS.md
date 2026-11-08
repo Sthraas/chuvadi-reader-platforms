@@ -18,6 +18,7 @@
 | F-4 PlatformState cascade | — | Done: TouchSupport and PhoneShell use `IPlatformInfo` + `ShellLayouts.Shell` |
 | Web portal PhoneShell slot | Coordinator, 7 Nov | Done: `OpenLabel`, `OpenIcon`, `MenuFooter` (Web UI chat's request patch). The Home Open button uses `OpenLabel` too |
 | Android run 42276742988 findings | Coordinator, 7 Nov | Run used pinned f29b6a6. H-8 bug fix (Document › Print / Export / Press, → counter); compose.sh and test changes for the Android chat (`FOR-FOUNDATION.md`) |
+| Round 5/6 vs handout 12d–12j | Coordinator, 8 Nov | 9 differences fixed in my files; **H-14** (phone Fit width, edge to edge); 4 decisions listed in FOR-FOUNDATION.md |
 | Round 3: double-tap lands on the wrong page; API 35 Fit page 147 px | Coordinator, 8 Nov: fix with a test | **H-13** (reader.js) for the seventh combined patch; tests in gestures.py / checks.py, before FAIL, after PASS |
 | Sixth combined patch (H-5 to H-12, PhoneShell slot) | D-94 | **Landed** in Foundation 584bbf2; merged here |
 | D-88 Home search + Settings summaries | Coordinator, 7 Nov 04:55: yes to both | **H-10** (Dashboard) and **H-11** (Settings) written; desktop Home HTML byte-identical; startup +0.4 ms |

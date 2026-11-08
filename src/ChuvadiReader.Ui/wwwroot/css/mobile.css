@@ -148,7 +148,8 @@ html[data-shell="tablet"] .tb-pg-box[aria-label="desk number"] + .tb-pg-total::a
    resting as a 52 px peek at the bottom edge (mobile.js opens / closes it). */
 @media (max-width: 999px) {
     html[data-shell="tablet"] .bench-shelf:not(.hidden) {
-        position: fixed; left: calc(var(--sh-left, 72px) + env(safe-area-inset-left)); right: 0;
+        position: fixed; left: calc(var(--sh-left, 72px) + env(safe-area-inset-left));
+        right: calc(var(--sh-tools, 72px) + var(--sh-view, 0px) + env(safe-area-inset-right));
         bottom: env(safe-area-inset-bottom); z-index: 40;
         width: auto; height: 60dvh; max-height: calc(100% - 120px); padding-top: 22px;
         border: none; border-top: var(--chvd-stroke) solid var(--chvd-border); border-radius: 22px 22px 0 0;
@@ -172,8 +173,6 @@ html[data-shell="tablet"] *, html[data-shell="phone"] * { scrollbar-width: none;
 html[data-shell="tablet"] ::-webkit-scrollbar, html[data-shell="phone"] ::-webkit-scrollbar { width: 0; height: 0; }
 html[data-shell="tablet"] .rcurl, html[data-shell="phone"] .rcurl { display: none; }
 html[data-shell="tablet"] .srail .rtext[title="Zoom"] { display: none; }
-/* Other rail readouts ("1 / row" in Arrange) fit the 60 px rail instead of being clipped. */
-html[data-shell="tablet"] .srail .rtext { height: auto; min-height: 24px; white-space: normal; text-align: center; line-height: 1.15; font-size: 9.5px; }
 
 /* ════════════════════════════════════════════════════════════════════════════
    Phone — 12g (Read), 12h (Mark), 12i (Arrange), 12j (Protect + View sheet)
@@ -317,6 +316,11 @@ html[data-shell="phone"] {
 /* Mode views on a phone: the rails fold into the strip / sheet; the page uses the full width. */
 html[data-shell="phone"] .mview-rails { display: none; }
 html[data-shell="phone"] .rdesk { padding: 12px 0 24px; }
+/* 12g–12j: the page fills the width (12 px each side: reader.js measureFit reads --rfit-pad-x, H-14)
+   and sits 12 px under the app bar. Paged reading still snaps a page per screen, but from the top,
+   not centred in the screen as on the desktop. */
+html[data-shell="phone"] .rdesk { --rfit-pad-x: 24px; }
+html[data-shell="phone"] .rdesk.snap:not(.two):not(.zoomed) .rpage-wrap { justify-content: flex-start; padding-top: 12px; scroll-snap-align: start; }
 
 /* Pages & outline drawer and Arrange's Shelf: a sheet that rises from the bottom bar. */
 html[data-shell="phone"] .mdrawer,
