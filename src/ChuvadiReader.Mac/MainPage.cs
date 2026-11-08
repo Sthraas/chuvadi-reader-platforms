@@ -31,7 +31,17 @@ public sealed class MainPage : ContentPage
             return;
         }
 
-        _ = web.TryDispatchAsync(services => { _ = action(); });
+        _ = DispatchAsync(web, action);
+    }
+
+    /// <summary>TryDispatchAsync is false until Blazor has started in the WebView; anything asked for
+    /// before then runs on the main thread instead of being dropped.</summary>
+    private static async Task DispatchAsync(BlazorWebView web, Func<Task> action)
+    {
+        if (!await web.TryDispatchAsync(_ => { _ = action(); }))
+        {
+            UIKit.UIApplication.SharedApplication.BeginInvokeOnMainThread(() => _ = action());
+        }
     }
 
     public MainPage(IServiceProvider services)
@@ -49,6 +59,9 @@ public sealed class MainPage : ContentPage
             "contrast" => "#F5F5F2",
             _ => "#F2EAD6",
         });
+
+        // Edge to edge: the page runs under the (transparent, hidden) title bar (Mac Test M-04).
+        SafeAreaEdges = SafeAreaEdges.None;
 
         var web = new BlazorWebView { HostPage = "wwwroot/index.html", BackgroundColor = BackgroundColor };
         web.RootComponents.Add(new RootComponent
@@ -73,6 +86,8 @@ public sealed class MainPage : ContentPage
         view.ScrollView.MinimumZoomScale = 1;
         view.ScrollView.MaximumZoomScale = 1;
         view.ScrollView.BouncesZoom = false;
+        // No automatic inset for the title-bar area: the Ui's own top bar sits at the top edge (M-04).
+        view.ScrollView.ContentInsetAdjustmentBehavior = UIKit.UIScrollViewContentInsetAdjustmentBehavior.Never;
         // Don't let the WKWebView paint white before the first frame.
         view.Opaque = false;
         view.BackgroundColor = UIKit.UIColor.Clear;

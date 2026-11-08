@@ -16,6 +16,7 @@ public sealed class AppDelegate : MauiUIApplicationDelegate
     protected override MauiApp CreateMauiApp()
     {
         MacQuit.Install();
+        WebKitPrewarm.Start(); // M-06: WebKit's content process starts while MAUI builds
         var app = MauiProgram.CreateMauiApp();
         _commands = app.Services.GetRequiredService<IAppCommands>();
         _shell = app.Services.GetRequiredService<ShellService>();
