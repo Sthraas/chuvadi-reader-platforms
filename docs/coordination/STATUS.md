@@ -1,8 +1,8 @@
 # Programme status
 
-_Last updated: 8 Nov 2026, 18:00 IST._
+_Last updated: 8 Nov 2026, 18:20 IST._
 
-**STOPPED since ~06:00 IST 7 Nov:** every chat hit a usage limit, and the claude.ai account now shows "Your subscription is paused. Pay your invoice to restore access." Nothing has moved since 00:20 UTC 7 Nov. Waiting on Arun.
+**Restarted 18:15 IST 8 Nov** after the usage-limit stop and paused subscription (7 to 8 Nov; Arun paid). Staggered restart: Foundation, Linux, Linux Test, Android now; Web, Mobile UI and Web portal UI at the next check-in; then the Mac Test chat.
 
 **CI:** running again on public-repo minutes (D-93). Repo stays public until the work is complete, then private.
 
