@@ -38,7 +38,7 @@ public sealed class MainPage : ContentPage
     /// before then runs on the main thread instead of being dropped.</summary>
     private static async Task DispatchAsync(BlazorWebView web, Func<Task> action)
     {
-        if (!await web.TryDispatchAsync(_ => { _ = action(); }))
+        if (!await web.TryDispatchAsync(sp => { _ = action(); }))
         {
             UIKit.UIApplication.SharedApplication.BeginInvokeOnMainThread(() => _ = action());
         }
