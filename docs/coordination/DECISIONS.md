@@ -334,5 +334,11 @@ Options considered:
 
 | D-132 | Mac: keep a warnings-and-errors log in ~/Library/Logs/Chuvadi | Yes: about 1 MB, rotated, local only, never sent anywhere; no document contents or passwords; file names as extension plus a short hash. Pros: a failure on Arun's or a user's Mac can be diagnosed. Cons: a small local file. Mentioned in the privacy notice draft |
 
+## 9 Nov 2026 03:40 — Arun
+| # | Item | Decision |
+|---|---|---|
+| D-133 | B-18 / D-121 left bar | Arun: documents are mostly portrait, so there is always room; keep the Reader's wide labelled left rail with a collapse button (Arun has asked the Reader chat for it). Platforms follow the Reader's version through the shared Ui; B-18 closed as "by design" |
+| D-134 | D-111 rail heading ("top railing") | Arun: follow the handout. Being confirmed with Arun that this means the tool rail's "TOOLS" heading; the Reader chat to be told the same (Arun relays) so every platform looks the same |
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).
