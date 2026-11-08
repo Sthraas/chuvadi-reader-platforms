@@ -1,6 +1,6 @@
 # Programme status
 
-_Last updated: 9 Nov 2026, 04:45 IST. All chats running._
+_Last updated: 9 Nov 2026, 05:05 IST. All chats running._
 
 **All chats running in parallel (D-125, Arun).**
 
@@ -10,7 +10,7 @@ _Last updated: 9 Nov 2026, 04:45 IST. All chats running._
 
 | Chat | State |
 |---|---|
-| Foundation | Moving Docs 2.0.0 / Sheets 2.0.2 with limits and cancel in PR #11 (D-136, Arun), plus Chuvadi.Zip and B-24 |
+| Foundation | 1016987 green on 6: Docs 2.0.0, Sheets 2.0.2, Chuvadi.Zip 1.0.0, B-24/B-25; PR #11 at 063659e green. Next: D-137 limits split, D-138 list markers, then PR #11 once more |
 | Mac | M-01..M-16 fixes done (c6d7705) incl. D-132 local error log; waiting for Mac Test re-verify |
 | Linux | Merged Foundation 839d39d (bad60d7); full Xvfb pass running, then push |
 | Android | Rebased on 839d39d; smoke check; waiting for Android Test bugs |

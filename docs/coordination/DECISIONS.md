@@ -346,5 +346,9 @@ Options considered:
 | — | Mobile UI: touch tap areas on the shelf | Yes: every touch control gets at least a 44 px hit area (D-37), visible size unchanged; desktop unchanged |
 | — | Mac | M fixes done (c6d7705); Mac Test told to re-verify and run the blocked cases |
 
+| — | D-136 landed | Foundation 1016987 (green on 6): Docs 2.0.0 + Sheets 2.0.2 + Chuvadi.Zip 1.0.0 from release tags; library limits and Cancel (60 s, Stop, close tab); Core's own zip-bomb check retired; independent data check (XML/openpyxl ground truth): old libraries 18 values wrong, new 0 wrong (all 1,153 cells of a 200-row sheet); whitespace preserved on screen. PR #11 at 063659e (patches 1–11), green; footer re-added by the tooling |
+| D-137 | Word part limits | Desktop and mobile: 100 MB per part, 400 MB total (people open their own files; a scanned/medical Word file with one big picture is realistic). Web portal: keep 20 MB / 64 MB (shared server). Keyed on IPlatformInfo.ServerSide; both pinned in tests |
+| D-138 | Word list markers from paragraph styles | Fix now with Docs 2.0's GetListLabels() — missing bullets are a fidelity bug |
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).
