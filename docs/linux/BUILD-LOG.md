@@ -496,3 +496,13 @@ the Linux host: `LinuxAppPaths` deleted (the kit's `DesktopAppPaths` has the fal
 the centrally adopted copies (same SHA-256s); print refusal uses Core's `PrintPermission` text; single instance
 and the open router are the kit's. The Print card now locks itself for a no-printing file (Foundation), so UI step
 31 checks the locked card; the Linux print service refuses too.
+
+### 39. CI on ffb2823; the shared diff tested on Linux (8 Nov)
+- CI on `ffb2823`: green on x64 and ARM64, including the new steps (B-15 no user namespaces, first launch,
+  `check-deb.py`, B-16 read-only home, B-21 Show in folder, B-20 no printing service); the shared workflow green
+  on Ubuntu x64/ARM64, macOS and Windows; the Windows app and pack-check green.
+- Shared fixes (D-101 live layout, B-02 Ui OFL, B-03, B-07 to B-11, B-19, B-23) rebased on `ffb2823` as one
+  exact diff in `PROPOSAL-shared-fixes-8nov.md` (applies cleanly with `git apply`). With it applied: Reader
+  179/179, host kit 54/54, Linux 25/25, Web Ui 33/33, Mobile Ui 16/16; full UI pass 114/114 (step 35: 8 layouts
+  exact, B-19 divider within 1.5 px, three live changes; step 34b3: B-23 Tab order).
+- BUGS.md on `platform/linux-test` (14b1c43) lists each fix's commit and test for the Test chat to re-verify.
