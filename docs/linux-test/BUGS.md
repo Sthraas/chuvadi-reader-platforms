@@ -21,6 +21,10 @@ Every bug gets fixed; I re-verify on the fixing commit and mark it here.
 | B-11 | S3 | Library + Shared | Damaged PDF (bad `startxref` offset) not repaired; raw parser text shown to the user | open |
 | B-12 | S3 (perf) | Linux | First launch per user on a GPU-less machine: ~1.7 s of blank window (WebKit GL compositing) | open — options |
 | B-13 | S4 | Linux | Stray XML doc files shipped in `/usr/lib/chuvadi-reader` | open |
+| B-14 | S3 | Linux | Landscape pages print shrunk onto portrait paper (orientation forced to portrait) | open |
+| B-15 | S3 | Linux | No user namespaces → app aborts with a GLib ERROR, no message | open — options |
+| B-16 | S2 | Linux + Shared | Read-only home → unhandled exception at startup, no window | open |
+| B-17 | S3 | Linux | `UseSystemResourceKeys=true` → users see resource keys (`UnauthorizedAccess_IODenied_Path`) instead of messages | open |
 
 Known and already tracked (not re-filed): sample recent files / watched folder on a fresh profile (D-94 H-12);
 `.xlsx` shared-string index shown as a value — `bad-sst.xlsx` shows `99` (Sheets 2.0.2 move, D-87);
@@ -102,3 +106,26 @@ Functionally harmless (the apphost is `0755`; users can run it) — but rule: no
 
 ## B-13 — Stray XML doc files shipped (S4, Linux)
 `ChuvadiReader.Hosting.xml` and `ChuvadiReader.Platform.xml` (IntelliSense docs) in `/usr/lib/chuvadi-reader`. Fix: `-p:GenerateDocumentationFile=false` on publish, or exclude in `build-deb.sh`.
+
+## B-14 — Landscape pages print shrunk onto portrait paper (S3, Linux)
+**Steps.** Open `five-pages.pdf` (page 4 is landscape) or a 3-page A3-landscape vector drawing; Ctrl+P → Print → GTK dialog defaults (A4) → Print to the cups-pdf queue.
+**Expected.** Each page fills the sheet in its own orientation, as Windows/Acrobat/browsers auto-rotate (or the job follows the document's orientation).
+**Actual.** The app sends `orientation-requested=3` (portrait) with `print-scaling=fit` (CUPS debug log), which stops CUPS auto-rotating: page 4 and every A3-landscape sheet print at **about half size** in the middle of a portrait page. Portrait pages are fine.
+Evidence: `screenshots/B-14-five-pages-page4-shrunk.png`, `screenshots/B-14-a3-landscape-printed-portrait.png`. (Vector itself passes — see RESULTS T4.7.)
+**Fix.** Don't send `orientation-requested` unless the user changed it in the dialog (let CUPS auto-rotate per page), or derive it per page.
+
+## B-15 — No user namespaces → hard abort, no message (S3, Linux)
+**Steps.** Run where unprivileged user namespaces are unavailable (here: Docker default seccomp; in the field: hardened kernels with `user.max_user_namespaces=0`, some locked-down corporate images, or Ubuntu 24.04+ without the AppArmor profile — the README's dev-build note).
+**Expected.** A plain message ("Chuvadi can't start its secure document view on this system — …") and a clean exit code, or a documented fallback.
+**Actual.** `bwrap: No permissions to create new namespace…` then `** ERROR **: Connection: failed to receive credentials` → SIGABRT. No window, nothing for the user. Options in RESULTS › O-3.
+
+## B-16 — Read-only home crashes at startup (S2, Linux + Shared)
+**Steps.** Non-root user, `chmod -R a-w ~`, launch `chuvadi-reader five-pages.pdf` (Docker `ubuntu:24.04`, installed `.deb`).
+**Expected.** App starts with defaults in memory, opens the file, warns once that settings can't be saved (kiosk / locked-down / full-disk profiles do this).
+**Actual.** `Chuvadi error: System.UnauthorizedAccessException: UnauthorizedAccess_IODenied_Path, /home/tester/.config` — process exits, no window. Settings/recents/category-folder creation all need to tolerate failure.
+
+## B-17 — Users see .NET resource keys instead of messages (S3, Linux)
+**Steps.** Non-root user; `chmod 000 locked.pdf`; `chuvadi-reader locked.pdf`.
+**Expected.** "Could not open this document. Access to the path '/home/tester/locked.pdf' is denied." (what Windows shows).
+**Actual.** "Could not open this document. **UnauthorizedAccess_IODenied_Path**, /home/tester/locked.pdf". Cause: `ChuvadiReader.Linux.csproj:19 <UseSystemResourceKeys>true</UseSystemResourceKeys>` strips the BCL's message strings; the shared Ui shows `ex.Message` in 65 places (disk full, access denied on save, etc. are all affected). Screenshot: `screenshots/B-17-resource-key-message.png`.
+**Fix.** Remove `UseSystemResourceKeys` (cost: a few hundred KB) — or map exceptions to own messages before display (bigger change, shared).
