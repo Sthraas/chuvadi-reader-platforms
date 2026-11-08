@@ -606,3 +606,8 @@ capitalises on Enter (the search found 1/4).
 | Smoke | PASS | PASS |
 1. The emulator's own "Pixel Launcher isn't responding" dialog was over the screen (dump texts: only that dialog),
    as in round 4. `webview_gate.py` now taps its "Wait" before reading the screen, like gestures.py does.
+
+### 52. Phone API 35 re-run — run 42493320507: green
+WebView gate 4/4 (update screen with version 124.0.6367.219; button → Play page in Chrome; back in, same process,
+same screen; no crash), smoke pass. With round 6 (API 36 phone and tablet, all checks) and round 7 (API 35 tablet,
+4/4), **every emulator is green** on Foundation 9fbed93 + Mobile UI a20f6d1 + this host (cd485ef).
