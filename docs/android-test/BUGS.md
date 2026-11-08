@@ -70,3 +70,42 @@ data-safety basis line ("…and Google's AndroidX/Material and JetBrains' Kotlin
 `exported=false`, so not reachable from other apps; the app uses none of them (it has its own `SharedFileProvider`).
 **Expected:** only what the app uses (smaller attack surface; nothing in a Play review that looks like connectivity monitoring).
 **Fix (proposal):** `tools:node="remove"` entries in the host's `AndroidManifest.xml`. Low risk; verify Share and Open still work.
+
+## AT-04 · S3 · Mobile UI · open — Desk header on touch still shows the desktop action row (12f, 12i; D-114)
+**Steps:** phone or tablet, open a PDF, Arrange.
+**Expected (12f / 12i, D-114):** desk header = name, page count, `···`; the desk actions live in the `···` menu on touch.
+**Actual:** header shows the colour swatch, name, a "BM" chip, page count, ← → arrows, duplicate, `···` and delete — the desktop
+row. The arrows/duplicate/delete are ~20 dp targets and the swatch 16 dp (see AT-06).
+**Evidence:** `screenshots/r1/12f-vs-app.png`, `12i-vs-app.png` (API 36, R1, Debug build of the same composition).
+Foundation 839d39d's message says H-16 (desk actions in the menu on touch) landed, so either it covers only the desk toolbar or it
+isn't keyed on the touch form factor here.
+
+## AT-05 · S3 · Mobile UI · open — Tablet portrait top bar has no `Document ▾` menu (12f)
+**Expected (12f):** tabs · pager · `Document ▾` · search, as in landscape.
+**Actual:** tablet portrait shows tabs · pager · search; `Document ▾` is gone, so Properties / Export / Compress / Merge / Split
+have no entry point from the top bar in portrait. **Evidence:** `screenshots/r1/12f-vs-app.png`.
+
+## AT-06 · S3 · Mobile UI · open — Touch targets under 44 dp (handout: 48 dp on tablet and phone)
+Measured in the page (CSS px = dp), every visible control, all screens, R1 API 36 (`design/*.layout.json`):
+| Form | Control | Size (dp) |
+|---|---|---|
+| Phone | Account avatar (Home app bar) `.ph-av` | 32 × 32 |
+| Phone | Pager chip `.ph-pager` ("1 / 12", "Bind all") | 56 × 36 |
+| Phone | Sheet handle "Close" `.ph-handle` | 64 × 17–20 (landscape 64 × 9) |
+| Phone | Library search button `.libp-go` / tag chips `.tagchip` | 71 × 28 / ~70 × 32 |
+| Phone + tablet | Desk swatch `.desk-swatch`, desk ← → / duplicate / delete | 16 × 16, ~20 × 20 |
+| Tablet | Top bar: previous/next page `.tb-pg-btn` | 36 × 36 |
+| Tablet | Top bar: page box `.tb-pg-box` | 34 wide |
+| Tablet | Top bar: Find/command `.tb-cmd` | 40 × 40 |
+| Tablet | Brand / Home `.tb-brand` | 83 × 22.5 |
+**Expected:** ≥ 44 dp everywhere (Android's own minimum is 48 dp; the handout asks 48 on tablet rails and phone bars). A larger
+hit area (padding / `::after` inset) keeps the drawn size.
+
+## AT-07 · S4 · Foundation · open — Tab tooltip shows the internal working path
+The tablet tab's `title` is the working copy path, e.g. `/data/user/0/in.chuvadi.reader/cache/work/open/1429e6d5d0cd4…`
+(`design/tablet-*-home.layout.json`). Android shows `title` on long-press/hover with a mouse. **Expected:** the document's name
+(or the original location the person chose), never the app's private cache path.
+
+## Questions for the coordinator (not filed as bugs)
+- **Q-1 Same file opened again → new tab.** Opening the same PDF with Open with twelve times gave 13 tabs of `design-doc.pdf`
+  (phone "13 of 13 tabs"). Is that the Windows behaviour too? If Windows focuses the existing tab, Android should match.
