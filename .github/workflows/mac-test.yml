@@ -225,6 +225,8 @@ jobs:
           sudo lpadmin -p ChvdTest -E -v ipp://127.0.0.1:9/none 2>&1 || true
           sudo lpadmin -d ChvdTest; lpoptions -d ChvdTest >/dev/null 2>&1 || true
           sudo cupsdisable ChvdTest
+          # the print panel uses the system default, not "last used" (none on a fresh runner)
+          defaults write org.cups.PrintingPrefs UseLastPrinter -bool false
           lpstat -t || true
       - name: Run T2–T5 (${{ matrix.suite }})
         run: python3 harness/tests/mac/run_ui.py "$RUNNER_TEMP/macdrive" /tmp/fixtures "$PWD/evidence" --suite ${{ inputs.only == 'print' && 'print' || matrix.suite }} --runs "$RUNS"

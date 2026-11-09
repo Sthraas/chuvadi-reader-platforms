@@ -15,6 +15,7 @@ Owner: **Mac** = Mac chat (host code) · **Shared** = existing Ui/Core/Hosting (
 | M-18 | S1 | Mac? | Settings opened after using the Reader and Library shows a blank page with "An error occurred" (fresh launch → Settings is fine) | 26 | open |
 | M-19 | S2 | Mac | The new error log (D-132) stays empty when the Ui fails: no `chuvadi.log` in 47 saved log folders, while M-17/M-18 fired | 26 | open |
 | M-20 | S3 | Shared/Library? | The 8 MB one-page vector stand-in never draws in 20 s ("page 1" placeholder, RSS 409 MB); under memory pressure it stays on "Opening…" | 26 | open — needs a Windows comparison |
+| M-22 | S2 | Mac | Opening the macOS print panel makes macOS ask "Allow 'Chuvadi' to find devices on local networks?" (generic text — no `NSLocalNetworkUsageDescription`); for a "nothing leaves this device" app this needs a decision | 26 | open — options below |
 | M-21 | S3 | Shared? | Esc doesn't leave Immersive on Mac (⌃⌘F enters; the "exit" button leaves) | 26, 15, 15-intel | open — check Windows behaviour |
 | M-01 | S2 | Mac | macOS menu bar has no Chuvadi commands: File, Document and Help are empty; View has only ⌘K and the system's Enter Full Screen | 26, 15, 15-intel | **partly fixed** — on macOS 15 / 15-Intel the menus are right (File: Close ⌘W, Print ⌘P, Show in folder, Copy file path · View: 26 items incl. Immersive ⌃⌘F, ⌘K · Document: 10 items + Mark/Protect submenus · no Enter Full Screen). **macOS 26: intermittent** — File 0, Document 0, View 1 in run 42534074875 (doc open, after a mode switch + 5 s), right in 42538220489. Open… ⌘O waits on the shared patch; Help still empty |
 | M-02 | S2 | Mac | Files handed over by macOS never open — at launch (Open With / double-click) and while running (`open -a`, Dock); single instance can't work | 26, 15, 15-intel | **verified fixed** — re-verified on c6d7705 (runs 42534074875, 42538220489): launch with a PDF shows page 1 (22/22 per runner); `open -a` two files into the running app → 3 tabs in order, one process, all runners |
@@ -223,3 +224,23 @@ on Esc this is a Mac/Shared bug, otherwise close it.
   6 Nov decision.
 - Excel cells show raw values (`1234.5` for ₹1,234.50, `46334` for the date) — the shared Sheets display-text work
   (SHEETS-FMT) isn't released; same in every locale.
+
+### M-22 — local-network permission prompt from the print panel (S2, Mac)
+**Steps.** macOS 26 runner, fresh install. Open `annotated.pdf`, Print (rail or ⌘P) → "Print 2 pages" → the macOS print
+panel opens (✅, with preview).
+**Actual.** A system alert appears over the panel at once: **"Allow 'Chuvadi' to find devices on local networks? This
+will allow the app to discover, connect to, and collect data from devices on your networks."** The text is macOS's
+generic one because `Info.plist` has no `NSLocalNetworkUsageDescription`. It comes from the print panel browsing for
+printers (Bonjour) inside the app's process. Screenshot: `screenshots/M-22-print-local-network-prompt-macos26.png`
+(top: the alert over the Save-as-PDF sheet; bottom: still there a step later).
+**Why it matters.** The status bar says "offline · on this device" and the promise is "nothing leaves this device"; a
+person asked to let Chuvadi "collect data from devices on your networks" will reasonably refuse or distrust it — and if
+they refuse, network printers may not appear in the panel.
+**Options for the Mac chat / coordinator (my view, not a decision):**
+| Option | Pros | Cons |
+|---|---|---|
+| A. Add `NSLocalNetworkUsageDescription` ("Chuvadi looks for printers on your network only when you print. Nothing is sent anywhere.") | Honest prompt, printers keep working, tiny change | The prompt still appears once |
+| B. Same as A, plus a line in the privacy notice about printer discovery | Legal texts match what the person sees | Lawyer's text to update (DRAFT anyway) |
+| C. Try to keep printing out of process so the app itself never browses | No prompt at all | Not under the app's control with UIKit printing; research needed |
+**Recommendation: B** (A + the privacy-notice line), and add it to REAL-MAC-CHECKS: refuse the prompt on a real Mac and
+confirm a USB / saved printer still prints.

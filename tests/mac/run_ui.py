@@ -867,55 +867,23 @@ def t4_7():
     time.sleep(4)
     ev["panel"] = screen("print-panel")
     axdump("print-panel")
-    # macOS print panel → PDF ▸ Save as PDF (what a person does to check the output; no printer needed)
-    for d in (f"{HOME}/Documents", f"{HOME}/Desktop", FX, "/private/tmp/fixtures"):
-        for f in os.listdir(d) if os.path.isdir(d) else []:
-            if f.startswith("chvd-printed"):
-                os.remove(os.path.join(d, f))
-    rc, ev["pdf-button"] = press("PDF", role="AXMenuButton")
-    if rc != 0:
-        rc, ev["pdf-button"] = press("PDF", role="AXPopUpButton")
-    time.sleep(1.5)
-    rc, ev["save-as-pdf"] = press("Save as PDF", contains=True, role="AXMenuItem")
-    time.sleep(3)
-    ev["save-sheet"] = screen("print-save-sheet")
-    open("/tmp/chvd-print-marker", "w").write("x")
-    # macOS may ask "Allow Chuvadi to find devices on local networks?" when the print panel browses printers (M-22)
-    ev["local_network_prompt"] = []
-    for owner in (NAME, "UserNotificationCenter", "universalAccessAuthWarn", "CoreServicesUIAgent"):
-        rc, o = drive("press", owner, "Don't Allow")
-        if rc == 0:
-            ev["local_network_prompt"].append(f"{owner}: {o[:80]}")
-    time.sleep(1.5)
-    drive("activate", NAME)
-    time.sleep(0.5)
-    drive("key", "cmd+a")
-    drive("type", "chvd-printed.pdf")
-    time.sleep(0.8)
-    rc, ev["name"] = drive("focusset", NAME, "chvd-printed.pdf")
-    rc, ev["save-press"] = press("Save", role="AXButton", index=-1)
-    time.sleep(3)
-    rc, o = find("Replace", timeout=1)   # look only — never press Replace
-    if rc == 0:
-        ev["replace-prompt"] = "a file of that name exists — pressed Cancel instead"
-        press("Cancel", role="AXButton", index=-1)
-    time.sleep(4)
-    ev["after-save"] = screen("print-after-save")
-    _, ev["new_pdfs"] = sh(f"find {HOME} /private/tmp -newer /tmp/chvd-print-marker -name '*.pdf' -type f 2>/dev/null | grep -v '/Library/' | head", timeout=120)
-    _, found = sh(f"ls -1 {FX}/chvd-printed*.pdf {HOME}/Documents/chvd-printed*.pdf {HOME}/Desktop/chvd-printed*.pdf 2>/dev/null")
-    if not found.strip() and ev["new_pdfs"].strip():
-        found = ev["new_pdfs"]
-    ev["saved"] = found
+    # Print to the paused test queue (ChvdTest): the job macOS submits stays in the CUPS spool as the PDF the
+    # print system generated — the same document "Save as PDF" writes. The panel's Save sheet could not be driven
+    # reliably from outside (local-network alert, M-22), so this is the check.
+    _, ev["panel_printer"] = sh("defaults read org.cups.PrintingPrefs UseLastPrinter 2>&1; lpstat -d 2>&1")
+    rc, ev["print-press"] = press("Print", role="AXButton", index=-1)
+    time.sleep(10)
+    ev["after-print"] = screen("print-after-print")
+    new = sorted(spool_files() - before)
+    ev["spool-new"] = new
+    ev["jobs"] = cups_jobs()
     good = False
-    if found.strip():
+    if new:
         f = f"{OUT}/printed-annotated.pdf"
-        shutil.copy(found.splitlines()[0], f)
+        sh(f"sudo cp /var/spool/cups/{new[-1]} '{f}' && sudo chmod 644 '{f}'")
         good = check_printed(f, ev, "marker-1")
-        # flattened: no live annotations or form fields; annotation appearances printed (red square, highlight)
         ev["flattened"] = ev.get("live_annots", 1) == 0 and ev.get("forms", 1) == 0
         good = good and ev["flattened"]
-    else:
-        ev["jobs"] = cups_jobs()
     record("T4.7 print vector", "pass" if good else "fail",
            "vector PDF reached CUPS: fonts, no images, text extractable" if good else "see evidence", **ev)
     quit_app()
