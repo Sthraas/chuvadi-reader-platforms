@@ -422,3 +422,17 @@ Tests: `tests/ChuvadiReader.Mac.Tests` (12, any OS, in the Mac workflow) and the
 written, rolled over after 1.3 MB of warnings, 995 352 bytes total, none of the six opened fixtures' names, no `/Users/`,
 no planted secret (run 42528878885). Privacy-notice wording for Foundation:
 `docs/mac/foundation/D-132-privacy-notice-mac-log.patch` (new A2a under Part A; A1's "no crash reporting" stays true).
+
+### 2026-11-09 (08:00) — rebased onto Foundation 022b7c0; trimmed Catalyst Release checked (AT-03)
+- Rebased cleanly onto 022b7c0 (Docs 2.0.0, Sheets 2.0.2, Word limits D-137, chuvadi-pdf 3.32.0, typed registrations
+  D-146). W-02's `host-drop.js` is WebView2-only and not needed: the Mac host takes drops natively (`FileDrop`).
+- **The `TrimmerRootAssembly` workaround for ChuvadiReader.Platform is gone** (1d9a026): the bundle now relies on
+  Foundation's typed registrations alone, so the launch checks test that fix, not mine. New workflow step "Prove the
+  bundle is trimmed" fails if ILLink did not trim Platform or the workaround comes back.
+- Run 42548722140 (1d9a026), Release, `MtouchLink=SdkOnly`, universal: Platform trimmed 25 600 → 20 480 bytes on both
+  x64 and arm64; the trimmed bundle launches, opens a five-page PDF, Markdown, text, HTML, **Word and Excel** through
+  the left bar's Open button and the real Open panel, hand-over at launch and while running, no Blazor error bar and
+  no Error logs; quits without a crash report. Core 219/219, Mac 12/12.
+  Still failing, as before: File › Open… ⌘O (M-01/M-15) and Settings… (M-11) — the global-commands patch.
+- The three Mac patches for Foundation still apply on 022b7c0; with all three applied: Hosting 72/72, WebUi 39/39,
+  Core 212/212.
