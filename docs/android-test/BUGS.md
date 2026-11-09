@@ -130,6 +130,30 @@ type `zephyrine`.
 says 2. **Evidence:** R2 run 42533545934 › results-tablet-api36 › function/04-find.png (`screenshots/r1/r2-find-print.png`, left).
 Re-checked next round on phone too (phone typing in R2 was cut short by the test, see notes).
 
+## AT-10 · S2 · Foundation (shared Ui, Reader's Find box) · open — The Find box drops typed characters; a plain field doesn't
+**Steps:** API 36, open a PDF, Find, type on the on-screen keyboard path (`adb shell input text`, i.e. real key events through the IME).
+**Expected:** every character arrives, as in any text field.
+**Actual (R3, run 42537723474):**
+| Input | Find box got | Plain `<input>` added to the same page, same input |
+|---|---|---|
+| burst "burstwordtest" — phone | `burtwordt` | `burstwordtest` |
+| burst "burstwordtest" — tablet | `butwort` | `burstwordtest` |
+| "zephyrine" one key every 250 ms — tablet | `zphyrine` → 0/0 matches | — |
+So characters are lost at an ordinary typing speed, not only in bursts. The plain field on the same page, same keyboard, keeps
+everything, which points at the Find box's binding (value written back on re-render while keys are still arriving), not at the host
+or the IME. The Android chat's "garbled typing" (D-81) was this. Other Blazor-bound text fields (Library search, Mark text boxes,
+form fields, desk names) likely share the pattern; to check next round.
+**Evidence:** R3 › results-*-api36 › function/results.jsonl (F-03b); `screenshots/r1/r3-print-dialog-find-typing.png` (right).
+
+## AT-11 · S2 · Android / Foundation · open, seen once — Open tabs not restored after Android ends the app in the background
+**Steps:** phone API 36, 6 tabs open, Home key, `am kill in.chuvadi.reader` (what Android does to a background app under memory
+pressure), open the app again.
+**Expected:** the six tabs come back, on the same document (as on the tablet in R3 and on both in R2).
+**Actual (R3 phone):** the app opened on Home with **0 tabs**; "Pick up where you left off" still lists `doc-12p.pdf`.
+Seen 1 of 4 runs so far (R2 phone + tablet, R3 tablet passed), so likely a race between saving the session in `OnPause`
+(`RaiseSuspendingAsync`, not awaited) and the kill. **Evidence:** R3 › results-phone-api36 › function/10-after-process-death.png,
+results.jsonl (F-15). I'll repeat this case 10× next round to give a rate.
+
 ## Questions for the coordinator (not filed as bugs)
 - **Q-1 Same file opened again → new tab.** Opening the same PDF with Open with twelve times gave 13 tabs of `design-doc.pdf`
   (phone "13 of 13 tabs"), and Home › Recent lists `startup-doc.pdf` three times. Is that the Windows behaviour too? If Windows

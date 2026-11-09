@@ -272,17 +272,24 @@ pr = tap("Print", sel="section.chvd-card .footer button")
 time.sleep(5)
 shot("print-dialog")
 # Android print dialog: choose Save as PDF, then the PDF button, then Save in the picker.
+# Print spooler: open the printer list, choose "Save as PDF", then the round PDF button (content-desc varies by version).
+for _ in range(3):
+    xml = ui_dump()
+    if re.search(r'text="Save as PDF"[^>]*resource-id="[^"]*title"', xml) is None and "Select a printer" in xml:
+        ui_tap_text("Select a printer")
+        time.sleep(1.5)
+        ui_tap_text("Save as PDF")
+        time.sleep(2)
+    else:
+        break
 xml = ui_dump()
-if "Save as PDF" not in xml:
-    ui_tap_text("Select a printer")
-    time.sleep(1)
-    ui_tap_text("Save as PDF")
-    time.sleep(1)
-    ui_tap_text("Save as PDF")
-time.sleep(2)
-ui_tap_text("Download PDF", "PDF")
-sh("input tap 0 0")
-time.sleep(3)
+m = re.search(r'resource-id="com.android.printspooler:id/print_button"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', xml) \
+    or re.search(r'content-desc="(?:Download PDF|Save to PDF|Print)"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', xml)
+if m:
+    x1, y1, x2, y2 = map(int, m.groups()[-4:])
+    sh(f"input tap {(x1 + x2) // 2} {(y1 + y2) // 2}")
+open(os.path.join(OUT, "print-dialog.xml"), "w").write(xml)
+time.sleep(4)
 xml = ui_dump()
 if 'text="SAVE"' in xml or 'text="Save"' in xml:
     ui_tap_text("SAVE", "Save")
@@ -351,6 +358,25 @@ st_after = state()
 shot("after-process-death")
 R.check("F-15 after process death the open tabs come back", killed and (st_after.get("tabs") or 0) >= 1,
         {"killed": killed, "before": st_before, "after": st_after})
+
+# F-15b repeat the background kill 10 times for a rate (AT-11)
+lost = []
+for i in range(10):
+    open_with(uris["doc-12p.pdf"])
+    wait_state(lambda s: s.get("rendered", 0) >= 1, 30, "doc")
+    n_before = state().get("tabs") or 0
+    sh("input keyevent KEYCODE_HOME")
+    time.sleep(1 + (i % 3))
+    sh(f"am kill {PKG}")
+    time.sleep(1)
+    sh(f"am start -W -n {COMP}")
+    cdp.close()
+    wait_state(lambda s: s.get("shell"), 60, "restart")
+    time.sleep(4)
+    n_after = state().get("tabs") or 0
+    if n_after < n_before:
+        lost.append({"run": i + 1, "before": n_before, "after": n_after})
+R.check("F-15b tabs restored after a background kill, 10 of 10", not lost, {"lost": lost})
 
 # F-16 Low memory
 for level in ("RUNNING_LOW", "RUNNING_CRITICAL", "UI_HIDDEN", "BACKGROUND", "COMPLETE"):
