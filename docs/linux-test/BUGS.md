@@ -210,6 +210,15 @@ Each fix has a test in `.github/workflows/linux.yml` / `tools/linux` (details: `
 
 B-18 goes to the Reader chat's desktop revamp (it changes Windows too).
 
+**9 Nov, Linux chat — `PROPOSAL-shared-fixes-9nov.md` (f84c9ed on `platform/linux`), exact diff for Foundation:**
+| Bug | Fix (in the diff) | Test |
+|---|---|---|
+| B-24 (reopened) | The Reader no longer opens each new tab's file on the page's thread (`RefreshDocKind`, unused result) | UI step 34e: named-pipe `slow.pdf` and `slow.xlsx` → "Opening…" ≤ 1.2 s, "Stop opening" ~10 s, the next file opens meanwhile (fails on e242d92) |
+| B-25 | Every viewer: plain sentence + system text under a collapsed Details (WT-10) | UI step 34f: `notzip.xlsx`, `notzip.docx` (fails on e242d92) |
+| B-26 | Not in the diff: a decision for the coordinator (D-136 shows raw values) and a Chuvadi.Sheets date-order bug (format 14 renders en-IN as `03-15-23`) | — |
+| B-27 | Library list (coordinator) | — |
+Re-verify B-24/B-25 once Foundation's patch with this diff is merged into `platform/linux`.
+
 ## B-24 — A stalled read gives a blank Reader, no Cancel, and blocks later opens (S2, shared Ui/Core) — e468d1a
 **Steps.** `mkfifo /tmp/fifo/slow.pdf` (a source that never delivers data — the real-world case is a hung SMB/NFS/sshfs mount or an unplugged USB drive); `open /tmp/fifo/slow.pdf`; after 5 s open `five-pages.pdf`.
 **Expected.** "Opening…" at once; after 10 s the `SlowOpenNote` with Cancel; Cancel closes the tab; the second file opens regardless (B-08b / B-10).
