@@ -1001,14 +1001,17 @@ def t4_6():
 
     def submit(tag, f, pw):
         r = {"focused": focus_field("Password to open")}
-        drive("key", "cmd+a")
-        drive("type", pw)
-        time.sleep(0.4)
         press("show")
+        time.sleep(0.6)
+        focus_field("Password to open")
+        for ch in pw:  # real key codes, one key at a time (unicode-string events did not reach the field)
+            drive("key", ch)
+            time.sleep(0.08)
         time.sleep(0.6)
         t = axdump(f"pw-{tag}-typed-" + f)
         r["typed_values"] = [l.strip()[:160] for l in t.splitlines() if "AXTextField" in l][:3]
         r["typed_ok"] = f'value="{pw}"' in t
+        r["open_button"] = [l.strip()[:120] for l in t.splitlines() if 'AXButton desc="Open"' in l][:1]
         focus_field("Password to open")
         drive("key", "return")
         time.sleep(4)
