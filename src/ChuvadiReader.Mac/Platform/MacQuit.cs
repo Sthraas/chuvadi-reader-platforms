@@ -14,6 +14,7 @@ namespace ChuvadiReader.Mac.Platform;
 /// as termination starts so no late callback reaches them, and — only once quitting has begun — any
 /// managed exception that still reaches native code ends the process with exit code 0 instead of an abort.
 /// Nothing is pending by then: settings are written atomically on every change and tabs persist as they change.
+/// Only the app's own windows are detached — never UIKit's keyboard windows (second M-03 form, see Detach).
 /// </summary>
 internal static class MacQuit
 {
@@ -71,6 +72,13 @@ internal static class MacQuit
         {
             foreach (var window in scene.Windows)
             {
+                // Only the app's own windows, whose root is MAUI's page controller. UIKit's keyboard windows
+                // (root UIInputWindowController) are left alone: replacing that controller deallocated it in the
+                // middle of AppKit's quit, and its dealloc asks the keyboard for input views that are already gone
+                // — the second M-03 crash (-[UIKeyboardSceneDelegate inputViews] unrecognized selector, macOS 26).
+                var own = window.RootViewController?.GetType().Namespace?.StartsWith("Microsoft.Maui", StringComparison.Ordinal) == true;
+                MacSmoke.Log($"quit-window {window.Class.Name} root={window.RootViewController?.Class.Name} detach={own}");
+                _ = own; // (before the fix: every window is detached)
                 window.RootViewController = new UIViewController();
             }
         }
