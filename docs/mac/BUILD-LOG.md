@@ -506,3 +506,16 @@ a0c478d · reload logged 4a4b419 · M-11 a7c46be.
 - **D-154 (3), done:** `docs/mac/APPLE-FEEDBACK.md` FB-1 — steps, expected/actual, backtrace, system.
 - First-launch hang seen twice on fresh runners (no `main` mark within 120 s, before any Chuvadi code runs; a re-run
   passes) — macOS's first-launch check of an ad-hoc-signed app, not the app. Watching it.
+
+### 2026-11-10 (05:00) — M-21 fixed on the tester's path; M-15 works here
+- **M-21 (3daf1ab):** after the Open panel closes the WebView often no longer has the keyboard: ⌃⌘F (a menu
+  shortcut) still enters Immersive, Esc reaches nothing. The host page now reports Immersive (a MutationObserver on
+  `body.chvd-immersive` → `chvdState`), and `AppDelegate.KeyCommands` carries an Esc command that UIKit offers only
+  while Immersive is on (`CanPerform`); it hands Esc to the page, where reader.js calls `Reader.OnEscape` as on
+  Windows. While Immersive is off the command is unavailable and Esc goes where it always went. Smoke (run 42712210203,
+  re-run): two files through the Open panel, real ⌃⌘F → Immersive on, real Esc → "immersive escape → page" → off.
+- **M-15:** on the same run a real ⌘O after the Open panel reaches the File menu's command
+  (`menu-command file.open ran=True`), the panel runs and the file opens as a tab. Not reproduced here; the smoke
+  run keeps checking it. If Mac Test still sees nothing, the next evidence is whether its ⌘O reaches the app at all.
+- First-launch hang (now 3 times, every launch in that run silent): the startup step now prints processes and
+  launch logs when it happens (83c2ac8).
