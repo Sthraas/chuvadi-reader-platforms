@@ -1022,14 +1022,31 @@ def paging_fast():
     worst = max(pings)
     if worst > 1.0:
         raise AssertionError(f"the page took {worst:.2f} s to answer while paging (each burst 25 pages)")
-    t0 = time.time()
-    landed = app.wait(lambda: current_page() > 100 and rendered(current_page() - 1) and current_page(), 20, "the landed-on page drawn")
-    drawn_in = time.time() - t0
+    # WebKitGTK plays each PageDown as a smooth-scroll step, one after another, so the view keeps moving for
+    # seconds after the last key. Time the drawing from when the view settles, not from the last key.
+    t_keys = time.time()
+    last, since = current_page(), time.time()
+    while time.time() - since < 1.0:
+        time.sleep(0.1)
+        now = current_page()
+        if now != last:
+            last, since = now, time.time()
+        if time.time() - t_keys > 60:
+            raise AssertionError("the view never settled after paging")
+    settled_after = since - t_keys
+    landed = current_page()
+    t0 = since
+    app.wait(lambda: rendered(landed - 1), 20, f"page {landed} drawn")
+    drawn_in = max(0.0, time.time() - t0)
+    if drawn_in > 2.0:
+        raise AssertionError(f"page {landed} drew {drawn_in:.1f} s after the view settled on it")
     app.js("document.querySelector('.tb-pg-box').value='400'; document.querySelector('.tb-pg-box').dispatchEvent(new Event('change')); return 1")
     app.wait(lambda: current_page() == 400 and rendered(399), 20, "page 400 drawn")
     close_active_tab()
-    return (f"6 bursts of 25 PageDowns: page answered within {worst:.2f} s each; landed on page {landed}, drawn {drawn_in:.1f} s "
-            "after the last click; jumped to page 400, drawn")
+    return (f"6 bursts of 25 PageDowns: page answered within {worst:.2f} s each; the view settled on page {landed} "
+            f"{settled_after:.1f} s after the last key (smooth scrolling), drawn "
+            f"{'within the 1 s it took to count as settled' if drawn_in <= 1.05 else f'{drawn_in:.1f} s after it settled'}; "
+            "jumped to page 400, drawn")
 
 
 step("36a-paging-fast-big-pdf", paging_fast)
