@@ -139,13 +139,23 @@ fi
 quit_app || fail "Open-panel run did not quit"
 sleep 2
 
+SCRIPTS="$(cd "$(dirname "$0")" && pwd)"
+KEYS="$RUNNER_TEMP/keys"
+xcrun swiftc -O -o "$KEYS" "$SCRIPTS/keys.swift" && sudo python3 "$SCRIPTS/grant-post-event.py" "$KEYS"
+
 # --- M-18: Settings › Appearance (macOS 26) — the page must live, WebKit's content process must not die -----
 wcrep() { ls "$HOME/Library/Logs/DiagnosticReports" /Library/Logs/DiagnosticReports 2>/dev/null | grep -c "WebContent" || true; }
 wc_before=$(wcrep)
 rm -f "$LOG"
 open -n --env CHUVADI_SMOKE=1 --env "CHUVADI_SMOKE_STEPS=click:Settings;click:Appearance;click:Reading;click:Appearance" \
   --stdout "$LOG" --stderr "$LOG" -a "$APP"
+# An accessibility client reads the app all along (as the Mac Test driver and VoiceOver do) — WebKit then builds its
+# accessibility tree for every section, Appearance included.
+( end=$((SECONDS + 120)); while [ $SECONDS -lt $end ] && ! grep -q "CHUVADI steps done" "$LOG" 2>/dev/null; do
+    "$KEYS" "$BUNDLE_ID" ax-walk; sleep 1.5; done ) &
+AXW=$!
 wait_for 'CHUVADI steps done' 120 || fail "M-18 Appearance steps did not finish"
+wait $AXW 2>/dev/null || true
 grep -E "CHUVADI (step|log Error)|CHUVADI_STARTUP wk-" "$LOG" | cut -c1-600
 a=$(grep -E "CHUVADI step 2 click: route=" "$LOG" | tail -1)
 [[ "$a" == *"route=/settings"* && "$a" == *"errorbar=none"* ]] && pass "M-18 Settings › Appearance: the Ui lives" || fail "M-18 Settings › Appearance: ${a:-no report}"
@@ -173,8 +183,6 @@ SCRIPTS="$(cd "$(dirname "$0")" && pwd)"
 command -v qpdf >/dev/null || brew install qpdf >/dev/null 2>&1 || true
 qpdf --encrypt user1 own1 256 -- "$DOCS/five-pages.pdf" "$DOCS/aes256.pdf"
 qpdf --allow-weak-crypto --encrypt user1 own1 40 -- "$DOCS/five-pages.pdf" "$DOCS/rc4.pdf"
-KEYS="$RUNNER_TEMP/keys"
-xcrun swiftc -O -o "$KEYS" "$SCRIPTS/keys.swift" && sudo python3 "$SCRIPTS/grant-post-event.py" "$KEYS"
 rm -f "$LOG"; rm -rf "$LOGDIR"
 STEPS="jserror;pick;pw:wrong;pw:user1;native:ctrl-cmd-f;native:escape;mode:2;click:Document;native:escape;native:cmd-k;native:escape;click:Library;click:Settings;pick;pw:user1"
 open -n --env CHUVADI_SMOKE=1 --env "CHUVADI_SMOKE_PICK=$DOCS/aes256.pdf;$DOCS/rc4.pdf" --env "CHUVADI_SMOKE_STEPS=$STEPS" \
