@@ -1083,38 +1083,42 @@ step("36b-close-tab-mid-render", close_mid_render)
 
 
 def cad_drawing():
-    """A 5-sheet A1 vector drawing (~120,000 strokes a sheet; B-27's kind of file): the page answers while
-    sheets draw, every sheet draws, and the app's memory before, with 5 sheets, and after closing is reported."""
+    """A 5-sheet A1 vector drawing (~120,000 strokes a sheet; B-27's kind of file): the page answers while sheets
+    draw, every sheet really draws (its page-sized drawing, not the loading icon: B-28), and once all five are
+    drawn, closing the drawing gives the memory back (within 100 MB of before it opened)."""
+    sheet_limit = 120  # measured on 2 vCPU, no GPU: sheet 1 ~49 s (B-27, a library item); twice that, plus margin
     baseline = memory_mb()
     t0 = time.time()
     open_tab(os.path.join(HEAVY, "cad.pdf"))
     worst = max(ping() for _ in range(3))
-    app.wait(lambda: rendered(0), 60, "sheet 1 drawn")
+    app.wait(lambda: rendered(0), sheet_limit, "sheet 1 drawn")
     first = time.time() - t0
     times = []
     for n in range(2, 6):
         t1 = time.time()
         app.js(f"var b=document.querySelector('.tb-pg-box'); b.value='{n}'; b.dispatchEvent(new Event('change')); return 1")
         worst = max(worst, ping())
-        app.wait(lambda: rendered(n - 1), 60, f"sheet {n} drawn")
+        app.wait(lambda: rendered(n - 1), sheet_limit, f"sheet {n} drawn")
+        worst = max(worst, ping())
         times.append(time.time() - t1)
     app.shot("36c-cad-drawing")
-    mem = memory_mb()
+    mem = memory_mb()  # every sheet drawn: nothing still drawing
     close_active_tab()
     if worst > 1.0:
         raise AssertionError(f"the page took {worst:.2f} s to answer while a sheet was drawing")
-    # Closing the drawing gives its memory back (sixteenth patch): the app comes back near where it started.
+    # Closing gives the memory back (sixteenth patch). Collections are at least 30 s apart (MemoryRelief.MinGap) and
+    # 36b closed a drawing just before, so the relief can come up to ~30 s later (D-156): wait up to 40 s.
     t_close = time.time()
     after = memory_mb()
-    while after[0] > baseline[0] + 100 and time.time() - t_close < 15:
+    while after[0] > baseline[0] + 100 and time.time() - t_close < 40:
         time.sleep(1)
         after = memory_mb()
-    # Target (sixteenth patch): back within 100 MB of before opening. Not met on Linux yet (BUILD-LOG §47), so this
-    # is reported, not failed, until the fix lands; then it becomes an assertion.
-    kept = "" if after[0] <= baseline[0] + 100 else " — NOT back near the start (known, reported)"
+    if after[0] > baseline[0] + 100:
+        raise AssertionError(f"the app kept its memory after closing the drawing: {baseline[0]} MB before opening, "
+                             f"{mem[0]} MB with 5 sheets drawn, {after[0]} MB {time.time() - t_close:.0f} s after closing")
     return (f"sheet 1 drawn in {first:.1f} s; sheets 2-5 in {', '.join(f'{t:.1f}' for t in times)} s; page answered in "
             f"≤ {worst:.2f} s throughout; memory app/web: {baseline[0]}/{baseline[1]} MB before, {mem[0]}/{mem[1]} MB with "
-            f"5 sheets, {after[0]}/{after[1]} MB {time.time() - t_close:.0f} s after closing{kept}")
+            f"5 sheets drawn, {after[0]}/{after[1]} MB {time.time() - t_close:.0f} s after closing")
 
 
 step("36c-cad-drawing", cad_drawing)
