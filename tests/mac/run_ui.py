@@ -872,6 +872,9 @@ def t4_7():
     # reliably from outside (local-network alert, M-22), so this is the check.
     _, ev["panel_printer"] = sh("defaults read org.cups.PrintingPrefs UseLastPrinter 2>&1; lpstat -d 2>&1")
     rc, ev["print-press"] = press("Print", role="AXButton", index=-1)
+    time.sleep(3)
+    # "Printing of jobs for this printer is stopped…" → Add to Printer keeps the job in the spool
+    rc, ev["add-to-printer"] = press("Add to Printer", role="AXButton")
     time.sleep(10)
     ev["after-print"] = screen("print-after-print")
     new = sorted(spool_files() - before)
