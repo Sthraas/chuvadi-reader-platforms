@@ -21,11 +21,13 @@ public sealed class MemoryAfterCloseTests
 {
     public MemoryAfterCloseTests()
     {
-        // No waiting in tests: the relief runs at once, and its one-minute second pass is off.
+        // No waiting in tests: the relief runs at once, back to back, and its one-minute second pass is off.
         MemoryRelief.Settle = TimeSpan.Zero;
         MemoryRelief.FollowUp = TimeSpan.Zero;
+        MemoryRelief.MinGap = TimeSpan.Zero;
         (MemoryRelief.Last ?? Task.CompletedTask).Wait(TimeSpan.FromSeconds(30));
         MemoryRelief.ResetForTests();
+        MemoryRelief.MinGap = TimeSpan.Zero;
     }
 
     private static string HeavyLargeFormatPage(int pages = 1)
@@ -77,6 +79,34 @@ public sealed class MemoryAfterCloseTests
         Assert.True(drawnChars * sizeof(char) >= MemoryRelief.HeavyBytes, $"the test page is too light ({drawnChars * 2 / mb} MB)");
         Assert.True(after.Live - before.Live < 16 * mb, $"live memory after close: {before.Live / mb} → {after.Live / mb} MB");
         Assert.True(after.Committed - before.Committed < 64 * mb, $"memory kept by the runtime after close: {before.Committed / mb} → {after.Committed / mb} MB");
+    }
+
+    [Fact]
+    public async Task A_second_heavy_close_inside_the_gap_waits_for_it_instead_of_being_dropped()
+    {
+        // Linux 36b then 36c: two drawings closed within the gap. The second must still give its memory back.
+        MemoryRelief.ResetForTests();
+        MemoryRelief.MinGap = TimeSpan.FromMilliseconds(400);
+        try
+        {
+            MemoryRelief.Request();
+            var first = MemoryRelief.Last!;
+            await first.WaitAsync(TimeSpan.FromSeconds(10));
+            var firstDone = System.Diagnostics.Stopwatch.StartNew();
+
+            MemoryRelief.Request();                      // inside the gap: before this change it was dropped
+            var second = MemoryRelief.Last!;
+            Assert.NotSame(first, second);
+            MemoryRelief.Request();                      // while the second waits: it shares that relief
+            Assert.Same(second, MemoryRelief.Last);
+
+            await second.WaitAsync(TimeSpan.FromSeconds(10));
+            Assert.True(firstDone.ElapsedMilliseconds >= 300, $"ran {firstDone.ElapsedMilliseconds} ms after the first: the gap wasn't kept");
+        }
+        finally
+        {
+            MemoryRelief.ResetForTests();
+        }
     }
 
     [Fact]
@@ -252,6 +282,95 @@ public sealed class MemoryAfterCloseTests
         session.Dispose();
         Assert.NotSame(last, MemoryRelief.Last);   // closing it is what asks
         await MemoryRelief.Last!.WaitAsync(TimeSpan.FromSeconds(30));
+    }
+
+    // ── Eighteenth patch: B-30 (nothing holds a closed document) and B-29 (the next file isn't held up) ─────────
+
+    [Fact]
+    public async Task Nothing_holds_a_closed_document_its_pages_or_its_queued_renders()
+    {
+        // B-30 on 64c9c16: the managed heap stayed at 680 MB after a full collection. Here, the way a tab is used:
+        // pages drawn and cached, more queued, one drawing mid-sheet, then the tab closed through TabsService.
+        var path = StrokedSheets(pages: 3, strokes: 12_000);
+        var before = Measure();
+
+        var (session, document, firstPage) = await OpenUseAndClose(path);
+        for (var i = 0; i < 50 && (session.IsAlive || document.IsAlive || firstPage.IsAlive); i++)
+        {
+            await Task.Delay(100);
+            GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true, compacting: true);
+            GC.WaitForPendingFinalizers();
+        }
+
+        var after = Measure();
+        const long mb = 1024 * 1024;
+        Assert.False(session.IsAlive, "the closed session is still referenced");
+        Assert.False(document.IsAlive, "the closed PdfDocument is still referenced");
+        Assert.False(firstPage.IsAlive, "a drawn page of the closed document is still referenced");
+        Assert.True(after.Live - before.Live < 16 * mb, $"live memory after close: {before.Live / mb} → {after.Live / mb} MB");
+    }
+
+    /// <summary>Kept out of the test method so no local of the test holds what it closes.</summary>
+    private static async Task<(WeakReference Session, WeakReference Document, WeakReference FirstPage)> OpenUseAndClose(string path)
+    {
+        var tabs = new ChuvadiReader.Core.Reader.TabsService(new ChuvadiPdfReader(), new NullStorage());
+        var tab = await tabs.OpenAsync(path, Path.GetFileName(path), ChuvadiReader.Core.Documents.DocumentFormat.Pdf);
+        var session = (ChuvadiPdfSession)tab.Session!;
+        WeakReference document = null!;
+        session.TryUseDocument(d => { document = new WeakReference(d); return 0; }, out _);
+        var first = await session.RenderPageSvgAsync(0);
+        var firstRef = new WeakReference(first);
+
+        using var started = new ManualResetEventSlim();
+        session.BeforeRenderForTests = page => { if (page == 1) started.Set(); };
+        var drawing = session.RenderPageSvgAsync(1);
+        var queued = session.RenderPageSvgAsync(2);
+        Assert.True(started.Wait(TimeSpan.FromSeconds(30)));
+        await tabs.CloseAsync(tab.Id);             // mid-sheet, with one more queued
+        await Task.WhenAll(drawing, queued).WaitAsync(TimeSpan.FromSeconds(30));
+        return (new WeakReference(session), document, firstRef);
+    }
+
+    [Fact]
+    public async Task Closing_mid_sheet_never_holds_up_the_next_file()
+    {
+        // B-29: after a CAD tab closed mid-sheet, the next file's page 1 sometimes took 3.7–4.6 s.
+        var light = TestPdf.TextPage("next file");
+        var idle = new Stopwatch();
+        using (var warm = await new ChuvadiPdfReader().OpenAsync(light, "warm.pdf"))
+        {
+            idle.Start();
+            await warm.RenderPageSvgAsync(0);
+            idle.Stop();
+        }
+
+        var heavy = (ChuvadiPdfSession)await new ChuvadiPdfReader().OpenAsync(StrokedSheets(pages: 1, strokes: 12_000), "cad.pdf");
+        using var started = new ManualResetEventSlim();
+        heavy.BeforeRenderForTests = _ => started.Set();
+        var sheet = heavy.RenderPageSvgAsync(0);
+        Assert.True(started.Wait(TimeSpan.FromSeconds(30)));
+        await Task.Delay(300);                     // as B-29: closed 0.3 s into the sheet
+        heavy.Dispose();
+
+        var next = Stopwatch.StartNew();
+        using var nextFile = await new ChuvadiPdfReader().OpenAsync(light, "five-pages.pdf");
+        await nextFile.RenderPageSvgAsync(0);
+        next.Stop();
+        var stoppedAt = Stopwatch.StartNew();
+        await sheet.WaitAsync(TimeSpan.FromSeconds(30));
+        stoppedAt.Stop();
+
+        Assert.True(next.ElapsedMilliseconds < idle.ElapsedMilliseconds + 1000, $"the next file's page took {next.ElapsedMilliseconds} ms (alone: {idle.ElapsedMilliseconds} ms)");
+        Assert.True(stoppedAt.ElapsedMilliseconds < 1000, $"the closed sheet was still drawing {stoppedAt.ElapsedMilliseconds} ms after the next file was ready");
+    }
+
+    private sealed class NullStorage : ChuvadiReader.Core.Storage.IAppStorage
+    {
+        private readonly Dictionary<string, string> _d = new();
+
+        public Task<string?> GetAsync(string key, CancellationToken ct = default) => Task.FromResult(_d.TryGetValue(key, out var v) ? v : null);
+
+        public Task SetAsync(string key, string value, CancellationToken ct = default) { _d[key] = value; return Task.CompletedTask; }
     }
 
     private static async Task<long> OpenDrawClose(string path)

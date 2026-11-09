@@ -729,7 +729,7 @@ internal static class MemoryRelief
 
     /// <summary>A document whose drawing allocated this much is heavy too, whatever its pages keep.</summary>
     internal const long HeavyDrawingBytes = 64L * 1024 * 1024;
-    internal static readonly TimeSpan MinGap = TimeSpan.FromSeconds(30);
+    internal static TimeSpan MinGap { get; set; } = TimeSpan.FromSeconds(30);
     internal static TimeSpan Settle { get; set; } = TimeSpan.FromMilliseconds(500);
 
     /// <summary>
@@ -741,41 +741,51 @@ internal static class MemoryRelief
     internal static TimeSpan FollowUp { get; set; } = TimeSpan.FromSeconds(65);
 
     private static long _lastTicks = long.MinValue / 2;
-    private static int _running;
+    private static int _queued;
 
     /// <summary>Tests only: the last relief started, if any.</summary>
     internal static Task? Last { get; private set; }
 
+    /// <summary>
+    /// Asks for one relief after a heavy close. A close that comes within <see cref="MinGap"/> of the last relief (or
+    /// while one waits) is not dropped: it waits for the gap, so closing two drawings in a row gives back both
+    /// (Linux 36b then 36c). Closes while a relief is already waiting share it.
+    /// </summary>
     internal static void Request()
     {
-        var now = Environment.TickCount64;
-        var last = Interlocked.Read(ref _lastTicks);
-        if (now - last < (long)MinGap.TotalMilliseconds || Interlocked.CompareExchange(ref _running, 1, 0) != 0)
+        if (Interlocked.CompareExchange(ref _queued, 1, 0) != 0)
         {
-            return;
+            return; // the relief already waiting covers this close too
         }
 
-        Interlocked.Exchange(ref _lastTicks, now);
         Last = Task.Run(async () =>
         {
             try
             {
-                await Task.Delay(Settle).ConfigureAwait(false); // the Ui lets go of the closed tab's pages first
-                GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, blocking: true, compacting: true);
-                if (FollowUp > TimeSpan.Zero)
-                {
-                    await Task.Delay(FollowUp).ConfigureAwait(false);
-                    GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true); // the pool drops buffers idle for a minute
-                    GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, blocking: true, compacting: true);
-                }
+                var sinceLast = Environment.TickCount64 - Interlocked.Read(ref _lastTicks);
+                var gap = TimeSpan.FromMilliseconds(Math.Max(0, (long)MinGap.TotalMilliseconds - sinceLast));
+                await Task.Delay(gap + Settle).ConfigureAwait(false); // the gap, then the Ui lets go of the pages
             }
             finally
             {
-                Volatile.Write(ref _running, 0);
+                Volatile.Write(ref _queued, 0); // a close from here on asks for the next relief
+            }
+
+            Interlocked.Exchange(ref _lastTicks, Environment.TickCount64);
+            GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, blocking: true, compacting: true);
+            if (FollowUp > TimeSpan.Zero)
+            {
+                await Task.Delay(FollowUp).ConfigureAwait(false);
+                GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true); // the pool drops buffers idle for a minute
+                GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, blocking: true, compacting: true);
             }
         });
     }
 
     /// <summary>Tests only: lets the next request run at once.</summary>
-    internal static void ResetForTests() => Interlocked.Exchange(ref _lastTicks, long.MinValue / 2);
+    internal static void ResetForTests()
+    {
+        Interlocked.Exchange(ref _lastTicks, long.MinValue / 2);
+        MinGap = TimeSpan.FromSeconds(30);
+    }
 }
