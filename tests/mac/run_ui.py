@@ -115,8 +115,15 @@ def read_settings():
         return None
 
 
+SAVED_LOGS = [0]
+
+
 def reset_state(settings=None):
     quit_app()
+    # keep the app's own error log (D-132) before the folder is cleared
+    if os.path.isdir(LOGS) and os.listdir(LOGS):
+        SAVED_LOGS[0] += 1
+        shutil.copytree(LOGS, f"{OUT}/chuvadi-logs/{SAVED_LOGS[0]:03d}", dirs_exist_ok=True)
     for d in [STATE, LOGS, *WEBKIT]:
         shutil.rmtree(d, ignore_errors=True) if os.path.isdir(d) else (os.path.exists(d) and os.remove(d))
     if settings is not None:
@@ -915,24 +922,34 @@ def t4_6():
         txt = axdump("pw-" + f)
         e = {"tab": ok, "shot": shot("pw-" + f.replace(".", "_")),
              "messages": [l.strip()[:200] for l in txt.splitlines() if re.search(r"password|encrypted|locked|unlock", l, re.I)][:6]}
-        field = "AXTextField" in txt and re.search(r"password", txt, re.I)
+        field = "AXSecureTextField" in txt
         if field and f != "owner-only.pdf":
-            press("password", contains=True)
-            drive("type", "wrong")
+            press("Password", role="AXTextField")
+            time.sleep(0.5)
+            drive("focusset", NAME, "wrong")
             drive("key", "return")
             time.sleep(2)
-            e["wrong"] = [l.strip()[:200] for l in axdump("pw-wrong-" + f).splitlines() if re.search(r"wrong|incorrect|password", l, re.I)][:4]
-            press("password", contains=True)
-            drive("key", "cmd+a")
-            drive("type", "user1")
+            wt = axdump("pw-wrong-" + f)
+            e["wrong"] = [l.strip()[:200] for l in wt.splitlines() if re.search(r"wrong|incorrect|didn|password", l, re.I)][:4]
+            e["wrong_ui_error"] = ui_error()
+            e["wrong_shot"] = shot("pw-wrong-" + f.replace(".", "_"))
+            if e["wrong_ui_error"]:
+                quit_app()
+                launch(settle=3)
+                open_doc(f"{FX}/{f}", settle=4)
+            press("Password", role="AXTextField")
+            time.sleep(0.5)
+            drive("focusset", NAME, "user1")
             drive("key", "return")
-            time.sleep(3)
-            e["right_shows_page"] = "marker-1" in axdump("pw-right-" + f) or "Page 1" in axdump("pw-right2-" + f)
+            time.sleep(4)
+            rt = axdump("pw-right-" + f)
+            e["right_shows_page"] = "marker-1" in rt or "Page 1 of five" in rt
+            e["right_ui_error"] = ui_error()
             e["right_shot"] = shot("pw-right-" + f.replace(".", "_"))
         e["prompt"] = bool(field)
         ev[f] = e
         quit_app()
-    bad = [k for k, v in ev.items() if k != "owner-only.pdf" and not v.get("right_shows_page")]
+    bad = [k for k, v in ev.items() if k != "owner-only.pdf" and (not v.get("right_shows_page") or v.get("right_ui_error") or v.get("wrong_ui_error"))]
     record("T4.6 passwords", "pass" if not bad else "fail", f"no working prompt for: {bad}" if bad else "prompt, wrong and right password", **ev)
 
 

@@ -154,17 +154,6 @@ jobs:
         continue-on-error: true
         run: python3 harness/tests/mac/audit_bundle.py "$APP" asm-ids.tsv app audit.json | tee t1-audit.txt
 
-      # Testing only: a throw-away build with one extra file that prints every .NET exception to stderr, so the
-      # Ui errors seen on the runner can be named. Built after every check of the real app above; never shipped.
-      - name: Diagnostic variant (testing only)
-        continue-on-error: true
-        working-directory: app
-        run: |
-          cp ../harness/tests/mac/diag/ChvdDiag.cs src/ChuvadiReader.Mac/ChvdDiag.cs
-          dotnet build src/ChuvadiReader.Mac/ChuvadiReader.Mac.csproj -c Release --no-restore 2>&1 | tail -3
-          codesign --force --deep --sign - --entitlements src/ChuvadiReader.Mac/Platforms/MacCatalyst/Entitlements.plist "$APP"
-          ditto -c -k --keepParent "$APP" ../out/Chuvadi-diag-testing-only.zip
-
       - name: Upload app + T1 evidence
         if: always()
         uses: actions/upload-artifact@v7
@@ -240,14 +229,6 @@ jobs:
       - name: Run T2–T5 (${{ matrix.suite }})
         run: python3 harness/tests/mac/run_ui.py "$RUNNER_TEMP/macdrive" /tmp/fixtures "$PWD/evidence" --suite ${{ matrix.suite }} --runs "$RUNS"
         timeout-minutes: 100
-      - name: Diagnostic build repro (testing only, macos-26)
-        if: always() && matrix.suite == 'full'
-        timeout-minutes: 25
-        run: |
-          [ -f t1/out/Chuvadi-diag-testing-only.zip ] || { echo "no diag build"; exit 0; }
-          pkill -9 -x ChuvadiReader.Mac || true
-          rm -rf /Applications/Chuvadi.app && ditto -x -k t1/out/Chuvadi-diag-testing-only.zip /Applications
-          python3 harness/tests/mac/run_ui.py "$RUNNER_TEMP/macdrive" /tmp/fixtures "$PWD/evidence/diag" --suite diag --runs 1
       - name: Logs
         if: always()
         run: |
