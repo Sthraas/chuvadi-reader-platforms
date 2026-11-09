@@ -155,6 +155,12 @@ public static class Fixtures
                 pb.DrawRectangle(60, y, lw, 6, Color.FromHex("#EBE8E2"), Color.FromHex("#EBE8E2"), 0);
                 y -= 22;
             }
+
+            if (p == 3)
+            {
+                // One word near the foot of page 3, for the Find check (Android Test AT-09).
+                pb.DrawText("zephyrine", 60, h - 70, "Helvetica", 12, Color.FromHex("#1A1310"));
+            }
         }
 
         var path = Path.Combine(folder, name);

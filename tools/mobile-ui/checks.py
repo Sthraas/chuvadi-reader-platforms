@@ -3,6 +3,8 @@
 #   * → on a fresh load moves the page and the counter follows (H-8)
 #   * the ⋮ menu's Print opens the Print card (H-8)
 #   * Redact on a phone opens at fit width: page within the screen, no sideways overflow (H-7)
+#   * a tap just outside a small control reaches it (D-37); Arrange keeps Document ▾ (H-18);
+#     Find brings the match on screen (H-19)
 #   checks.py <url> <width> <height>     → PASS/FAIL per check, exit 1 on any FAIL
 import asyncio, sys
 from playwright.async_api import async_playwright
@@ -103,6 +105,41 @@ async def main():
         after = await bold.get_attribute("class") or ""
         report("a tap just outside a small control reaches it (44 px area)", ("on" in before.split()) != ("on" in after.split()),
                f"B class '{before}' → '{after}'")
+        await pg.context.close()
+
+        # 5. Arrange keeps Document ▾ (tablet top bar / phone ⋮) and its items run in Read (H-18, AT-05, 12f).
+        pg = await fresh()
+        await pg.locator(".ph-nav-b:nth-child(3), .lb-mode:nth-of-type(3)").first.click(); await pg.wait_for_timeout(1500)
+        if phone:
+            await pg.locator('.ph-bar button[aria-label="More"]').click(); await pg.wait_for_timeout(500)
+            item = pg.locator(".ph-row", has_text="Properties")
+        else:
+            await pg.locator(".tb-doc").click(); await pg.wait_for_timeout(400)
+            item = pg.locator(".pop-item", has_text="Properties")
+        has = await item.count() > 0
+        if has:
+            await item.first.click(); await pg.wait_for_timeout(2500)
+        shown = await pg.get_by_text("Document properties").count() > 0
+        report("Arrange › Document › Properties opens the Properties card in Read", has and shown and pg.url.endswith("/reader"),
+               f"item {has}, card {shown}, {pg.url.rsplit('/', 1)[-1]}")
+        await pg.context.close()
+
+        # 6. Find brings the match itself into view, not only its page's top (H-19, AT-09): zoomed in, the
+        #    fixture's one "zephyrine" sits near the foot of page 3, more than a screen below the page's top.
+        pg = await fresh()
+        if phone:
+            await pg.locator(".ph-nav-b:nth-child(1)").click(); await pg.wait_for_timeout(800)
+        for _ in range(3):
+            await pg.keyboard.press("Control+Equal"); await pg.wait_for_timeout(400)
+        await pg.wait_for_timeout(800)
+        await pg.keyboard.press("Control+f"); await pg.wait_for_timeout(700)
+        await pg.locator(".rfind-box").last.fill("zephyrine"); await pg.keyboard.press("Enter"); await pg.wait_for_timeout(2500)
+        r = await pg.evaluate('''() => { const d = document.querySelector('.rdesk'), h = document.querySelector('.rfind-hl.cur');
+            if (!h) return null; const a = d.getBoundingClientRect(), c = h.getBoundingClientRect();
+            return { count: document.querySelector('.rfind-count')?.textContent, top: Math.round(c.top), bottom: Math.round(c.bottom),
+                     desk: [Math.round(a.top), Math.round(a.bottom)], counter: '' + eval(COUNTER) }; }'''.replace("COUNTER", repr(COUNTER)))
+        ok = bool(r) and r["desk"][0] <= r["top"] and r["bottom"] <= r["desk"][1] and r["counter"][:1] == "3"
+        report("Find shows the match on screen and the counter is on its page", ok, r)
         await pg.context.close()
         await b.close()
     sys.exit(1 if fails else 0)

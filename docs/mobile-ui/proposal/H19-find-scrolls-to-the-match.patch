@@ -1,0 +1,55 @@
+diff --git a/src/ChuvadiReader.Ui/Pages/Reader.razor b/src/ChuvadiReader.Ui/Pages/Reader.razor
+index 56ff057..d3f2a30 100644
+--- a/src/ChuvadiReader.Ui/Pages/Reader.razor
++++ b/src/ChuvadiReader.Ui/Pages/Reader.razor
+@@ -2132,14 +2132,16 @@
+     {
+         var m = CurrentFindMatch;
+         if (m is null || _js is null) return;
+-        try { await _js.InvokeVoidAsync("scrollToPage", _desk, m.PageIndex); } catch { }
+         if (Tab is { } t)
+         {
+             t.CurrentPage = m.PageIndex + 1;   // keep the top-bar counter in step with the jump
+             _pageInput = t.CurrentPage.ToString();
+         }
+ 
++        // Render the current highlight first: the scroll goes to the match itself (AT-09), not its page's top.
+         StateHasChanged();
++        await Task.Yield();
++        try { await _js.InvokeVoidAsync("scrollToMatch", _desk, m.PageIndex); } catch { }
+     }
+ 
+     // ── Bookmarks panel (#41): read, navigate, edit, save ────────────────────────
+diff --git a/src/ChuvadiReader.Ui/wwwroot/js/reader.js b/src/ChuvadiReader.Ui/wwwroot/js/reader.js
+index 98b8077..64615ef 100644
+--- a/src/ChuvadiReader.Ui/wwwroot/js/reader.js
++++ b/src/ChuvadiReader.Ui/wwwroot/js/reader.js
+@@ -732,6 +732,28 @@ export function scrollToPage(deskEl, index) {
+     deskEl.scrollTo({ top, behavior: 'smooth' });
+ }
+ 
++// Find: bring the current match itself into view, not only the top of its page — on a zoomed or tall
++// page the match can sit a screen or more below it (Android Test AT-09). The highlight renders with the
++// page, so after bringing the page in, wait for it (up to 1.5 s), then put it a third of the way down.
++export async function scrollToMatch(deskEl, index) {
++    if (!deskEl) return;
++    scrollToPage(deskEl, index);
++    for (let i = 0; i < 30; i++) {
++        const hl = deskEl.querySelector('[data-page="' + index + '"] .rfind-hl.cur');
++        if (hl) {
++            suppressUntil = performance.now() + 1400;
++            const d = deskEl.getBoundingClientRect(), h = hl.getBoundingClientRect();
++            const top = deskEl.scrollTop + (h.top - d.top) - Math.max(0, (deskEl.clientHeight - h.height) / 3);
++            const left = deskEl.scrollWidth > deskEl.clientWidth
++                ? deskEl.scrollLeft + (h.left - d.left) - Math.max(0, (deskEl.clientWidth - h.width) / 2)
++                : deskEl.scrollLeft;
++            deskEl.scrollTo({ top, left, behavior: 'smooth' });
++            return;
++        }
++        await new Promise(r => setTimeout(r, 50));
++    }
++}
++
+ export function getScrollTop(deskEl) {
+     return deskEl ? deskEl.scrollTop : 0;
+ }

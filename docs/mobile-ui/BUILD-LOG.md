@@ -403,3 +403,19 @@ Evidence:
     note to Foundation).
   - 305 tests; desktop clock-only (Read, Mark, Arrange, Home, desk menu); 56 touch checks pass (52 gestures and checks, plus the new tap check at 4 sizes); 0 console
     errors.
+
+## 9 Nov, 05:55: Android Test look bugs routed here (AT-04, AT-05, AT-06, AT-09)
+- Merged Foundation 42461ba (eleventh combined patch). H-17 still applies.
+- AT-04: H-17 (desk header on touch), already written. AT-06: done (D-37 work above).
+- AT-05 → **H-18**: Arrange keeps Document ▾ on tablet and phone; each item runs in Read on the active tab.
+- AT-09 → **H-19**: Find scrolls to the match, not its page's top. Reproduced first: at 3× zoom the match
+  near page 3's foot stayed below the screen at 1280×800, 800×1280 and 412×915.
+- Preview fixture: page 3 of every fixture PDF has one word, "zephyrine", near its foot (the AT-09 case).
+- `mobile-ui-hooks-6.patch` = H-17 + H-18 + H-19; applies to 42461ba.
+- checks.py: Arrange › Document › Properties opens the card in Read; Find shows the match on screen with
+  the counter on its page.
+- Results:
+  - 324 tests (210 + 16 + 59 + 39) on the patched tree.
+  - Desktop before/after: clock only on Read, Mark, Home and the desk menu; Arrange clock plus ≤ 8-level
+    noise, as in A/A runs.
+  - 64 touch checks pass at 800×1280, 1280×800, 412×915, 915×412; 0 console errors.

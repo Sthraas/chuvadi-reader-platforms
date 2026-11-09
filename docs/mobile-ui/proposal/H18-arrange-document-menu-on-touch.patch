@@ -1,0 +1,82 @@
+diff --git a/src/ChuvadiReader.Ui/Pages/Bench.Shell.cs b/src/ChuvadiReader.Ui/Pages/Bench.Shell.cs
+index 77a26ed..1f93c99 100644
+--- a/src/ChuvadiReader.Ui/Pages/Bench.Shell.cs
++++ b/src/ChuvadiReader.Ui/Pages/Bench.Shell.cs
+@@ -47,7 +47,7 @@ public partial class Bench
+             _shellHooked = true;
+             Shell.SetMode(DocMode.Arrange, Tabs.Active?.Id);
+             Shell.ClearCounter();
+-            Shell.SetDocumentMenu(null);
++            Shell.SetDocumentMenu(TouchDesks ? ArrangeDocumentMenu() : null);
+         }
+ 
+         var pages = BenchSvc.Desks.Sum(d => d.Pages.Count);
+@@ -58,6 +58,29 @@ public partial class Bench
+         Shell.RegisterCommands(this, ArrangeCommands().ToList());
+     }
+ 
++    // Tablet and phone (Portal & Android 12f): Arrange keeps the top bar's Document ▾ for the active tab.
++    // The items are the Reader's own, as it last published them; each one goes back to Read and runs
++    // there (Shell.PendingTool "doc:<id>"), so no Reader action is duplicated here.
++    private IReadOnlyList<ShellCommand>? ArrangeDocumentMenu()
++    {
++        if (Tabs.Active is null || Shell.DocumentMenu.Count == 0)
++        {
++            return null;
++        }
++
++        return Shell.DocumentMenu
++            .Select(c => c.Id.StartsWith("sep", StringComparison.Ordinal) ? c : c with
++            {
++                Run = () =>
++                {
++                    Shell.PendingTool = "doc:" + c.Id;
++                    Nav.NavigateTo("/reader");
++                    return Task.CompletedTask;
++                },
++            })
++            .ToList();
++    }
++
+     private void ShellRelease()
+     {
+         Shell.UnregisterCommands(this);
+diff --git a/src/ChuvadiReader.Ui/Pages/Reader.Shell.cs b/src/ChuvadiReader.Ui/Pages/Reader.Shell.cs
+index 5979e9a..c55f11f 100644
+--- a/src/ChuvadiReader.Ui/Pages/Reader.Shell.cs
++++ b/src/ChuvadiReader.Ui/Pages/Reader.Shell.cs
+@@ -89,9 +89,25 @@ public partial class Reader
+     }
+ 
+     /// <summary>Open a Protect tool requested by the redaction view (after the document loads).</summary>
++    // A tab its Document ▾ items can run on: a PDF once its session is open, any other format once loaded.
++    private static bool DocReady(ReaderTab tab) => tab.Format.IsViewOnly() ? !tab.IsLoading : tab.Session is not null;
++
+     private async Task ConsumePendingToolAsync()
+     {
+         var tool = Shell.PendingTool;
++        if (tool is not null && tool.StartsWith("doc:", StringComparison.Ordinal) && Tab is { } docTab && DocReady(docTab))
++        {
++            // A Document ▾ item chosen in Arrange (tablet / phone): run it here, on the active tab.
++            Shell.PendingTool = null;
++            if (DocumentMenuItems(docTab).FirstOrDefault(c => c.Id == tool[4..]) is { IsEnabled: true } cmd)
++            {
++                await cmd.Run();
++                StateHasChanged();
++            }
++
++            return;
++        }
++
+         if (tool is null || Tab?.Session is null)
+         {
+             return;
+@@ -323,7 +339,7 @@ public partial class Reader
+             return;
+         }
+ 
+-        if (Shell.PendingTool is not null && Tab?.Session is not null)
++        if (Shell.PendingTool is not null && Tab is { } pt && (pt.Session is not null || DocReady(pt)))
+         {
+             _ = InvokeAsync(ConsumePendingToolAsync);
+         }

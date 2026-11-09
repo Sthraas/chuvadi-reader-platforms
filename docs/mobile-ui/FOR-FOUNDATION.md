@@ -1,11 +1,40 @@
-# Mobile app UI → Foundation: hooks and hand-off (updated 9 Nov)
+# Mobile app UI → Foundation: hooks and hand-off (updated 9 Nov, 06:30)
 
-## Outstanding for Foundation: H-17 (`proposal/mobile-ui-hooks-6.patch`)
-Android Test **AT-04**: on touch the desk header still shows the desktop row (swatch 16 px, BM, All,
-Inv, ← →, duplicate, Clear, delete; 16–20 px targets). 12f / 12i draw only the name, the page count
-and ···. `mobile-ui-hooks-6.patch` = H-17 alone; it applies cleanly to Foundation 053e8e4.
-Landed combined sets now live in `proposal/landed/`, so Android's `compose.sh` only ever sees the
-outstanding one.
+## Outstanding for Foundation: H-17, H-18, H-19 (`proposal/mobile-ui-hooks-6.patch`)
+The Android Test chat's look bugs, routed to this chat on 9 Nov 05:55. `mobile-ui-hooks-6.patch` =
+H-17 + H-18 + H-19 (each also on its own in `proposal/`); it applies cleanly to Foundation 42461ba.
+Landed combined sets live in `proposal/landed/`, so Android's `compose.sh` only sees the outstanding one.
+Every one has a check in `tools/mobile-ui/checks.py` (tablet and phone, both orientations).
+
+### H-19: Find brings the match itself on screen (AT-09; all platforms — a bug fix)
+(`Ui/Pages/Reader.razor` + `Ui/wwwroot/js/reader.js`, +25 / −1)
+- Today `JumpToFindMatch` scrolls to the top of the match's page. When the page is taller than the view
+  (zoomed in, or a tall page on a tablet), the match can sit a screen or more below: Find says 1/1 and
+  nothing visible changes (AT-09; reproduced here at 3× zoom in-reader on every size).
+- Now the Reader renders the current highlight first, then reader.js `scrollToMatch` brings its page in,
+  waits for the highlight (up to 1.5 s, while the page renders) and scrolls the desk so the match sits a
+  third of the way down (and centred sideways when the page is wider than the view). The counter is set
+  to the match's page as before, and the scroll spy stays quiet during the move.
+- **For:** the match is always on screen; one new reader.js function; the old `scrollToPage` is untouched.
+- **Against:** on Windows too the view now moves to the match rather than the page top (that's the fix,
+  but it's a visible behaviour change there). Static screens are pixel-identical.
+
+### H-18: Arrange keeps the top bar's Document ▾ on touch (AT-05; 12f)
+(`Ui/Pages/Bench.Shell.cs` + `Ui/Pages/Reader.Shell.cs`, +41 / −2)
+- AT-05's screenshot is Arrange in tablet portrait: Arrange clears the Document menu on every platform
+  (`Shell.SetDocumentMenu(null)`), while 12f draws `Document ▾` there.
+- On Tablet and Phone (H-16's `TouchDesks`), Arrange now publishes the Reader's own Document items for the
+  active tab, as the Reader last published them. Each item sets `Shell.PendingTool = "doc:<id>"` and goes to
+  Read, where `ConsumePendingToolAsync` runs that same item on the active tab (Properties opens its card,
+  Export its card, Close closes the tab, and so on). No Reader action is copied into Bench.
+- `ConsumePendingToolAsync` gains the `doc:` branch; it runs once the tab is ready (a PDF's session open,
+  another format loaded).
+- Desktop: unchanged (Arrange still has no Document menu there).
+- On the phone the same items appear in Arrange's ⋮ sheet, as they do in Read.
+- **For:** 12f as drawn; every document action is one tap from Arrange; no logic duplicated.
+- **Against:** choosing an item leaves Arrange for Read (the actions are Read's cards); if Arrange is the
+  first view after start-up, before Read has published anything, the menu stays empty, as today.
+- **Your call:** keep it touch-only (as written), or give Windows the same menu (one condition).
 
 ### H-17: the desk header's small buttons move into the ··· menu on touch (12f, 12i)
 (`Ui/Pages/Bench.razor`, +31 / −2)
