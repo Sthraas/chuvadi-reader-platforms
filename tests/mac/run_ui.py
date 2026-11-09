@@ -880,12 +880,26 @@ def t4_7():
     time.sleep(3)
     ev["save-sheet"] = screen("print-save-sheet")
     open("/tmp/chvd-print-marker", "w").write("x")
-    time.sleep(1)
-    drive("type", "chvd-printed")
-    rc, ev["name"] = drive("focusset", NAME, "chvd-printed.pdf")
+    # macOS may ask "Allow Chuvadi to find devices on local networks?" when the print panel browses printers (M-22)
+    ev["local_network_prompt"] = []
+    for owner in (NAME, "UserNotificationCenter", "universalAccessAuthWarn", "CoreServicesUIAgent"):
+        rc, o = drive("press", owner, "Don't Allow")
+        if rc == 0:
+            ev["local_network_prompt"].append(f"{owner}: {o[:80]}")
+    time.sleep(1.5)
+    drive("activate", NAME)
+    time.sleep(0.5)
+    drive("key", "cmd+a")
+    drive("type", "chvd-printed.pdf")
     time.sleep(0.8)
+    rc, ev["name"] = drive("focusset", NAME, "chvd-printed.pdf")
     rc, ev["save-press"] = press("Save", role="AXButton", index=-1)
-    time.sleep(6)
+    time.sleep(3)
+    rc, o = find("Replace", timeout=1)   # look only — never press Replace
+    if rc == 0:
+        ev["replace-prompt"] = "a file of that name exists — pressed Cancel instead"
+        press("Cancel", role="AXButton", index=-1)
+    time.sleep(4)
     ev["after-save"] = screen("print-after-save")
     _, ev["new_pdfs"] = sh(f"find {HOME} /private/tmp -newer /tmp/chvd-print-marker -name '*.pdf' -type f 2>/dev/null | grep -v '/Library/' | head", timeout=120)
     _, found = sh(f"ls -1 {FX}/chvd-printed*.pdf {HOME}/Documents/chvd-printed*.pdf {HOME}/Desktop/chvd-printed*.pdf 2>/dev/null")
