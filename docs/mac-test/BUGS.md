@@ -11,8 +11,8 @@ Owner: **Mac** = Mac chat (host code) · **Shared** = existing Ui/Core/Hosting (
 | ID | Sev | Owner | Title | Seen on | Status |
 |---|---|---|---|---|---|
 | M-16 | S1 | Mac | Opening any document through the Open panel adds the tab and the "Pick up where you left off" card, then the Ui dies: Blazor's "An error occurred" bar (hidden behind the status bar — only a red line shows) and the Reader never renders; every later click does nothing until relaunch | 15 (26, 15-intel in run 42517758923) | **verified fixed** — re-verified on c6d7705 (runs 42534074875, 42538220489): Open panel → Reader on all three runners; PDF, docx, xlsx, md, txt, html, Tamil file name; 15 tabs opened and restored |
-| M-17 | S1 | Mac? | **first (D-148)** — Submitting a PDF password — right or wrong — kills the Ui ("An error occurred", blank page); user-password files can't be opened at all | 26 (AES-256, AES-128, RC4) | open |
-| M-18 | S1 | Mac? | **first (D-148)** — Settings opened after using the Reader and Library shows a blank page with "An error occurred" (fresh launch → Settings is fine) | 26 | open |
+| M-17 | S1 | Mac? | Submitting a PDF password killed the Ui ("An error occurred", blank page) | 26 on c6d7705 | **verified fixed on 00a5975** (run 42661249171, all three runners): right password first → page 1 for AES-256, AES-128, RC4; wrong → "That password doesn't open this file." then right → page 1; empty submit → the same clean message (run 42656778614); owner-only opens without a prompt. Note: my c6d7705 repro set the value through Accessibility, so the Ui most likely saw an empty password — the crash was on that path |
+| M-18 | S1 | Mac? | **first (D-148)** — Settings › **Appearance** kills the Ui on macOS 26: blank page + "An error occurred" (also every Settings section after it). Not tied to the Reader — fresh launch → Settings → Appearance does it too | 26 only (15, 15-Intel fine) | open — **narrowed on 00a5975** (run 42658809276): of six fresh-launch paths only the two that press Appearance break, on macOS 26 only; Settings itself opens fine after Mark/Read/Library, Document ▾ or ⌘K |
 | M-19 | S2 | Mac | The new error log (D-132) stays empty when the Ui fails: no `chuvadi.log` in 47 saved log folders, while M-17/M-18 fired | 26 | open — **still empty on 00a5975**: 86 saved log folders over runs 42646315081 and 42656778614 hold only `startup.log`, while M-18 fired 16 times in the first |
 | M-20 | S3 | Shared/Library? | The 8 MB one-page vector stand-in never draws in 20 s ("page 1" placeholder, RSS 409 MB); under memory pressure it stays on "Opening…" | 26 | open — **D-148:** Windows comparison on Arun's list with B-27 (real CAD PDF) |
 | M-22 | S2 | Mac | Opening the macOS print panel makes macOS ask "Allow 'Chuvadi' to find devices on local networks?" (generic text — no `NSLocalNetworkUsageDescription`) | 26 | open — **D-148: option B** (printer-only usage description + a privacy-notice line) |
@@ -200,9 +200,40 @@ Open `aes256.pdf` (user password `user1`) through the Open panel → the prompt 
 (wrong left, right right). The value is set through Accessibility, then Return — the same events a person's typing ends
 with. Not yet run on 15 (password cases are in the full suite only).
 
-### M-18 — Settings after the Reader (S1)
-Fresh launch → Settings: fine on every runner (T4.0b). But: open a PDF, switch modes, open Document ▾ and ⌘K, go to
-Library (fine), then Settings → blank page + "An error occurred" (`screenshots/M-18-settings-after-reader-ui-error-macos26.png`).
+**Re-test on 00a5975 — verified fixed.** The harness now presses "show", types with real key codes and reads the value
+back from the Accessibility tree before pressing Return (`value="user1"` confirmed on every runner). Run 42661249171:
+
+| File | macOS 26 | 15 | 15-Intel |
+|---|---|---|---|
+| AES-256 / AES-128 / RC4, right password first | page 1 ✅ | page 1 ✅ | page 1 ✅ |
+| AES-256, `wrong` then `user1` | message, then page 1 ✅ | ✅ | ✅ |
+| Empty submit (run 42656778614) | "That password doesn't open this file." ✅ | ✅ | ✅ |
+| Owner-password only | opens, no prompt ✅ | ✅ | ✅ |
+
+No "An error occurred" anywhere. Honest correction: on c6d7705 I set the field through Accessibility, which WebKit does
+not pass to Blazor as input, so what I submitted was most likely an empty password — the crash was real, but on the
+empty-submit path rather than for every password. Screenshots: `screenshots/M-17-00a5975-wrong-password-macos26.png`,
+`screenshots/M-17-00a5975-right-password-page-macos26.png`.
+
+### M-18 — Settings › Appearance on macOS 26 (S1)
+First seen on c6d7705 as "Settings after the Reader". **Narrowed on 00a5975** (run 42658809276, M-18 case: six paths,
+each from a fresh launch, `ui_error()` after every step):
+
+| Path | macOS 26 | 15 | 15-Intel |
+|---|---|---|---|
+| PDF → Mark → Read → Library → Settings | ok | ok | ok |
+| PDF → Settings | ok | ok | ok |
+| PDF → Settings → **Appearance** | **"An error occurred"** | ok | ok |
+| PDF → Document ▾ → Settings | ok | ok | ok |
+| PDF → ⌘K → Settings | ok | ok | ok |
+| Home (no document) → Settings → **Appearance** | **"An error occurred"** | ok | ok |
+
+So the trigger is the Appearance section on macOS 26, not the Reader. In the full run (42646315081) every theme's
+Settings › Appearance shot is the blank page with the red bar, and so are all later sections (About, Licences,
+Shortcuts …) because the Ui is already dead. Screenshots: `screenshots/M-18-00a5975-home-settings-appearance-macos26.png`,
+`screenshots/M-18-00a5975-reader-settings-appearance-dark-macos26.png`. Guess for the Mac chat: something Appearance
+reads that only macOS 26 answers differently (system appearance / accent colour / font list). No log line (M-19).
+Consequence: T1.10 (Licences screen) and T3.2's Settings shots are unverified on macOS 26 until this is fixed.
 
 ### M-19 — error log empty when it matters (S2)
 My harness now keeps `~/Library/Logs/Chuvadi` before each case. Across 47 cases (M-17 and M-18 included) the folder

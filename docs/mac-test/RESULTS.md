@@ -1,6 +1,6 @@
 # Mac Test — results
 
-Subject: `platform/mac` **7a65178**. Harness: `tests/mac/` + `.github/workflows/mac-test.yml` on `platform/mac-test`.
+Subject: `platform/mac` **7a65178** → c6d7705 → **00a5975** (current). Harness: `tests/mac/` + `.github/workflows/mac-test.yml` on `platform/mac-test`.
 Runs (one each, read before the next — no retries):
 
 | Round | Run | What changed in the harness |
@@ -10,6 +10,31 @@ Runs (one each, read before the next — no retries):
 | 2 | 42490785792 | menu bar and `open -a` found broken (M-01, M-02) → drive through ⌘O / ⌘K instead; quit-crash capture |
 | 3 | 42494662734 | ⌘O found not to open a panel → the Open button; app stdout per launch; diagnostic exception build |
 | 4 | 42517758923 | panel path set through Accessibility (typing into the Go-to field was lossy) → documents open; timing sets skipped |
+
+## Re-test on platform/mac 00a5975 (9 Nov, D-148) — current state
+
+Trimmed Catalyst Release launch (AT-03). Runs 42646315081 (full suite, all runners), 42656778614, 42658809276 and
+42661249171 (password and M-18 cases, all runners). Anything not listed here is as on c6d7705 below.
+
+| Case | macOS 26 | macOS 15 | 15 Intel | Note / bug |
+|---|---|---|---|---|
+| T1 build + audit | ✅ | — | — | trimmed bundle builds and launches |
+| T3.7 menu bar | ✅ menus full | ✅ | ✅ | File 4 · View 26 · Document 10 everywhere, macOS 26 included (M-01 menus fixed); still no ⌘O (M-15), ⌘, (M-11), Help empty |
+| T4.6 passwords | ✅ | ✅ | ✅ | AES-256/128, RC4, wrong → message → right, empty submit, owner-only — **M-17 verified fixed** |
+| T4.7 print vector / T4.8 no-print refused | ✅ / ✅ | ✅ / ✅ | ✅ / ✅ | as on c6d7705 |
+| T4.12 copy path / T4.13 Show in Finder / T4.14 single instance | ✅ | ✅ | ✅ | |
+| T4.12b snapshot → PNG | ⚠️ | ✅ | ✅ | on 26 the drag didn't draw a region (Snapshot mode on, no selection) so only the earlier text was on the pasteboard; passed on 26 on c6d7705 — harness timing, re-run with the next build |
+| Settings › Appearance | ❌ | ✅ | ✅ | **M-18 narrowed**: Appearance kills the Ui on macOS 26 from Home or Reader; Settings itself is fine. T1.10 Licences and T3.2 Settings shots unverified on 26 until fixed |
+| T3.5 Esc leaves Immersive | ❌ | ❌ | ❌ | M-21 (D-148) |
+| T5.10 quit | ❌ | ✅ | ✅ | M-03, 8 crash reports on 26 |
+| Error log (D-132) | ❌ | ❌ | ❌ | M-19: 86 log folders, only `startup.log` |
+| T5.4 many tabs, T5.7 network, T5.9 fresh/corrupt/read-only | ✅ | | | |
+| T5.3 heavy vector, T5.5 low memory | ❌ | | | M-20 (D-148: on Arun's list with B-27) |
+
+T2 on 00a5975 (probe, ms, median of 10): warm first render macOS 26 **2 106**, 15 **2 781**, Intel **3 997**; cold first
+render 4 559 / 5 702 / 10 521. Open panel → first page 154 / 295 / 2 054. Windows in the same run: window 596, first
+render **1 564** (client-area probe, D-127). Trimming did not change the Mac startup; Intel is slower than on c6d7705
+(2 396) — same VM type, so most likely runner variance; I'll watch it on the next build before calling it.
 
 ## Re-verification on platform/mac c6d7705 (9 Nov) — current state
 
