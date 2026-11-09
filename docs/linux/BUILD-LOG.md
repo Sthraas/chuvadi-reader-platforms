@@ -629,3 +629,22 @@ while its 65 s follow-up runs). 36b then 36c without a fix: still 589 MB 40 s af
 `PROPOSAL-memory-relief-defer-10nov.md` (a close inside the gap waits for it; test added): 36b then 36c 3 of 3
 (→ 290–292 MB, 18 s after closing), full pass 121/121 (542 → 755 → 330 MB). 36c becomes the assertion (waiting up
 to 40 s) on `platform/linux` when Foundation takes it; until then it stays a measurement here.
+
+### 50. Foundation's seventeenth and eighteenth combined patches (fc6286a, 10 Nov); B-28 fixed in the UI tests
+Merged without conflicts (Chuvadi.Sheets 2.0.4; D-156 deferral; B-29/B-30 tests). Reader 233/233, host kit 75/75,
+Linux 44/44, Web Ui 39/39, Mobile Ui 16/16; full UI pass 121/121.
+
+**B-28 (Linux Test):** `rendered(i)` counted the 24 x 24 loading icon as a drawn page, so 36a–36c's draw times and
+36c's memory were wrong (my mistake). A page now counts as drawn only when its page-sized svg is there. Re-measured:
+- 36a: page answers ≤ 0.10 s; the landed page is drawn within 1 s of the view settling (13 s of smooth scrolling).
+- 36b: now really closes mid-render; the next file draws in 0.3 s.
+- 36c: the 120,000-stroke stand-in really took ~49 s a sheet and up to 2.4 GB (with sheets that never drew), far
+  heavier than the real CAD file (~1 s a sheet), so it is now 10,000 strokes a sheet, sized to the real file's
+  memory. Every sheet must draw within 30 s: 4.9–5.6 s each; the page answers ≤ 0.37 s. Memory is recorded: 371 MB
+  before, 2.5 GB with 5 sheets drawn, 817 MB 90 s after closing.
+
+Three findings, in `PROPOSAL-render-findings-10nov.md`: (1) a page back in view after its render was cancelled is
+never drawn (one-line diff; seen with 49 s sheets); (2) moving to a page while the view fits the first drawing lands
+two sheets on (36c waits for the page heights to hold); (3) after closing, the .NET heap still holds ~680 MB of
+garbage that one aggressive collection clears (678 → 5 MB): the relief runs before the drawing is garbage, and ~150
+MB stays outside the heap even then. 36c's memory becomes an assertion when (3) is settled.
