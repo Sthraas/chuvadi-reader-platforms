@@ -419,3 +419,10 @@ Evidence:
   - Desktop before/after: clock only on Read, Mark, Home and the desk menu; Arrange clock plus ≤ 8-level
     noise, as in A/A runs.
   - 64 touch checks pass at 800×1280, 1280×800, 412×915, 915×412; 0 console errors.
+
+## 9 Nov, 06:40: decisions
+- Document ▾ in Arrange (H-18): touch-only, as written. Windows' layout is the Reader chat's call.
+- The three touch-only visible changes (Settings options ≥ 44 px wide, tablet pager 12 px wider, docked Shelf
+  icons on their own line): approved.
+- H-17 to H-19 go to Foundation as `mobile-ui-hooks-6.patch` (applies to 42461ba). Desktop static screens
+  pixel-identical (last run: clock only, Arrange ≤ 8-level noise as A/A).

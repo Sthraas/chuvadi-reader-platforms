@@ -1,6 +1,8 @@
 # Mobile app UI → Foundation: hooks and hand-off (updated 9 Nov, 06:30)
 
 ## Outstanding for Foundation: H-17, H-18, H-19 (`proposal/mobile-ui-hooks-6.patch`)
+Approved by the coordinator for Foundation (9 Nov 06:40). Desktop: static screens pixel-identical (clock
+only); H-19 changes only where Find scrolls to.
 The Android Test chat's look bugs, routed to this chat on 9 Nov 05:55. `mobile-ui-hooks-6.patch` =
 H-17 + H-18 + H-19 (each also on its own in `proposal/`); it applies cleanly to Foundation 42461ba.
 Landed combined sets live in `proposal/landed/`, so Android's `compose.sh` only sees the outstanding one.
@@ -34,7 +36,7 @@ Every one has a check in `tools/mobile-ui/checks.py` (tablet and phone, both ori
 - **For:** 12f as drawn; every document action is one tap from Arrange; no logic duplicated.
 - **Against:** choosing an item leaves Arrange for Read (the actions are Read's cards); if Arrange is the
   first view after start-up, before Read has published anything, the menu stays empty, as today.
-- **Your call:** keep it touch-only (as written), or give Windows the same menu (one condition).
+- **Decided (coordinator, 9 Nov 06:40):** touch-only, as written; Windows' layout stays the Reader chat's call.
 
 ### H-17: the desk header's small buttons move into the ··· menu on touch (12f, 12i)
 (`Ui/Pages/Bench.razor`, +31 / −2)

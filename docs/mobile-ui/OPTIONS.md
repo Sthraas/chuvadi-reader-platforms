@@ -148,7 +148,8 @@ drawn; desktop unchanged. Two mechanisms, both touch-only:
 - **Against:** (2) is a heuristic — a near-miss goes to the nearest control, which is what a 44 px area
   means, but it relies on clickable non-controls being styled `cursor: pointer` (they are today);
   range sliders take only real hits (they're made 44 px tall in dialogs instead).
-- Two visible changes to note: Settings segmented options are at least 44 px wide (On / Off were 36 / 38),
+- **Approved (coordinator, 9 Nov 06:40), touch-only:** the three visible changes below.
+- Three visible changes to note: Settings segmented options are at least 44 px wide (On / Off were 36 / 38),
   and the tablet pager is 12 px wider (gap 10 px). The docked Shelf's file row puts its four icons on a line
   of their own (they don't fit 44 px apart beside the name line).
 - Checked by `tools/mobile-ui/targets.py` (every enabled visible control, 4 sizes, 11 screens, 15 cards and
