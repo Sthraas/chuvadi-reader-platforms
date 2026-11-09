@@ -173,3 +173,12 @@
 - W-01: the top bar's empty middle moves the window (press-stopping moved from the containers to display:contents wrappers; pixel-identical). Already in main. Test before FAIL / after PASS.
 - W-02: dropped files reach the Windows host through WebView2's postMessageWithAdditionalObjects (host-drop.js and MainWindow.OnWebMessageReceived); WebView2's drop stays on. Already in main. Page-side test 5/5; host side for Arun's retest.
 - D-143: the 93 Android packages MAUI 10.0.110 bundles (scripts/resolve-android-packages.py → legal/android/maui-android-packages.json) in the notices with licence and holder; Glide's BSD text; Play data-safety basis corrected.
+
+### 33. Twelfth combined patch, part 3 (9 Nov, D-145)
+- Mobile UI H-17 (desk header's small buttons in the ··· menu on touch), H-18 (Arrange keeps Document ▾ on touch), H-19 (Find scrolls the match itself into view; all platforms) from `mobile-ui-hooks-6.patch` (3e80750). 327/327; 27/27 identical; W-01/W-02 tests still pass.
+
+### 34. AT-03 made structural (9 Nov, D-146)
+- Registrations are typed `Core<TService, TImpl>` / `Seam<TService, TImpl>` calls (annotated `TImpl`, `TImpl : TService`); no `Type` tables. A new seam default such as Android P-08's `PlainPathLabels` is one `Seam` line.
+- Found while proving it: the trim analyser doesn't flag a `(Type, Type)` array, so the first fix's annotated record was safe only while every entry used it. Guard test added; matrix in TRIMMING.md.
+- 331/331 tests (Hosting 64); 0 warnings in both solutions; trimmed probe 53/53; StartupProbe no cost (JIT 1448 vs 1450). Windows: registrations pinned identical in order and type, and no Ui file changed.
+
