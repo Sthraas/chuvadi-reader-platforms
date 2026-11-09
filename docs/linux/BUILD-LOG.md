@@ -529,3 +529,16 @@ Orientation (B-14) is unchanged. In Chuvadi.Print 1.0.0-rc.2, `PrintSettings.Aut
 in document mode (CUPS lays out the PDF, as Linux prints) `IppJobTicket.Build` still sends `orientation-requested`
 (3 for portrait) with it on, which is what shrinks landscape pages. Checked with a small program against the
 package; options in the report.
+
+### 42. Foundation's ninth to eleventh combined patches merged (1016987, 9 Nov)
+B-07 through the library, B-24 (a stalled read never freezes the Reader), Chuvadi.Zip 1.0.0, Chuvadi.Docs 2.0.0 and
+Chuvadi.Sheets 2.0.2 with their limits and cancellation (D-136). No conflicts; no Linux change needed. Results:
+Reader 199/199, host kit 59/59, Linux 44/44, Web Ui 39/39, Mobile Ui 16/16; both packages pass `check-deb.py`;
+full UI pass 115/115.
+
+Found on the way: a local build put a stale ReadyToRun image of Sheets 1.1.2 in the app under a deps.json that
+said 2.0.2 (ReadyToRun recompiles only when an input is newer, and the release asset is dated earlier), so
+Settings › About threw. Clean CI runners can't hit it, but a package built on a developer's machine could ship
+it. `build-deb.sh` now clears ReadyToRun's cache before publishing, and `check-deb.py` checks that every Chuvadi
+and LiPicons DLL is the version deps.json names (it fails on the stale package and passes with a stale image
+planted in the cache).
