@@ -112,7 +112,14 @@ def type_into(selector, text, index=0):
         raise AssertionError(f"typed {text!r} into {selector}, field has {got!r}")
 
 
+# UITEST_ONLY="34e,34f": run only steps whose names start with one of these (re-checking a fix quickly);
+# the app's start-up steps (01-…) always run. Unset in CI: every step runs.
+ONLY = [p for p in os.environ.get("UITEST_ONLY", "").split(",") if p]
+
+
 def step(name, fn, shot=True):
+    if ONLY and not name.startswith("01") and not any(name.startswith(p) for p in ONLY):
+        return
     baseline = errors_in_log()
     t0 = time.time()
     try:
@@ -605,6 +612,58 @@ def print_not_allowed():
 
 step("31-print-not-allowed", print_not_allowed)
 
+
+def unlock(path, password):
+    app.open(path)
+    name = os.path.basename(path)
+    app.wait(lambda: app.js(f"var t=[...document.querySelectorAll('.rtab')].find(t=>t.innerText.includes('{name}')); if(!t) return false; t.click(); return true"), 20, "tab " + name)
+    app.wait(lambda: app.js("var i=document.querySelector('.uc-pw'); return !!i && !!i.offsetParent"), 15, "the password card")
+    type_into(".uc-pw", password)
+    app.key("Return")
+    app.wait(lambda: app.js("return !document.querySelector('.uc-pw')") and app.js("return document.querySelectorAll('.rpage').length > 0"), 20, "the unlocked pages")
+    time.sleep(1.5)
+
+
+def print_with_owner_password():
+    """D-139 (chuvadi-pdf 3.32.0; ends D-102's refusal): the owner password lifts a file's "no printing";
+    the user password doesn't. Same file twice (two copies, two tabs), print forbidden, both passwords set."""
+    src = os.path.join(FIX, "five-pages.pdf")
+    files = {}
+    for who in ("user", "owner"):
+        files[who] = os.path.join(FIX, f"no-print-{who}-opens.pdf")
+        subprocess.run(["qpdf", "--encrypt", "--user-password=chuvadi-user", "--owner-password=chuvadi-owner", "--bits=256",
+                        "--print=none", "--", src, files[who]], check=True)
+    card = "section[aria-label=Print]"
+    # The user password: still refused.
+    unlock(files["user"], "chuvadi-user")
+    focus_main()
+    app.key("ctrl+p")
+    time.sleep(1.2)
+    locked = app.wait(lambda: app.js(f"var c=document.querySelector({json.dumps(card)}); return c && (c.title || '').includes(\"permissions don't allow printing\") ? c.title : null"), 10, "the reason on the card (user password)")
+    dismiss()
+    # The owner password: printing works, and the job reaches CUPS.
+    started = time.time()
+    unlock(files["owner"], "chuvadi-owner")
+    focus_main()
+    app.key("ctrl+p")
+    time.sleep(1.2)
+    title = app.js(f"var c=document.querySelector({json.dumps(card)}); return c ? (c.title || '') : null")
+    if "permissions" in (title or ""):
+        raise AssertionError("the Print card is locked after opening with the owner password: " + title)
+    app.click(card + " button.primary")
+    w = app.wait(lambda: [x for x in native_windows() if x[1].startswith("Print")], 15, "GTK print dialog")[0][0]
+    subprocess.run(["xdotool", "windowactivate", "--sync", w], env=app.env, capture_output=True)
+    time.sleep(3)
+    app.key("Return")
+    out = sorted(app.wait(lambda: cups_pdfs(started), 60, "cups-pdf output"), key=os.path.getmtime)[-1]
+    time.sleep(1)
+    pages = pdfinfo(out).get("Pages")
+    app.shot("31b-owner-password-prints")
+    return f"user password: locked ('{locked}'); owner password: printed, CUPS wrote {pages} pages"
+
+
+step("31b-owner-password-lifts-no-print", print_with_owner_password)
+
 # ── keyboard ────────────────────────────────────────────────────────────────
 
 
@@ -814,6 +873,87 @@ def error_message_is_a_sentence():
 
 
 step("34d-error-message-not-a-resource-key", error_message_is_a_sentence)
+
+
+def unblock(fifo):
+    """Ends a stalled read: open the pipe for writing without blocking, then close it (the reader sees the end)."""
+    try:
+        os.close(os.open(fifo, os.O_WRONLY | os.O_NONBLOCK))
+    except OSError:
+        pass
+    try:
+        os.remove(fifo)
+    except OSError:
+        pass
+
+
+def stalled_source_never_blocks():
+    """B-24: a source that never delivers data (a hung network mount, an unplugged drive; here a named pipe)
+    shows "Opening…" and a way to stop at once, and never holds up the next open — for a PDF and for Excel."""
+    stall = os.path.join(FIX, "stall")
+    os.makedirs(stall, exist_ok=True)
+    out = []
+    for name in ("slow.pdf", "slow.xlsx"):
+        fifo = os.path.join(stall, name)
+        if os.path.exists(fifo):
+            os.remove(fifo)
+        os.mkfifo(fifo)
+        try:
+            t0 = time.time()
+            app.send("open " + fifo, timeout=5)  # before the fix the page's thread waited on the pipe here
+            opening = app.wait(lambda: "Opening" in (app.js("return document.body.innerText") or "") and round(time.time() - t0, 1),
+                               5, f"'Opening…' for {name}")
+            stop = app.wait(lambda: app.js("return [...document.querySelectorAll('button')].some(b => b.offsetParent && "
+                                           "/^(Stop opening|Cancel)/.test(b.innerText.trim()))") and round(time.time() - t0, 1),
+                            15, f"a Stop button for {name}")
+            app.send("open " + os.path.join(FIX, "five-pages.pdf"), timeout=5)
+            app.wait(lambda: app.js("return [...document.querySelectorAll('.rtab')].some(t => t.innerText.includes('five-pages'))"),
+                     10, "the next file's tab while the first still waits")
+            out.append(f"{name}: Opening… {opening} s, Stop {stop} s, next file opened")
+        finally:
+            unblock(fifo)
+        time.sleep(1)
+        focus_main()
+        app.key("ctrl+shift+w")
+        time.sleep(1.5)
+    return "; ".join(out)
+
+
+step("34e-stalled-source-never-blocks", stalled_source_never_blocks)
+
+
+def viewer_errors_follow_wt10():
+    """B-25: a Word or Excel file that can't be read says so in a plain sentence; the library's own text
+    (here a zip error) is under a collapsed Details, as for PDFs (WT-10)."""
+    out = []
+    for name, what in (("notzip.xlsx", "an Excel workbook"), ("notzip.docx", "a Word document")):
+        path = os.path.join(FIX, name)
+        with open(path, "wb") as f:
+            f.write(b"These bytes are not a zip package." * 20)
+        app.send("open " + path)
+        app.wait(lambda: app.js(f"var t=document.querySelector('.rtab.active'); return !!t && t.innerText.includes('{name}')"),
+                 10, f"{name}'s tab in front")
+        shown = "[...document.querySelectorAll('.vm-err')].filter(e => e.offsetParent).pop()"  # the visible tab's
+        sentence = app.wait(lambda: app.js(f"var e={shown}; var b=e && e.querySelector('.vm-body > span'); return b ? b.innerText : null"),
+                            15, f"the error for {name}")
+        detail = app.js(f"var e={shown}; var d=e && e.querySelector('details.vm-detail'); return d ? [d.open, d.textContent] : null")
+        if not detail:
+            raise AssertionError(f"{name}: no Details under '{sentence}'")
+        if detail[0]:
+            raise AssertionError(f"{name}: Details is open; WT-10 keeps it collapsed")
+        if ":" in sentence or "Central Directory" in sentence or "zip" in sentence.lower():
+            raise AssertionError(f"{name}: technical text in the sentence: '{sentence}'")
+        if ("Word" in what) != ("Word" in sentence):
+            raise AssertionError(f"{name}: unexpected sentence '{sentence}'")
+        app.shot("34f-" + name.replace(".", "-"))
+        out.append(f"{name}: '{sentence}' | Details: {' '.join(detail[1].split())[7:80]}")
+    focus_main()
+    app.key("ctrl+shift+w")
+    time.sleep(1.5)
+    return "; ".join(out)
+
+
+step("34f-viewer-errors-follow-wt10", viewer_errors_follow_wt10)
 
 # The desktop's window-button layout, followed exactly (any subset, any order, either end) — the
 # setting GNOME (button-layout) and KDE hand to GTK, written to GTK's settings file for a fresh launch.
