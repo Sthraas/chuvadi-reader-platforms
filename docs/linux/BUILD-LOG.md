@@ -542,3 +542,14 @@ Settings › About threw. Clean CI runners can't hit it, but a package built on 
 it. `build-deb.sh` now clears ReadyToRun's cache before publishing, and `check-deb.py` checks that every Chuvadi
 and LiPicons DLL is the version deps.json names (it fails on the stale package and passes with a stale image
 planted in the cache).
+
+### 43. Foundation's twelfth combined patch merged (022b7c0, c91a581; 9 Nov)
+chuvadi-pdf 3.32.0 (owner password lifts a file's permissions, D-139), AT-03 typed registrations (D-146), W-01,
+W-02, path labels (P-08). No conflicts; no Linux change needed (Linux isn't trimmed; it already uses
+`PrintPermission.Allows`). Built with warnings as errors; Reader 212/212, host kit 66/66, Linux 44/44, Web Ui
+39/39, Mobile Ui 16/16; `tools/TrimProbe` published trimmed for linux-x64 and launched: 53/53 services.
+
+Found by a new UI step (31b, owner password → print): the Print card is unlocked, but printing fails with "This
+PDF is encrypted and needs a password to open". `Reader.razor` opens `PrintCard` without the tab's password, so
+the print service gets none (Windows too). One-line shared fix (`Password="@tab.Password"`) sent to Foundation
+with B-24 and B-25 in `PROPOSAL-shared-fixes-9nov.md`; step 31b lands here with it.
