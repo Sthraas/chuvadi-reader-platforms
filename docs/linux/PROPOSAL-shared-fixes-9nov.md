@@ -1,8 +1,8 @@
-# Proposal for the Foundation's next combined patch: B-24 (reopened), B-25; B-26 as options
+# Proposal for the Foundation's next combined patch: B-24 (reopened), B-25, owner-password printing; B-26
 
 9 Nov 2026, Linux chat. The changes touch existing shared files (Core, Ui), so they go to the Foundation as one
-exact diff (bottom of this file, against `platform/linux` at `e242d92`, which carries `platform/foundation`
-`1016987`). Built with warnings as errors. The Linux UI steps that test them (`tools/linux/uitest.py` 34e and 34f,
+exact diff (bottom of this file, against `platform/linux` at `c373a3d`, which carries `platform/foundation`
+`c91a581`; updated 9 Nov evening, first sent against `e242d92`). Built with warnings as errors. The Linux UI steps that test them (`tools/linux/uitest.py` 34e, 34f and 31b,
 plus `UITEST_ONLY` for re-checking a fix quickly) land on `platform/linux` with the rebase, so its CI stays green
 until then.
 
@@ -10,9 +10,10 @@ until then.
 |---|---|---|---|
 | S1 | B-24 reopened: a stalled read blanks the Reader and blocks later opens | The Reader's tab-changed handler opened every new tab's file (`FlattenService.Probe`, as a PDF even for `.xlsx`) on the page's thread to set `_isXfaDoc`, which nothing reads (the XFA notice uses `tab.Session.Document.IsXfaForm`). `RefreshDocKind` and `_isXfaDoc` are removed; no behaviour changes | Ui/Pages/Reader.razor |
 | S2 | B-25: viewer errors don't follow WT-10 | `ViewerBase.Describe` returns a plain sentence and the system's text: "This file is damaged or isn't an Excel workbook / a Word document / … Chuvadi can read.", WT-10's access sentence for I/O and permission errors, and a `DocumentViewException`'s own sentence with its inner error as the detail. `ViewerMessage` gets a `Detail` shown under a collapsed **Details**; all five viewers (Word, Excel, web page, Markdown, text) pass it. The access sentence is one constant, `TabsService.CantRead`, shared with the Reader | Core/Reader/TabsService.cs; Ui/Components/Viewers/ViewerBase.cs, ViewerMessage.razor(.css), DocxView, XlsxView, HtmlView, MarkdownView, TextView |
+| S3 | Owner password doesn't print (found by Linux step 31b, D-139) | The Print card unlocks after an owner-password open, but `Reader.razor` opens `PrintCard` without the tab's password, so the print service opens the file with none: "Couldn't print: This PDF is encrypted and needs a password to open." Windows passes `request.Password` the same way. `Password="@tab.Password"` | Ui/Pages/Reader.razor |
 
 ## Results on Linux with the diff applied
-- Tests: Reader 199/199, host kit 59/59, Linux 44/44, Web Ui 39/39, Mobile Ui 16/16.
+- Tests (on `c91a581`): Reader 212/212, host kit 66/66, Linux 44/44, Web Ui 39/39, Mobile Ui 16/16.
 - B-24 (new UI step 34e, a named pipe as the stalled source): `slow.pdf` shows "Opening…" in 1.2 s and "Stop
   opening" at 10.3 s, and `five-pages.pdf` opens while it still waits; `slow.xlsx` 0.3 s / 10.1 s, the same.
   On `e242d92` the step fails (no "Opening…", the next open blocked).
@@ -20,7 +21,10 @@ until then.
   (collapsed) "The file is not a valid xlsx workbook: End of Central Directory record could not be found";
   `notzip.docx` → "This file couldn't be read as a Word document." with the library's text under Details. On
   `e242d92` it fails (the technical text inline, no Details).
-- Full UI pass with the diff and the two new steps: 117/117.
+- S3 (UI step 31b): a no-printing file with both passwords. Opened with the user password the card stays
+  locked; opened with the owner password it prints, and CUPS writes all 5 pages. Without S3 the step fails
+  with the message above.
+- Full UI pass with the diff and the three new steps: 118/118.
 
 ## B-26 (Excel number formats): a decision, not in the diff
 D-136's tests make "every value as the file holds it" the rule (numbers raw, dates as `yyyy-mm-dd`); Excel's
@@ -49,8 +53,8 @@ date formats 15–17, 22) in the culture's own order.**
 2. **B-27** (already in BUGS.md): large vector CAD PDF — 3–4 s to open, memory grows to 1.6 GB over 5 pages.
 
 ## The exact diff
-Apply with `git apply` on `platform/linux` at `e242d92` (`git diff e242d92..shared-fixes-9nov -- src` of the Linux
-chat's local branch).
+Apply with `git apply` on `platform/linux` at `c373a3d` (`git diff cfaac4e..shared-fixes-9nov-b -- src` of the Linux
+chat's local branch; `cfaac4e` has the same `src` tree as `c373a3d`).
 
 ```diff
 diff --git a/src/ChuvadiReader.Core/Reader/TabsService.cs b/src/ChuvadiReader.Core/Reader/TabsService.cs
@@ -332,10 +336,19 @@ index eac7c57..f5f544d 100644
          }
          finally
 diff --git a/src/ChuvadiReader.Ui/Pages/Reader.razor b/src/ChuvadiReader.Ui/Pages/Reader.razor
-index 56ff057..bbd7186 100644
+index 35d36f4..e73b8d8 100644
 --- a/src/ChuvadiReader.Ui/Pages/Reader.razor
 +++ b/src/ChuvadiReader.Ui/Pages/Reader.razor
-@@ -3131,7 +3131,6 @@
+@@ -794,7 +794,7 @@
+                     <SignaturesCard Path="@tab.Path" Session="@tab.Session" CurrentPage="@tab.CurrentPageIndex" OnClose="CloseCard" OnMessage="OnCardMessage" OnReport="OnSigReport" />
+                     break;
+                 case "print":
+-                    <PrintCard Path="@tab.Path" Session="@tab.Session" CurrentPage="@tab.CurrentPageIndex" OnClose="CloseCard" OnMessage="OnCardMessage" />
++                    <PrintCard Path="@tab.Path" Session="@tab.Session" Password="@tab.Password" CurrentPage="@tab.CurrentPageIndex" OnClose="CloseCard" OnMessage="OnCardMessage" />
+                     break;
+                 case "password":
+                     <PasswordCard Path="@tab.Path" Session="@tab.Session" CurrentPage="@tab.CurrentPageIndex" OnClose="CloseCard" OnMessage="OnCardMessage" OnSaved="OnProtectedSaved" />
+@@ -3134,7 +3134,6 @@
      }
  
      // ── Flatten to a static PDF (XFA form data / AcroForm fields / markup) ──────
@@ -343,7 +356,7 @@ index 56ff057..bbd7186 100644
      private bool _flattening;
  
      // ── Recovery (opt-in): a page failed to decode, offer to open a repaired copy ──
-@@ -3189,12 +3188,6 @@
+@@ -3192,12 +3191,6 @@
      private async Task DocFlatten() { CloseDocMenu(); await FlattenNow(); }
      private void DocNav(string path) { CloseDocMenu(); Nav.NavigateTo(path); }
  
@@ -356,7 +369,7 @@ index 56ff057..bbd7186 100644
      private async Task FlattenNow()
      {
          var source = Tab?.Path;
-@@ -3328,7 +3321,6 @@
+@@ -3331,7 +3324,6 @@
                  _mkTagged = false; _mkTaggedPath = null;
                  if (_markup) _ = CheckTaggedAsync();
              }
