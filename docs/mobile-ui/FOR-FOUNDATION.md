@@ -1,6 +1,22 @@
-# Mobile app UI → Foundation: hooks and hand-off (updated 9 Nov, 06:30)
+# Mobile app UI → Foundation: hooks and hand-off (updated 9 Nov, 07:45)
 
-## Outstanding for Foundation: H-17, H-18, H-19 (`proposal/mobile-ui-hooks-6.patch`)
+## Outstanding for Foundation: H-20 (`proposal/mobile-ui-hooks-7.patch`)
+H-17, H-18 and H-19 landed in the twelfth combined patch, part 3 (bfffab6), exactly as written
+(reverse-apply check on 022b7c0). `mobile-ui-hooks-6.patch` moved to `proposal/landed/`.
+
+### H-20: every tools rail is headed "TOOLS" (D-134; all platforms)
+(`Ui/Pages/Reader.razor`, `Ui/Pages/Bench.razor`, `Ui/Pages/Redact.razor`, +5 / −5)
+- D-134 (9 Nov 03:45): the tool rail heading becomes "TOOLS" on every platform. Foundation 022b7c0 has it
+  on the view-only rail only; Read, Mark, Protect (Reader and Redact) and Arrange still say READ, MARK,
+  PROTECT, ARRANGE. The diff changes those five `Heading=` values; nothing else.
+- Desktop: the rail heading text changes, as D-134 asks; nothing else moves.
+- **For:** D-134 as decided, on every platform at once.
+- **Against:** `SideRail` also uses the heading as the rail's `aria-label`, so a screen reader hears
+  "TOOLS" instead of the mode name. If that matters, SideRail could take a separate label (one parameter);
+  not in this diff.
+- D-135 (Save at the foot of the Mark rail): already true on every platform (Save, then Save as new PDF).
+
+## Landed: H-17, H-18, H-19 (twelfth combined patch, part 3, bfffab6)
 Approved by the coordinator for Foundation (9 Nov 06:40). Desktop: static screens pixel-identical (clock
 only); H-19 changes only where Find scrolls to.
 The Android Test chat's look bugs, routed to this chat on 9 Nov 05:55. `mobile-ui-hooks-6.patch` =

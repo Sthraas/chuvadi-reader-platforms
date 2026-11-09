@@ -429,3 +429,16 @@ Evidence:
 - Merged Foundation 6fbe24e (twelfth combined patch); `mobile-ui-hooks-6.patch` still applies.
   Re-run on the merge: 64 touch checks pass at 4 sizes, no Read control under 44 px; desktop Read, Mark and
   desk menu clock only, Arrange and Home clock plus ≤ 8-level noise (as in A/A runs).
+
+## 9 Nov, 07:32: Foundation 022b7c0 merged; H-17 to H-19 landed; H-20
+- Merged Foundation 022b7c0 (non-destructive merge, as on every update: force-pushes are refused here).
+  H-17, H-18 and H-19 are in bfffab6 exactly as written; hooks-6 moved to `proposal/landed/`.
+- D-134 check: only the view-only rail says TOOLS; Read, Mark, Protect and Arrange keep their mode names →
+  **H-20** (`mobile-ui-hooks-7.patch`), five `Heading=` values.
+- D-135 check: the Mark rail ends with Save and Save as new PDF on every platform.
+- Tablet Save pin (D-112), measured with and without it (tools rail, Save buttons in view?):
+  - Without: tablet landscape 1280×800 and 1024×768 Mark rail scrolls; Save and Save as new are both below
+    the fold. Portrait 800×1280 fits. Protect and Arrange fit everywhere.
+  - With (today): Save as new stays visible; plain Save scrolls away in landscape.
+  - Desktop for comparison: fits at 1440×900 and 1366×768; at 1280×720 Save as new is below the fold.
+  - Pin kept until the coordinator decides (options in the status).
