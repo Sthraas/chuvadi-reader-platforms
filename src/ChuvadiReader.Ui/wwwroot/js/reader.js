@@ -120,6 +120,14 @@ export function init(deskEl, dotnetRef) {
 
         if (e.key === 'Escape') { invoke('OnEscape'); return; }
 
+        // Next/previous tab: ⌃Tab / ⌃⇧Tab on every platform. On macOS this is the only way —
+        // ⌘Tab is the system app switcher and never reaches the page (Safari, Finder, Xcode use ⌃Tab).
+        if (e.key === 'Tab' && e.ctrlKey === true && e.metaKey !== true && e.altKey !== true) {
+            e.preventDefault();
+            invoke('CycleTab', e.shiftKey ? -1 : 1);
+            return;
+        }
+
         // Tab-close shortcuts: handle the Alt/Shift variants of W before the no-Alt block.
         if (isPrimary(e) && e.key.toLowerCase() === 'w') {
             e.preventDefault();

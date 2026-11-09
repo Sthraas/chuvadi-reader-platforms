@@ -447,6 +447,9 @@ public sealed class TabsService
     /// <summary>Shown when a document can't be opened for a reason other than damage, a password or access (WT-10).</summary>
     public const string OpenFailed = "This file is damaged or isn't a PDF Chuvadi can read.";
 
+    /// <summary>WT-10: a file that can't be read (permissions, in use, a missing drive), for the Reader and the viewers.</summary>
+    public const string CantRead = "Chuvadi couldn't read this file. It may be open in another app, or you may not have permission to read it.";
+
     private async Task EnsureLoadedAsync(ReaderTab tab, CancellationToken ct)
     {
         if (tab.IsLoaded || tab.IsLoading)
@@ -534,7 +537,7 @@ public sealed class TabsService
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             // WT-10: a plain sentence; the system's own text stays under Details.
-            tab.Error = "Chuvadi couldn't read this file. It may be open in another app, or you may not have permission to read it.";
+            tab.Error = CantRead;
             tab.ErrorDetail = ex.Message;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)

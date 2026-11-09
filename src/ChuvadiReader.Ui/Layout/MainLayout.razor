@@ -674,6 +674,14 @@
     // ── lifecycle / theme / window ────────────────────────────────────────
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // The shell's own commands, for hosts with a native menu bar (IAppCommands; macOS). Only raises
+        // Shell.Changed when they actually differ, so this can't re-render in a loop. Other hosts have no
+        // menu bar to fill, so they skip it: no extra render at startup, nothing changes there.
+        if (Platform.Chrome.NativeMenuBar)
+        {
+            Shell.SetGlobalCommands(GlobalCommands().ToList());
+        }
+
         if (!firstRender)
         {
             return;
