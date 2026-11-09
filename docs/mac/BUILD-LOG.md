@@ -465,3 +465,22 @@ the keys the page received).
   the tester saw them on c6d7705, before Foundation's thirteenth/fourteenth patches. Mac Test to re-verify.
 - **M-11:** `go.settings` reaches the menu code and "Settings… ⌘," is inserted after About, but AppKit's app menu
   does not show it; diagnosis in progress (the builder's app menu is now logged).
+
+### 2026-11-10 (01:00) — rebased onto Foundation bcd1ab1; M-11 fixed; M-18 hunted; M-19 first error
+Commit hashes after this rebase: M-19 page errors 5f34138 · M-22 5f34138 · M-03 second form d390abc · Blazor once
+a0c478d · reload logged 4a4b419 · M-11 a7c46be.
+- **M-11 (fixed, a7c46be):** Settings… ⌘, never showed because `go.settings` was also under View › Go to, and UIKit
+  silently drops a menu change that repeats a command already in the bar (same action and id). Settings now lives
+  only in the Chuvadi menu, in its own section after About Chuvadi (through the Application menu's children; edits
+  aimed at About itself were ignored). Run 42679963336: 38/38 checks, Settings… ⌘, present.
+- **M-18 (not reproduced here):** Mac Test narrowed it to Settings › Appearance on macOS 26 and saw the page load again
+  with a new WebContent process — WebKit's content process ends, the Blazor session dies with it. My smoke run (same
+  image, macos-26-arm64 26.7.2) opens Settings → Appearance → Reading → Appearance, with and without an
+  accessibility client reading the app throughout: the page lives, loads once, no WebContent crash report (runs
+  42678975900, 42681067751). The AX walk did not reach the web area, so an AX-driven crash is not ruled out — the
+  WebContent crash report from Mac Test's run 42676250705 is the next evidence.
+- **M-19 (4a4b419):** when WebKit's content process ends, nothing throws first — so a second load of the Ui page is now
+  logged as the error ("the page was loaded again … WebKit's content process ended or the page was reset"), ahead
+  of the follow-on `MainLayout.DisposeAsync` JS-object error. Page errors (`console.error`, window errors, unhandled
+  rejections) were already logged (5f34138).
+- Smoke summary fixed for a run with nothing failing (bash 3.2 `set -u` and an empty array), 884b529.
