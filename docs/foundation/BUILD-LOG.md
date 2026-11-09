@@ -164,3 +164,15 @@
 
 ### 30. Eleventh combined patch, part 2 (9 Nov, D-137)
 - Word limits keyed on `ServerSide`: portal 20/64 MB, desktop and mobile 100/400 MB (a 30 MB picture opens locally, is refused on the server). List markers from `Document.GetListLabels()`; Symbol/Wingdings bullets drawn as Unicode shapes. 324/324; 26/27 + Home artefact.
+
+### 31. Twelfth combined patch, part 1 (9 Nov, D-139 item 1 + AT-03)
+- chuvadi-pdf 3.32.0 from the release, 34/34 against its SHA256SUMS.txt. Stale commit stamp (aff17e6) checked: packed the signed tag, so 33/33 DLLs are identical in metadata, IL sizes and resources (`PACKAGES-3.32.0.md`). Printing follows `EncryptionInfo.EffectiveFlags` (the owner password prints; D-102 ends). LIB-1 pypdf `/P 4294965243` fixture opens (3.31.2 failed).
+- AT-03: typed registrations with `DynamicallyAccessedMembers`; trim and AOT analysers on Hosting; settings JSON source-generated (byte-identical). `tools/TrimProbe` reproduced 6/53 failures before, 0 after; `trim-check` CI job. `TRIMMING.md`.
+
+### 32. Twelfth combined patch, part 2 (9 Nov, D-142, D-143)
+- W-01: the top bar's empty middle moves the window (press-stopping moved from the containers to display:contents wrappers; pixel-identical). Already in main. Test before FAIL / after PASS.
+- W-02: dropped files reach the Windows host through WebView2's postMessageWithAdditionalObjects (host-drop.js and MainWindow.OnWebMessageReceived); WebView2's drop stays on. Already in main. Page-side test 5/5; host side for Arun's retest.
+- D-143: the 93 Android packages MAUI 10.0.110 bundles (scripts/resolve-android-packages.py → legal/android/maui-android-packages.json) in the notices with licence and holder; Glide's BSD text; Play data-safety basis corrected.
+
+### 33. Twelfth combined patch, part 3 (9 Nov, D-145)
+- Mobile UI H-17 (desk header's small buttons in the ··· menu on touch), H-18 (Arrange keeps Document ▾ on touch), H-19 (Find scrolls the match itself into view; all platforms) from `mobile-ui-hooks-6.patch` (3e80750). 327/327; 27/27 identical; W-01/W-02 tests still pass.
