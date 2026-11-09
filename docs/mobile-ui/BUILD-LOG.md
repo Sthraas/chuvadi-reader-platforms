@@ -401,5 +401,5 @@ Evidence:
     mostly above it (a tap there closes the sheet anyway), (b) rows scrolled half under a bar, and (c) the
     "change…" folder buttons in the Export / Press cards (inline-styled, 16 px, close to the next button:
     note to Foundation).
-  - 305 tests; desktop clock-only (Read, Mark, Arrange, Home, desk menu); 53 touch checks pass; 0 console
+  - 305 tests; desktop clock-only (Read, Mark, Arrange, Home, desk menu); 56 touch checks pass (52 gestures and checks, plus the new tap check at 4 sizes); 0 console
     errors.
