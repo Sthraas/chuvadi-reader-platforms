@@ -619,3 +619,13 @@ from 257–259 MB. The 2 that weren't peaked lower (424–486 MB, i.e. the drawi
 446–523 MB. With the heavy-drawing line at 64 MB (`PROPOSAL-memory-relief-10nov.md`, one line in Core): cold 6 of 6
 (→ 270–277 MB), warm full pass 121/121 (548 → 726 → 351 MB). 36c stays a measurement on `platform/linux` until that
 lands, then becomes the assertion (written and tested on the local branch).
+
+### 49. Foundation's sixteenth combined patch, part 3 (3759b6f, 10 Nov)
+Merged without conflicts; Reader 230/230, host kit 75/75, Linux 44/44, Web Ui 39/39, Mobile Ui 16/16. Closing one
+drawing now gives its memory back every time: 36c cold, 4 of 4 (257–260 MB before, 442–545 MB with 5 sheets,
+273–276 MB after closing). But the full pass (warm) failed 36c as an assertion — 341 → 671 → 680 MB — because 36b
+closes a CAD tab just before, and `MemoryRelief.Request` drops a heavy close within 30 s of the last relief (or
+while its 65 s follow-up runs). 36b then 36c without a fix: still 589 MB 40 s after closing. With the deferral in
+`PROPOSAL-memory-relief-defer-10nov.md` (a close inside the gap waits for it; test added): 36b then 36c 3 of 3
+(→ 290–292 MB, 18 s after closing), full pass 121/121 (542 → 755 → 330 MB). 36c becomes the assertion (waiting up
+to 40 s) on `platform/linux` when Foundation takes it; until then it stays a measurement here.

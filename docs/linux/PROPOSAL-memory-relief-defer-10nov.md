@@ -15,7 +15,7 @@ closes while it waits share it; collections stay at least `MinGap` apart. `MinGa
 
 **Results:** Reader 231/231 three times (one unexplained failure in seven runs of the memory and render tests,
 not repeated in the next six); Linux 36b then 36c, 3 of 3: 284–285 MB before, 560–586 MB with 5 sheets, 290–292 MB
-18 s after closing; full UI pass with 36c as an assertion (warm): RESULT.
+18 s after closing; full UI pass with 36c as an assertion (warm): 121/121 (542 MB before, 755 MB with 5 sheets, 330 MB after closing).
 
 **Options.** A. Defer (this diff). Pros: every heavy close gives memory back, at most 30 s late; the spacing that
 protects a shared server stays. Cons: a waiting task per gap. B. Drop as now. Pros: no change. Cons: the second
