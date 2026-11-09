@@ -41,6 +41,46 @@ public sealed class PlatformFixesTests
         Assert.True(session.Document.AllowsPrinting);
     }
 
+    // ── D-139 (chuvadi-pdf 3.32.0): the owner password lifts the "no printing" permission; the user password doesn't ──
+
+    [Fact]
+    public async Task A_no_printing_file_opened_with_its_owner_password_prints_and_with_its_user_password_doesnt()
+    {
+        var locked = TestPdf.TempOutput();
+        TestSigning.ProtectRestricted(TestPdf.TextPage("Owner"), locked, "user-pw", PrintPermissionMask(allowPrint: false), ownerPassword: "owner-pw");
+
+        using (var asOwner = await new ChuvadiPdfReader().OpenAsync(locked, "locked.pdf", "owner-pw"))
+        {
+            Assert.True(asOwner.Document.AllowsPrinting);
+        }
+
+        using var asUser = await new ChuvadiPdfReader().OpenAsync(locked, "locked.pdf", "user-pw");
+        Assert.False(asUser.Document.AllowsPrinting);
+    }
+
+    // ── LIB-1 (chuvadi-pdf 3.32.0): a PDF from pypdf, its /P written unsigned (4294965243), opens ──
+
+    private static string PypdfFile => Path.Combine(AppContext.BaseDirectory, "Fixtures", "Pdf", "pypdf-unsigned-p.pdf");
+
+    [Fact]
+    public async Task A_pypdf_file_with_an_unsigned_permissions_number_opens_and_keeps_its_permissions()
+    {
+        Assert.Contains("/P 4294965243", File.ReadAllText(PypdfFile, System.Text.Encoding.Latin1)); // as pypdf wrote it
+
+        var tabs = new TabsService(new ChuvadiPdfReader(), new MemoryStorage());
+        var tab = await tabs.OpenAsync(PypdfFile, "pypdf.pdf", DocumentFormat.Pdf);
+        Assert.True(tab.NeedsPassword); // B-07: it asks
+        await tabs.UnlockAsync(tab.Id, "user");
+
+        Assert.Null(tab.Error);
+        Assert.NotNull(tab.Session);
+        Assert.Equal(1, tab.Session!.Document.PageCount);
+        Assert.False(tab.Session.Document.AllowsPrinting); // its permissions forbid printing, and the user password doesn't lift that
+
+        using var asOwner = await new ChuvadiPdfReader().OpenAsync(PypdfFile, "pypdf.pdf", "owner");
+        Assert.True(asOwner.Document.AllowsPrinting);
+    }
+
     private static int PrintPermissionMask(bool allowPrint) =>
         PasswordService.BuildPermissionMask(new PasswordProtectOptions { OpenPassword = "pw", AllowPrint = allowPrint });
 

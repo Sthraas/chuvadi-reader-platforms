@@ -12,7 +12,7 @@
     <PackageReference Include="xunit" Version="2.9.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
     <!-- The rasterizer + authoring used to build fixtures and assert placement. -->
-    <PackageReference Include="Chuvadi.Pdf" Version="3.31.2" />
+    <PackageReference Include="Chuvadi.Pdf" Version="3.32.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -23,5 +23,7 @@
   <ItemGroup>
     <!-- D-136: Word/Excel files with what they truly hold (tools/OfficeCorpus/make.py writes expected.json). -->
     <None Include="Fixtures\Office\**" CopyToOutputDirectory="PreserveNewest" />
+    <!-- D-139: PDFs made by other tools (tools/OfficeCorpus/make_pdf_fixtures.py). -->
+    <None Include="Fixtures\Pdf\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

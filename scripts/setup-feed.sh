@@ -7,7 +7,7 @@
 # (CI restores straight from ci/packages with --configfile ci/nuget.config; same packages.)
 #
 #   scripts/setup-feed.sh                 copy ci/packages → ./localpackages
-#   scripts/setup-feed.sh --verify-pack   also CHECK: pack chuvadi-pdf from the unchanged tag v3.31.2
+#   scripts/setup-feed.sh --verify-pack   also CHECK: pack chuvadi-pdf from the unchanged tag v3.32.0
 #                                         and confirm it produces exactly the chuvadi-pdf package
 #                                         names and versions in ci/packages. The re-packed files
 #                                         are only compared, never used.
@@ -19,8 +19,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SRC="$ROOT/ci/packages"
 FEED="$ROOT/localpackages"
-PDF_TAG="v3.31.2"
-PDF_VERSION="3.31.2"
+PDF_TAG="v3.32.0"
+PDF_VERSION="3.32.0"
 FONTS_SHA="c15a82d1caa3d70f3e2abe16dd94201ea1d3dae91764735a19ffa7398c37f5fe"
 
 mkdir -p "$FEED"

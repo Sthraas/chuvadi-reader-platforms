@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using ChuvadiReader.Core.Storage;
@@ -70,7 +71,7 @@ public sealed class FileAppStorage : IAppStorage
                     {
                         if (File.Exists(_file))
                         {
-                            _cache = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(_file)) ?? new();
+                            _cache = JsonSerializer.Deserialize(File.ReadAllText(_file), SettingsJson.Default.DictionaryStringString) ?? new();
                         }
                     }
                     catch (Exception e) when (e is JsonException or IOException or UnauthorizedAccessException)
@@ -100,7 +101,7 @@ public sealed class FileAppStorage : IAppStorage
             _cache[key] = value;
             if (CanSave)
             {
-                var json = JsonSerializer.Serialize(_cache);
+                var json = JsonSerializer.Serialize(_cache, SettingsJson.Default.DictionaryStringString);
                 var temp = _file + ".tmp";
                 try
                 {
@@ -148,7 +149,7 @@ public sealed class FileAppStorage : IAppStorage
                 if (File.Exists(_file))
                 {
                     var json = await File.ReadAllTextAsync(_file, ct).ConfigureAwait(false);
-                    _cache = JsonSerializer.Deserialize<Dictionary<string, string>>(json) ?? new();
+                    _cache = JsonSerializer.Deserialize(json, SettingsJson.Default.DictionaryStringString) ?? new();
                 }
             }
             catch (Exception e) when (e is JsonException or IOException or UnauthorizedAccessException)
@@ -163,4 +164,11 @@ public sealed class FileAppStorage : IAppStorage
             _gate.Release();
         }
     }
+}
+
+/// <summary>AT-03: settings.json is read and written by generated code, not reflection, so a trimmed or AOT
+/// host can't lose it (and the first read does no reflection at startup). Same JSON as before, byte for byte.</summary>
+[JsonSerializable(typeof(Dictionary<string, string>))]
+internal sealed partial class SettingsJson : JsonSerializerContext
+{
 }

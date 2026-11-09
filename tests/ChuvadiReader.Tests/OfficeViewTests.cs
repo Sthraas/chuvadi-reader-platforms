@@ -2,6 +2,7 @@ using System.Globalization;
 using System.IO.Compression;
 using System.Text.Json;
 using ChuvadiReader.Core.Documents;
+using ChuvadiReader.Platform;
 using Xunit;
 
 namespace ChuvadiReader.Tests;
@@ -142,7 +143,7 @@ public sealed class OfficeViewTests
 
     // ── B-08: zip bombs are refused by the libraries' own limits ──
 
-    private static string Bomb(string extension, string part, long bytes)
+    private static string Bomb(string extension, string part, long bytes, bool likeAPicture = false)
     {
         var path = Path.Combine(Path.GetTempPath(), $"bomb-{Guid.NewGuid():N}{extension}");
         using (var zip = ZipFile.Open(path, ZipArchiveMode.Create))
@@ -152,8 +153,13 @@ public sealed class OfficeViewTests
                 w.Write("<?xml version=\"1.0\"?><Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"/>");
             }
 
-            using var s = zip.CreateEntry(part, CompressionLevel.SmallestSize).Open();
+            using var s = zip.CreateEntry(part, likeAPicture ? CompressionLevel.NoCompression : CompressionLevel.SmallestSize).Open();
             var zeros = new byte[1 << 20];
+            if (likeAPicture)
+            {
+                new Random(7).NextBytes(zeros); // a scan or photo doesn't compress; zeros would trip the ratio check instead
+            }
+
             for (long written = 0; written < bytes; written += zeros.Length)
             {
                 s.Write(zeros, 0, (int)Math.Min(zeros.Length, bytes - written));
@@ -163,16 +169,62 @@ public sealed class OfficeViewTests
         return path;
     }
 
-    [Fact]
-    public void A_word_zip_bomb_is_refused_by_the_library_as_too_large()
+    private sealed class Host(bool serverSide) : IPlatformInfo
     {
-        var path = Bomb(".docx", "word/document.xml", 100L * 1024 * 1024); // 100 MB of zeros: over the 64 MB total
+        public PlatformKind Kind => serverSide ? PlatformKind.Web : PlatformKind.Windows;
+
+        public FormFactor FormFactor => FormFactor.Desktop;
+
+        public event Action? FormFactorChanged { add { } remove { } }
+
+        public InputKinds Input => InputKinds.Mouse | InputKinds.Keyboard;
+
+        public ShellChrome Chrome => new(WindowButtons.Right, false, serverSide, !serverSide, 0);
+
+        public PlatformCapabilities Capabilities => new() { ServerSide = serverSide };
+
+        public IKeyLabels Keys => null!;
+    }
+
+    [Fact]
+    public void A_word_zip_bomb_is_refused_by_the_library_as_too_large_even_on_a_persons_own_device()
+    {
+        var path = Bomb(".docx", "word/document.xml", 120L * 1024 * 1024); // 120 MB of zeros: over the 100 MB local part limit
         Assert.True(new FileInfo(path).Length < 2 * 1024 * 1024, "the bomb itself is small");
 
-        var ex = Assert.Throws<DocumentViewException>(() => new DocxViewService().Load(path));
+        var ex = Assert.Throws<DocumentViewException>(() => new DocxViewService(new Host(serverSide: false)).Load(path));
 
         Assert.Equal(ViewErrorReason.TooLarge, ex.Reason);
         Assert.Contains("too large to open", ex.Message);
+    }
+
+    [Fact]
+    public void A_document_with_a_30_MB_picture_is_too_large_on_the_shared_server_but_opens_on_a_persons_own_device()
+    {
+        // D-137: one large picture is realistic in a medical or scanned document. The landscape test document
+        // with its picture replaced by 30 MB that doesn't compress, as a scan or photo doesn't.
+        var path = Path.Combine(Path.GetTempPath(), $"big-picture-{Guid.NewGuid():N}.docx");
+        File.Copy(Path.Combine(Dir, "landscape.docx"), path);
+        using (var zip = ZipFile.Open(path, ZipArchiveMode.Update))
+        {
+            zip.GetEntry("word/media/image1.png")!.Delete();
+            using var s = zip.CreateEntry("word/media/image1.png", CompressionLevel.NoCompression).Open();
+            var chunk = new byte[1 << 20];
+            var random = new Random(7);
+            for (var i = 0; i < 30; i++)
+            {
+                random.NextBytes(chunk);
+                s.Write(chunk);
+            }
+        }
+
+        var server = Assert.Throws<DocumentViewException>(() => new DocxViewService(new Host(serverSide: true)).Load(path));
+        Assert.Equal(ViewErrorReason.TooLarge, server.Reason);
+
+        var local = new DocxViewService(new Host(serverSide: false)).Load(path);
+        Assert.Equal("Landscape report", Texts(local.Blocks)[0]);
+        var picture = local.Blocks.OfType<WordPara>().SelectMany(p => p.Runs).Single(r => r.ImageDataUrl is not null);
+        Assert.True(picture.ImageDataUrl!.Length > 30 * 1024 * 1024, "the whole picture came through");
     }
 
     [Fact]
@@ -185,13 +237,41 @@ public sealed class OfficeViewTests
         Assert.Equal(ViewErrorReason.TooLarge, ex.Reason);
     }
 
-    [Fact]
-    public void The_word_limits_are_the_agreed_ones()
+    [Theory]
+    [InlineData(true, 20, 64)]    // the Web portal: many people share one server (D-136)
+    [InlineData(false, 100, 400)] // desktop and mobile: a person's own files (D-137)
+    public void The_word_limits_are_the_agreed_ones(bool serverSide, long partMb, long totalMb)
     {
-        var o = DocxViewService.ReadOptions();
-        Assert.Equal(20L * 1024 * 1024, o.MaxPartBytes);
-        Assert.Equal(64L * 1024 * 1024, o.MaxTotalUncompressedBytes);
+        var o = DocxViewService.ReadOptions(serverSide);
+        Assert.Equal(partMb * 1024 * 1024, o.MaxPartBytes);
+        Assert.Equal(totalMb * 1024 * 1024, o.MaxTotalUncompressedBytes);
     }
+
+    // ── D-137: list markers as Word shows them (numbering through paragraph styles included) ──
+
+    [Fact]
+    public void List_items_show_the_markers_word_shows()
+    {
+        var items = new DocxViewService().Load(Path.Combine(Dir, "discharge.docx")).Blocks.OfType<WordPara>()
+            .Where(p => p.ListKind != "").Select(p => (Text: string.Concat(p.Runs.Select(r => r.Text)), p.ListKind, p.ListLabel)).ToList();
+
+        Assert.Equal(
+            [("Paracetamol 500 mg", "bullet", "\u2022"), ("Pantoprazole 40 mg", "bullet", "\u2022"),
+             ("Review in 7 days", "number", "1."), ("CBC before review", "number", "2.")],
+            items);
+    }
+
+    [Theory]
+    [InlineData("\uF0B7", "\u2022")] // Word's standard bullet, Symbol font
+    [InlineData("\uF0A7", "\u25AA")] // Wingdings small square
+    [InlineData("\uF0D8", "\u27A2")] // Wingdings arrowhead
+    [InlineData("\uF0E0", "\u2022")] // any other symbol-font bullet
+    [InlineData("1.", "1.")]          // numbers are never changed
+    [InlineData("iv)", "iv)")]
+    [InlineData("o", "o")]            // Courier New "o", a real letter
+    [InlineData("\u2013", "\u2013")]
+    public void Symbol_font_bullets_get_a_shape_every_device_can_draw(string label, string shown) =>
+        Assert.Equal(shown, DocxViewService.MarkerText(label));
 
     // ── B-08b: the read's cancellation reaches the library ──
 

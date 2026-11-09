@@ -18,13 +18,13 @@ Arun's release assets of `docs-v2.0.0` and `sheets-v2.0.2`, unchanged, SHA-256 r
 ## 3. Protections (B-08, B-08b) — all through the libraries
 | | Word (Docs 2.0.0) | Excel (Sheets 2.0.2) |
 |---|---|---|
-| Zip-bomb limits | `DocxReaderOptions`: **MaxPartBytes 20 MB, MaxTotalUncompressedBytes 64 MB** (checked against declared and actually inflated sizes) | `XlsxReaderOptions.ForUntrustedInput()`: 256 MB per part, 1 GB total, 500:1, Excel's row maximum (the levels Core's own guard used) |
+| Zip-bomb limits | `DocxReaderOptions` (checked against declared and actually inflated sizes): **portal 20 MB per part / 64 MB total; desktop and mobile 100 MB / 400 MB** (D-137) | `XlsxReaderOptions.ForUntrustedInput()`: 256 MB per part, 1 GB total, 500:1, Excel's row maximum (the levels Core's own guard used) |
 | Cancel and time-out | a token passed to `Document.Load(path, password, options, token)`, checked on every XML node | `XlsxReaderOptions.CancellationToken`, checked on every row |
 
 - The token comes from the viewer (`ViewerBase.NewLoadToken`). It is cancelled when the tab closes or "Stop opening" is pressed, when another load starts, and after 60 s, when the slow-open note gives up. The viewer then shows "Chuvadi stopped waiting for this file…".
 - The viewer also stops waiting at once (`WaitAsync`, as B-24 did for PDFs), even when a read is stuck where no token can reach it.
 - **Core's own `OfficePackageGuard` is retired:** the libraries now do this job, including against packages that lie about their sizes, which the guard couldn't catch.
-- **Note for the coordinator:** the Word limits (20 MB per part, 64 MB in total) refuse a .docx carrying a single picture over 20 MB, or more than 64 MB of pictures. They are the agreed figures, and a test pins them.
+- **Word limits by where the file is opened (D-137, part 2):** desktop and mobile allow **100 MB per part and 400 MB in total**, because a person opens their own files and medical or scanned documents can carry one large picture. The Web portal keeps **20 MB and 64 MB**, because many people share one server. The choice is keyed on `IPlatformInfo.Capabilities.ServerSide`, and both sets are pinned in tests.
 
 ## 4. Data comes through as the file holds it
 - **Corpus** (`tests/ChuvadiReader.Tests/Fixtures/Office`):
@@ -42,7 +42,11 @@ Arun's release assets of `docs-v2.0.0` and `sheets-v2.0.2`, unchanged, SHA-256 r
 
 **On screen** (portal preview): Excel shows leading, trailing and double spaces, Tamil, formula results, dates and errors as in the file. Word shows the tab, the line break, double spaces, Tamil, the table, the header and the footer. No page errors.
 
-**Not changed (follow-up):** lists whose bullets come only from the paragraph style (as python-docx writes them) show without markers, as before. Word itself usually sets numbering on the paragraph. Docs 2.0's `GetListLabels()` can label these; not in this patch.
+## Part 2 (D-137, coordinator 05:00)
+| Item | Change | Test |
+|---|---|---|
+| Word limits by device | `DocxViewService(IPlatformInfo)` picks 20 MB / 64 MB on the portal (`ServerSide`) and 100 MB / 400 MB elsewhere | Both sets pinned. The same document with a 30 MB picture is refused on the server and opens locally with the whole picture. A 120 MB bomb is refused locally too |
+| **List markers** (fidelity bug) | Every list item's marker comes from the library's `Document.GetListLabels()`, which includes numbering through paragraph styles, tables, headers and footers ("1.", "2.3.", "iv)", "•"). Before, numbered lists showed "–" and style-based lists showed no marker. Word's Symbol and Wingdings bullets (private-use characters such as U+F0B7) get their standard Unicode shape, because only Windows' own fonts draw them; numbers and the document's text are never changed | The test file's items show "•", "•", "1.", "2." (as Word shows them). The glyph mapping and pass-through are tested on their own. Checked on screen |
 
 ## Proof
 - Build 0 warnings (`-warnaserror`, both solutions); tests 313/313 (Reader 199, Hosting 59, Mobile UI 16, Web UI 39).
