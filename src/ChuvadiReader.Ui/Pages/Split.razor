@@ -6,6 +6,7 @@
 @inject NavigationManager Nav
 @inject IAppStorage Storage
 @inject ChuvadiReader.Platform.IFileWriteBack WriteBack
+@inject ChuvadiReader.Platform.IPathLabels PathLabels
 
 <PageTitle>Chuvadi · Split</PageTitle>
 
@@ -31,7 +32,7 @@
     {
         <div class="ssource">
             <Icon Name="file-pdf" Size="16" />
-            <span class="ssource-name" title="@_sourcePath">@_sourceName</span>
+            <span class="ssource-name" title="@PathLabels.Describe(_sourcePath)">@_sourceName</span>
             <span class="ssource-pages">@_pageCount pages</span>
             <button class="slink" @onclick="ClearSource">change</button>
         </div>
