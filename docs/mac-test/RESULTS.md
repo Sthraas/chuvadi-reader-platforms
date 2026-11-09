@@ -1,6 +1,6 @@
 # Mac Test — results
 
-Subject: `platform/mac` **7a65178** → c6d7705 → **00a5975** (current). Harness: `tests/mac/` + `.github/workflows/mac-test.yml` on `platform/mac-test`.
+Subject: `platform/mac` **7a65178** → c6d7705 → 00a5975 → **83207af** (current). Harness: `tests/mac/` + `.github/workflows/mac-test.yml` on `platform/mac-test`.
 Runs (one each, read before the next — no retries):
 
 | Round | Run | What changed in the harness |
@@ -10,6 +10,42 @@ Runs (one each, read before the next — no retries):
 | 2 | 42490785792 | menu bar and `open -a` found broken (M-01, M-02) → drive through ⌘O / ⌘K instead; quit-crash capture |
 | 3 | 42494662734 | ⌘O found not to open a panel → the Open button; app stdout per launch; diagnostic exception build |
 | 4 | 42517758923 | panel path set through Accessibility (typing into the Go-to field was lossy) → documents open; timing sets skipped |
+
+## Re-test on platform/mac 83207af (10 Nov) — current state
+
+Rebased onto Foundation b41f25c (pages render off the Ui thread); Mac fixes for M-17, M-18, M-19, M-21, M-22 and M-03's
+second form. Runs: **42673993820** (passwords + Settings, all runners), **42674315117** (full suite, 10-run timing sets,
+all runners — the Intel job ran to the end, but GitHub failed to upload its evidence (`ENOTFOUND`), so Intel results come
+from the job log only and it has no T2 numbers), **42676250705** (M-18 with WebKit log capture).
+
+| Case | macOS 26 | macOS 15 | 15 Intel | Note / bug |
+|---|---|---|---|---|
+| T4.6 passwords | ✅ (pw run) | ✅ | ✅ | M-17 holds. In the full suite on 26 my keystrokes didn't land in the field (value read back empty) — test-side, the dedicated run passed |
+| Settings › Appearance | ❌ | ✅ | ✅ | **M-18 not fixed**; the WebView reloads the Ui page when Appearance is pressed |
+| Error log | ⚠️ | — | — | M-19: `chuvadi.log` now written, but with the follow-on dispose error, not the cause |
+| T5.10 quit | ✅ | ✅ | ✅ | **M-03 fixed**: 0 crash reports in 64 macOS 26 launches |
+| T3.5 Esc leaves Immersive | ❌ | ❌ | ❌ | M-21 not fixed |
+| T4.7 print vector / M-22 | ✅ / ✅ | ✅ | ✅ | the local-network alert now explains itself |
+| T4.8 no-print refused | ✅ | ✅ | ✅ | |
+| T3.7 menus | ✅ | ✅ | ✅ | File 6 · View 33 · Document 11; no ⌘, (M-11), no ⌘O (M-15), Help empty |
+| T4.12b snapshot → PNG | ✅ | ✅ | ✅ | the macOS 26 miss on 00a5975 was the test |
+| T4.12, T4.13, T4.14 | ✅ | ✅ | ✅ | |
+| T5.3 heavy vector | ❌ | | | never draws (M-20); many pages: first page 1.6 s (0.9 s on c6d7705) |
+| T5.5 low memory | ✅ | | | now opens under pressure |
+| T5.4, T5.7, T5.9 | ✅ | | | |
+| T1.10 Licences | ⏳ | | | blocked by M-18 on 26 |
+
+**Page rendering — no hang seen.** All 40 timed launches on each runner drew their first frame; launch-with-PDF showed
+the page 2/2; Open panel → page 10/10 on every runner. Open panel → first page (median / worst): macOS 26 **586 / 829 ms**
+(00a5975: 154), macOS 15 **121 / 141 ms** (295). So it is faster on 15 but slower on 26.
+
+T2 on 83207af (probe, ms, median (worst) of 10):
+
+| Runner | Cold first render | Warm window / first render | PDF first page cold / warm |
+|---|---|---|---|
+| macos-26 | 7 641 (9 569) | 895 / 2 345 (2 415) | 9 907 / 2 830 |
+| macos-15 | 3 315 (4 022) | 420 / 2 114 (2 171) | 3 629 / 2 323 |
+| Windows, same run | — | 622 / 1 611 (1 852) | — |
 
 ## Re-test on platform/mac 00a5975 (9 Nov, D-148) — current state
 
