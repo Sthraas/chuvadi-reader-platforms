@@ -55,7 +55,8 @@ Runs 42534074875 (full + 10-run timing sets) and 42538220489 (function cases), a
 
 Method as below (same probe, same rule). PDF first page = launch with the file (Finder double-click) → first frame
 with the white page and its text. Open panel → first page = from pressing Open in the panel to the page on screen.
-Reading: the Mac still needs 1.6–2.6 s from window to first render, 1.3–2.5× Windows in the same run (M-06 open).
+Reading: warm first render is 1.25–1.8× Windows' in the same run; window → first render takes 1.0–2.0 s on the Mac
+runners against 1.0 s on Windows. Cold Mac launches remain 4–7 s on these VMs (M-06 open; real-Mac numbers will decide).
 
 Runners: `macos-26` = macOS 26.7.2, Apple M1 (virtual), 1920×1080 · `macos-15` = macOS 15.7, Apple Silicon (virtual),
 1920×1080 · `macos-15-intel` = macOS 15.7.9, Intel i7-8700B, 1920×1080. **No HiDPI mode on any runner** (every
