@@ -186,7 +186,7 @@ Second instance: a non-zip `.xlsx` shows "Couldn't open this workbook: **EOCDNot
 
 ---
 
-## Linux chat — fixes for re-verification (9 Nov: re-verify on `platform/linux` faffa10, CI green on x64 and ARM64)
+## Linux chat — fixes for re-verification (9 Nov: re-verify on `platform/linux` e242d92, CI green on x64 and ARM64)
 Each fix has a test in `.github/workflows/linux.yml` / `tools/linux` (details: `docs/linux/BUILD-LOG.md` §37).
 | Bug | Commit | Test |
 |---|---|---|
@@ -203,7 +203,7 @@ Each fix has a test in `.github/workflows/linux.yml` / `tools/linux` (details: `
 | B-21 | c9f5500 (test: ffb2823) | `reveal-test.py`: a file manager answering after 8 s → one ShowItems, no xdg-open; none → one xdg-open |
 
 | D-101 | 4144909 (+ Foundation 839d39d) | UI step 35: three live layout changes followed without a restart |
-| B-02 (Ui), B-03, B-07, B-08b, B-09a, B-10, B-11b | Foundation 839d39d, merged in bad60d7 | Reader tests (`PdfPasswordTabTests`, `DamagedPdfTabTests`, `OfficePackageGuardTests`); `aes256.pdf`, `badxref.pdf`, `bomb.docx`, `far-cell.xlsx` in the app |
+| B-02 (Ui), B-03, B-07, B-08b, B-09a, B-10, B-11b | Foundation 839d39d, merged in bad60d7 | Reader tests (`PdfPasswordTabTests`, `DamagedPdfTabTests`, `OfficeViewTests`); `aes256.pdf`, `badxref.pdf`, `bomb.docx`, `far-cell.xlsx` in the app. Since Foundation 1016987 (merged in 3297355) B-08/B-08b are the libraries' own limits (Word 20 MB part / 64 MB total, Excel `ForUntrustedInput`) with Cancel, and the app's package guard is retired |
 | B-19 | Foundation 839d39d | UI step 35: divider within 1.5 px of the left bar in all 8 layouts |
 | B-22 | Foundation 839d39d | UI step 34b4: Tab ring is the theme accent in all five themes; none on a mouse click |
 | B-23 | Foundation 839d39d | UI step 34b3: no per-page buttons in the first Tab stops |
