@@ -6,6 +6,7 @@
 @inject IAppLifecycle Life
 @inject UserProfileService Profile
 @inject IJSRuntime JS
+@inject ChuvadiReader.Platform.IPathLabels PathLabels
 
 @*
     Android phone shell — Portal & Android 12g-12j. Rendered by MainLayout in place of the top bar,
@@ -139,7 +140,7 @@
                 var on = tab.Id == Tabs.Active?.Id;
                 <div class="ph-row ph-tab @(on ? "on" : null)" @key="tab.Id">
                     <button class="ph-tab-b" @onclick="() => Then(() => SwitchTab is null ? Task.CompletedTask : SwitchTab(tab.Id))"
-                            aria-current="@(on ? "true" : null)" title="@tab.Path">
+                            aria-current="@(on ? "true" : null)" title="@PathLabels.Describe(tab.Path)">
                         <Icon Name="@tab.Format.IconName()" Size="18" />
                         <span class="ph-row-l">@tab.FileName</span>
                         <span class="ph-row-v">@(tab.IsLoading ? "opening…" : tab.Error is not null ? "couldn't open" : $"p {tab.CurrentPage}")</span>

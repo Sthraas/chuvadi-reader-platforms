@@ -59,6 +59,24 @@ public sealed class NoFileWriteBack : IFileWriteBack
         Task.FromResult(WriteBackResult.NotNeeded);
 }
 
+/// <summary>
+/// How a file or folder path is shown to the person: tooltips, accessible names (TalkBack reads them),
+/// and the Library and watched-folder paths. Desktop paths are the real files, so they show as they
+/// are; on Android every document is a working copy in the app's private cache, so the host shows
+/// the document's own name and where it came from instead (AT-07).
+/// </summary>
+public interface IPathLabels
+{
+    /// <summary>The person-facing label for a path; empty for a null or empty path.</summary>
+    string Describe(string? path);
+}
+
+/// <summary>Default: the path itself (Windows, macOS, Linux, Web).</summary>
+public sealed class PlainPathLabels : IPathLabels
+{
+    public string Describe(string? path) => path ?? string.Empty;
+}
+
 /// <summary>Folders the app uses. Replaces direct use of Environment.SpecialFolder in Core and Ui.</summary>
 public interface IAppPaths
 {

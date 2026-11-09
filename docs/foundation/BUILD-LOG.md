@@ -182,3 +182,8 @@
 - Found while proving it: the trim analyser doesn't flag a `(Type, Type)` array, so the first fix's annotated record was safe only while every entry used it. Guard test added; matrix in TRIMMING.md.
 - 331/331 tests (Hosting 64); 0 warnings in both solutions; trimmed probe 53/53; StartupProbe no cost (JIT 1448 vs 1450). Windows: registrations pinned identical in order and type, and no Ui file changed.
 
+### 35. Twelfth combined patch, part 4: Android P-08 path labels (9 Nov, D-146)
+- From platform/android 4260ca4 (`docs/android/proposal/P-08-path-labels.patch`): `IPathLabels` seam with `PlainPathLabels` default (the path itself) in Platform; every path shown in the Ui (titles, chips, folder rows) goes through it; drift-guard test reads the Ui's .razor files.
+- The patch's registration hunk targeted the old `(Type, Type)` table; registered instead as one typed line, `Seam<IPathLabels, PlainPathLabels>`, per §34. `TypedRegistrationTests` gains the new row.
+- 333/333 tests (Hosting 66); 0 warnings in both solutions; trimmed probe 54/54; desktop 27/27 identical (Windows shows the same paths as before); drift guard proved by putting one raw `title="@entry.Path"` back: it fails naming Merge.razor:41.
+
