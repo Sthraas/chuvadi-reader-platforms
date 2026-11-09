@@ -176,16 +176,18 @@ internal static class MacMenuBar
         {
             var settings = UIKeyCommand.Create((NSString)"Settings…", null, new Selector(ActionSelector), (NSString)",",
                 UIKeyModifierFlags.Command, new NSString(SettingsId));
-            if (builder.GetMenu(UIMenuIdentifier.Preferences.GetConstant()!) is not null)
+            // Catalyst keeps a hidden, empty Preferences menu; an item put in it never showed (Mac Test run on
+            // b41f25c). Remove it and put Settings… in its own section right after About, as macOS apps do.
+            var hadPreferences = builder.GetMenu(UIMenuIdentifier.Preferences.GetConstant()!) is not null;
+            if (hadPreferences)
             {
-                builder.ReplaceChildrenOfMenu(UIMenuIdentifier.Preferences.GetConstant()!, _ => new UIMenuElement[] { settings });
+                builder.RemoveMenu(UIMenuIdentifier.Preferences.GetConstant()!);
             }
-            else
-            {
-                builder.InsertSiblingMenuAfter(
-                    UIMenu.Create(string.Empty, null, UIMenuIdentifier.None, UIMenuOptions.DisplayInline, new UIMenuElement[] { settings }),
-                    UIMenuIdentifier.About.GetConstant()!);
-            }
+
+            builder.InsertSiblingMenuAfter(
+                UIMenu.Create(string.Empty, null, UIMenuIdentifier.None, UIMenuOptions.DisplayInline, new UIMenuElement[] { settings }),
+                UIMenuIdentifier.About.GetConstant()!);
+            MacSmoke.Log($"menu-settings inserted (system Preferences menu {(hadPreferences ? "removed" : "absent")})");
         }
 
         // Help keeps only macOS's own menu search field.
