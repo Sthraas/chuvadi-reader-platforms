@@ -89,6 +89,12 @@ var a = Fixtures.Document("discharge-summary.pdf", 13);
 var b = Fixtures.Document("lab-report.pdf", 4);
 await tabs.OpenAsync(b, Path.GetFileName(b), DocumentFormat.Pdf);
 var first = await tabs.OpenAsync(a, Path.GetFileName(a), DocumentFormat.Pdf);
+// CHVD_OPEN=path;path: also open these real files (memory and render checks with heavy test PDFs); the last is active.
+foreach (var extra in (Environment.GetEnvironmentVariable("CHVD_OPEN") ?? "").Split(';', StringSplitOptions.RemoveEmptyEntries))
+{
+    first = await tabs.OpenAsync(extra, Path.GetFileName(extra), DocumentFormat.Pdf);
+}
+
 shell.SetMode(DocMode.Read, first.Id);
 
 app.Run();

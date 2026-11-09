@@ -121,6 +121,21 @@ public sealed class ChuvadiPdfSession : IPdfSession
     // use of _document after the open holds this gate: the render, a measurement, and closing the document.
     // Layers are read once at the open, before anything else can touch the document.
     private readonly SemaphoreSlim _gate = new(1, 1);
+
+    // Sixteenth patch, part 2 (Linux step 47): the page being drawn stops when nobody wants it any more, its page left
+    // the view or the document closed, instead of drawing a CAD sheet for a tab that's gone. Raster pages stop
+    // part-way (the library's rasteriser takes a token); vector pages can't be stopped inside the library.
+    // Under lock (_queue).
+    private readonly CancellationTokenSource _closing = new();
+    private CancellationTokenSource? _drawing;
+    private int _drawingPage = -1;
+
+    // Bytes the renders of this document allocated (library included): a heavy document is one whose drawing cost
+    // a lot, even if what it kept is small (a vector CAD sheet's SVG is small; drawing it isn't).
+    private long _renderAllocatedBytes;
+
+    /// <summary>Tests only: what this document's renders have allocated so far.</summary>
+    internal long RenderAllocatedBytes => Interlocked.Read(ref _renderAllocatedBytes);
     private volatile bool _closeRequested;
 
     // Fifteenth patch (Linux, fast paging): renders wait in this queue, not on the gate, so one that is no longer wanted
@@ -392,6 +407,10 @@ public sealed class ChuvadiPdfSession : IPdfSession
                 lock (_queue)
                 {
                     removed = _queue.Remove(entry);
+                    if (removed && entry.Page == _drawingPage && !_queue.Any(q => q.Page == entry.Page))
+                    {
+                        _drawing?.Cancel(); // the page being drawn left the view and nobody else waits for it
+                    }
                 }
 
                 if (removed)
@@ -424,16 +443,25 @@ public sealed class ChuvadiPdfSession : IPdfSession
                 }
 
                 page = Next().Page;
+                _drawing = CancellationTokenSource.CreateLinkedTokenSource(_closing.Token);
+                _drawingPage = page;
             }
 
             string? svg = null;
             Exception? failed = null;
+            var stopped = false;
             if (!TryGetRenderedSvg(page, out var cached))
             {
                 await _gate.WaitAsync().ConfigureAwait(false);
+                var allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
                 try
                 {
-                    svg = RenderInGate(page);
+                    svg = RenderInGate(page, _drawing!.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    svg = string.Empty; // stopped part-way: nobody waited for it any more, or the document closed
+                    stopped = true;
                 }
                 catch (Exception e)
                 {
@@ -441,6 +469,14 @@ public sealed class ChuvadiPdfSession : IPdfSession
                 }
                 finally
                 {
+                    Interlocked.Add(ref _renderAllocatedBytes, GC.GetAllocatedBytesForCurrentThread() - allocatedBefore);
+                    lock (_queue)
+                    {
+                        _drawing.Dispose();
+                        _drawing = null;
+                        _drawingPage = -1;
+                    }
+
                     if (_closeRequested)
                     {
                         CloseDocument(); // Dispose came while this render held the document; close it now
@@ -452,6 +488,11 @@ public sealed class ChuvadiPdfSession : IPdfSession
             else
             {
                 svg = cached;
+            }
+
+            if (stopped && !_closeRequested)
+            {
+                continue; // anyone who asked for this page since the stop waits for a fresh draw
             }
 
             foreach (var waiting in TakeAll(page))
@@ -504,7 +545,7 @@ public sealed class ChuvadiPdfSession : IPdfSession
     }
 
     /// <summary>Draws one page while holding the gate, and keeps it unless the layers changed or the document closed meanwhile.</summary>
-    private string RenderInGate(int pageNumber)
+    private string RenderInGate(int pageNumber, CancellationToken cancellationToken)
     {
         if (TryGetRenderedSvg(pageNumber, out var cached))
         {
@@ -527,7 +568,7 @@ public sealed class ChuvadiPdfSession : IPdfSession
             overrides = CurrentOverrides;
         }
 
-        var svg = RenderPage(document, renderer, overrides, pageNumber);
+        var svg = RenderPage(document, renderer, overrides, pageNumber, cancellationToken);
         lock (_svgCache)
         {
             if (generation == _renderGeneration && !_closeRequested)
@@ -539,7 +580,7 @@ public sealed class ChuvadiPdfSession : IPdfSession
         return svg;
     }
 
-    private string RenderPage(PdfDocument document, SvgRenderer renderer, IReadOnlyDictionary<string, bool>? overrides, int pageNumber)
+    private string RenderPage(PdfDocument document, SvgRenderer renderer, IReadOnlyDictionary<string, bool>? overrides, int pageNumber, CancellationToken cancellationToken)
     {
         BeforeRenderForTests?.Invoke(pageNumber);
         var page = document.Pages[pageNumber];
@@ -549,20 +590,26 @@ public sealed class ChuvadiPdfSession : IPdfSession
         // with a safety fallback if a normal-size page's SVG is unexpectedly huge.
         if (page.Width * page.Height > LargeFormatAreaPt)
         {
-            return RenderPageAsRasterSvg(document, page, overrides);
+            return RenderPageAsRasterSvg(document, page, overrides, cancellationToken);
         }
 
         // SvgRenderer renders at the page's natural size; zoom is applied in the
         // UI (CSS), so there is no scale parameter here.
         var svg = renderer.RenderPage(document, pageNumber);
-        return svg.Length > HeavySvgBytes ? RenderPageAsRasterSvg(document, page, overrides) : svg;
+        if (svg.Length <= HeavySvgBytes)
+        {
+            return svg;
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        return RenderPageAsRasterSvg(document, page, overrides, cancellationToken);
     }
 
     /// <summary>Renders a page to a raster image (via the library rasteriser + PNG encoder)
     /// and wraps it in a minimal SVG carrying a single &lt;image&gt;, so the UI's SVG display
     /// path is unchanged while the WebView only has to hold one image node instead of
     /// hundreds of thousands of vector paths.</summary>
-    private static string RenderPageAsRasterSvg(PdfDocument document, PdfPage page, IReadOnlyDictionary<string, bool>? overrides)
+    private static string RenderPageAsRasterSvg(PdfDocument document, PdfPage page, IReadOnlyDictionary<string, bool>? overrides, CancellationToken cancellationToken)
     {
         var buffer = new PageRasterizer(
                 document.Objects,
@@ -573,7 +620,7 @@ public sealed class ChuvadiPdfSession : IPdfSession
                     AntiAlias = true,
                     LayerVisibility = overrides,
                 })
-            .Rasterize(page);
+            .Rasterize(page, cancellationToken);
 
         using var ms = new MemoryStream();
         PngEncoder.Encode(new ImageFrame(buffer, ImageColorFormat.Rgba32), ms, false);
@@ -634,6 +681,7 @@ public sealed class ChuvadiPdfSession : IPdfSession
     public void Dispose()
     {
         _closeRequested = true;
+        _closing.Cancel(); // the page being drawn, if any, stops
         _closedCacheChars = DropCacheChars();
         if (_gate.Wait(0))
         {
@@ -659,7 +707,8 @@ public sealed class ChuvadiPdfSession : IPdfSession
 
         _document.Dispose();
         _document = null;
-        if (_closedCacheChars * sizeof(char) >= MemoryRelief.HeavyBytes)
+        if (_closedCacheChars * sizeof(char) >= MemoryRelief.HeavyBytes
+            || Interlocked.Read(ref _renderAllocatedBytes) >= MemoryRelief.HeavyDrawingBytes)
         {
             MemoryRelief.Request(); // after the close, so the document and its pages can go
         }
@@ -677,8 +726,19 @@ public sealed class ChuvadiPdfSession : IPdfSession
 internal static class MemoryRelief
 {
     internal const long HeavyBytes = 64L * 1024 * 1024;
+
+    /// <summary>A document whose drawing allocated this much is heavy too, whatever its pages keep.</summary>
+    internal const long HeavyDrawingBytes = 256L * 1024 * 1024;
     internal static readonly TimeSpan MinGap = TimeSpan.FromSeconds(30);
     internal static TimeSpan Settle { get; set; } = TimeSpan.FromMilliseconds(500);
+
+    /// <summary>
+    /// The second pass. Showing a heavy page sends its text through the Ui's transport, which grows buffers in .NET's
+    /// shared byte pool (seen in the Web preview after closing two CAD sheets: 8 to 128 MB arrays, ~260 MB in all).
+    /// The pool lets go of a buffer only at a full collection after it has gone unused for about a minute, so a
+    /// second pass then gives that back too (measured: the heap dropped from ~423 MB to ~2 MB of large arrays).
+    /// </summary>
+    internal static TimeSpan FollowUp { get; set; } = TimeSpan.FromSeconds(65);
 
     private static long _lastTicks = long.MinValue / 2;
     private static int _running;
@@ -702,6 +762,12 @@ internal static class MemoryRelief
             {
                 await Task.Delay(Settle).ConfigureAwait(false); // the Ui lets go of the closed tab's pages first
                 GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, blocking: true, compacting: true);
+                if (FollowUp > TimeSpan.Zero)
+                {
+                    await Task.Delay(FollowUp).ConfigureAwait(false);
+                    GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true); // the pool drops buffers idle for a minute
+                    GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, blocking: true, compacting: true);
+                }
             }
             finally
             {

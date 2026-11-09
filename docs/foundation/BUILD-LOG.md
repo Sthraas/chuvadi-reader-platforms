@@ -292,3 +292,26 @@ Measured with Linux's own CAD stand-in (`tools/linux/make-heavy-pdfs.py`, run he
 - 356/356 tests; 0 warnings in both solutions; trimmed probe 54/54.
 - **Every platform, Linux and Web included:** that one collection after a heavy close.
 
+### 41. Sixteenth combined patch, part 2: what allocated after the close (Linux step 47, platform/linux 64c9c16)
+Reproduced in the desktop preview, which now opens real files (`CHVD_OPEN`, test-only). A cold app with the two sample PDFs and Linux's `cad.pdf` active: two sheets drawn, then Ctrl+W. Sampled with `tools/PixelProof/close-memory.js`, dotnet-counters and heap dumps (testing tools only).
+
+1. **A sheet kept drawing for the closed tab.** The page observer had already asked for sheet 3 (1000 px ahead), and the gate drew it to the end: about 55 MB/s allocated at one core's CPU for 33 s after the close, then a burst at its PNG encode. On Linux, where a sheet takes about 0.3 s, that is the "back up within 2 s".
+   - **Fixed:** the page being drawn stops when its page leaves the view and nobody else waits for it, or when the document closes. The library's rasteriser takes the token (`PageRasterizer.Rasterize(page, token)`).
+   - Whoever asks for that page after the stop waits for a fresh draw.
+   - Vector pages drawn by `SvgRenderer` can't be stopped inside the library: it takes no token. **Library item.**
+   - After the fix, allocation and CPU drop to 0 within 1 s of the close.
+2. **The relief didn't run for vector sheets** (their kept SVG is small).
+   - **Fixed:** a document also counts as heavy when its renders allocated ≥ 256 MB (library included; counted on the render thread). A blank A1 sheet costs 277 MB to draw and keeps 0.1 M characters.
+3. **Pooled buffers held by the Ui's transport.** After the close, about 260 MB stayed alive in .NET's shared byte pool: arrays of 8, 16, 32, 64 and 128 MB, grown while sending the pages' text to the Ui. No gcroot from our code. The pool lets go of a buffer only at a full collection after it has gone unused for about a minute.
+   - **Fixed:** the relief does a second pass 65 s after the first.
+   - Measured: resident memory 1198 MB before close → 623 MB at 0.5 s → **167 MB after the second pass** (cold start 114 MB, with the two sample PDFs still open).
+   - The cause is page images travelling as huge strings; options are with the coordinator.
+
+- **Tests (`MemoryAfterCloseTests`, run alone, 6):**
+  - closing mid-sheet stops the drawing (well under half a sheet's time);
+  - a sheet that leaves the view mid-draw stops, and the next sheet is ready within 1.4 sheet-times;
+  - a costly but small-keeping document gets the relief.
+  - The first two fail when the rasteriser is given no token; the third fails without the drawing-cost rule.
+- 360/360 tests (3 runs of the Reader suite); 0 warnings in both solutions; trimmed probe 54/54.
+- **Every platform, Linux included:** the drawing stops, and the second pass runs.
+
