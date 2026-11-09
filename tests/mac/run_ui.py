@@ -851,16 +851,34 @@ def t4_7():
     time.sleep(4)
     ev["panel"] = screen("print-panel")
     axdump("print-panel")
+    # macOS print panel → PDF ▸ Save as PDF (what a person does to check the output; no printer needed)
+    for d in (f"{HOME}/Documents", f"{HOME}/Desktop"):
+        for f in os.listdir(d) if os.path.isdir(d) else []:
+            if f.startswith("chvd-printed"):
+                os.remove(os.path.join(d, f))
+    rc, ev["pdf-button"] = press("PDF", role="AXMenuButton")
+    if rc != 0:
+        rc, ev["pdf-button"] = press("PDF", role="AXPopUpButton")
+    time.sleep(1.5)
+    rc, ev["save-as-pdf"] = press("Save as PDF", contains=True, role="AXMenuItem")
+    time.sleep(3)
+    ev["save-sheet"] = screen("print-save-sheet")
+    rc, ev["name"] = drive("focusset", NAME, "chvd-printed.pdf")
+    time.sleep(0.8)
     drive("key", "return")
-    time.sleep(8)
-    new = sorted(spool_files() - before)
-    ev["spool-new"] = new
-    ev["jobs"] = cups_jobs()
+    time.sleep(6)
+    _, found = sh(f"ls -1 {HOME}/Documents/chvd-printed*.pdf {HOME}/Desktop/chvd-printed*.pdf 2>/dev/null")
+    ev["saved"] = found
     good = False
-    if new:
+    if found.strip():
         f = f"{OUT}/printed-annotated.pdf"
-        sh(f"sudo cp /var/spool/cups/{new[-1]} '{f}' && sudo chmod 644 '{f}'")
+        shutil.copy(found.splitlines()[0], f)
         good = check_printed(f, ev, "marker-1")
+        # flattened: no live annotations or form fields; annotation appearances printed (red square, highlight)
+        ev["flattened"] = ev.get("live_annots", 1) == 0 and ev.get("forms", 1) == 0
+        good = good and ev["flattened"]
+    else:
+        ev["jobs"] = cups_jobs()
     record("T4.7 print vector", "pass" if good else "fail",
            "vector PDF reached CUPS: fonts, no images, text extractable" if good else "see evidence", **ev)
     quit_app()
