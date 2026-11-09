@@ -13,8 +13,10 @@ Runs (one each, read before the next — no retries):
 
 ## Re-verification on platform/mac c6d7705 (9 Nov) — current state
 
-Runs 42534074875 (full + 10-run timing sets) and 42538220489 (function cases), all three runners; 42541303798
-(print via Save as PDF) pending at the time of writing. Bug statuses live in BUGS.md.
+Runs 42534074875 (full + 10-run timing sets), 42538220489 (function cases) and 42548656656 (print), all three runners.
+Bug statuses live in BUGS.md. The panel's Save-as-PDF sheet could not be driven reliably from outside (the M-22 alert
+and the sheet's default name got in the way), so the vector check reads the job macOS hands to CUPS instead — the same
+PDF Save as PDF writes.
 
 | Case | macOS 26 | macOS 15 | 15 Intel | Evidence / bug |
 |---|---|---|---|---|
@@ -28,7 +30,7 @@ Runs 42534074875 (full + 10-run timing sets) and 42538220489 (function cases), a
 | T4.1 Open panel → Reader | ✅ | ✅ | ✅ | M-16 fixed |
 | T4.6 passwords | ❌ | ⏳ | ⏳ | prompt ✅; any submit kills the Ui — M-17 |
 | T4.8 no-print permission | ✅ | ✅ | ✅ | Windows message shown, no panel, no CUPS job |
-| T4.7 print → macOS panel | ✅ panel | ✅ | ✅ | "Print 2 pages" opens the native panel with preview; vector check via PDF ▸ Save as PDF in run 42541303798 |
+| T4.7 print → macOS panel, vector | ✅ | ✅ | ✅ | run 42548656656: "Print 2 pages" → native panel (preview) → Print to the paused test queue → the spooled job is a 2-page PDF made by macOS (Quartz PDFContext): fonts embedded as subset TrueType, **no images**, all text extractable incl. the free-text comment, **0 live annotations, 0 form fields** (flattened), marks drawn as vector (`evidence/T4.7-printed-annotated-macos15.pdf`, `screenshots/T4.7-printed-page1-rendered.png`). Page size follows the panel's paper (Letter on the en-US runner). macOS 26 also asks for local-network access (M-22) |
 | T4.9 formats | ✅ | | | PDF, docx, xlsx (2 sheets, merged row), md, txt, html, Tamil name; Excel shows raw values (shared Sheets display text not released) |
 | T4.12 clipboard text / PNG | ✅ / ✅ | ✅ / ✅ | ✅ / ✅ | File › Copy file path → path; View › Snapshot a region → Copy → `public.png` |
 | T4.13 Show in Finder | ✅ | ✅ | ✅ | Finder selection = the file |
