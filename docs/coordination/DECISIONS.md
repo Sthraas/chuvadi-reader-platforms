@@ -366,5 +366,7 @@ Options considered:
 | D-142 | Windows bugs from Arun's checks (logged for later, retest with Foundation) | W-01: title-bar drag and double-click (maximise) work only on the Chuvadi logo area, not the empty centre of the top bar. W-02: dragging a file into the app window does nothing. Both go to Foundation's list; the next update to main comes as a new PR |
 | D-143 | Android AT-01: libraries MAUI bundles (AndroidX, Material, Kotlin, Tink, Glide, Gson) | Arun: accept what MAUI must bundle. List each with its licence and holder in the third-party notices, and correct the Play data-safety draft |
 
+| D-144 | PR authorship / "with Claude" badge on PRs opened via the Claude app | Arun (06:23 IST): continue as now for the time being; revisit later. The badge on PR #11 is GitHub metadata and can't be removed; the merge commit is authored by Arun with no attribution |
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).
