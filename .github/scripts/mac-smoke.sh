@@ -311,5 +311,5 @@ fi
 grep -hE 'CHUVADI (quit|quit-window|quit-exception)' "$LOG" "$PWD/smoke-steps.log" "$PWD/smoke-open-panel.log" 2>/dev/null || true
 
 echo "== ${#FAILED[@]} failed"
-for f in "${FAILED[@]}"; do echo " - $f"; done
+for f in ${FAILED[@]+"${FAILED[@]}"}; do echo " - $f"; done
 [ ${#FAILED[@]} -eq 0 ]
