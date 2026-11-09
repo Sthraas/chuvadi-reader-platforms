@@ -577,21 +577,55 @@ public sealed class ChuvadiPdfSession : IPdfSession
 
         using var ms = new MemoryStream();
         PngEncoder.Encode(new ImageFrame(buffer, ImageColorFormat.Rgba32), ms, false);
-        var dataUri = "data:image/png;base64," + Convert.ToBase64String(ms.ToArray());
 
         string w = page.Width.ToString("0.###", CultureInfo.InvariantCulture);
         string h = page.Height.ToString("0.###", CultureInfo.InvariantCulture);
-        return $"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{w}pt\" height=\"{h}pt\" " +
-               $"viewBox=\"0 0 {w} {h}\" preserveAspectRatio=\"xMidYMid meet\">" +
-               $"<image x=\"0\" y=\"0\" width=\"{w}\" height=\"{h}\" preserveAspectRatio=\"none\" " +
-               $"href=\"{dataUri}\"/></svg>";
+        return RasterSvg(w, h, ms.GetBuffer(), (int)ms.Length);
     }
 
-    public void DropRenderCache()
+    /// <summary>
+    /// The SVG that carries a rendered page as one PNG, written straight into its final string (sixteenth patch).
+    /// Before, the base64 text was built three times over (the base64, the data URI, then an interpolated string,
+    /// which grew through a pooled buffer): a large sheet (≈ 39 M characters) left a 134 MB buffer in the shared
+    /// pool for the life of the app, and three 77 MB copies at once while drawing. Same characters as before.
+    /// </summary>
+    internal static string RasterSvg(string w, string h, byte[] png, int length)
+    {
+        var head = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"" + w + "pt\" height=\"" + h + "pt\" " +
+                   "viewBox=\"0 0 " + w + " " + h + "\" preserveAspectRatio=\"xMidYMid meet\">" +
+                   "<image x=\"0\" y=\"0\" width=\"" + w + "\" height=\"" + h + "\" preserveAspectRatio=\"none\" " +
+                   "href=\"data:image/png;base64,";
+        var base64Length = checked((length + 2) / 3 * 4);
+        return string.Create(head.Length + base64Length + RasterSvgTail.Length, (head, png, length), static (span, st) =>
+        {
+            st.head.AsSpan().CopyTo(span);
+            if (!Convert.TryToBase64Chars(st.png.AsSpan(0, st.length), span[st.head.Length..], out var written)
+                || written != span.Length - st.head.Length - RasterSvgTail.Length)
+            {
+                throw new InvalidOperationException("Unexpected base64 length.");
+            }
+
+            RasterSvgTail.AsSpan().CopyTo(span[(st.head.Length + written)..]);
+        });
+    }
+
+    private const string RasterSvgTail = "\"/></svg>";
+
+    public void DropRenderCache() => DropCacheChars();
+
+    /// <summary>Clears the page cache and returns how many characters of page SVG it held.</summary>
+    private long DropCacheChars()
     {
         lock (_svgCache)
         {
+            long chars = 0;
+            foreach (var svg in _svgCache.Values)
+            {
+                chars += svg.Length;
+            }
+
             _svgCache.Clear();
+            return chars;
         }
     }
 
@@ -600,7 +634,7 @@ public sealed class ChuvadiPdfSession : IPdfSession
     public void Dispose()
     {
         _closeRequested = true;
-        DropRenderCache();
+        _closedCacheChars = DropCacheChars();
         if (_gate.Wait(0))
         {
             try
@@ -614,9 +648,68 @@ public sealed class ChuvadiPdfSession : IPdfSession
         }
     }
 
+    private long _closedCacheChars;
+
     private void CloseDocument()
     {
-        _document?.Dispose();
+        if (_document is null)
+        {
+            return;
+        }
+
+        _document.Dispose();
         _document = null;
+        if (_closedCacheChars * sizeof(char) >= MemoryRelief.HeavyBytes)
+        {
+            MemoryRelief.Request(); // after the close, so the document and its pages can go
+        }
     }
+}
+
+/// <summary>
+/// Sixteenth patch (Linux 36c): gives memory back to the system after a heavy document closes. The runtime keeps the
+/// memory a big drawing used (a CAD sheet: ~1.7 GB resident) for later use even when nothing in it is alive any
+/// more, so the app stayed at that size after the tab closed. One aggressive collection returns it (measured:
+/// 1745 MB → 129 MB resident, a 74 ms pause). Asked for only when the closed document's pages held at least
+/// <see cref="HeavyBytes"/>, run on a worker after the close, and at most once per <see cref="MinGap"/> so a shared
+/// server (Web) never runs them back to back.
+/// </summary>
+internal static class MemoryRelief
+{
+    internal const long HeavyBytes = 64L * 1024 * 1024;
+    internal static readonly TimeSpan MinGap = TimeSpan.FromSeconds(30);
+    internal static TimeSpan Settle { get; set; } = TimeSpan.FromMilliseconds(500);
+
+    private static long _lastTicks = long.MinValue / 2;
+    private static int _running;
+
+    /// <summary>Tests only: the last relief started, if any.</summary>
+    internal static Task? Last { get; private set; }
+
+    internal static void Request()
+    {
+        var now = Environment.TickCount64;
+        var last = Interlocked.Read(ref _lastTicks);
+        if (now - last < (long)MinGap.TotalMilliseconds || Interlocked.CompareExchange(ref _running, 1, 0) != 0)
+        {
+            return;
+        }
+
+        Interlocked.Exchange(ref _lastTicks, now);
+        Last = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(Settle).ConfigureAwait(false); // the Ui lets go of the closed tab's pages first
+                GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, blocking: true, compacting: true);
+            }
+            finally
+            {
+                Volatile.Write(ref _running, 0);
+            }
+        });
+    }
+
+    /// <summary>Tests only: lets the next request run at once.</summary>
+    internal static void ResetForTests() => Interlocked.Exchange(ref _lastTicks, long.MinValue / 2);
 }
