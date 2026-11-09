@@ -9,7 +9,7 @@ run [42518447149](https://github.com/Sthraas/chuvadi-reader-platforms/actions/ru
 
 ---
 
-## AT-03 · S1 · Foundation (+ Android CI) · open, decided (a) by the coordinator 9 Nov 05:55, sent to Foundation — The Release app crashes at every launch (trimmed constructor)
+## AT-03 · S1 · Foundation (+ Android CI) · fixed in Foundation c91a581 — to verify on Release — The Release app crashes at every launch (trimmed constructor)
 **Steps:** install the Release `.apk` from the build above (the same build as the Play `.aab`) on any emulator; tap the icon,
 or Open with a PDF.
 **Expected:** the app starts.
@@ -105,7 +105,7 @@ Measured in the page (CSS px = dp), every visible control, all screens, R1 API 3
 **Expected:** ≥ 44 dp everywhere (Android's own minimum is 48 dp; the handout asks 48 on tablet rails and phone bars). A larger
 hit area (padding / `::after` inset) keeps the drawn size.
 
-## AT-07 · S4 · Android · open (routed to the Android chat 9 Nov) — Tabs and Home's recent cards/rows label themselves with the internal working path
+## AT-07 · S4 · Android · fixed in Foundation c91a581 (P-08) — to verify — Tabs and Home's recent cards/rows label themselves with the internal working path
 The tablet tab's `title`, and the accessible name/`title` of every Home "Pick up where you left off" card (`.rcard`) and Recent
 row (`.rrow`) on phone and tablet, is the working copy path, e.g. `/data/user/0/in.chuvadi.reader/cache/work/open/1429e6d5d0cd4…`
 (`design/*-home.layout.json`). TalkBack reads that path aloud. Android shows `title` on long-press/hover with a mouse. **Expected:** the document's name
@@ -130,7 +130,7 @@ type `zephyrine`.
 says 2. **Evidence:** R2 run 42533545934 › results-tablet-api36 › function/04-find.png (`screenshots/r1/r2-find-print.png`, left).
 Re-checked next round on phone too (phone typing in R2 was cut short by the test, see notes).
 
-## AT-10 · S2 · Foundation (shared Ui, Reader's Find box) · open — The Find box drops typed characters; a plain field doesn't
+## AT-10 · S2 · Foundation (shared Ui) · open (routed D-149) — The Find box drops typed characters; a plain field doesn't
 **Steps:** API 36, open a PDF, Find, type on the on-screen keyboard path (`adb shell input text`, i.e. real key events through the IME).
 **Expected:** every character arrives, as in any text field.
 **Actual (R3, run 42537723474):**
@@ -145,7 +145,7 @@ or the IME. The Android chat's "garbled typing" (D-81) was this. Other Blazor-bo
 form fields, desk names) likely share the pattern; to check next round.
 **Evidence:** R3 › results-*-api36 › function/results.jsonl (F-03b); `screenshots/r1/r3-print-dialog-find-typing.png` (right).
 
-## AT-11 · S2 · Android / Foundation · open — On the phone, open tabs are lost when Android ends the app in the background
+## AT-11 · S2 · Android (host process-death restore; Foundation only if a Ui hook is needed) · open (routed D-149) — On the phone, open tabs are lost when Android ends the app in the background
 **Steps:** phone API 36, several tabs open, Home key, `am kill in.chuvadi.reader` (what Android does to a background app under memory
 pressure), open the app again.
 **Expected:** the tabs come back on the same document.
@@ -181,7 +181,7 @@ full path over (`DesktopSingleInstance` → `IncomingFiles`), so it focuses that
 - (c) Leave as is. *Cons:* differs from Windows; tabs and Recent fill with duplicates.
 **Recommendation:** (a).
 
-## AT-13 · S2 · Foundation / Library · open, intermittent — A page with one large image sometimes never paints
+## AT-13 · S2 · Foundation (shared Ui; library if it's the renderer) · open, intermittent (routed D-149) — A page with one large image sometimes never paints
 **Steps:** open `heavy-image.pdf` (one A4 page holding a 6000 × 6000 px JPEG; 28 MB file) with Open with; wait.
 **Expected:** page 1 painted within a few seconds (it does, when it works: 3.9 s and 4.5 s).
 **Actual:** in 2 of 4 runs the page stayed on its "page 1" placeholder for the whole wait (90 s, 120 s), app alive, CPU idle
