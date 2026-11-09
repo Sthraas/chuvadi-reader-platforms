@@ -553,6 +553,17 @@ case "find":
     }
     print("not found: \(text)"); exit(1)
 
+case "scroll":
+    // scroll x y lines — wheel event at a screen point (positive = down)
+    let at = CGPoint(x: Double(arg(0))!, y: Double(arg(1))!)
+    CGEvent(mouseEventSource: nil, mouseType: .mouseMoved, mouseCursorPosition: at, mouseButton: .left)?.post(tap: .cghidEventTap)
+    usleep(80_000)
+    let lines = Int32(arg(2)) ?? 10
+    for _ in 0..<abs(lines) {
+        CGEvent(scrollWheelEvent2Source: nil, units: .line, wheelCount: 1, wheel1: lines > 0 ? -3 : 3, wheel2: 0, wheel3: 0)?.post(tap: .cghidEventTap)
+        usleep(20_000)
+    }
+    print("scrolled \(lines) at \(at)")
 case "click":
     clickAt(CGPoint(x: Double(arg(0))!, y: Double(arg(1))!), double: flag("--double"))
 case "drag":

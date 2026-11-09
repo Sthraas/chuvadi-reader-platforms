@@ -406,6 +406,18 @@ def t4_0b():
     quit_app()
 
 
+def open_licences(mouse=True):
+    """About is open: scroll its column so the Help card shows, then press the Open button on the Licences row
+    (the third plain "Open" button; the row's label is static text)."""
+    rc, out = find("About", timeout=3)
+    m = re.search(r"@(-?\d+),(-?\d+) (\d+)x(\d+)", out)
+    if m:
+        drive("scroll", 1200, 500, 15)
+        time.sleep(0.8)
+    return press("Open", role="AXButton", index=2, click=mouse)
+
+
+
 @case("M-18 Settings after the Reader")
 def m18():
     """M-18 (D-154): an Accessibility press on Settings › Appearance or About › Licences ends WebKit's content process on
@@ -433,7 +445,10 @@ def m18():
             time.sleep(1.5)
         before_log = open(LOG, errors="replace").read() if os.path.exists(LOG) else ""
         _, before_diag = sh(f"ls {DIAG} 2>/dev/null")
-        rc, out = press(target, contains=True, index=-1, click=mouse)
+        if target == "Licences":
+            rc, out = open_licences(mouse)
+        else:
+            rc, out = press(target, contains=True, index=-1, click=mouse)
         e = {"press": out[:120]}
         # the message may be short-lived: look early, then again once things settle
         time.sleep(1.5)
@@ -700,7 +715,7 @@ def t3_1():
                 t = axdump("settings-" + sec.lower())
                 texts += t
                 if sec == "About":
-                    rc3, o3 = press("Licences", contains=True, click=True)
+                    rc3, o3 = open_licences(True)
                     time.sleep(1.5)
                     ev["licences"] = shot("light-licences") + f" ({o3[:70]})"
                     lic = axdump("licences")
