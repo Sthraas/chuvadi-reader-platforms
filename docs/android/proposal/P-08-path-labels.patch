@@ -1,14 +1,15 @@
 diff --git a/src/ChuvadiReader.Hosting/ChuvadiReaderServices.cs b/src/ChuvadiReader.Hosting/ChuvadiReaderServices.cs
-index b223008..2f49d9f 100644
+index 4ab1e49..bef1384 100644
 --- a/src/ChuvadiReader.Hosting/ChuvadiReaderServices.cs
 +++ b/src/ChuvadiReader.Hosting/ChuvadiReaderServices.cs
-@@ -106,5 +106,6 @@ public static class ChuvadiReaderServices
-         (typeof(IAccount), typeof(LocalAccount)),
-         (typeof(IAppLifecycle), typeof(NoAppLifecycle)),
-         (typeof(IFileManager), typeof(NoFileManager)),
-+        (typeof(IPathLabels), typeof(PlainPathLabels)),
-     };
- }
+@@ -101,6 +101,7 @@ public static class ChuvadiReaderServices
+         Seam<IAccount, LocalAccount>(services, life);
+         Seam<IAppLifecycle, NoAppLifecycle>(services, life);
+         Seam<IFileManager, NoFileManager>(services, life);
++        Seam<IPathLabels, PlainPathLabels>(services, life);
+ 
+         return services;
+     }
 diff --git a/src/ChuvadiReader.Platform/Services.cs b/src/ChuvadiReader.Platform/Services.cs
 index 1d84f5c..39acc42 100644
 --- a/src/ChuvadiReader.Platform/Services.cs
@@ -130,7 +131,7 @@ index 65011ce..ef2475d 100644
              <RowButton OnClick="ResetFolder" Title="@SaveFolders.DefaultFolder">Reset to default</RowButton>
          </SettingRow>
 diff --git a/src/ChuvadiReader.Ui/Layout/MainLayout.razor b/src/ChuvadiReader.Ui/Layout/MainLayout.razor
-index 966983b..9f23b81 100644
+index ec220b5..a70f5a9 100644
 --- a/src/ChuvadiReader.Ui/Layout/MainLayout.razor
 +++ b/src/ChuvadiReader.Ui/Layout/MainLayout.razor
 @@ -16,6 +16,7 @@
@@ -151,7 +152,7 @@ index 966983b..9f23b81 100644
                           @onmouseup="(e) => OnTabMouseUp(e, t.Id)">
                          <span class="rtab-ic"><Icon Name="@t.Format.IconName()" Size="12" /></span>
 diff --git a/src/ChuvadiReader.Ui/Pages/Bench.razor b/src/ChuvadiReader.Ui/Pages/Bench.razor
-index 054140f..d0e6945 100644
+index b1a35f8..4fe0ed4 100644
 --- a/src/ChuvadiReader.Ui/Pages/Bench.razor
 +++ b/src/ChuvadiReader.Ui/Pages/Bench.razor
 @@ -15,6 +15,7 @@
@@ -162,7 +163,7 @@ index 054140f..d0e6945 100644
  @implements IAsyncDisposable
  
  <PageTitle>Chuvadi · Bench</PageTitle>
-@@ -690,7 +691,7 @@
+@@ -719,7 +720,7 @@
                  </div>
                  <p class="modal-body">Write every page of this desk as its own single-page PDF into:</p>
                  <div class="folder-row">
@@ -171,7 +172,7 @@ index 054140f..d0e6945 100644
                      @if (Platform.Capabilities.PickFolders)
                      {
                          <button class="link" @onclick="ChangeScatterFolder">change…</button>
-@@ -742,7 +743,7 @@
+@@ -771,7 +772,7 @@
                  else
                  {
                      <div class="folder-row">
@@ -180,7 +181,7 @@ index 054140f..d0e6945 100644
                          @if (Platform.Capabilities.PickFolders)
                      {
                          <button class="link" @onclick="ChangeExportFolder">change…</button>
-@@ -905,7 +906,7 @@
+@@ -934,7 +935,7 @@
                  </div>
                  <p class="modal-note">@PresetHint(_pressPreset)</p>
                  <div class="folder-row">
@@ -325,7 +326,7 @@ index fcf7a87..cdeb88d 100644
                          <button class="mico" @onclick="() => MoveUp(idx)" disabled="@(idx == 0)" aria-label="Move up"><Icon Name="chevron-up" Size="14" /></button>
                          <button class="mico" @onclick="() => MoveDown(idx)" disabled="@(idx == _entries.Count - 1)" aria-label="Move down"><Icon Name="chevron-down" Size="14" /></button>
 diff --git a/src/ChuvadiReader.Ui/Pages/Reader.razor b/src/ChuvadiReader.Ui/Pages/Reader.razor
-index 56ff057..17c569e 100644
+index d3f2a30..35d36f4 100644
 --- a/src/ChuvadiReader.Ui/Pages/Reader.razor
 +++ b/src/ChuvadiReader.Ui/Pages/Reader.razor
 @@ -25,6 +25,7 @@
@@ -431,3 +432,15 @@ index f6adf60..e806626 100644
      private sealed class TestWriteBack : IFileWriteBack
      {
          public bool IsNeeded => true;
+diff --git a/tests/ChuvadiReader.Hosting.Tests/TypedRegistrationTests.cs b/tests/ChuvadiReader.Hosting.Tests/TypedRegistrationTests.cs
+index 7922ec7..24911d0 100644
+--- a/tests/ChuvadiReader.Hosting.Tests/TypedRegistrationTests.cs
++++ b/tests/ChuvadiReader.Hosting.Tests/TypedRegistrationTests.cs
+@@ -63,6 +63,7 @@ public sealed class TypedRegistrationTests
+         "IAccount = LocalAccount",
+         "IAppLifecycle = NoAppLifecycle",
+         "IFileManager = NoFileManager",
++        "IPathLabels = PlainPathLabels",
+     ];
+ 
+     [Theory]

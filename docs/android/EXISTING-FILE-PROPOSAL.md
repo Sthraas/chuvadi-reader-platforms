@@ -124,8 +124,9 @@ navigates only when the Reader isn't the current page.
   (the composition applies Android's pending proposals), check "back steps back … with no dead presses".
 
 ## P-08 Paths shown to the person go through a host seam, `IPathLabels` (AT-07) — **decided (a), D-146 (coordinator, 9 Nov 07:00 IST); for Foundation's combined patch**
-Patch: [`proposal/P-08-path-labels.patch`](proposal/P-08-path-labels.patch), against platform/foundation **42461ba** (applies
-on it alone, and on 42461ba + Mobile UI 1f4b4c3); 15 files, +88 −23.
+Patch: [`proposal/P-08-path-labels.patch`](proposal/P-08-path-labels.patch), against platform/foundation **022b7c0** (applies
+on it alone, and on 022b7c0 + Mobile UI 558a276); 16 files, +89 −23. Rebased 9 Nov 07:30 onto the typed registrations:
+the seam is `Seam<IPathLabels, PlainPathLabels>(services, life)`, and `TypedRegistrationTests` pins it.
 
 AT-07: on Android every document and picked folder is a working copy in the app's private cache, and the Ui put the
 path in front of the person as a `title` (tooltip, and the accessible name TalkBack reads) or as text: tablet and phone
@@ -139,8 +140,9 @@ folders. So TalkBack read `/data/user/0/in.chuvadi.reader/cache/work/open/1429e6
   public interface IPathLabels { string Describe(string? path); }               // the person-facing label; "" for null
   public sealed class PlainPathLabels : IPathLabels { … => path ?? string.Empty; } // kit default: the path itself
   ```
-- `ChuvadiReader.Hosting/ChuvadiReaderServices.cs` — `PlainPathLabels` in `SeamDefaults`. **Note for the AT-03 trimming
-  fix:** this is one more seam default created by DI, so it needs its constructor kept like the others.
+- `ChuvadiReader.Hosting/ChuvadiReaderServices.cs` — `Seam<IPathLabels, PlainPathLabels>(services, life)` after
+  `IFileManager` (typed, so the trimmer keeps its constructor — AT-03); `TypedRegistrationTests`' pinned list gains
+  `"IPathLabels = PlainPathLabels"`.
 - Ui (13 files) — `@inject ChuvadiReader.Platform.IPathLabels PathLabels` and `PathLabels.Describe(…)` in the 23 places
   above. Nothing else changes in the markup.
 - Tests (Hosting.Tests):
@@ -160,7 +162,8 @@ shows as it is.
 member. Rejected: (b) the file name everywhere (takes the full path from Windows, leaves Android's folders wrong); (c)
 readable working-copy paths (TalkBack still reads a meaningless location).
 
-**Verified (sandbox):** on 42461ba alone + this patch: Platforms solution `-warnaserror` 0 warnings, 0 errors; Hosting
+**Verified (sandbox), on 022b7c0 + Mobile UI 558a276 + this patch:** Platforms `-warnaserror` 0 warnings; Core 212,
+Hosting 66, MobileUi 16, WebUi 39 pass; Android Debug and Release `-warnaserror` 0 warnings. Earlier, on 42461ba alone + this patch: Platforms solution `-warnaserror` 0 warnings, 0 errors; Hosting
 tests 61 pass. On 42461ba + Mobile UI 1f4b4c3 + this patch: Core tests 210, Hosting 61, MobileUi 16, WebUi 39 pass;
 Android host Debug and Release `-warnaserror` 0 warnings. On device, run 42541330985 (phone and tablet API 36, first
 version of the patch): `platform_checks.py` "no private cache path in tab, card or row titles, accessible names or text"

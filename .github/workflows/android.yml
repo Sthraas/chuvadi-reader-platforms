@@ -26,10 +26,10 @@ on:
         options: [full, smoke]
 
 env:
-  # platform/foundation: eleventh combined patch part 2 (D-137; Chuvadi.Docs 2.0.0, Chuvadi.Sheets 2.0.2), with Mobile UI's hooks-5.
-  FOUNDATION_REF: 42461ba5da431933bc21a501694c02c74fbab66b
-  # platform/mobile-ui: latest (9 Nov).
-  MOBILEUI_REF: 1f4b4c358ac472fa71b54486ad90ceb9e4b15d74
+  # platform/foundation: AT-03 fix, typed registrations (D-146), on the twelfth combined patch.
+  FOUNDATION_REF: 022b7c0a1bdba0a9dfb7a2c99b131c53f4138391
+  # platform/mobile-ui: Foundation 6fbe24e merged (9 Nov).
+  MOBILEUI_REF: 558a276bb0228ebb55042f6beff9304be4f9d060
   DOTNET_NOLOGO: '1'
   DOTNET_CLI_TELEMETRY_OPTOUT: '1'
 

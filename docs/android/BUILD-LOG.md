@@ -656,3 +656,10 @@ same screen; no crash), smoke pass. With round 6 (API 36 phone and tablet, all c
   `Ui_shows_paths_only_through_path_labels` beside `Default_path_labels_show_the_path`. Applies on 42461ba alone:
   Platforms `-warnaserror` 0 warnings, Hosting 61 pass. With Mobile UI 1f4b4c3: Core 210, Hosting 61, MobileUi 16,
   WebUi 39 pass; Android 0 warnings.
+
+### 56. Rebase onto Foundation 022b7c0 (AT-03 fix, typed registrations) — coordinator, 9 Nov 07:30 IST
+- Composition: Foundation `022b7c0` + Mobile UI `558a276` merged (clean). P-08 rebased: the seam is now a typed
+  `Seam<IPathLabels, PlainPathLabels>` call and `TypedRegistrationTests` pins it; applies on 022b7c0 alone.
+- Sandbox: Platforms `-warnaserror` 0 warnings; Core 212, Hosting 66, MobileUi 16, WebUi 39 pass; Android Debug and
+  Release `-warnaserror` 0 warnings; Release manifest check 14/14.
+- Round: all four emulators, full suite, with the Release (trimmed) launch — for AT-03.
