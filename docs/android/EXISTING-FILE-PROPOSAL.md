@@ -123,37 +123,45 @@ navigates only when the Reader isn't the current page.
 - **Verified (sandbox):** Platforms `-warnaserror` 0 warnings; tests 171 + 54 + 32 + 16 pass. On device: round 6
   (the composition applies Android's pending proposals), check "back steps back … with no dead presses".
 
-## P-08 Paths shown to the person go through a host seam, `IPathLabels` (AT-07) — **for the coordinator to decide**
-Patch: [`proposal/P-08-path-labels.patch`](proposal/P-08-path-labels.patch), against platform/foundation **42461ba** +
-platform/mobile-ui **1f4b4c3** (it touches Mobile UI's `PhoneShell.razor`); 10 files, +52 −13.
+## P-08 Paths shown to the person go through a host seam, `IPathLabels` (AT-07) — **decided (a), D-146 (coordinator, 9 Nov 07:00 IST); for Foundation's combined patch**
+Patch: [`proposal/P-08-path-labels.patch`](proposal/P-08-path-labels.patch), against platform/foundation **42461ba** (applies
+on it alone, and on 42461ba + Mobile UI 1f4b4c3); 15 files, +88 −23.
 
-AT-07: on Android every document is a working copy in the app's private cache, and the Ui uses the path as the
-`title` (tooltip, and the accessible name TalkBack reads) of tablet tabs, phone tabs, Home's cards and rows and pinned
-rows, Merge and Split sources, and shows it as text for the Library folder, each Library row, the watched folder and
-Settings › Library. So TalkBack reads `/data/user/0/in.chuvadi.reader/cache/work/open/1429e6d5…/report.pdf`.
+AT-07: on Android every document and picked folder is a working copy in the app's private cache, and the Ui put the
+path in front of the person as a `title` (tooltip, and the accessible name TalkBack reads) or as text: tablet and phone
+tabs, Home's cards, rows, pinned rows, category folder and watched folder, Library's folder and rows, Merge and Split
+sources, the Export / Press / Scatter folder lines in the Reader, Bench and Library, and Settings' save, watched and data
+folders. So TalkBack read `/data/user/0/in.chuvadi.reader/cache/work/open/1429e6d5…/report.pdf`.
 
-The patch adds one kit seam in `ChuvadiReader.Platform/Services.cs`:
-```csharp
-public interface IPathLabels { string Describe(string? path); }      // the person-facing label for a path
-public sealed class PlainPathLabels : IPathLabels { … path ?? "" }   // kit default: the path itself
-```
-registered in the kit's `SeamDefaults`, and uses `PathLabels.Describe(…)` in those 13 places. Android's
-`AndroidPathLabels` (host, already on `platform/android`) answers from the document links: a file from the device's
-storage shows its place there (`Download/report.pdf`), a file from another app or a cloud provider shows its name, a
-file inside a picked folder shows that folder and its place in it.
+**What the patch does**
+- `ChuvadiReader.Platform/Services.cs` — the contract and its default:
+  ```csharp
+  public interface IPathLabels { string Describe(string? path); }               // the person-facing label; "" for null
+  public sealed class PlainPathLabels : IPathLabels { … => path ?? string.Empty; } // kit default: the path itself
+  ```
+- `ChuvadiReader.Hosting/ChuvadiReaderServices.cs` — `PlainPathLabels` in `SeamDefaults`. **Note for the AT-03 trimming
+  fix:** this is one more seam default created by DI, so it needs its constructor kept like the others.
+- Ui (13 files) — `@inject ChuvadiReader.Platform.IPathLabels PathLabels` and `PathLabels.Describe(…)` in the 23 places
+  above. Nothing else changes in the markup.
+- Tests (Hosting.Tests):
+  - `Default_path_labels_show_the_path` — the kit's default is `PlainPathLabels` and returns the path exactly (desktops
+    unchanged), `""` for null.
+  - `Ui_shows_paths_only_through_path_labels` — a drift guard: reads every `.razor` in the Ui (copied as text, like the
+    Windows drift test) and fails on any `title`, `aria-label` or `Text` parameter, or any text node, that shows a
+    `…Path` / `…Folder` value directly. Checked to catch all 23 old lines and none of the new ones.
 
-Options:
-- **(a) This seam (recommended).** Windows, macOS, Linux and Web keep showing the real path exactly as now (default
-  `PlainPathLabels`); Android shows where the file really is. *For:* one rule for every place a path is shown, and
-  later ones get it by using the same call; no behaviour change on any desktop. *Against:* a new kit interface and 13
-  call sites to keep using it (a missed one shows the cache path again on Android only; the emulator check below
-  catches tabs and Home).
-- (b) Ui uses the file name instead of the path for these titles, on every platform. *For:* no new interface.
-  *Against:* Windows loses the full-path tooltip it has today (a design change), and the visible Library and
-  watched-folder paths would still need something for Android.
-- (c) Host only: give working copies a readable path. *Against:* still an app-private path, and the name is already
-  the last part of it; doesn't fix what TalkBack reads.
+**Behaviour:** Windows, macOS, Linux and Web: identical (the default returns the path, so the tooltip and the visible
+paths are character for character what they were). Android: `AndroidPathLabels` (host, on `platform/android`) answers
+from the document links — device storage shows its place there (`Download/report.pdf`), another app or a cloud provider
+shows the name, a picked folder shows its own place and the file's place in it; the app's data folder (Settings › About)
+shows as it is.
 
-- **Verified (sandbox):** composition 42461ba + 1f4b4c3 + this patch: Android host Debug `-warnaserror` 0 warnings;
-  Hosting tests 60 pass (new `Default_path_labels_show_the_path`), MobileUi 16 and WebUi 39 pass. On device:
-  `platform_checks.py` "no private cache path in tab, card or row titles" (AT-07).
+**Decision (D-146):** (a). For: each platform gets the truthful label; Windows doesn't change. Against: one more contract
+member. Rejected: (b) the file name everywhere (takes the full path from Windows, leaves Android's folders wrong); (c)
+readable working-copy paths (TalkBack still reads a meaningless location).
+
+**Verified (sandbox):** on 42461ba alone + this patch: Platforms solution `-warnaserror` 0 warnings, 0 errors; Hosting
+tests 61 pass. On 42461ba + Mobile UI 1f4b4c3 + this patch: Core tests 210, Hosting 61, MobileUi 16, WebUi 39 pass;
+Android host Debug and Release `-warnaserror` 0 warnings. On device, run 42541330985 (phone and tablet API 36, first
+version of the patch): `platform_checks.py` "no private cache path in tab, card or row titles, accessible names or text"
+pass on both.

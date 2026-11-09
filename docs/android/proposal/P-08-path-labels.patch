@@ -59,11 +59,32 @@ index 2713aa8..a938673 100644
                          <Icon Name="@tab.Format.IconName()" Size="18" />
                          <span class="ph-row-l">@tab.FileName</span>
                          <span class="ph-row-v">@(tab.IsLoading ? "opening…" : tab.Error is not null ? "couldn't open" : $"p {tab.CurrentPage}")</span>
+diff --git a/src/ChuvadiReader.Ui/Components/Settings/AboutSection.razor b/src/ChuvadiReader.Ui/Components/Settings/AboutSection.razor
+index a918b54..e97ed6f 100644
+--- a/src/ChuvadiReader.Ui/Components/Settings/AboutSection.razor
++++ b/src/ChuvadiReader.Ui/Components/Settings/AboutSection.razor
+@@ -1,6 +1,7 @@
+ @namespace ChuvadiReader.Ui.Components.Settings
+ @inject ChuvadiReader.Platform.IAppPaths Paths
+ @inject ChuvadiReader.Platform.IPlatformInfo Platform
++@inject ChuvadiReader.Platform.IPathLabels PathLabels
+ 
+ <SettingsSection Title="About" Sub="Versions, licences and privacy.">
+     <SettingsCard Title="Chuvadi Reader">
+@@ -24,7 +25,7 @@
+         }
+         @if (!Platform.Capabilities.ServerSide)
+         {
+-            <SettingRow Label="Data folder" Hint="Settings, recent files and tabs" Stack="true"><ValueChip Text="@Paths.AppDataFolder" Wrap="true" /></SettingRow>
++            <SettingRow Label="Data folder" Hint="Settings, recent files and tabs" Stack="true"><ValueChip Text="@PathLabels.Describe(Paths.AppDataFolder)" Wrap="true" /></SettingRow>
+         }
+         <SettingRow Label="Clear recent files & cache" Soon="true"><RowButton>Clear…</RowButton></SettingRow>
+     </SettingsCard>
 diff --git a/src/ChuvadiReader.Ui/Components/Settings/LibrarySection.razor b/src/ChuvadiReader.Ui/Components/Settings/LibrarySection.razor
-index bbd0cb9..1169dbd 100644
+index bbd0cb9..288721c 100644
 --- a/src/ChuvadiReader.Ui/Components/Settings/LibrarySection.razor
 +++ b/src/ChuvadiReader.Ui/Components/Settings/LibrarySection.razor
-@@ -5,6 +5,7 @@
+@@ -5,13 +5,14 @@
  @inject LibraryService Lib
  @inject IFilePicker Picker
  @inject ChuvadiReader.Platform.IPlatformInfo Platform
@@ -71,15 +92,43 @@ index bbd0cb9..1169dbd 100644
  
  <SettingsSection Title="@SectionTitle" Sub="Where Chuvadi looks for documents.">
      @if (Platform.Capabilities.WatchFolders)
+     {
+     <SettingsCard Title="Library folder">
+         <SettingRow Label="Folder" Hint="The same folder new files are saved to" Stack="true">
+-            <ValueChip Text="@SaveFolders.BaseFolder" Wrap="true" />
++            <ValueChip Text="@PathLabels.Describe(SaveFolders.BaseFolder)" Wrap="true" />
+             <RowButton IconName="folder" OnClick="ChangeLibraryFolder">Change folder…</RowButton>
+             <RowButton IconName="refresh" OnClick="Rescan" Disabled="Lib.IsScanning">@(Lib.IsScanning ? "Scanning…" : "Scan again")</RowButton>
+         </SettingRow>
 @@ -25,7 +26,7 @@
  
      <SettingsCard Title="Watched folders">
          <SettingRow Label="Watched folder" Hint="@($"{Watched.DocumentCount} documents found · scanned {Relative(Watched.LastScanned)}")" Stack="true">
 -            <ValueChip Text="@(Watched.FolderPath ?? "—")" Wrap="true" />
-+            <ValueChip Text="@(Watched.FolderPath is { } watched ? PathLabels.Describe(watched) : "—")" Wrap="true" />
++            <ValueChip Text="@(PathLabels.Describe(Watched.FolderPath) is { Length: > 0 } watched ? watched : "—")" Wrap="true" />
              <RowButton IconName="folder" OnClick="ChangeWatched">Change…</RowButton>
          </SettingRow>
          <SettingRow Soon="true" SoonText="Coming soon — one watched folder for now">
+diff --git a/src/ChuvadiReader.Ui/Components/Settings/SavingSection.razor b/src/ChuvadiReader.Ui/Components/Settings/SavingSection.razor
+index 65011ce..ef2475d 100644
+--- a/src/ChuvadiReader.Ui/Components/Settings/SavingSection.razor
++++ b/src/ChuvadiReader.Ui/Components/Settings/SavingSection.razor
+@@ -2,13 +2,14 @@
+ @inject SaveFolderService SaveFolders
+ @inject IFilePicker Picker
+ @inject ChuvadiReader.Platform.IPlatformInfo Platform
++@inject ChuvadiReader.Platform.IPathLabels PathLabels
+ 
+ <SettingsSection Title="@SectionTitle" Sub="Where new files go, and what they are called.">
+     @if (Platform.Capabilities.PickFolders)
+     {
+     <SettingsCard Title="Where files are saved">
+         <SettingRow Label="Save folder" Hint="Bind, Lift, Scatter and other saves default here" Stack="true">
+-            <ValueChip Text="@SaveFolders.BaseFolder" Wrap="true" />
++            <ValueChip Text="@PathLabels.Describe(SaveFolders.BaseFolder)" Wrap="true" />
+             <RowButton IconName="folder" OnClick="ChangeFolder">Change folder…</RowButton>
+             <RowButton OnClick="ResetFolder" Title="@SaveFolders.DefaultFolder">Reset to default</RowButton>
+         </SettingRow>
 diff --git a/src/ChuvadiReader.Ui/Layout/MainLayout.razor b/src/ChuvadiReader.Ui/Layout/MainLayout.razor
 index 966983b..9f23b81 100644
 --- a/src/ChuvadiReader.Ui/Layout/MainLayout.razor
@@ -101,8 +150,47 @@ index 966983b..9f23b81 100644
                           @onmousedown:stopPropagation="true" @ondblclick:stopPropagation="true"
                           @onmouseup="(e) => OnTabMouseUp(e, t.Id)">
                          <span class="rtab-ic"><Icon Name="@t.Format.IconName()" Size="12" /></span>
+diff --git a/src/ChuvadiReader.Ui/Pages/Bench.razor b/src/ChuvadiReader.Ui/Pages/Bench.razor
+index 054140f..d0e6945 100644
+--- a/src/ChuvadiReader.Ui/Pages/Bench.razor
++++ b/src/ChuvadiReader.Ui/Pages/Bench.razor
+@@ -15,6 +15,7 @@
+ @inject ChuvadiReader.Platform.IFileWriteBack WriteBack
+ @inject ChuvadiReader.Platform.IAppPaths Paths
+ @inject ChuvadiReader.Platform.IPlatformInfo Platform
++@inject ChuvadiReader.Platform.IPathLabels PathLabels
+ @implements IAsyncDisposable
+ 
+ <PageTitle>Chuvadi · Bench</PageTitle>
+@@ -690,7 +691,7 @@
+                 </div>
+                 <p class="modal-body">Write every page of this desk as its own single-page PDF into:</p>
+                 <div class="folder-row">
+-                    <span class="folder-path" title="@_scatterFolder">@_scatterFolder</span>
++                    <span class="folder-path" title="@PathLabels.Describe(_scatterFolder)">@PathLabels.Describe(_scatterFolder)</span>
+                     @if (Platform.Capabilities.PickFolders)
+                     {
+                         <button class="link" @onclick="ChangeScatterFolder">change…</button>
+@@ -742,7 +743,7 @@
+                 else
+                 {
+                     <div class="folder-row">
+-                        <span class="folder-path" title="@_expFolder">@_expFolder</span>
++                        <span class="folder-path" title="@PathLabels.Describe(_expFolder)">@PathLabels.Describe(_expFolder)</span>
+                         @if (Platform.Capabilities.PickFolders)
+                     {
+                         <button class="link" @onclick="ChangeExportFolder">change…</button>
+@@ -905,7 +906,7 @@
+                 </div>
+                 <p class="modal-note">@PresetHint(_pressPreset)</p>
+                 <div class="folder-row">
+-                    <span class="folder-path" title="@_pressFolder">@_pressFolder</span>
++                    <span class="folder-path" title="@PathLabels.Describe(_pressFolder)">@PathLabels.Describe(_pressFolder)</span>
+                     @if (Platform.Capabilities.PickFolders)
+                     {
+                         <button class="link" @onclick="ChangePressFolder">change…</button>
 diff --git a/src/ChuvadiReader.Ui/Pages/Dashboard.razor b/src/ChuvadiReader.Ui/Pages/Dashboard.razor
-index f67007c..5e9364d 100644
+index f67007c..15d606a 100644
 --- a/src/ChuvadiReader.Ui/Pages/Dashboard.razor
 +++ b/src/ChuvadiReader.Ui/Pages/Dashboard.razor
 @@ -14,6 +14,7 @@
@@ -131,6 +219,15 @@ index f67007c..5e9364d 100644
                              <span class="r-ic fmt-@FmtClass(r.Format)"><Icon Name="@r.Format.IconName()" Size="16" /></span>
                              <span class="r-name">@r.FileName</span>
                              <span class="r-lock">
+@@ -153,7 +154,7 @@
+                 <span>@(IsPortal ? ChuvadiReader.Ui.Components.Platform.PlatformText.HomeStorageMapTitle : "Storage map")</span>
+                 @if (Platform.Capabilities.RevealInFolder)
+                 {
+-                    <span class="smap-folder" title="@Categories.BaseFolder">@Categories.BaseFolder</span>
++                    <span class="smap-folder" title="@PathLabels.Describe(Categories.BaseFolder)">@PathLabels.Describe(Categories.BaseFolder)</span>
+                 }
+                 <span class="smap-count">@(Lib.IsScanning ? "scanning…" : $"{Lib.Entries.Count} pdf{(Lib.Entries.Count == 1 ? "" : "s")}")</span>
+             </h2>
 @@ -183,7 +184,7 @@
              {
                  if (p.IsFolder)
@@ -168,7 +265,7 @@ index f67007c..5e9364d 100644
              <span class="w-actions">
                  <button type="button" class="mini accent" @onclick="ChangeWatched">change</button>
 diff --git a/src/ChuvadiReader.Ui/Pages/Library.razor b/src/ChuvadiReader.Ui/Pages/Library.razor
-index a03495a..a1828af 100644
+index a03495a..50dfc8d 100644
 --- a/src/ChuvadiReader.Ui/Pages/Library.razor
 +++ b/src/ChuvadiReader.Ui/Pages/Library.razor
 @@ -9,6 +9,7 @@
@@ -197,6 +294,15 @@ index a03495a..a1828af 100644
                          </button>
                          <div class="lib-tags">
                              @if (e.Category is not null)
+@@ -232,7 +233,7 @@
+ 
+                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;font-family:var(--chvd-mono);font-size:11px;color:var(--chvd-ink-muted)">
+                     <Icon Name="folder" Size="13" />
+-                    <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="@_pressFolder">@_pressFolder</span>
++                    <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="@PathLabels.Describe(_pressFolder)">@PathLabels.Describe(_pressFolder)</span>
+                     @if (Platform.Capabilities.PickFolders)
+                     {
+                         <button @onclick="ChangePressFolder" style="background:none;border:none;color:var(--chvd-binding);cursor:pointer;font-family:var(--chvd-mono);font-size:11px">change…</button>
 diff --git a/src/ChuvadiReader.Ui/Pages/Merge.razor b/src/ChuvadiReader.Ui/Pages/Merge.razor
 index fcf7a87..cdeb88d 100644
 --- a/src/ChuvadiReader.Ui/Pages/Merge.razor
@@ -218,6 +324,36 @@ index fcf7a87..cdeb88d 100644
                      <span class="mrow-tools">
                          <button class="mico" @onclick="() => MoveUp(idx)" disabled="@(idx == 0)" aria-label="Move up"><Icon Name="chevron-up" Size="14" /></button>
                          <button class="mico" @onclick="() => MoveDown(idx)" disabled="@(idx == _entries.Count - 1)" aria-label="Move down"><Icon Name="chevron-down" Size="14" /></button>
+diff --git a/src/ChuvadiReader.Ui/Pages/Reader.razor b/src/ChuvadiReader.Ui/Pages/Reader.razor
+index 56ff057..17c569e 100644
+--- a/src/ChuvadiReader.Ui/Pages/Reader.razor
++++ b/src/ChuvadiReader.Ui/Pages/Reader.razor
+@@ -25,6 +25,7 @@
+ @inject ChuvadiReader.Platform.IAppPaths Paths
+ @inject ChuvadiReader.Platform.IFileManager FileManager
+ @inject ChuvadiReader.Platform.IAppLifecycle Lifecycle
++@inject ChuvadiReader.Platform.IPathLabels PathLabels
+ @using ChuvadiReader.Core.Documents
+ 
+ <PageTitle>Chuvadi · Reader</PageTitle>
+@@ -194,7 +195,7 @@
+ 
+                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;font-family:var(--chvd-mono);font-size:11px;color:var(--chvd-ink-muted)">
+                     <Icon Name="folder" Size="13" />
+-                    <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="@_expFolder">@_expFolder</span>
++                    <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="@PathLabels.Describe(_expFolder)">@PathLabels.Describe(_expFolder)</span>
+                     @if (Platform.Capabilities.PickFolders)
+                     {
+                         <button @onclick="ChangeExportFolder" style="background:none;border:none;color:var(--chvd-binding);cursor:pointer;font-family:var(--chvd-mono);font-size:11px">change…</button>
+@@ -261,7 +262,7 @@
+ 
+                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;font-family:var(--chvd-mono);font-size:11px;color:var(--chvd-ink-muted)">
+                     <Icon Name="folder" Size="13" />
+-                    <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="@_pressFolder">@_pressFolder</span>
++                    <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="@PathLabels.Describe(_pressFolder)">@PathLabels.Describe(_pressFolder)</span>
+                     @if (Platform.Capabilities.PickFolders)
+                     {
+                         <button @onclick="ChangePressFolder" style="background:none;border:none;color:var(--chvd-binding);cursor:pointer;font-family:var(--chvd-mono);font-size:11px">change…</button>
 diff --git a/src/ChuvadiReader.Ui/Pages/Split.razor b/src/ChuvadiReader.Ui/Pages/Split.razor
 index 92db8f5..63ef9f2 100644
 --- a/src/ChuvadiReader.Ui/Pages/Split.razor
@@ -239,11 +375,23 @@ index 92db8f5..63ef9f2 100644
              <span class="ssource-pages">@_pageCount pages</span>
              <button class="slink" @onclick="ClearSource">change</button>
          </div>
+diff --git a/tests/ChuvadiReader.Hosting.Tests/ChuvadiReader.Hosting.Tests.csproj b/tests/ChuvadiReader.Hosting.Tests/ChuvadiReader.Hosting.Tests.csproj
+index 444d9b7..ba59294 100644
+--- a/tests/ChuvadiReader.Hosting.Tests/ChuvadiReader.Hosting.Tests.csproj
++++ b/tests/ChuvadiReader.Hosting.Tests/ChuvadiReader.Hosting.Tests.csproj
+@@ -18,5 +18,7 @@
+     <None Include="..\..\src\ChuvadiReader.Windows\App.xaml.cs" Link="WindowsApp.xaml.cs.txt" CopyToOutputDirectory="PreserveNewest" />
+     <!-- The Windows Open dialog's filter, read as text by the openable-types test. -->
+     <None Include="..\..\src\ChuvadiReader.Windows\Platform\WpfFilePicker.cs" Link="WpfFilePicker.cs.txt" CopyToOutputDirectory="PreserveNewest" />
++    <!-- The Ui's markup, read as text by the path-label drift test (AT-07). -->
++    <None Include="..\..\src\ChuvadiReader.Ui\**\*.razor" Exclude="..\..\src\ChuvadiReader.Ui\bin\**;..\..\src\ChuvadiReader.Ui\obj\**" LinkBase="UiSources" CopyToOutputDirectory="PreserveNewest" />
+   </ItemGroup>
+ </Project>
 diff --git a/tests/ChuvadiReader.Hosting.Tests/HostingTests.cs b/tests/ChuvadiReader.Hosting.Tests/HostingTests.cs
-index f6adf60..93c19c0 100644
+index f6adf60..e806626 100644
 --- a/tests/ChuvadiReader.Hosting.Tests/HostingTests.cs
 +++ b/tests/ChuvadiReader.Hosting.Tests/HostingTests.cs
-@@ -68,6 +68,19 @@ public sealed class HostingTests
+@@ -68,6 +68,39 @@ public sealed class HostingTests
          Assert.IsType<TestWriteBack>(sp.GetRequiredService<IFileWriteBack>());
      }
  
@@ -258,6 +406,26 @@ index f6adf60..93c19c0 100644
 +        Assert.IsType<PlainPathLabels>(labels);
 +        Assert.Equal(@"C:\Users\a\Documents\report.pdf", labels.Describe(@"C:\Users\a\Documents\report.pdf"));
 +        Assert.Equal(string.Empty, labels.Describe(null));
++    }
++
++    /// <summary>
++    /// AT-07 drift guard: a path is never put in front of the person (a title, an accessible name or
++    /// the text itself) without going through <see cref="IPathLabels"/>, or Android shows and TalkBack
++    /// reads the working copy in the app's private cache.
++    /// </summary>
++    [Fact]
++    public void Ui_shows_paths_only_through_path_labels()
++    {
++        var dir = Path.Combine(AppContext.BaseDirectory, "UiSources");
++        var raw = new System.Text.RegularExpressions.Regex(
++            @"(?:title|aria-label|Text)=""@\(?[\w.]*(?:Path|Folder)\b[^""]*""|>@[\w.]*(?:Path|Folder)\s*<");
++        var leaks = Directory.GetFiles(dir, "*.razor", SearchOption.AllDirectories)
++            .SelectMany(f => File.ReadLines(f).Select((line, i) => (f, i, line)))
++            .Where(x => raw.IsMatch(x.line))
++            .Select(x => $"{Path.GetRelativePath(dir, x.f)}:{x.i + 1}: {x.line.Trim()}")
++            .ToList();
++        Assert.True(Directory.GetFiles(dir, "*.razor", SearchOption.AllDirectories).Length > 20, "Ui sources not copied");
++        Assert.Empty(leaks);
 +    }
 +
      private sealed class TestWriteBack : IFileWriteBack

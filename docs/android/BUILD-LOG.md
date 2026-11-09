@@ -649,3 +649,10 @@ same screen; no crash), smoke pass. With round 6 (API 36 phone and tablet, all c
 - AT-08's icon half wasn't judged in that run (the window dump on API 36 doesn't show the requested appearance). The check
   now reads the status-bar icons from the pixels; on that run's own screenshots it gives light icons on Night paper and
   dark on the other four, on both devices. It runs in the next round.
+
+### 55. P-08 decided (a), D-146 — coordinator, 9 Nov 07:00 IST
+- Patch finished for Foundation: also the Export / Press / Scatter folder lines (Reader, Bench, Library), Home's category
+  folder and Settings' save and data folders (23 places, 13 Ui files). New drift-guard test
+  `Ui_shows_paths_only_through_path_labels` beside `Default_path_labels_show_the_path`. Applies on 42461ba alone:
+  Platforms `-warnaserror` 0 warnings, Hosting 61 pass. With Mobile UI 1f4b4c3: Core 210, Hosting 61, MobileUi 16,
+  WebUi 39 pass; Android 0 warnings.
