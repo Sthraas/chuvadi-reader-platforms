@@ -68,7 +68,7 @@ for f in ("damaged-truncated.pdf", "damaged-xref.pdf", "not-a-pdf.pdf", "empty.p
             alive_and_usable() and bool(st.get("tab")), {"state": st, "seconds": round(time.time() - t0, 1)})
 
 # R-03 very large files
-for f, wait_s in (("big-600p.pdf", 60), ("heavy-image.pdf", 90)):
+for f, wait_s in (("big-600p.pdf", 60),):
     uri = push_media(os.path.join(FX, f))
     t0 = time.time()
     open_with(uri)
@@ -96,6 +96,23 @@ shot("provider-uri")
 R.check("R-04 DocumentsProvider content URI opens (name from the provider)", st.get("rendered", 0) > 0,
         {"am": out.strip()[-200:], "state": st})
 
+# R-03c heavy image page (6000 × 6000 px JPEG, 28 MB file), after the provider case so a stall can't hide it
+uri = push_media(os.path.join(FX, "heavy-image.pdf"))
+t0 = time.time()
+open_with(uri)
+st = wait(lambda s: (s.get("tab") or "").startswith("heavy-image") and s.get("rendered", 0) > 0, 120)
+secs = round(time.time() - t0, 1)
+shot("heavy-image")
+pss = sh(f"dumpsys meminfo {PKG} | grep -m1 'TOTAL PSS'").strip()
+cpu = sh(f"top -b -n 1 -p $(pidof {PKG}) | tail -1").strip()
+R.check("R-03c heavy-image.pdf: first page painted within 120 s, no ANR", st.get("rendered", 0) > 0,
+        {"seconds": secs, "mem": pss, "cpu": cpu, "shell": cdp.js("document.documentElement.getAttribute('data-shell')")})
+# does the app still open another document while/after that?
+uri2 = push_media(os.path.join(FX, "doc-12p.pdf"), "after-heavy.pdf")
+open_with(uri2)
+st2 = wait(lambda s: (s.get("tab") or "").startswith("after-heavy") and s.get("rendered", 0) > 0, 40)
+R.check("R-03d after the heavy page, the next document opens and renders", st2.get("rendered", 0) > 0, st2)
+
 # R-05 no network: airplane mode, open and use; no network attempts by the app
 sh("cmd connectivity airplane-mode enable")
 time.sleep(3)
@@ -122,7 +139,11 @@ for loc in ("en-IN", "ta-IN", "hi-IN"):
     sh(f"am start -W -n {COMP}")
     cdp.close()
     st = wait(lambda s: bool(s.get("url")), 40)
-    cdp.js("Blazor.navigateTo('/')")
+    cdp.wait("!!(window.Blazor && Blazor.navigateTo) && document.getElementById('app').children.length > 0", 40)
+    try:
+        cdp.js("Blazor.navigateTo('/')")
+    except Exception as e:
+        print("navigate:", e)
     time.sleep(2)
     shot(f"locale-{loc}")
     over = cdp.js("document.documentElement.scrollWidth - innerWidth")

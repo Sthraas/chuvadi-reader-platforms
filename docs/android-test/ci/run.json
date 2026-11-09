@@ -1,5 +1,5 @@
 {
-  "round": 4,
+  "round": "4b",
   "emulators": "phone-36,tablet-36",
   "suites": "robust",
   "foundation_ref": "053e8e4f5102a312da75a876329f6b393dfe8f76",
