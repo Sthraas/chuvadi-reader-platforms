@@ -1,0 +1,49 @@
+busiest thread: Thread (801), span 7517 milliseconds
+
+Top self (exclusive) time:
+   94.3%  CPU_TIME
+    5.7%  UNMANAGED_CODE_TIME
+    0.0%  Chuvadi.Pdf.Rendering.Raster!Chuvadi.Pdf.Rendering.Raster.DisplayListBuilder.Build(class Chuvadi.Pdf.Documents.PdfPage
+    0.0%  Thread (801)
+    0.0%  Chuvadi.Pdf.Images!Chuvadi.Pdf.Images.PngEncoder.Encode(class Chuvadi.Pdf.Images.ImageFrame,class System.IO.Stream,boo
+    0.0%  Chuvadi.Pdf.Rendering!Chuvadi.Pdf.Rendering.PageRasterizer.PaintDisplayList(class Chuvadi.Pdf.Rendering.Raster.PageDis
+    0.0%  Chuvadi.Pdf.Images!Chuvadi.Pdf.Images.PngEncoder.CompressWithZlib(unsigned int8[])
+    0.0%  Chuvadi.Pdf.Filters!Chuvadi.Pdf.Filters.DeflateFilter.Encode(class System.IO.Stream,class System.IO.Stream,class Chuva
+    0.0%  Chuvadi.Pdf.Filters!Chuvadi.Pdf.Filters.DeflateDeflater.Tokenize()
+    0.0%  Chuvadi.Pdf.Rendering.Raster!Chuvadi.Pdf.Rendering.Raster.DisplayListBuilder+Worker.ShowTextComposite(unsigned int8[])
+    0.0%  Chuvadi.Pdf.Filters!Chuvadi.Pdf.Filters.DeflateInflater.InflateHuffmanBlock(class System.Collections.Generic.List`1<un
+    0.0%  prof!Program.<Main>$(class System.String[])
+    0.0%  Chuvadi.Pdf.Rendering.Walking!Chuvadi.Pdf.Rendering.Walking.ContentStreamWalker.Walk(unsigned int8[],class Chuvadi.Pdf
+    0.0%  Chuvadi.Pdf.Filters!Chuvadi.Pdf.Filters.DeflateInflater.Inflate()
+    0.0%  Chuvadi.Pdf.Rendering.Raster!Chuvadi.Pdf.Rendering.Raster.DisplayListBuilder+Worker.ResolveFontRenderer()
+    0.0%  Chuvadi.Pdf.Rendering.Raster!Chuvadi.Pdf.Rendering.Raster.DisplayListBuilder+Worker.BuildFromPage(unsigned int8[],clas
+    0.0%  Chuvadi.Pdf.Filters!Chuvadi.Pdf.Filters.FilterPipeline.Decode(class System.String,unsigned int8[],class Chuvadi.Pdf.Fi
+    0.0%  Chuvadi.Pdf.Primitives!Chuvadi.Pdf.Primitives.PdfTokenizer.ReadNextToken()
+    0.0%  Chuvadi.Pdf.Filters!Chuvadi.Pdf.Filters.DeflateFilter.Decode(class System.IO.Stream,class System.IO.Stream,class Chuva
+    0.0%  Chuvadi.Pdf.Rendering!Chuvadi.Pdf.Rendering.ScanlineRasterizer.Fill(class Chuvadi.Pdf.Graphics.PixelBuffer,class Syste
+
+Top inclusive Chuvadi frames:
+   82.1%  Chuvadi.Pdf.Rendering!Chuvadi.Pdf.Rendering.PageRasterizer.RasterizeUpright(class Chuvadi.Pdf.Documents.PdfPage)
+   82.1%  Chuvadi.Pdf.Rendering!Chuvadi.Pdf.Rendering.PageRasterizer.RasterizeCore(class Chuvadi.Pdf.Documents.PdfPage)
+   82.1%  Chuvadi.Pdf.Rendering!Chuvadi.Pdf.Rendering.PageRasterizer+<>c__DisplayClass7_0.<Rasterize>b__0()
+   82.1%  Chuvadi.Pdf.Rendering!Chuvadi.Pdf.Rendering.PageRasterizer.Guard(class System.Func`1<!!0>,value class System.Threading
+   82.1%  Chuvadi.Pdf.Rendering!Chuvadi.Pdf.Rendering.PageRasterizer.Rasterize(class Chuvadi.Pdf.Documents.PdfPage,value class S
+   82.1%  Chuvadi.Pdf.Rendering!Chuvadi.Pdf.Rendering.PageRasterizer.Rasterize(class Chuvadi.Pdf.Documents.PdfPage)
+   82.0%  Chuvadi.Pdf.Rendering!Chuvadi.Pdf.Rendering.PageRasterizer.RasterizeInternal(class Chuvadi.Pdf.Documents.PdfPage,class
+   41.3%  Chuvadi.Pdf.Rendering!Chuvadi.Pdf.Rendering.PageRasterizer.PaintDisplayList(class Chuvadi.Pdf.Rendering.Raster.PageDis
+   39.9%  Chuvadi.Pdf.Rendering.Raster!Chuvadi.Pdf.Rendering.Raster.DisplayListBuilder.Build(class Chuvadi.Pdf.Documents.PdfPage
+   35.0%  Chuvadi.Pdf.Rendering.Raster!Chuvadi.Pdf.Rendering.Raster.DisplayListBuilder+Worker.BuildFromPage(unsigned int8[],clas
+   34.9%  Chuvadi.Pdf.Rendering.Walking!Chuvadi.Pdf.Rendering.Walking.ContentStreamWalker.Walk(unsigned int8[],class Chuvadi.Pdf
+   32.8%  Chuvadi.Pdf.Rendering!Chuvadi.Pdf.Rendering.ScanlineRasterizer.Fill(class Chuvadi.Pdf.Graphics.PixelBuffer,class Syste
+   25.9%  Chuvadi.Pdf.Rendering.Walking!Chuvadi.Pdf.Rendering.Walking.ContentStreamWalker.Dispatch(class System.String,class Sys
+   24.6%  Chuvadi.Pdf.Rendering.Walking!Chuvadi.Pdf.Rendering.Walking.ContentStreamLoader.Decode(class Chuvadi.Pdf.Primitives.Pd
+   24.6%  Chuvadi.Pdf.Filters!Chuvadi.Pdf.Filters.FilterPipeline.Decode(class System.String,unsigned int8[],class Chuvadi.Pdf.Fi
+   24.3%  Chuvadi.Pdf.Filters!Chuvadi.Pdf.Filters.DeflateFilter.Decode(class System.IO.Stream,class System.IO.Stream,class Chuva
+   24.1%  Chuvadi.Pdf.Filters!Chuvadi.Pdf.Filters.DeflateInflater.Inflate()
+   23.8%  Chuvadi.Pdf.Filters!Chuvadi.Pdf.Filters.DeflateInflater.InflateHuffmanBlock(class System.Collections.Generic.List`1<un
+   22.8%  Chuvadi.Pdf.Filters!Chuvadi.Pdf.Filters.HuffmanTree.Decode(class Chuvadi.Pdf.Filters.DeflateInflater)
+   22.6%  Chuvadi.Pdf.Rendering.Raster!Chuvadi.Pdf.Rendering.Raster.DisplayListBuilder+Worker.ShowTextComposite(unsigned int8[])
+   20.1%  Chuvadi.Pdf.Rendering.Raster!Chuvadi.Pdf.Rendering.Raster.DisplayListBuilder+Worker.ResolveFontRenderer()
+   19.9%  Chuvadi.Pdf.Rendering.Raster!Chuvadi.Pdf.Rendering.Raster.DisplayListBuilder+Worker.ExtractFontBytes(class Chuvadi.Pdf
+   16.9%  Chuvadi.Pdf.Images!Chuvadi.Pdf.Images.PngEncoder.Encode(class Chuvadi.Pdf.Images.ImageFrame,class System.IO.Stream,boo
+   14.4%  Chuvadi.Pdf.Images!Chuvadi.Pdf.Images.PngEncoder.CompressWithZlib(unsigned int8[])

@@ -1,0 +1,13 @@
+1 library open (PdfDocument.OpenAsync)            56 ms  alloc     16 MB  retained      8 MB  WS     53 MB
+1b first touch of page 1 content (Rasterize 18 dpi)    2251 ms  alloc    771 MB  retained      9 MB  WS    235 MB
+2a rasterize page 1 @150 dpi                    2383 ms  alloc   1693 MB  retained     76 MB  WS    319 MB
+2b PNG encode page 1                            1136 ms  alloc    279 MB  retained     78 MB  WS    432 MB
+2c base64 + SVG wrapper string                     5 ms  alloc     10 MB  retained     83 MB  WS    428 MB
+3 FlattenService.Probe (the extra open, B-24)       2 ms  alloc      0 MB  retained      9 MB  WS    429 MB
+4 Reader open (ChuvadiPdfReader.OpenAsync)        11 ms  alloc     16 MB  retained     18 MB  WS    437 MB
+5.1 session.RenderPageSvgAsync page 1 (cached)    3524 ms  alloc   1999 MB  retained     32 MB  WS    505 MB
+5.2 session.RenderPageSvgAsync page 2 (cached)    3810 ms  alloc   1508 MB  retained     41 MB  WS    543 MB
+5.3 session.RenderPageSvgAsync page 3 (cached)    4998 ms  alloc   2980 MB  retained     67 MB  WS    633 MB
+5.4 session.RenderPageSvgAsync page 4 (cached)    4932 ms  alloc   3290 MB  retained     74 MB  WS    708 MB
+5.5 session.RenderPageSvgAsync page 5 (cached)    4618 ms  alloc   2488 MB  retained     84 MB  WS    639 MB
+6 DropRenderCache                                  0 ms  alloc      0 MB  retained     58 MB  WS    618 MB
