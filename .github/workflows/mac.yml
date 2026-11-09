@@ -209,6 +209,8 @@ jobs:
             smoke-files.log
             smoke-open-panel.log
             smoke-steps.log
+            smoke-appearance.log
+            *.ips
             chuvadi-logs-steps/
             chuvadi-logs/
             smoke-checks.txt
