@@ -325,3 +325,20 @@ Reproduced in the desktop preview, which now opens real files (`CHVD_OPEN`, test
 - **Two drawings closed in a row** (Linux's note): the second close is skipped while the first relief runs, but that relief's second pass, 65 s later, collects for both.
 - 361/361 tests (2 runs); 0 warnings in both solutions; trimmed probe 54/54.
 
+### 43. Eighteenth combined patch (10 Nov)
+1. **D-156: a second heavy close inside the gap waits for the relief instead of being dropped.** Linux's exact diff (`PROPOSAL-memory-relief-defer-10nov.md`, platform/linux ec108e7, on a203a62), applied unchanged, with its test.
+   - Tests now set `MinGap` to zero in the memory class's constructor, so one test's relief never makes the next wait 30 s.
+2. **B-30 (Linux Test, on 64c9c16): nothing in Core holds a closed document.** New retention test `Nothing_holds_a_closed_document_its_pages_or_its_queued_renders`:
+   - a tab opened through `TabsService`, a page drawn and cached, one sheet mid-draw and one queued, then the tab closed;
+   - the session, the `PdfDocument` and the drawn page's string are all collected;
+   - live memory is within 16 MB of where it started.
+   - It passes on add7b05 (before 4f67a4c) too, so the 680 MB that B-30 saw after a full collection on 64c9c16 wasn't a stuck reference. It was the sheets still drawing for the closed tab (4f67a4c stops them; on 64c9c16 a real-CAD sheet takes 10–13 s, so at 60 s the background sheets could still be drawing), and the shared byte pool's buffers from the Ui's transport, which go at the 65 s second pass (§41; the preview showed the heap's large arrays fall from ~423 MB to ~2 MB).
+   - **For Linux Test:** measure 70 s or more after the close, past the second pass. At 60 s the pool's buffers are still there by design.
+3. **B-29: the closed tab's raster pass is cancelled mid-sheet.** New test `Closing_mid_sheet_never_holds_up_the_next_file`: an A1 stroked sheet (a real `PageRasterizer` pass) closed 0.3 s in, then the next file opened.
+   - The next file's page is ready within a second of its time alone.
+   - The closed sheet has stopped by then (< 1 s).
+   - On add7b05 it fails: the closed sheet was still drawing 5.2 s after the next file was ready.
+4. **B-27 for the library list** (Linux Test): draw time is in the library rasteriser (`PaintStrokeOp` under `RasterizeInternal`). Real CAD sheet 1 takes 6–8 s and sheets 2–3 take 10–13 s, against about 1 s in Poppler; the stand-in takes 53 s. Nothing to change in the app.
+
+- 363/363 tests (2 runs); 0 warnings in both solutions; trimmed probe 54/54.
+
