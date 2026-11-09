@@ -163,7 +163,14 @@ jobs:
           CODE=$?
           set -e
           cat smoke.log
-          grep -q CHUVADI_SMOKE_OK smoke.log || { echo "smoke run did not reach first render (exit $CODE)"; exit 1; }
+          if ! grep -q CHUVADI_SMOKE_OK smoke.log; then
+            # Seen on some fresh runners: no output at all, for every launch in the run. Show what macOS did.
+            echo "smoke run did not reach first render (exit $CODE) — diagnosis:"
+            ps axo pid,stat,etime,command | grep -iE "chuvadi|syspolicyd|XprotectService|lsd |amfid" | grep -v grep || true
+            log show --last 3m --style compact --predicate 'process == "ChuvadiReader.Mac" OR (process IN {"syspolicyd","amfid","launchservicesd","runningboardd"} AND eventMessage CONTAINS[c] "chuvadi")' 2>/dev/null | tail -60 || true
+            ls -la ~/Library/Logs/DiagnosticReports 2>/dev/null | grep -i chuvadi || true
+            exit 1
+          fi
           {
             echo "### Startup on $(sysctl -n machdep.cpu.brand_string)"
             echo '```'
