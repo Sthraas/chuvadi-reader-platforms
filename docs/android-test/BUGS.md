@@ -181,6 +181,20 @@ full path over (`DesktopSingleInstance` → `IncomingFiles`), so it focuses that
 - (c) Leave as is. *Cons:* differs from Windows; tabs and Recent fill with duplicates.
 **Recommendation:** (a).
 
+## AT-13 · S2 · Foundation / Library · open, intermittent — A page with one large image sometimes never paints
+**Steps:** open `heavy-image.pdf` (one A4 page holding a 6000 × 6000 px JPEG; 28 MB file) with Open with; wait.
+**Expected:** page 1 painted within a few seconds (it does, when it works: 3.9 s and 4.5 s).
+**Actual:** in 2 of 4 runs the page stayed on its "page 1" placeholder for the whole wait (90 s, 120 s), app alive, CPU idle
+(`top`: 0.0 %), no ANR, no exception in logcat — the render looks dropped, not slow:
+| Run | Phone | Tablet |
+|---|---|---|
+| R4 (42543057904) | **not painted in 90 s** (and the next Open with waited behind it) | 3.9 s |
+| R4b (42546917921) | 4.5 s | **not painted in 120 s** (the next document then opened fine) |
+Idle CPU with no page points at a render request that is lost or dropped (a cancelled/timed-out render that isn't retried —
+compare Foundation's B-24 "a stalled read never freezes the Reader") rather than the library being slow. Debug build; to repeat on
+Release once AT-03 lands. **Evidence:** R4 › results-phone-api36 › robust/; R4b › results-tablet-api36 › robust/ (screenshots,
+results.jsonl with PSS and `top`).
+
 ## Questions for the coordinator (not filed as bugs)
 - **Q-1 Same file opened again → new tab** — answered by the coordinator (9 Nov 07:12): Windows is the reference. Checked the shared
   code and filed the difference as **AT-12** (Android).

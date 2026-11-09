@@ -54,6 +54,7 @@ if [ "${RELEASE_ONLY:-0}" = 1 ]; then
     python3 "$HERE/startup.py" "$OUT/startup-debug" "$OUT/fixtures/doc-12p.pdf" 12 || rc=1
   fi
 fi
+adb logcat -c   # suites judge crashes from here on (the as-built AT-03 crashes are recorded above)
 if [[ $SUITES == *,design,* ]]; then
   python3 "$HERE/design.py" "$OUT/design" "$OUT/fixtures/doc-12p.pdf" || rc=1
 fi
