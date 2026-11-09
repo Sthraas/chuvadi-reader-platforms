@@ -10,14 +10,14 @@ _Last updated: 9 Nov 2026, 06:12 IST. **PR #11 merged into chuvadi-reader main (
 
 | Chat | State |
 |---|---|
-| Foundation | 1016987 green on 6: Docs 2.0.0, Sheets 2.0.2, Chuvadi.Zip 1.0.0, B-24/B-25; PR #11 at 063659e green. Next: D-137 limits split, D-138 list markers, then PR #11 once more |
-| Mac | M-01..M-16 fixes done (c6d7705) incl. D-132 local error log; waiting for Mac Test re-verify |
-| Linux | Merged Foundation 839d39d (bad60d7); full Xvfb pass running, then push |
-| Android | Rebased on 839d39d; smoke check; waiting for Android Test bugs |
-| Web | Rebased; WT-01, 07, 08, 11–13 and D-117/118 done; standby for Web Test re-verify |
-| Mobile app UI | Handout comparison 12d–12j done (nine fixes), H-14; D-111..D-114 answered |
-| Linux Test | All fixes re-verified on e468d1a except B-08b (testing with far-cell); open: B-18 (Arun), library items, CAD PDF, real-machine checks |
-| Mac Test | Round 3 running |
-| Web Test | Round 1 done: WT-01..WT-13 filed (BUGS.md on platform/web-test); options decided (D-117..D-119) |
-| Android Test | Running its test plan (design frames 12d–12j) |
-| Web portal UI | U-17 (b) diff ready; pushing without force (D-115) |
+| Foundation | platform/foundation 022b7c0: twelfth patch (pdf 3.32.0, W-01, W-02, H-17..H-19, notices) + AT-03 typed registrations. PR #12 (cc6b653) green, waits for Arun. Next: P-08 from Android 4260ca4 |
+| Mac | Rebasing onto 022b7c0 and checking the trimmed Mac Catalyst Release launch (9 Nov 07:30 IST) |
+| Linux | Rebasing onto 022b7c0 (not waiting for main), then hand to Linux Test for B-24/B-08b/B-26 |
+| Android | 4260ca4: AT-02, AT-07 (P-08 patch for Foundation), AT-08; rebasing onto 022b7c0 and running emulators incl. Release launch |
+| Web | Rebasing onto 022b7c0 for pdf 3.32.0 (LIB-1) and WT-17 |
+| Mobile app UI | Rebasing onto 022b7c0; checking TOOLS/Mark rails against desktop, then drop tablet Save pin |
+| Linux Test | Waiting for Linux head on 022b7c0 to re-verify B-24, B-08b, B-26; open: library items, B-27, real-machine checks |
+| Mac Test | Long re-verify of M-01..M-16 running (~2h45m); then trimmed Release check |
+| Web Test | Waiting for Web on pdf 3.32.0 (LIB-1, WT-17); staging VM items and manual checks for a person |
+| Android Test | Round 4 running (incl. same-file-opened-twice vs Windows) |
+| Web portal UI | Rebasing onto 022b7c0; standing by for WT-03..WT-06 |
