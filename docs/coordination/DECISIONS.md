@@ -350,5 +350,11 @@ Options considered:
 | D-137 | Word part limits | Desktop and mobile: 100 MB per part, 400 MB total (people open their own files; a scanned/medical Word file with one big picture is realistic). Web portal: keep 20 MB / 64 MB (shared server). Keyed on IPlatformInfo.ServerSide; both pinned in tests |
 | D-138 | Word list markers from paragraph styles | Fix now with Docs 2.0's GetListLabels() — missing bullets are a fidelity bug |
 
+## 9 Nov 2026 05:45 — library releases (relayed by Arun)
+| # | Item | Decision |
+|---|---|---|
+| D-139 | Libraries released and verified: chuvadi-pdf 3.32.0 (signed tag v3.32.0, 34 packages + SHA256SUMS), Markup 1.1.0, Docs 2.0.0 + Docs.Conversion 2.0.0 (docs-v2.0.0), Layout 0.1.0 + Layout.Fonts/.Docs/.Sheets/.Markup/.Documents/.Pdf (Layout.Pdf → Pdf [3.31.2, 4.0)), Sheets 2.0.2 | Foundation takes them all from the GitHub releases, verified against SHA256SUMS; wires Word/Excel page view, print and Save as PDF through Layout; owner-password printing via EncryptionInfo.OpenedWith/EffectiveFlags (closes D-102); LIB-1 (unsigned /P) test. Layout limits: portal LayoutLimits.ForUntrustedInput() (50 MB source, 256 MB layout); desktop/mobile untrusted preset with 100 MB source and 512 MB layout (keyed on ServerSide). Item 3 (Layout.Pdf pin) closed — released |
+| — | Known gaps / coming | 18 KB .docx with 2 million empty paragraphs (1.1 GB) passes byte limits → Docs 2.1.0 element cap; Pdf 3.32.1 RepairIfDamaged; Layout builds sheet pages only when asked (huge extents); Print rc.4 auto-rotate in document mode (D-131 ask); Sheets 2.0.3 DataTable header fix |
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).
