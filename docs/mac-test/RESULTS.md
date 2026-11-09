@@ -21,7 +21,7 @@ from the job log only and it has no T2 numbers), **42676250705** (M-18 with WebK
 | Case | macOS 26 | macOS 15 | 15 Intel | Note / bug |
 |---|---|---|---|---|
 | T4.6 passwords | ✅ (pw run) | ✅ | ✅ | M-17 holds. In the full suite on 26 my keystrokes didn't land in the field (value read back empty) — test-side, the dedicated run passed |
-| Settings › Appearance | ❌ | ✅ | ✅ | **M-18 not fixed**; the WebView reloads the Ui page when Appearance is pressed |
+| Settings › Appearance | ✅ mouse / ❌ AXPress | ✅ | ✅ | **M-18 re-scoped**: a mouse click works on 26; an Accessibility press crashes WebKit's web process inside Apple's accessibility layer and the Ui doesn't recover (run 42686357055) |
 | Error log | ⚠️ | — | — | M-19: `chuvadi.log` now written, but with the follow-on dispose error, not the cause |
 | T5.10 quit | ✅ | ✅ | ✅ | **M-03 fixed**: 0 crash reports in 64 macOS 26 launches |
 | T3.5 Esc leaves Immersive | ❌ | ❌ | ❌ | M-21 not fixed |
@@ -33,7 +33,7 @@ from the job log only and it has no T2 numbers), **42676250705** (M-18 with WebK
 | T5.3 heavy vector | ❌ | | | never draws (M-20); many pages: first page 1.6 s (0.9 s on c6d7705) |
 | T5.5 low memory | ✅ | | | now opens under pressure |
 | T5.4, T5.7, T5.9 | ✅ | | | |
-| T1.10 Licences | ⏳ | | | blocked by M-18 on 26 |
+| T1.10 Licences | ⏳ | | | re-running on 26 with mouse clicks |
 
 **Page rendering — no hang seen.** All 40 timed launches on each runner drew their first frame; launch-with-PDF showed
 the page 2/2; Open panel → page 10/10 on every runner. Open panel → first page (median / worst): macOS 26 **586 / 829 ms**

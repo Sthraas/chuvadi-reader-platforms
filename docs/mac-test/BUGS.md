@@ -12,7 +12,7 @@ Owner: **Mac** = Mac chat (host code) · **Shared** = existing Ui/Core/Hosting (
 |---|---|---|---|---|---|
 | M-16 | S1 | Mac | Opening any document through the Open panel adds the tab and the "Pick up where you left off" card, then the Ui dies: Blazor's "An error occurred" bar (hidden behind the status bar — only a red line shows) and the Reader never renders; every later click does nothing until relaunch | 15 (26, 15-intel in run 42517758923) | **verified fixed** — re-verified on c6d7705 (runs 42534074875, 42538220489): Open panel → Reader on all three runners; PDF, docx, xlsx, md, txt, html, Tamil file name; 15 tabs opened and restored |
 | M-17 | S1 | Mac? | Submitting a PDF password killed the Ui ("An error occurred", blank page) | 26 on c6d7705 | **verified fixed on 00a5975**, and still fine on **83207af** (run 42673993820, all runners): right password first, wrong → message → right, owner-only. The c6d7705 repro most likely submitted an empty password (value set through Accessibility) |
-| M-18 | S1 | Mac? | **first (D-148)** — Settings › **Appearance** kills the Ui on macOS 26: blank page + "An error occurred" (also every Settings section after it). Not tied to the Reader — fresh launch → Settings → Appearance does it too | 26 only (15, 15-Intel fine) | not reproduced in the Mac chat's smoke on the same image (Settings → Appearance → Reading → Appearance, with an AX client reading the app; page loads once, no WebContent crash). Next evidence: your WebContent crash report (run 42676250705). Mac chat continues |
+| M-18 | S2 (accessibility) | Mac + Apple | **Re-scoped 10 Nov:** on macOS 26 an **Accessibility press** (AXPress — what VoiceOver's VO-Space and my harness use) on Settings › Appearance crashes WebKit's web process inside Apple's `AccessibilityPlatformTranslation` (`-[AXPMacPlatformElement _synthesizeMouseClick:]` → Swift array index on an empty array → SIGTRAP). The WebView then reloads the Ui and Blazor dies ("An error occurred"). **A mouse click on the same element works** | 26 only | open — run 42686357055: mouse click → Appearance fine (macOS 26, from Home and Reader); AXPress → WebContent crash report each time. My earlier S1 "Settings is broken" was produced by the test method; a mouse user is not affected. What is left for the app: recover from a web-process crash with a clean reload and log it (M-19). Options to the coordinator in the session status |
 | M-19 | S2 | Mac | The new error log (D-132) stays empty when the Ui fails: no `chuvadi.log` in 47 saved log folders, while M-17/M-18 fired | 26 | fixed further 4a4b419 — re-verify: a second load of the Ui page (WebKit's content process ended) is now logged as the error, ahead of the follow-on DisposeAsync error; page errors since 5f34138 |
 | M-20 | S3 | Shared/Library? | The 8 MB one-page vector stand-in never draws in 20 s ("page 1" placeholder, RSS 409 MB); under memory pressure it stays on "Opening…" | 26 | open — 83207af: under memory pressure the heavy file now opens (T5.5 passes, RSS 437 MB), but the page still never draws in 20 s (RSS 420 MB). **D-148:** Windows comparison on Arun's list with B-27 (real CAD PDF) |
 | M-22 | S2 | Mac | Opening the macOS print panel makes macOS ask "Allow 'Chuvadi' to find devices on local networks?" (generic text — no `NSLocalNetworkUsageDescription`) | 26 | fixed 5f34138 — re-verify: NSLocalNetworkUsageDescription names printers only (bundle step checks it); privacy-notice line A2b sent to Foundation (docs/mac/foundation/D-148-privacy-notice-mac-printers.patch) |
@@ -234,6 +234,20 @@ Shortcuts …) because the Ui is already dead. Screenshots: `screenshots/M-18-00
 `screenshots/M-18-00a5975-reader-settings-appearance-dark-macos26.png`. Guess for the Mac chat: something Appearance
 reads that only macOS 26 answers differently (system appearance / accent colour / font list). No log line (M-19).
 Consequence: T1.10 (Licences screen) and T3.2's Settings shots are unverified on macOS 26 until this is fixed.
+
+**Re-scoped on 83207af (10 Nov).** Run 42676250705 kept the WebKit log and found two WebContent crash reports from the
+moment Appearance was pressed (`evidence/M-18-83207af-WebContent-crash-AXPress-macos26.ips`): `EXC_BREAKPOINT` in
+`libswiftCore` `_assertionFailure`. The array read is in `__SwiftNativeNSArrayWithContiguousStorage.objectAtSubscript`,
+called by `-[AXPMacPlatformElement _synthesizeMouseClick:]` ← `accessibilityPerformPress` ← `NSAccessibilityPerformEntryPointBOOL`.
+In other words, Apple's macOS 26 accessibility layer turns my AXPress into a synthetic click and indexes an empty
+array. Run 42686357055 then added paths that press the same element with a **real mouse click**. Those paths are fine on
+macOS 26, from Home and from the Reader (`screenshots/M-18-83207af-appearance-mouse-click-ok-macos26.png`), while the
+AXPress paths crash again. macOS 15 / 15-Intel: no crash either way.
+
+So this is not "Settings is broken for everyone" (my earlier S1). It is: on macOS 26, a VoiceOver or other
+Accessibility press on that control kills the web process, and the app is left dead instead of recovering. I've
+changed the harness to click Settings sections with the mouse, so the Settings, About and Licences screens can be
+checked on macOS 26 again.
 
 ### M-19 — error log empty when it matters (S2)
 My harness now keeps `~/Library/Logs/Chuvadi` before each case. Across 47 cases (M-17 and M-18 included) the folder
