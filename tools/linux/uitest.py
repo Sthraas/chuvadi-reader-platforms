@@ -933,7 +933,9 @@ def viewer_errors_follow_wt10():
         app.send("open " + path)
         app.wait(lambda: app.js(f"var t=document.querySelector('.rtab.active'); return !!t && t.innerText.includes('{name}')"),
                  10, f"{name}'s tab in front")
-        shown = "[...document.querySelectorAll('.vm-err')].filter(e => e.offsetParent).pop()"  # the visible tab's
+        kind = "Word" if "Word" in what else "Excel"
+        # This file's message: visible, and naming its own kind (both viewers can stay in the page).
+        shown = f"[...document.querySelectorAll('.vm-err')].filter(e => e.offsetParent && e.innerText.includes('{kind}')).pop()"
         sentence = app.wait(lambda: app.js(f"var e={shown}; var b=e && e.querySelector('.vm-body > span'); return b ? b.innerText : null"),
                             15, f"the error for {name}")
         detail = app.js(f"var e={shown}; var d=e && e.querySelector('details.vm-detail'); return d ? [d.open, d.textContent] : null")
@@ -943,8 +945,6 @@ def viewer_errors_follow_wt10():
             raise AssertionError(f"{name}: Details is open; WT-10 keeps it collapsed")
         if ":" in sentence or "Central Directory" in sentence or "zip" in sentence.lower():
             raise AssertionError(f"{name}: technical text in the sentence: '{sentence}'")
-        if ("Word" in what) != ("Word" in sentence):
-            raise AssertionError(f"{name}: unexpected sentence '{sentence}'")
         app.shot("34f-" + name.replace(".", "-"))
         out.append(f"{name}: '{sentence}' | Details: {' '.join(detail[1].split())[7:80]}")
     focus_main()

@@ -553,3 +553,14 @@ Found by a new UI step (31b, owner password → print): the Print card is unlock
 PDF is encrypted and needs a password to open". `Reader.razor` opens `PrintCard` without the tab's password, so
 the print service gets none (Windows too). One-line shared fix (`Password="@tab.Password"`) sent to Foundation
 with B-24 and B-25 in `PROPOSAL-shared-fixes-9nov.md`; step 31b lands here with it.
+
+### 44. Foundation's thirteenth combined patch, part 1 (7d1ac03, 9 Nov)
+Carries the Linux chat's B-24 (no file probe on the page's thread), B-25 (viewer errors as WT-10) and S3 (the Print
+card gets the tab's password, so an owner-password open prints, D-139). The tests that prove them land here:
+- 31b: no-printing file with both passwords — user password: card locked; owner password: CUPS writes 5 pages.
+- 34e: named-pipe `slow.pdf` / `slow.xlsx` — "Opening…" 0.3 s, "Stop opening" 10 s, the next file opens meanwhile.
+- 34f: `notzip.xlsx` / `notzip.docx` — plain sentence, the library's text under a collapsed Details. (It now
+  waits for the message naming the opened file's kind: both viewers can stay in the page; 3/3 runs.)
+
+Built with warnings as errors; Reader 212/212, host kit 75/75, Linux 44/44, Web Ui 39/39, Mobile Ui 16/16; full
+UI pass 118/118.
