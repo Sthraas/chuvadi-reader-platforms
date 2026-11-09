@@ -969,7 +969,10 @@ def ping():
 
 
 def rendered(page_index):
-    return app.js(f"var w=document.querySelector('.rpage-wrap[data-page=\"{page_index}\"]'); return !!w && !!w.querySelector('svg')")
+    """The page's own drawing is there: a page-sized svg (viewBox wider than 100), not the 24 x 24 loading icon
+    that the page holds while it draws (B-28)."""
+    return app.js(f"var w=document.querySelector('.rpage-wrap[data-page=\"{page_index}\"]'); "
+                  "return !!w && [...w.querySelectorAll('svg')].some(s => s.viewBox && s.viewBox.baseVal && s.viewBox.baseVal.width > 100)")
 
 
 def current_page():
