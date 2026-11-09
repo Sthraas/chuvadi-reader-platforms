@@ -222,6 +222,38 @@ public sealed class MemoryAfterCloseTests
         Assert.True(stop.Elapsed < whole.Elapsed * 1.4, $"sheet 2 was ready {stop.ElapsedMilliseconds} ms after sheet 1 left; one whole sheet takes {whole.ElapsedMilliseconds} ms");
     }
 
+    [Fact]
+    public async Task Paging_never_runs_a_collection_only_closing_a_heavy_document_does()
+    {
+        // Part 3 (Linux, 64 MB drawing line): everything paging does (draw, drop a page that left the view, drop the
+        // cache of a tab in the background, toggle a layer) leaves the relief alone, however heavy the drawing.
+        var session = (ChuvadiPdfSession)await new ChuvadiPdfReader().OpenAsync(BlankA1Sheets(3), "paging.pdf");
+        var last = MemoryRelief.Last;
+
+        for (var round = 0; round < 2; round++)
+        {
+            for (var page = 0; page < 3; page++)
+            {
+                using var left = new CancellationTokenSource();
+                var waiting = session.RenderPageSvgAsync((page + 1) % 3, left.Token);
+                await session.RenderPageSvgAsync(page);
+                left.Cancel();
+                try { await waiting; } catch (OperationCanceledException) { }
+                session.SetFocusPage(page);
+            }
+
+            session.DropRenderCache();
+            session.ResetLayerVisibility();
+        }
+
+        Assert.True(session.RenderAllocatedBytes >= MemoryRelief.HeavyDrawingBytes, "the drawing wasn't heavy");
+        Assert.Same(last, MemoryRelief.Last);
+
+        session.Dispose();
+        Assert.NotSame(last, MemoryRelief.Last);   // closing it is what asks
+        await MemoryRelief.Last!.WaitAsync(TimeSpan.FromSeconds(30));
+    }
+
     private static async Task<long> OpenDrawClose(string path)
     {
         var session = await new ChuvadiPdfReader().OpenAsync(path, Path.GetFileName(path));

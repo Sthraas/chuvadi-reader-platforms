@@ -315,3 +315,13 @@ Reproduced in the desktop preview, which now opens real files (`CHVD_OPEN`, test
 - 360/360 tests (3 runs of the Reader suite); 0 warnings in both solutions; trimmed probe 54/54.
 - **Every platform, Linux included:** the drawing stops, and the second pass runs.
 
+### 42. Sixteenth combined patch, part 3: the drawing line at 64 MB (Linux proposal, platform/linux 2f6a803, step 48)
+- `MemoryRelief.HeavyDrawingBytes` 256 → 64 MB, Linux's one-line diff. Linux, cold 36c: memory back in 6 of 6 runs (5 of 7 before; the misses had allocated just under 256 MB). Warm full pass 121/121.
+- **Paging never runs a collection** (new test `Paging_never_runs_a_collection_only_closing_a_heavy_document_does`): drawing, pages cancelled as they leave the view, the focus page, dropping a background tab's cache and a layer reset leave the relief alone, however heavy the drawing. Closing is what asks.
+  - Proved by making a cache drop ask: the test fails.
+  - The only caller is `CloseDocument`.
+- **Ordinary documents don't qualify:** a text page costs about 0.04 MB to draw, so about 1,600 such pages would reach 64 MB.
+- **No startup cost:** nothing on the startup path changed; the relief code runs only when a document closes.
+- **Two drawings closed in a row** (Linux's note): the second close is skipped while the first relief runs, but that relief's second pass, 65 s later, collects for both.
+- 361/361 tests (2 runs); 0 warnings in both solutions; trimmed probe 54/54.
+
