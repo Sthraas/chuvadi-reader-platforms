@@ -215,7 +215,7 @@ B-18 goes to the Reader chat's desktop revamp (it changes Windows too).
 |---|---|---|
 | B-24 (reopened) | The Reader no longer opens each new tab's file on the page's thread (`RefreshDocKind`, unused result) | UI step 34e: named-pipe `slow.pdf` and `slow.xlsx` → "Opening…" ≤ 1.2 s, "Stop opening" ~10 s, the next file opens meanwhile (fails on e242d92) |
 | B-25 | Every viewer: plain sentence + system text under a collapsed Details (WT-10) | UI step 34f: `notzip.xlsx`, `notzip.docx` (fails on e242d92) |
-| B-26 | Not in the diff: a decision for the coordinator (D-136 shows raw values) and a Chuvadi.Sheets date-order bug (format 14 renders en-IN as `03-15-23`) | — |
+| B-26 | D-147: B — raw values stay, as the file holds them (Arun's data-integrity rule, D-136's tests). Excel display text with the exact value on hover goes to Arun once Chuvadi.Sheets renders dates in the culture's order (format 14 shows en-IN `03-15-23`; library list) | D-136 corpus tests (unchanged) |
 | B-27 | Library list (coordinator) | — |
 Re-verify B-24/B-25 once Foundation's patch with this diff is merged into `platform/linux`.
 
