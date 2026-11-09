@@ -210,6 +210,7 @@ jobs:
             smoke-open-panel.log
             smoke-steps.log
             smoke-appearance.log
+            smoke-keys.log
             *.ips
             chuvadi-logs-steps/
             chuvadi-logs-recovery/

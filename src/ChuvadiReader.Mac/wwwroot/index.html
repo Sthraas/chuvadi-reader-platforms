@@ -61,6 +61,23 @@
             });
         })();
     </script>
+    <script>
+        // Mac Test M-21: tell the Mac host when Immersive is on (reader.js sets body.chvd-immersive), so Esc can
+        // leave it even when the page does not have the keyboard (Platform/MacImmersive.cs).
+        (function () {
+            var h = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.chvdState;
+            if (!h) { return; }
+            var last = null;
+            var report = function () {
+                var on = document.body && document.body.classList.contains('chvd-immersive') ? 1 : 0;
+                if (on !== last) { last = on; try { h.postMessage('immersive:' + on); } catch (e) { } }
+            };
+            document.addEventListener('DOMContentLoaded', function () {
+                report();
+                new MutationObserver(report).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+            });
+        })();
+    </script>
     <!-- autostart="false": MAUI's Mac handler starts Blazor itself (a WebKit user script calling Blazor.start()),
          so an autostart here started it twice — "Blazor has already started" on every launch. -->
     <script src="_framework/blazor.webview.js" autostart="false"></script>
