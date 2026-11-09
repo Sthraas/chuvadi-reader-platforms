@@ -373,5 +373,9 @@ Options considered:
 
 | D-146 | Android AT-07 / P-08: tabs and recents labelled with the app's private cache path | (a) a shared IPathLabels seam: desktops keep the real path and tooltip, Android shows the file name and its source. (b) file name only everywhere loses Windows' tooltip and leaves Android's Library paths wrong; (c) readable private paths still mean nothing to TalkBack. The AT-03 trimming fix must cover this default too |
 
+| D-147 | Linux B-26: Excel cells show raw values (D-136) vs Excel's display text | B now: raw value as the file holds it (Arun's data-integrity rule; D-136 tests). A (display text, exact value on hover) proposed to Arun once Sheets formats dates in the culture's order (format 14 shows 03-15-23 in en-IN; Excel shows 15-03-2023) |
+| — | Library list additions | Sheets: built-in date format 14 and other locale-dependent dates use month-first in en-IN; B-27: the 7.9 MB CAD PDF takes 3–4 s to open and memory grows to 1.6 GB over 5 pages (profile in docs/linux-test, numbers only) |
+| — | Android Test | API 35 = update-screen test only, API 36 = Reader checks (c); "same file opened twice" to be compared with Windows' shared router |
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).
