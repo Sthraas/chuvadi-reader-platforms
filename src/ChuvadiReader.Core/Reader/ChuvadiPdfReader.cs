@@ -123,6 +123,22 @@ public sealed class ChuvadiPdfSession : IPdfSession
     private readonly SemaphoreSlim _gate = new(1, 1);
     private volatile bool _closeRequested;
 
+    // Fifteenth patch (Linux, fast paging): renders wait in this queue, not on the gate, so one that is no longer wanted
+    // (its page scrolled out of view) is dropped before it starts, and the next one taken is the queued page nearest
+    // the page in view. One worker at a time drains it; guarded by lock (_queue).
+    private sealed class QueuedRender(int page, long order)
+    {
+        public int Page { get; } = page;
+        public long Order { get; } = order;
+        public TaskCompletionSource<string> Done { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public CancellationTokenRegistration Cancel { get; set; }
+    }
+
+    private readonly List<QueuedRender> _queue = new();
+    private long _queueOrder;
+    private bool _draining;
+    private int? _focusPage;
+
     /// <summary>Tests only: runs on the render's thread, inside the gate, before the page is drawn.</summary>
     internal Action<int>? BeforeRenderForTests { get; set; }
 
@@ -326,69 +342,201 @@ public sealed class ChuvadiPdfSession : IPdfSession
         }
     }
 
+    public void SetFocusPage(int? pageNumber)
+    {
+        lock (_queue)
+        {
+            _focusPage = pageNumber;
+        }
+    }
+
     /// <summary>
     /// D-152 (AT-13): renders on a worker thread, one page at a time for this document, so a heavy page (a
-    /// 6000 × 6000 image takes seconds) never holds up the Ui or the next open. Requests wait their turn in order;
-    /// a page already rendered (or rendered while it waited) comes straight from the cache.
+    /// 6000 × 6000 image takes seconds) never holds up the Ui or the next open. A page already rendered (or rendered
+    /// while it waited) comes straight from the cache. Fifteenth patch: a render still waiting is dropped when
+    /// <paramref name="cancellationToken"/> is cancelled (its page left the view), and the waiting page nearest the
+    /// focus page (<see cref="SetFocusPage"/>) goes next; without a focus, the order asked.
     /// </summary>
-    public async Task<string> RenderPageSvgAsync(int pageNumber, CancellationToken cancellationToken = default)
+    public Task<string> RenderPageSvgAsync(int pageNumber, CancellationToken cancellationToken = default)
+    {
+        if (TryGetRenderedSvg(pageNumber, out var cached))
+        {
+            return Task.FromResult(cached);
+        }
+
+        if (_document is null || _closeRequested)
+        {
+            return Task.FromResult(string.Empty);
+        }
+
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return Task.FromCanceled<string>(cancellationToken);
+        }
+
+        QueuedRender entry;
+        bool start;
+        lock (_queue)
+        {
+            entry = new QueuedRender(pageNumber, _queueOrder++);
+            _queue.Add(entry);
+            start = !_draining;
+            _draining = true;
+        }
+
+        if (cancellationToken.CanBeCanceled)
+        {
+            entry.Cancel = cancellationToken.Register(() =>
+            {
+                bool removed;
+                lock (_queue)
+                {
+                    removed = _queue.Remove(entry);
+                }
+
+                if (removed)
+                {
+                    entry.Done.TrySetCanceled(cancellationToken); // never started: nothing is drawn for it
+                }
+            });
+        }
+
+        if (start)
+        {
+            _ = Task.Run(DrainAsync);
+        }
+
+        return entry.Done.Task;
+    }
+
+    /// <summary>The one worker: takes the next wanted page, draws it inside the gate, answers everyone waiting for it.</summary>
+    private async Task DrainAsync()
+    {
+        while (true)
+        {
+            int page;
+            lock (_queue)
+            {
+                if (_queue.Count == 0 || _closeRequested)
+                {
+                    _draining = false;
+                    break;
+                }
+
+                page = Next().Page;
+            }
+
+            string? svg = null;
+            Exception? failed = null;
+            if (!TryGetRenderedSvg(page, out var cached))
+            {
+                await _gate.WaitAsync().ConfigureAwait(false);
+                try
+                {
+                    svg = RenderInGate(page);
+                }
+                catch (Exception e)
+                {
+                    failed = e;
+                }
+                finally
+                {
+                    if (_closeRequested)
+                    {
+                        CloseDocument(); // Dispose came while this render held the document; close it now
+                    }
+
+                    _gate.Release();
+                }
+            }
+            else
+            {
+                svg = cached;
+            }
+
+            foreach (var waiting in TakeAll(page))
+            {
+                waiting.Cancel.Dispose();
+                if (failed is not null)
+                {
+                    waiting.Done.TrySetException(failed);
+                }
+                else
+                {
+                    waiting.Done.TrySetResult(svg ?? string.Empty);
+                }
+            }
+        }
+
+        // Closed while renders still waited: they get the closed document's answer, an empty page.
+        foreach (var waiting in TakeAll(null))
+        {
+            waiting.Cancel.Dispose();
+            waiting.Done.TrySetResult(string.Empty);
+        }
+    }
+
+    /// <summary>Under lock (_queue): the queued render nearest the focus page, oldest first among equals.</summary>
+    private QueuedRender Next()
+    {
+        var best = _queue[0];
+        foreach (var q in _queue)
+        {
+            var d = _focusPage is { } f ? Math.Abs(q.Page - f) : 0;
+            var bd = _focusPage is { } bf ? Math.Abs(best.Page - bf) : 0;
+            if (d < bd || (d == bd && q.Order < best.Order))
+            {
+                best = q;
+            }
+        }
+
+        return best;
+    }
+
+    private List<QueuedRender> TakeAll(int? page)
+    {
+        lock (_queue)
+        {
+            var taken = _queue.Where(q => page is null || q.Page == page).ToList();
+            _queue.RemoveAll(q => page is null || q.Page == page);
+            return taken;
+        }
+    }
+
+    /// <summary>Draws one page while holding the gate, and keeps it unless the layers changed or the document closed meanwhile.</summary>
+    private string RenderInGate(int pageNumber)
     {
         if (TryGetRenderedSvg(pageNumber, out var cached))
         {
             return cached;
         }
 
-        if (_document is null || _closeRequested)
+        if (_document is not { } document || _closeRequested)
         {
             return string.Empty;
         }
 
-        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
-        try
+        // Taken now, on one side of any layer change: a render for the old layers is never kept.
+        int generation;
+        SvgRenderer renderer;
+        IReadOnlyDictionary<string, bool>? overrides;
+        lock (_svgCache)
         {
-            if (TryGetRenderedSvg(pageNumber, out cached))
-            {
-                return cached;
-            }
-
-            if (_document is not { } document || _closeRequested)
-            {
-                return string.Empty;
-            }
-
-            // Taken now, on one side of any layer change: a render for the old layers is never kept.
-            int generation;
-            SvgRenderer renderer;
-            IReadOnlyDictionary<string, bool>? overrides;
-            lock (_svgCache)
-            {
-                generation = _renderGeneration;
-                renderer = _svgRenderer;
-                overrides = CurrentOverrides;
-            }
-
-            var svg = await Task.Run(() => RenderPage(document, renderer, overrides, pageNumber), cancellationToken)
-                .ConfigureAwait(false);
-
-            lock (_svgCache)
-            {
-                if (generation == _renderGeneration && !_closeRequested)
-                {
-                    _svgCache[pageNumber] = svg;
-                }
-            }
-
-            return svg;
+            generation = _renderGeneration;
+            renderer = _svgRenderer;
+            overrides = CurrentOverrides;
         }
-        finally
+
+        var svg = RenderPage(document, renderer, overrides, pageNumber);
+        lock (_svgCache)
         {
-            if (_closeRequested)
+            if (generation == _renderGeneration && !_closeRequested)
             {
-                CloseDocument(); // Dispose came while this render held the document; close it now
+                _svgCache[pageNumber] = svg;
             }
-
-            _gate.Release();
         }
+
+        return svg;
     }
 
     private string RenderPage(PdfDocument document, SvgRenderer renderer, IReadOnlyDictionary<string, bool>? overrides, int pageNumber)

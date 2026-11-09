@@ -77,11 +77,18 @@ export function init(deskEl, dotnetRef) {
     ratios = {};
 
     // Render pages a bit before they reach the viewport.
+    // Pages asked for and not yet left: only these are reported when they leave, so a long document opening
+    // doesn't send one message per far page (fifteenth patch: a page that left the view isn't drawn any more).
+    const asked = new Set();
     lazy = new IntersectionObserver((entries) => {
         for (const e of entries) {
+            const n = pageOf(e.target);
+            if (n < 0) continue;
             if (e.isIntersecting) {
-                const n = pageOf(e.target);
-                if (n >= 0) invoke('RenderPage', n);
+                asked.add(n);
+                invoke('RenderPage', n);
+            } else if (asked.delete(n)) {
+                invoke('PageLeft', n);
             }
         }
     }, { root: deskEl, rootMargin: '1000px 0px', threshold: 0 });
