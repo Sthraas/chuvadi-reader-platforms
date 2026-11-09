@@ -291,7 +291,8 @@ def open_doc(path, settle=4.0, label=None, how="button"):
         t0 = time.time()
         while time.time() - t0 < timeout:
             _, w = drive("windows")
-            if sum(1 for l in w.splitlines() if l.startswith(NAME + "\t") and "layer=0" in l) > 1:
+            # the Open panel is a separate window of the app (layer 8), next to the main window (layer 0)
+            if sum(1 for l in w.splitlines() if l.startswith(NAME + "\t")) > 1:
                 return round(time.time() - t0, 1)
             time.sleep(0.3)
         return None
@@ -302,7 +303,7 @@ def open_doc(path, settle=4.0, label=None, how="button"):
         if rc != 0:
             press("Open document")
     waited = panel_up(10)
-    if waited is None:
+    if waited is None and find("Open a document", timeout=1)[0] != 0:
         PANEL_RETRIES.append(os.path.basename(path))
         press("Open ⌘O")
         waited = panel_up(10)
