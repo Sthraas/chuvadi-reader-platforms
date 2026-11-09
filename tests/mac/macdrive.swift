@@ -530,7 +530,14 @@ case "press":
     let found = findAll(pid, text, contains: contains, role: role)
     let idx = index < 0 ? found.count + index : index
     guard idx >= 0, idx < found.count else { fail("not found: \(text) (\(found.count) matches)") }
-    print("\(press(found[idx])): \(describe(found[idx])) [match \(idx + 1) of \(found.count)]")
+    if flag("--click"), let f = axFrame(found[idx]) {
+        // a real mouse click at the element's centre instead of AXPress (AXPress goes through the
+        // accessibility translation layer, which a mouse user never touches)
+        clickAt(CGPoint(x: f.midX, y: f.midY))
+        print("click: \(describe(found[idx])) [match \(idx + 1) of \(found.count)]")
+    } else {
+        print("\(press(found[idx])): \(describe(found[idx])) [match \(idx + 1) of \(found.count)]")
+    }
 
 case "find":
     let pid = pidOf(arg(0))

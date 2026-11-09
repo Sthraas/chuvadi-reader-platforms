@@ -179,8 +179,8 @@ def menu(*path):
     return drive("menu", NAME, *path)
 
 
-def press(text, contains=False, role=None, index=0):
-    args = ["press", NAME, text]
+def press(text, contains=False, role=None, index=0, click=False):
+    args = ["press", NAME, text] + (["--click"] if click else [])
     if contains:
         args.append("--contains")
     if role:
@@ -416,6 +416,8 @@ def m18():
         "reader-docmenu-settings": ["@Document", "Settings"],
         "reader-cmdk-settings": ["@cmd+k", "Settings"],
         "home-settings-appearance": ["@nodoc", "Settings", "Appearance"],
+        "home-settings-appearance-mouse": ["@nodoc", "Settings", "@clickAppearance"],
+        "reader-settings-appearance-mouse": ["Settings", "@clickAppearance"],
     }
     ev, bad = {}, []
     for fname, flow in flows.items():
@@ -434,6 +436,8 @@ def m18():
                 drive("key", "cmd+k"); time.sleep(1); drive("key", "escape")
             elif name == "Appearance":
                 press("Appearance", contains=True, index=-1)
+            elif name == "@clickAppearance":
+                press("Appearance", contains=True, index=-1, click=True)
             else:
                 press(name, contains=name.endswith(("1", "2")))
             time.sleep(2.5)
@@ -681,7 +685,7 @@ def t3_1():
         if target == "Settings":
             texts += axdump("settings")
             for sec in SECTIONS:
-                rc2, o2 = press(sec, contains=True, index=-1)
+                rc2, o2 = press(sec, contains=True, index=-1, click=True)
                 time.sleep(1.2)
                 ev["settings-" + sec] = shot("light-settings-" + sec.lower()) + f" ({o2[:70]})"
                 t = axdump("settings-" + sec.lower())
@@ -716,7 +720,7 @@ def t3_2():
         ev[th + "-reader"] = shot(f"{th}-reader")
         press("Settings")
         time.sleep(2)
-        press("Appearance", contains=True, index=-1)
+        press("Appearance", contains=True, index=-1, click=True)
         time.sleep(1.2)
         ev[th + "-settings"] = shot(f"{th}-settings")
         ev[th + "-kept"] = (read_settings() or {}).get("theme")
