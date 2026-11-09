@@ -42,6 +42,25 @@
             if (document.getElementById('app').firstElementChild) { performance.mark('chvd-app-content'); o.disconnect(); }
         }).observe(document.getElementById('app'), { childList: true });
     </script>
+    <script>
+        // Mac Test M-19: page errors reach the Mac error log (D-132). Blazor reports a component's exception
+        // with console.error(message + "\n" + .NET stack) and nothing else; forward that, window errors and
+        // unhandled rejections to the host (Platform/PageErrorBridge.cs). Never sent anywhere else.
+        (function () {
+            var h = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.chvdLog;
+            if (!h) { return; }
+            var send = function (text) { try { h.postMessage(String(text).slice(0, 20000)); } catch (e) { } };
+            var original = console.error;
+            console.error = function () {
+                try { send(Array.prototype.map.call(arguments, function (a) { return a && a.stack ? a.stack : String(a); }).join(" ")); } catch (e) { }
+                return original.apply(console, arguments);
+            };
+            window.addEventListener("error", function (e) { send("window error: " + e.message + "\n" + (e.error && e.error.stack || "")); });
+            window.addEventListener("unhandledrejection", function (e) {
+                var r = e.reason; send("unhandled rejection: " + (r && r.message || r) + "\n" + (r && r.stack || ""));
+            });
+        })();
+    </script>
     <script src="_framework/blazor.webview.js"></script>
 </body>
 </html>

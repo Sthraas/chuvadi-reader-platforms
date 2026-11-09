@@ -5,6 +5,10 @@
 	<!-- D-82 / HANDOFF: the shared Copyright value (Directory.Build.props). -->
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2026 Sthraas Intelligence Pvt Ltd. All rights reserved.</string>
+	<!-- Mac Test M-22 / D-148: the system Print panel looks for network printers inside the app, so macOS asks
+	     once for local-network access. Without this text it shows its generic "collect data from devices" wording. -->
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Chuvadi looks for printers on your network only when you open the Print panel. Your documents go only to the printer you choose.</string>
 	<!-- 6 = Mac idiom ("Optimize Interface for Mac"): the UI renders at 100 %, not scaled to 77 %
 	     as iPad-idiom Catalyst apps are, so fonts and layout match the Windows app exactly. -->
 	<key>UIDeviceFamily</key>

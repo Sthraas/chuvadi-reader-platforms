@@ -2,6 +2,8 @@
 # Mac smoke test — checks the Mac Test fixes on a real macOS runner. Usage: mac-smoke.sh /path/to/Chuvadi.app
 #   M-16  the left bar's Open button → the real Open panel → the Reader, for PDF, Markdown, text, HTML, Word, Excel
 #   D-132 the error log in ~/Library/Logs/Chuvadi: written, scrubbed, rolled over, about 1 MB at most
+#   M-17  locked PDFs (AES-256, RC4): wrong and right passwords; M-18 Settings after the Reader and Library;
+#   M-21  real ⌃⌘F / Esc in and out of Immersive; M-19 page errors reach the error log
 #   M-02  files handed over by macOS open as tabs: at launch, and while running (single instance)
 #   M-01  the menu bar carries Chuvadi's commands (File, View, Document), ⌘ shortcuts, no AppKit Enter Full Screen
 #   M-11  Settings… ⌘, in the Chuvadi menu
@@ -131,6 +133,61 @@ else
   fail "D-132 no error log at $LOGDIR"
 fi
 quit_app || fail "Open-panel run did not quit"
+sleep 2
+
+# --- M-17 / M-18 / M-21 / M-19: the tester's sequences, scripted --------------------------------------------
+# Locked PDFs (qpdf: a testing tool, never shipped), a real-key sender with Post Event access, then one launch that
+# walks: page error → locked AES-256 file → wrong password → right password → real ⌃⌘F → real Esc → another mode →
+# Library → Settings → RC4 file → right password. After each step the app reports the page.
+SCRIPTS="$(cd "$(dirname "$0")" && pwd)"
+command -v qpdf >/dev/null || brew install qpdf >/dev/null 2>&1 || true
+qpdf --encrypt user1 own1 256 -- "$DOCS/five-pages.pdf" "$DOCS/aes256.pdf"
+qpdf --allow-weak-crypto --encrypt user1 own1 40 -- "$DOCS/five-pages.pdf" "$DOCS/rc4.pdf"
+KEYS="$RUNNER_TEMP/keys"
+xcrun swiftc -O -o "$KEYS" "$SCRIPTS/keys.swift" && sudo python3 "$SCRIPTS/grant-post-event.py" "$KEYS"
+rm -f "$LOG"; rm -rf "$LOGDIR"
+STEPS="jserror;pick;pw:wrong;pw:user1;native:ctrl-cmd-f;native:escape;mode:2;click:Library;click:Settings;pick;pw:user1"
+open -n --env CHUVADI_SMOKE=1 --env "CHUVADI_SMOKE_PICK=$DOCS/aes256.pdf;$DOCS/rc4.pdf" --env "CHUVADI_SMOKE_STEPS=$STEPS" \
+  --stdout "$LOG" --stderr "$LOG" -a "$APP"
+(
+  seen=0; end=$((SECONDS + 300))
+  while [ $SECONDS -lt $end ]; do
+    n=$(grep -c "CHUVADI native-key " "$LOG" 2>/dev/null || true)
+    if [ "${n:-0}" -gt "$seen" ]; then
+      seen=$((seen + 1))
+      k=$(grep "CHUVADI native-key " "$LOG" | sed -n "${seen}p" | sed 's/.*native-key //')
+      "$KEYS" "$BUNDLE_ID" "$k"
+    fi
+    grep -q "CHUVADI steps done" "$LOG" 2>/dev/null && break
+    sleep 0.3
+  done
+) &
+WATCH=$!
+wait_for 'CHUVADI steps done' 300 || fail "scripted steps did not finish"
+wait $WATCH 2>/dev/null || true
+grep -E "CHUVADI (step|native-key|log )" "$LOG" | cut -c1-700
+step() { grep -E "CHUVADI step $1 [a-z]+: route=" "$LOG" | tail -1; }
+ok_ui() { [[ "$1" == *"errorbar=none"* ]]; }
+s=$(step 3); ok_ui "$s" && [[ "$s" == *"unlock=1"* ]] && pass "M-17 wrong password: the prompt stays, the Ui lives" || fail "M-17 wrong password: ${s:-no report}"
+s=$(step 4); ok_ui "$s" && [[ "$s" == *"unlock=0"* && "$s" == *"reader=1"* ]] && pass "M-17 right password (AES-256) opens the PDF" || fail "M-17 right password: ${s:-no report}"
+s=$(step 5); [[ "$s" == *"immersive=1"* ]] && pass "M-21 real ⌃⌘F enters Immersive" || fail "M-21 ⌃⌘F: ${s:-no report}"
+s=$(step 6); [[ "$s" == *"immersive=0"* ]] && pass "M-21 real Esc leaves Immersive" || fail "M-21 Esc: ${s:-no report}"
+s=$(step 9); ok_ui "$s" && [[ "$s" == *"route=/settings"* ]] && pass "M-18 Settings after the Reader and Library" || fail "M-18 Settings: ${s:-no report}"
+s=$(step 11); ok_ui "$s" && [[ "$s" == *"unlock=0"* && "$s" == *"reader=1"* ]] && pass "M-17 right password (RC4) opens the PDF" || fail "M-17 RC4: ${s:-no report}"
+# M-19: page errors reach the D-132 log, scrubbed; and every error bar seen has a logged cause.
+if grep -h "smoke-page-error" "$LOGDIR"/*.log 2>/dev/null | grep -q 'PageError.*<\.pdf #[0-9a-f]\{8\}>'; then
+  pass "M-19 a page error reaches ~/Library/Logs/Chuvadi, scrubbed"
+else
+  fail "M-19 page error not in the log: $(cat "$LOGDIR"/*.log 2>/dev/null | head -3)"
+fi
+grep -h "smoke-secret-name" "$LOGDIR"/*.log 2>/dev/null && fail "M-19 the page error kept a file name"
+if grep -E "CHUVADI step [0-9]+ [a-z]+: route=" "$LOG" | grep -vq "errorbar=none"; then
+  grep -q "PageError" "$LOGDIR"/*.log 2>/dev/null && grep -v smoke-page-error "$LOGDIR"/*.log | grep -q PageError \
+    && pass "M-19 the Ui failure above is in the error log" || fail "M-19 a Ui failure left nothing in the error log"
+  grep -h "PageError" "$LOGDIR"/*.log | grep -v smoke-page-error | head -3 | tr '⏎' '\n' | cut -c1-3000
+fi
+cp "$LOG" "$PWD/smoke-steps.log"; cp -R "$LOGDIR" "$PWD/chuvadi-logs-steps" 2>/dev/null || true
+quit_app || fail "scripted run did not quit"
 sleep 2
 
 REPORTS=("$HOME/Library/Logs/DiagnosticReports" "/Library/Logs/DiagnosticReports")
