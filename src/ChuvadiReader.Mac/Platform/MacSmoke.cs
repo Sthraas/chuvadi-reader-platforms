@@ -34,6 +34,9 @@ internal static class MacSmoke
     /// starts with Title — M-18), "mode:n" (the n-th mode button), "key:Name" (a synthetic page key) and
     /// "native:name" (a real key posted by the smoke script — M-21).
     /// </summary>
+    /// <summary>The page's WebView now — a new one after WebKit's content process ended and the page reopened.</summary>
+    private static WKWebView Current(WKWebView fallback) => ChuvadiReader.Mac.MainPage.WebKitView ?? fallback;
+
     private static void RunSteps(WKWebView view, int index = 0)
     {
         if (index >= Steps.Length)
@@ -55,7 +58,7 @@ internal static class MacSmoke
                 Log("native-key " + arg);
                 Later(4.0, async () =>
                 {
-                    Log($"step {index + 1} native: " + await UiTextAsync(view) + " sent=" + arg);
+                    Log($"step {index + 1} native: " + await UiTextAsync(Current(view)) + " sent=" + arg);
                     RunSteps(view, index + 1);
                 });
                 return;
@@ -64,6 +67,7 @@ internal static class MacSmoke
             var js = kind switch
             {
                 "pick" => null,
+                "wait" => "'waited'",
                 "jserror" => """
                     (function () {
                       console.error("smoke-page-error opening '/Users/someone/Documents/smoke-secret-name.pdf'\n   at Smoke.Page.Frame()");
@@ -106,13 +110,13 @@ internal static class MacSmoke
             };
             if (js is null)
             {
-                await PressOpenAsync(view);
+                await PressOpenAsync(Current(view));
             }
             else
             {
                 try
                 {
-                    Log($"step {index + 1} {kind}: " + (await view.EvaluateJavaScriptAsync(js))?.ToString());
+                    Log($"step {index + 1} {kind}: " + (await Current(view).EvaluateJavaScriptAsync(js))?.ToString());
                 }
                 catch (Exception ex)
                 {
@@ -127,7 +131,7 @@ internal static class MacSmoke
 
             Later(kind == "pw" ? 4.0 : 2.5, async () =>
             {
-                Log($"step {index + 1} {step.Split(':')[0]}: " + await UiTextAsync(view));
+                Log($"step {index + 1} {step.Split(':')[0]}: " + await UiTextAsync(Current(view)));
                 RunSteps(view, index + 1);
             });
         });
@@ -266,7 +270,8 @@ internal static class MacSmoke
                 + ' errorbar=' + (e ? getComputedStyle(e).display : 'none')
                 + ' unlock=' + (document.querySelector('.uc') ? 1 : 0)
                 + ' immersive=' + (document.body.classList.contains('chvd-immersive') ? 1 : 0)
-                + ' keys=[' + keys + ']' + (function () {
+                + ' keys=[' + keys + ']'
+                + ' notice=' + (document.body && document.body.innerText.indexOf('stopped unexpectedly') >= 0 ? 1 : 0) + (function () {
                   var f = document.querySelector('iframe.htv-frame');
                   if (!f) { return ''; }
                   var b = f.contentDocument && f.contentDocument.body;

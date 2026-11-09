@@ -212,6 +212,7 @@ jobs:
             smoke-appearance.log
             *.ips
             chuvadi-logs-steps/
+            chuvadi-logs-recovery/
             chuvadi-logs/
             smoke-checks.txt
           if-no-files-found: ignore

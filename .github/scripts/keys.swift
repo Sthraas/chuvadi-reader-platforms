@@ -4,7 +4,40 @@
 import AppKit
 
 let args = CommandLine.arguments
-guard args.count == 3 else { print("usage: keys <bundle-id> <key|ax-walk>"); exit(2) }
+guard args.count >= 3 else { print("usage: keys <bundle-id> <key|ax-walk|ax-press label>"); exit(2) }
+
+// ax-press <label>: press an element by its accessible name, as VoiceOver / Voice Control / the Mac Test driver do
+// (AXPress, not a mouse click). The app's full accessibility tree is switched on first, as assistive apps do.
+if args[2] == "ax-press", args.count == 4 {
+    guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: args[1]).first else { print("not running"); exit(1) }
+    let root = AXUIElementCreateApplication(app.processIdentifier)
+    AXUIElementSetAttributeValue(root, "AXManualAccessibility" as CFString, kCFBooleanTrue)
+    AXUIElementSetAttributeValue(root, "AXEnhancedUserInterface" as CFString, kCFBooleanTrue)
+    usleep(1_500_000)
+    let label = args[3]
+    var found: AXUIElement?
+    var seen = 0
+    func str(_ e: AXUIElement, _ a: String) -> String? {
+        var v: CFTypeRef?
+        return AXUIElementCopyAttributeValue(e, a as CFString, &v) == .success ? v as? String : nil
+    }
+    func walk(_ e: AXUIElement, _ depth: Int) {
+        if found != nil || depth > 60 || seen > 30000 { return }
+        seen += 1
+        let role = str(e, kAXRoleAttribute) ?? ""
+        let names = [str(e, kAXTitleAttribute), str(e, kAXDescriptionAttribute), str(e, kAXValueAttribute)].compactMap { $0 }
+        if role == "AXButton" && names.contains(where: { $0.trimmingCharacters(in: .whitespaces) == label }) { found = e; return }
+        var kids: CFTypeRef?
+        if AXUIElementCopyAttributeValue(e, kAXChildrenAttribute as CFString, &kids) == .success, let list = kids as? [AXUIElement] {
+            for k in list { walk(k, depth + 1) }
+        }
+    }
+    walk(root, 0)
+    guard let target = found else { print("ax-press: no button named \(label) (\(seen) elements)"); exit(1) }
+    let r = AXUIElementPerformAction(target, kAXPressAction as CFString)
+    print("ax-press \(label): \(r.rawValue) (\(seen) elements searched)")
+    exit(0)
+}
 
 // ax-walk: read the app's accessibility tree, as VoiceOver or the Mac Test driver does (makes WebKit build its own).
 if args[2] == "ax-walk" {
