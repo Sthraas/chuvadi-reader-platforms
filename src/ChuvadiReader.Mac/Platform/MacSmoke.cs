@@ -89,7 +89,7 @@ internal static class MacSmoke
                     (function () {
                       var t = {{System.Text.Json.JsonSerializer.Serialize(arg)}};
                       var b = Array.prototype.find.call(document.querySelectorAll('button'), function (x) {
-                        return (x.getAttribute('title') || x.getAttribute('aria-label') || '').indexOf(t) === 0; });
+                        return (x.getAttribute('title') || x.getAttribute('aria-label') || x.textContent.trim()).indexOf(t) === 0; });
                       if (!b) { return 'no-button'; } b.click(); return 'clicked';
                     })()
                     """,

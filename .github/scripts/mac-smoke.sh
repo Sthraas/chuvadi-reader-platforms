@@ -139,6 +139,32 @@ fi
 quit_app || fail "Open-panel run did not quit"
 sleep 2
 
+# --- M-18: Settings › Appearance (macOS 26) — the page must live, WebKit's content process must not die -----
+wcrep() { ls "$HOME/Library/Logs/DiagnosticReports" /Library/Logs/DiagnosticReports 2>/dev/null | grep -c "WebContent" || true; }
+wc_before=$(wcrep)
+rm -f "$LOG"
+open -n --env CHUVADI_SMOKE=1 --env "CHUVADI_SMOKE_STEPS=click:Settings;click:Appearance;click:Reading;click:Appearance" \
+  --stdout "$LOG" --stderr "$LOG" -a "$APP"
+wait_for 'CHUVADI steps done' 120 || fail "M-18 Appearance steps did not finish"
+grep -E "CHUVADI (step|log Error)|CHUVADI_STARTUP wk-" "$LOG" | cut -c1-600
+a=$(grep -E "CHUVADI step 2 click: route=" "$LOG" | tail -1)
+[[ "$a" == *"route=/settings"* && "$a" == *"errorbar=none"* ]] && pass "M-18 Settings › Appearance: the Ui lives" || fail "M-18 Settings › Appearance: ${a:-no report}"
+b=$(grep -E "CHUVADI step 4 click: route=" "$LOG" | tail -1)
+[[ "$b" == *"errorbar=none"* ]] && pass "M-18 Appearance again after another section" || fail "M-18 Appearance again: ${b:-no report}"
+reloads=$(grep -c "CHUVADI_STARTUP wk-ui-loading" "$LOG" || true)
+[ "${reloads:-0}" -le 1 ] && pass "M-18 the page loaded once (no WebView reload)" || fail "M-18 the page reloaded ($reloads loads)"
+sleep 5
+wc_after=$(wcrep)
+if [ "$wc_after" -gt "$wc_before" ]; then
+  fail "M-18 WebKit's content process crashed"
+  for d in "$HOME/Library/Logs/DiagnosticReports" /Library/Logs/DiagnosticReports; do
+    ls -t "$d" 2>/dev/null | grep WebContent | head -1 | while read -r f; do echo "== $d/$f"; head -c 6000 "$d/$f"; cp "$d/$f" "$PWD/" 2>/dev/null; done
+  done
+fi
+cp "$LOG" "$PWD/smoke-appearance.log"
+quit_app || fail "Appearance run did not quit"
+sleep 2
+
 # --- M-17 / M-18 / M-21 / M-19: the tester's sequences, scripted --------------------------------------------
 # Locked PDFs (qpdf: a testing tool, never shipped), a real-key sender with Post Event access, then one launch that
 # walks: page error → locked AES-256 file → wrong password → right password (each with a real Return) → real ⌃⌘F →
