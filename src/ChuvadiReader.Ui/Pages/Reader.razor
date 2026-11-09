@@ -25,6 +25,7 @@
 @inject ChuvadiReader.Platform.IAppPaths Paths
 @inject ChuvadiReader.Platform.IFileManager FileManager
 @inject ChuvadiReader.Platform.IAppLifecycle Lifecycle
+@inject ChuvadiReader.Platform.IPathLabels PathLabels
 @using ChuvadiReader.Core.Documents
 
 <PageTitle>Chuvadi · Reader</PageTitle>
@@ -194,7 +195,7 @@
 
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;font-family:var(--chvd-mono);font-size:11px;color:var(--chvd-ink-muted)">
                     <Icon Name="folder" Size="13" />
-                    <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="@_expFolder">@_expFolder</span>
+                    <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="@PathLabels.Describe(_expFolder)">@PathLabels.Describe(_expFolder)</span>
                     @if (Platform.Capabilities.PickFolders)
                     {
                         <button @onclick="ChangeExportFolder" style="background:none;border:none;color:var(--chvd-binding);cursor:pointer;font-family:var(--chvd-mono);font-size:11px">change…</button>
@@ -261,7 +262,7 @@
 
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;font-family:var(--chvd-mono);font-size:11px;color:var(--chvd-ink-muted)">
                     <Icon Name="folder" Size="13" />
-                    <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="@_pressFolder">@_pressFolder</span>
+                    <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="@PathLabels.Describe(_pressFolder)">@PathLabels.Describe(_pressFolder)</span>
                     @if (Platform.Capabilities.PickFolders)
                     {
                         <button @onclick="ChangePressFolder" style="background:none;border:none;color:var(--chvd-binding);cursor:pointer;font-family:var(--chvd-mono);font-size:11px">change…</button>

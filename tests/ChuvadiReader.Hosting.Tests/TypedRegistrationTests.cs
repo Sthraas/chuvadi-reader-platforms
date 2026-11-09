@@ -9,7 +9,7 @@ namespace ChuvadiReader.Hosting.Tests;
 /// <summary>AT-03 made structural (D-146): typed registration, same services as before.</summary>
 public sealed class TypedRegistrationTests
 {
-    /// <summary>The registrations as the (Type, Type) tables made them before this change, in order.</summary>
+    /// <summary>The registrations as the (Type, Type) tables made them before this change, in order, plus later seams.</summary>
     private static readonly string[] Before =
     [
         "SaveFolderService = SaveFolderService",
@@ -63,6 +63,7 @@ public sealed class TypedRegistrationTests
         "IAccount = LocalAccount",
         "IAppLifecycle = NoAppLifecycle",
         "IFileManager = NoFileManager",
+        "IPathLabels = PlainPathLabels", // P-08 (D-146), the first default added after this test
     ];
 
     [Theory]

@@ -9,6 +9,7 @@
 @inject OpenDocumentService OpenDoc
 @inject RecentFilesService Recents
 @inject NavigationManager Nav
+@inject ChuvadiReader.Platform.IPathLabels PathLabels
 @implements IDisposable
 
 <PageTitle>Chuvadi · Library</PageTitle>
@@ -18,7 +19,7 @@
         <span class="libp-title">Library</span>
         @if (Platform.Capabilities.RevealInFolder)
         {
-        <span class="libp-folder">@Lib.FolderPath</span>
+        <span class="libp-folder">@PathLabels.Describe(Lib.FolderPath)</span>
         }
         <span class="libp-count">@(Lib.IsScanning ? "scanning…" : $"{Lib.Entries.Count} pdf{(Lib.Entries.Count == 1 ? "" : "s")}")</span>
     </div>
@@ -116,7 +117,7 @@
                         <input type="checkbox" class="libcheck" checked="@_sel.Contains(e.Path)" @onchange="() => ToggleSel(e.Path)" />
                         <button class="lib-name" @onclick="() => OpenEntry(e)">
                             <span class="lib-name-row"><Icon Name="file-pdf" Size="14" /> @e.Name</span>
-                            <span class="lib-path" title="@e.Path">@e.Path</span>
+                            <span class="lib-path" title="@PathLabels.Describe(e.Path)">@PathLabels.Describe(e.Path)</span>
                         </button>
                         <div class="lib-tags">
                             @if (e.Category is not null)
@@ -232,7 +233,7 @@
 
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;font-family:var(--chvd-mono);font-size:11px;color:var(--chvd-ink-muted)">
                     <Icon Name="folder" Size="13" />
-                    <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="@_pressFolder">@_pressFolder</span>
+                    <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="@PathLabels.Describe(_pressFolder)">@PathLabels.Describe(_pressFolder)</span>
                     @if (Platform.Capabilities.PickFolders)
                     {
                         <button @onclick="ChangePressFolder" style="background:none;border:none;color:var(--chvd-binding);cursor:pointer;font-family:var(--chvd-mono);font-size:11px">change…</button>

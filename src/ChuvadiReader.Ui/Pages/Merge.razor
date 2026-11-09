@@ -5,6 +5,7 @@
 @inject OpenDocumentService OpenDoc
 @inject NavigationManager Nav
 @inject ChuvadiReader.Platform.IFileWriteBack WriteBack
+@inject ChuvadiReader.Platform.IPathLabels PathLabels
 
 <PageTitle>Chuvadi · Merge</PageTitle>
 
@@ -37,7 +38,7 @@
                 <li class="mrow" @key="entry.Path">
                     <span class="mrow-n">@(idx + 1)</span>
                     <Icon Name="file-pdf" Size="16" />
-                    <span class="mrow-name" title="@entry.Path">@entry.FileName</span>
+                    <span class="mrow-name" title="@PathLabels.Describe(entry.Path)">@entry.FileName</span>
                     <span class="mrow-tools">
                         <button class="mico" @onclick="() => MoveUp(idx)" disabled="@(idx == 0)" aria-label="Move up"><Icon Name="chevron-up" Size="14" /></button>
                         <button class="mico" @onclick="() => MoveDown(idx)" disabled="@(idx == _entries.Count - 1)" aria-label="Move down"><Icon Name="chevron-down" Size="14" /></button>

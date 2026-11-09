@@ -101,6 +101,7 @@ public static class ChuvadiReaderServices
         Seam<IAccount, LocalAccount>(services, life);
         Seam<IAppLifecycle, NoAppLifecycle>(services, life);
         Seam<IFileManager, NoFileManager>(services, life);
+        Seam<IPathLabels, PlainPathLabels>(services, life);
 
         return services;
     }
