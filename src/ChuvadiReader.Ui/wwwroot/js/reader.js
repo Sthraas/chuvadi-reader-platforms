@@ -732,6 +732,28 @@ export function scrollToPage(deskEl, index) {
     deskEl.scrollTo({ top, behavior: 'smooth' });
 }
 
+// Find: bring the current match itself into view, not only the top of its page — on a zoomed or tall
+// page the match can sit a screen or more below it (Android Test AT-09). The highlight renders with the
+// page, so after bringing the page in, wait for it (up to 1.5 s), then put it a third of the way down.
+export async function scrollToMatch(deskEl, index) {
+    if (!deskEl) return;
+    scrollToPage(deskEl, index);
+    for (let i = 0; i < 30; i++) {
+        const hl = deskEl.querySelector('[data-page="' + index + '"] .rfind-hl.cur');
+        if (hl) {
+            suppressUntil = performance.now() + 1400;
+            const d = deskEl.getBoundingClientRect(), h = hl.getBoundingClientRect();
+            const top = deskEl.scrollTop + (h.top - d.top) - Math.max(0, (deskEl.clientHeight - h.height) / 3);
+            const left = deskEl.scrollWidth > deskEl.clientWidth
+                ? deskEl.scrollLeft + (h.left - d.left) - Math.max(0, (deskEl.clientWidth - h.width) / 2)
+                : deskEl.scrollLeft;
+            deskEl.scrollTo({ top, left, behavior: 'smooth' });
+            return;
+        }
+        await new Promise(r => setTimeout(r, 50));
+    }
+}
+
 export function getScrollTop(deskEl) {
     return deskEl ? deskEl.scrollTop : 0;
 }

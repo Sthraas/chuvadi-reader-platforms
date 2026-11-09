@@ -63,3 +63,26 @@ jobs:
           name: test-results-${{ matrix.os }}
           path: '**/test-results.trx'
           if-no-files-found: ignore
+
+  # AT-03: a trimmed Release app (Android, Mac Catalyst) must be able to build every service the kit
+  # registers. The probe is published trimmed and launched; it fails if a constructor was trimmed away.
+  trim-check:
+    name: trimmed Release launch (${{ matrix.rid }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, rid: linux-x64 }
+          - { os: macos-latest,  rid: osx-arm64 }
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+      - name: Publish trimmed
+        run: |
+          dotnet restore tools/TrimProbe/TrimProbe.csproj -r ${{ matrix.rid }} --configfile ci/nuget.config
+          dotnet publish tools/TrimProbe/TrimProbe.csproj -c Release -r ${{ matrix.rid }} --no-restore -o trimprobe -warnaserror
+      - name: Launch
+        run: ./trimprobe/TrimProbe

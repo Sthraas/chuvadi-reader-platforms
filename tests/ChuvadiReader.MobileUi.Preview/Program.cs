@@ -29,6 +29,8 @@ var web = Environment.GetEnvironmentVariable("CHVD_FF") == "web";
 var linux = Environment.GetEnvironmentVariable("CHVD_FF") == "linux";
 var platform = new PreviewPlatform(ff, web, linux);
 builder.Services.AddSingleton<IPlatformInfo>(platform);
+var windowLog = new PreviewWindowControls(); // W-01: records the top bar's window calls
+builder.Services.AddSingleton<ChuvadiReader.Core.Window.IWindowControls>(windowLog);
 if (ff != FormFactor.Desktop)
 {
     // Stands in for Android's bundled .NET runtime notices (IHostNotices).
@@ -42,6 +44,7 @@ if (web)
 }
 
 var app = builder.Build();
+app.MapGet("/__preview/window-log", () => Results.Ok(new { drags = windowLog.Drags, maximizes = windowLog.Maximizes }));
 if (linux)
 {
     app.MapPost("/__preview/button-layout", (string gtk) =>

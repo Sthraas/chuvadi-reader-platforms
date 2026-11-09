@@ -47,7 +47,7 @@ public partial class Bench
             _shellHooked = true;
             Shell.SetMode(DocMode.Arrange, Tabs.Active?.Id);
             Shell.ClearCounter();
-            Shell.SetDocumentMenu(null);
+            Shell.SetDocumentMenu(TouchDesks ? ArrangeDocumentMenu() : null);
         }
 
         var pages = BenchSvc.Desks.Sum(d => d.Pages.Count);
@@ -56,6 +56,29 @@ public partial class Bench
         var sel = BenchSvc.SelectedCount;
         Shell.SetActivity($"Arrange · {desks} desk{(desks == 1 ? "" : "s")} · {pages} page{(pages == 1 ? "" : "s")}{(sel > 0 ? $" · {sel} selected" : "")}");
         Shell.RegisterCommands(this, ArrangeCommands().ToList());
+    }
+
+    // Tablet and phone (Portal & Android 12f): Arrange keeps the top bar's Document ▾ for the active tab.
+    // The items are the Reader's own, as it last published them; each one goes back to Read and runs
+    // there (Shell.PendingTool "doc:<id>"), so no Reader action is duplicated here.
+    private IReadOnlyList<ShellCommand>? ArrangeDocumentMenu()
+    {
+        if (Tabs.Active is null || Shell.DocumentMenu.Count == 0)
+        {
+            return null;
+        }
+
+        return Shell.DocumentMenu
+            .Select(c => c.Id.StartsWith("sep", StringComparison.Ordinal) ? c : c with
+            {
+                Run = () =>
+                {
+                    Shell.PendingTool = "doc:" + c.Id;
+                    Nav.NavigateTo("/reader");
+                    return Task.CompletedTask;
+                },
+            })
+            .ToList();
     }
 
     private void ShellRelease()

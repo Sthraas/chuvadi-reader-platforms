@@ -1,0 +1,8 @@
+# Documents are data: never convert their line endings (a Windows checkout with core.autocrlf would
+# otherwise rewrite a PDF's line ends and break its byte offsets).
+*.pdf  binary
+*.docx binary
+*.xlsx binary
+*.nupkg binary
+# Test fixtures reach every platform byte for byte.
+tests/**/Fixtures/** -text
