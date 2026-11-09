@@ -95,6 +95,7 @@ image's WebView failed twice: that WebView needs the Trichrome static library, w
 image. Options for the coordinator: (a) keep trying a donor (Trichrome library), (b) a newer API 35 system image if one ships
 WebView ≥ 128, (c) accept API 36 as the Reader check and test API 35 only for the update screen — real Android 15 devices get
 WebView through Play. Recommendation: (c) now, (b) when such an image appears; (a) costs runner time with no sure end.
+**Decided (coordinator, 9 Nov 07:12): (c).** API 36 is the Reader check; API 35 is tested only for the WebView update screen (D-105).
 
 ## Test-tool notes (my own bugs, fixed)
 - R1: the WebView donor took only the WebView `.apk`; the API 36 WebView needs the Trichrome static library, so the API 35
