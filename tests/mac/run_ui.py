@@ -440,7 +440,21 @@ def m18():
             steps[name] = "ERROR" if ui_error() else "ok"
             if steps[name] == "ERROR":
                 break
-        ev[fname] = {"opened": ok, "steps": steps, "shot": shot("m18-" + fname)}
+        diag = {}
+        if "ERROR" in steps.values():
+            # what WebKit and the app said around the failure, and any WebContent crash report
+            _, lg = sh(["log", "show", "--last", "45s", "--style", "compact", "--predicate",
+                        'process == "ChuvadiReader.Mac" OR process == "com.apple.WebKit.WebContent" OR '
+                        'eventMessage CONTAINS[c] "WebContent" OR eventMessage CONTAINS[c] "crash"'], timeout=90)
+            os.makedirs(f"{OUT}/logs", exist_ok=True)
+            open(f"{OUT}/logs/m18-{fname}.txt", "w").write(lg)
+            diag["webkit_lines"] = [l[:240] for l in lg.splitlines()
+                                    if re.search(r"crash|terminat|didClose|ProcessDidTerminate|exited|jetsam|reload|navigat", l, re.I)][:25]
+            _, ls = sh(f"ls -t {DIAG} 2>/dev/null | head -20")
+            diag["crash_reports"] = [x for x in ls.splitlines() if re.search(r"WebContent|Chuvadi|GPU", x, re.I)]
+            for x in diag["crash_reports"][:3]:
+                sh(["cp", f"{DIAG}/{x}", f"{OUT}/logs/"])
+        ev[fname] = {"opened": ok, "steps": steps, "shot": shot("m18-" + fname), **diag}
         if "ERROR" in steps.values():
             bad.append(fname)
         quit_app()
