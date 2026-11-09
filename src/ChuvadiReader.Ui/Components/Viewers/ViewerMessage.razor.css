@@ -5,3 +5,6 @@
 }
 .vm-err { color: var(--chvd-ink); border-color: var(--chvd-error); background: var(--chvd-surface-hi); }
 .vm-err ::deep .cv-icon { color: var(--chvd-error); }
+.vm-body { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.vm-detail { font-size: 12px; color: var(--chvd-ink-muted); overflow-wrap: anywhere; }
+.vm-detail summary { cursor: pointer; }

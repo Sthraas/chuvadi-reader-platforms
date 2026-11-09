@@ -187,3 +187,30 @@
 - The patch's registration hunk targeted the old `(Type, Type)` table; registered instead as one typed line, `Seam<IPathLabels, PlainPathLabels>`, per §34. `TypedRegistrationTests` gains the new row.
 - 333/333 tests (Hosting 66); 0 warnings in both solutions; trimmed probe 54/54; desktop 27/27 identical (Windows shows the same paths as before); drift guard proved by putting one raw `title="@entry.Path"` back: it fails naming Merge.razor:41.
 
+### 36. Thirteenth combined patch, part 1 (9 Nov evening)
+**Linux (platform/linux 2cb9c35, the f84c9ed diff rebased on c91a581):**
+- B-24 reopened: the Reader no longer opens each new tab's file on the page's thread (`RefreshDocKind` / `_isXfaDoc` removed; nothing read them; the XFA notice uses the session).
+- B-25: viewer errors follow WT-10. A plain sentence, the system's text under a collapsed **Details**, and one shared access sentence (`TabsService.CantRead`).
+- S3 (Linux step 31b, found after D-139): the Print card gets the tab's password, so a file opened with its owner password prints. **Windows has the same fix:** before, it opened the file to print with no password and failed.
+
+**Mac (platform/mac `docs/mac/foundation/*.patch`):**
+- M-01 / M-11: the shell's own commands (Open a file…, Settings, Go to, modes, themes, tabs) reach `IAppCommands`, so the macOS menu bar has File › Open… and Settings.
+  - Foundation change: published only when `Chrome.NativeMenuBar` (macOS). Other hosts have no menu bar to fill, so there's no extra render at startup and nothing changes there.
+- M-08 to M-10: ⌃Tab cycles tabs, labelled ⌃Tab on a Mac (on Windows, Ctrl+Tab does exactly what it did); F11 is labelled ⌃⌘F on a Mac; the green light is Zoom in both states.
+- D-132: privacy notice A2a for the macOS error log.
+
+**Android Test (D-149):**
+- AT-10 (Find drops typed characters): every typed field used `value="@x"` + `@oninput`, so each answer from the app wrote the field back to what it had seen so far. Now `@bind` / `@bind:get`/`@bind:set` with `@bind:event="oninput"` (Reader Find, viewer Find, bookmark rename, Library search and tags, Redact find, Bench search/range/bands, band editor, preferred name, Ctrl K).
+  - `tools/PixelProof/find-typing.js`, with the round trip slowed: before "burstdt", "butwtt", "burwdt"; after "burstwordtest" in all three fields, 3 runs.
+  - Guard: `TypingFieldsTests` fails if the old pairing comes back (proved: it names Library.razor:29 and :133 on the old file).
+- AT-13 (a heavy image page sometimes never paints, CPU idle): not reproduced here, since it needs the device. Code review found a way a page stays a placeholder for good: in-flight renders were remembered by page number and never forgotten, so after the tab's document was reopened in place (Save in place, unlock) with the same page count, or a render landed in a replaced session, that page was never asked for again.
+  - Now keyed by (session, page), forgotten when the render ends; a new session for the same tab re-arms the observers.
+  - Still open for the device: the page render runs on the Ui thread (a 6000 × 6000 image takes 4 s and holds up the next open). Options are with the coordinator.
+
+**Checks:**
+- 342/342 tests (Hosting 75);
+- 0 warnings in both solutions;
+- trimmed probe 54/54;
+- desktop 27/27 identical;
+- StartupProbe the same (JIT 1453 both; times within noise).
+
