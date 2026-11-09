@@ -270,3 +270,21 @@ Build `-warnaserror` 0 warnings with each diff applied and with neither; tests *
 
 ## 2026-11-09 — session 14 (coordinator 03:07: go ahead with Q-3 (c); Upload diff to the Foundation)
 Branches checked: `platform/foundation` d70590a (tenth combined patch, B-24), merged in; `platform/web` 35229c3, `platform/web-test` 2cc43db, `main` ee2b877 (D-129, D-130). Q-3 (c) is sent as `proposal/web-ui-home-session-wording.patch`, with "Files in this session" and "Nothing shelved this session — open the Library". The example line wraps, so I used the line that fits; the hide version is dropped. Both of my open diffs apply to d70590a and build together with 0 warnings.
+
+## 2026-11-09 — session 15 (coordinator 06:05: bring the branch up to date with the Foundation and re-check everything)
+
+### 1. Branches
+Checked all: `platform/foundation` eb74e52 (eleventh patch: Docs 2.0.0 / Sheets 2.0.2; twelfth part 1: chuvadi-pdf 3.32.0), `main` 9e3707a (D-139, D-140), `platform/web` c38bd80, `platform/web-test` 45f303e, `platform/mobile-ui` 1f4b4c3. Merged eb74e52 in (a merge, not a rebase, so no force push, per the 20:22 decision). My `src` equals the Foundation's.
+
+### 2. My diffs in the Foundation
+`git apply -R --check` succeeds for `web-ui-home-session-wording.patch` and `web-ui-upload-wording.patch`, so both are in exactly as sent. None of my hooks are waiting now.
+
+### 3. Render check: baseline vs merged
+I screenshotted every portal surface in Chromium, Firefox and WebKit at desktop 1280×720, tablet 1024×768 touch and phone 390×844 touch: 12a sign-in, 12c Sangam gate, Home, the 12b account menu with its footer (desktop and tablet), Arrange, Redact, and the phone Reader's ⋮ sheet. That's 54 screenshots, compared against a worktree of my previous head (dd0b705) with the two diffs applied, which is the state already proven against the handout.
+- Text: identical in all 54 once the clock times are masked.
+- Pixels: identical in all 54 with the two clocks masked (Home's date line and the status bar). One 3×12 px sliver on the Chromium 12b chip edge didn't come back on two fresh baseline shots, so it was a one-off render glitch.
+- Wording on the portal: "FILES IN THIS SESSION" (capitalised by CSS, the same as "STORAGE MAP") and "Nothing shelved this session — open the Library"; "Upload a PDF to start. / Upload a file" and "Upload a document…"; no "Fetch" on any portal screen; account footer "Terms of use · Privacy"; status bar "processed on the server · kept in memory only · only you can see it".
+Nothing needed fixing.
+
+### 4. Build and tests
+After a restore for the new library versions: build `-warnaserror` 0 warnings; tests 16 + 39 + 212 + 60 = **327 pass**, 0 fail.

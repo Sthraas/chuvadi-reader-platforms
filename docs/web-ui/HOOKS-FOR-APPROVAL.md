@@ -14,7 +14,9 @@ Consequences on my side (this branch):
 ## Applied by the Foundation (part 2a, foundation 9fbed93)
 - **H7** status-bar wording (D-98) and the **"Drop to open" overlay** (D-104 b) — checked: `git apply -R --check` of both patches succeeds on 9fbed93, and the 12a pitch (D-103) is as sent. Patches kept in `proposal/` for the record.
 
-## Still to apply — Q-3 Home wording on the portal (D-119 c; coordinator 9 Nov 02:30, confirmed 03:07)
+## Applied by the Foundation (eleventh/twelfth patches; checked on eb74e52) — Q-3 Home wording on the portal (D-119 c)
+`git apply -R --check` succeeds on eb74e52; it renders as below.
+
 **`proposal/web-ui-home-session-wording.patch`**, against foundation **d70590a** (applies cleanly; builds with 0 warnings together with the Upload-wording diff):
 - `Components/Platform/PlatformText.cs` (+8): `HomeStorageMapTitle = "Files in this session"` and `HomeShelvesEmpty = "Nothing shelved this session — open the Library"`.
 - `Pages/Dashboard.razor` (+2/−2): on the portal (`IsPortal`), the Storage map heading and the empty Library shelf line use these. The desktop text stays in place, unchanged.
@@ -23,7 +25,9 @@ Why the shelf line isn't the example wording: "Your shelves for this session are
 
 Measured (preview; Chromium / Firefox / WebKit; desktop 1280×720, tablet 1024×768 touch, phone 390×844 touch): both lines stay on one line, no block changes size in any of the 9 cases, and Windows shows the same text and is pixel-identical in all three browsers (clock masked). Screenshots: `screenshots/chromium-q3a-home.png`, `screenshots/webkit-q3a-phone-home.png`.
 
-## Still to apply — "Upload" in Arrange and Redact on the portal (coordinator 9 Nov 01:42, same bug as WT-10)
+## Applied by the Foundation (eleventh/twelfth patches; checked on eb74e52) — "Upload" in Arrange and Redact on the portal (coordinator 9 Nov 01:42)
+`git apply -R --check` succeeds on eb74e52; it renders as below.
+
 **`proposal/web-ui-upload-wording.patch`**, against foundation **839d39d**, and still applies cleanly on **d70590a**. It touches four of the Foundation's files and adds no new injects, because both pages already inject `IPlatformInfo Platform`:
 - `Components/Platform/PlatformText.cs` (+6): `FetchOrUpload(platform, desktop, portal)` returns the portal text when `Kind == Web` and the desktop text otherwise (Android included), character for character.
 - `Pages/Bench.razor` (+5/−5), `Pages/Bench.Shell.cs` (+1/−1), `Pages/Redact.razor` (+2/−2): every "Fetch" label goes through it, with the desktop text left exactly as it was:
