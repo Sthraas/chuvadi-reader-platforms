@@ -484,3 +484,25 @@ a0c478d · reload logged 4a4b419 · M-11 a7c46be.
   of the follow-on `MainLayout.DisposeAsync` JS-object error. Page errors (`console.error`, window errors, unhandled
   rejections) were already logged (5f34138).
 - Smoke summary fixed for a run with nothing failing (bash 3.2 `set -u` and an empty array), 884b529.
+
+### 2026-11-10 (03:00) — rebased onto Foundation 4f67a4c; D-154 recovery from a WebKit content-process end
+- **Cause of M-18 (Mac Test, a5617b4):** on macOS 26 an Accessibility press (VoiceOver, Voice Control, any AX client)
+  on Settings › Appearance makes Apple's `-[AXPMacPlatformElement _synthesizeMouseClick:]` index an empty Swift array
+  inside the WebContent process → `EXC_BREAKPOINT`, the page is gone. A mouse click works. Apple's bug: report drafted
+  in `docs/mac/APPLE-FEEDBACK.md` (FB-1).
+- **D-154 (1), done (ac4e1a2):** `Platform/WebContentRecovery.cs`. A proxy in front of MAUI's navigation delegate
+  (MAUI sets it after `BlazorWebViewInitialized`, so it is wrapped again 2 s later) answers
+  `webViewWebContentProcessDidTerminate:` and forwards everything else to MAUI's delegate by Objective-C message
+  forwarding. On termination: chuvadi.log gets "WebKit's content process ended; the page was reopened at <route>", a
+  fresh BlazorWebView opens at the same route (`StartPath`, tracked from the WebView's URL; tabs and settings are
+  process-wide, so they come back as they were), and the shell shows "Part of Chuvadi stopped unexpectedly and was
+  reopened. Your open documents are as you left them." At most 3 times a minute.
+  Smoke (run 42694841963, b790370, all 41 checks): Settings › Appearance, then WebKit's content process is killed →
+  the end is noticed, the Ui is back on /settings with no error bar, the message shows, chuvadi.log has the line.
+- **D-154 (2), not yet:** to try a change that avoids the trigger I need to reproduce it. My Accessibility press
+  (`keys.swift ax-press`) does not reach the web content yet (6–167 elements; the Mac Test driver reaches it), so no
+  control or role change has been tried. Next: reach the web area the way Mac Test's `macdrive.swift` does, then try
+  the press on candidates.
+- **D-154 (3), done:** `docs/mac/APPLE-FEEDBACK.md` FB-1 — steps, expected/actual, backtrace, system.
+- First-launch hang seen twice on fresh runners (no `main` mark within 120 s, before any Chuvadi code runs; a re-run
+  passes) — macOS's first-launch check of an ad-hoc-signed app, not the app. Watching it.
