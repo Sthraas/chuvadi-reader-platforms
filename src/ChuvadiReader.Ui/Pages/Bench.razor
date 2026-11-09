@@ -199,7 +199,10 @@
                 var sel = BenchSvc.SelectedInDesk(deskId);
                 <div class="desk @(_perRow == 3 ? "compact" : null)" style="@(desk.ColorHex is { } dcol ? $"--desk-accent:{dcol}" : "")">
                     <div class="desk-h">
+                        @if (!TouchDesks)
+                        {
                         <button class="desk-swatch @(desk.ColorHex is null ? "empty" : null)" style="@(desk.ColorHex is { } sc ? $"background:{sc}" : "")" @onclick="() => ToggleDeskPalette(deskId)" title="Desk colour" aria-label="Desk colour"></button>
+                        }
                         <input class="desk-name" value="@desk.Name"
                                @onchange="@(e => RenameDesk(deskId, e.Value?.ToString()))"
                                spellcheck="false" />
@@ -215,9 +218,12 @@
                         {
                             <span class="desk-wm desk-num" title="@NumberingChipTitle(desk.Numbering)">№</span>
                         }
+                        @if (!TouchDesks)
+                        {
                         <button class="desk-wm desk-bm @(desk.AddBookmarks ? "on" : "off")" @onclick="() => BenchSvc.SetDeskBookmarks(deskId, !desk.AddBookmarks)" title="@(desk.AddBookmarks ? "Bookmarks added on Bind (one per source, originals nested) — click to turn off" : "No bookmarks on Bind — click to turn on")">BM</button>
+                        }
                         <span class="desk-count">@desk.Pages.Count pg</span>
-                        @if (!desk.IsEmpty)
+                        @if (!desk.IsEmpty && !TouchDesks)
                         {
                             <button class="desk-sel" @onclick="() => BenchSvc.SelectAllInDesk(deskId)" title="Select all pages on this desk (@Platform.Keys.Format("Ctrl A"))" aria-label="Select all">All</button>
                             <button class="desk-sel" @onclick="() => BenchSvc.InvertSelectionInDesk(deskId)" title="Invert selection on this desk" aria-label="Invert selection">Inv</button>
@@ -226,15 +232,21 @@
                         {
                             <span class="desk-wm desk-size-chip" title="Every page normalised to @desk.NormalizeSize at Bind / Export">@(desk.NormalizeSize == "Letter" ? "LTR" : "A4")</span>
                         }
+                        @if (!TouchDesks)
+                        {
                         <button class="desk-ord" @onclick="() => BenchSvc.MoveDesk(deskId, -1)" title="Move desk left" aria-label="Move left">&#8592;</button>
                         <button class="desk-ord" @onclick="() => BenchSvc.MoveDesk(deskId, 1)" title="Move desk right" aria-label="Move right">&#8594;</button>
                         <button class="desk-dup" @onclick="() => DuplicateDesk(deskId)" disabled="@(!BenchSvc.CanAddDesk)" title="Duplicate this desk (pages + settings)" aria-label="Duplicate desk"><Icon Name="copy" Size="13" /></button>
-                        @if (!desk.IsEmpty)
+                        }
+                        @if (!desk.IsEmpty && !TouchDesks)
                         {
                             <button class="desk-clear" @onclick="() => ClearDesk(deskId)" title="Delete all pages on this desk" aria-label="Delete all pages">Clear</button>
                         }
                         <button class="desk-more" @onclick="() => ToggleDeskMenu(deskId)" title="More desk actions" aria-label="More actions">⋯</button>
+                        @if (!TouchDesks)
+                        {
                         <button class="desk-del" @onclick="() => RemoveDesk(deskId)" title="Delete desk" aria-label="Delete desk"><Icon Name="trash" Size="14" /></button>
+                        }
                     </div>
                     @if (_deskMenu == deskId)
                     {
@@ -245,6 +257,17 @@
                             {
                                 @* Touch (Portal & Android 12f / 12i): the desk's footer actions live here, with their
                                    labels, instead of a toolbar under every desk. *@
+                                <div class="desk-menu-sep"></div>
+                                @if (!desk.IsEmpty)
+                                {
+                                    <button @onclick="() => DeskMenuDo(() => BenchSvc.SelectAllInDesk(deskId))"><Icon Name="check" Size="13" /> Select all pages</button>
+                                    <button @onclick="() => DeskMenuDo(() => BenchSvc.InvertSelectionInDesk(deskId))"><Icon Name="refresh" Size="13" /> Invert selection</button>
+                                }
+                                <button @onclick="() => DeskMenuDo(() => BenchSvc.SetDeskBookmarks(deskId, !desk.AddBookmarks))"><Icon Name="bookmark" Size="13" /> Bookmarks on Bind: @(desk.AddBookmarks ? "on" : "off")</button>
+                                <button @onclick="() => DeskMenuDo(() => ToggleDeskPalette(deskId))"><Icon Name="circle" Size="13" /> Desk colour</button>
+                                <button @onclick="() => DeskMenuDo(() => BenchSvc.MoveDesk(deskId, -1))"><Icon Name="arrow-left" Size="13" /> Move desk left</button>
+                                <button @onclick="() => DeskMenuDo(() => BenchSvc.MoveDesk(deskId, 1))"><Icon Name="arrow-right" Size="13" /> Move desk right</button>
+                                <button @onclick="() => DeskMenuDo(() => DuplicateDesk(deskId))" disabled="@(!BenchSvc.CanAddDesk)"><Icon Name="copy" Size="13" /> Duplicate desk</button>
                                 <div class="desk-menu-sep"></div>
                                 <button @onclick="() => DeskMenuDo(() => FetchImageToDesk(deskId))"><Icon Name="file-image" Size="13" /> Image</button>
                                 <button @onclick="() => DeskMenuDo(() => AddBlank(deskId))"><Icon Name="file" Size="13" /> Blank page</button>
@@ -268,6 +291,12 @@
                                     <button @onclick="() => DeskMenuDo(() => DeleteSelected(deskId))"><Icon Name="trash" Size="13" /> Delete selected (@sel)</button>
                                 }
                                 <button @onclick="() => DeskMenuDo(() => BindDesk(deskId))" disabled="@(_busy || desk.IsEmpty)"><Icon Name="save" Size="13" /> Bind desk</button>
+                                <div class="desk-menu-sep"></div>
+                                @if (!desk.IsEmpty)
+                                {
+                                    <button @onclick="() => DeskMenuDo(() => ClearDesk(deskId))"><Icon Name="trash" Size="13" /> Delete all pages</button>
+                                }
+                                <button @onclick="() => DeskMenuDo(() => RemoveDesk(deskId))"><Icon Name="trash" Size="13" /> Delete desk</button>
                             }
                             <div class="desk-menu-sep"></div>
                             <button @onclick="() => SaveDeskAsTemplate(deskId)" disabled="@_busy">Save as template…</button>

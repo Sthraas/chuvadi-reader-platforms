@@ -173,3 +173,6 @@
 - W-01: the top bar's empty middle moves the window (press-stopping moved from the containers to display:contents wrappers; pixel-identical). Already in main. Test before FAIL / after PASS.
 - W-02: dropped files reach the Windows host through WebView2's postMessageWithAdditionalObjects (host-drop.js and MainWindow.OnWebMessageReceived); WebView2's drop stays on. Already in main. Page-side test 5/5; host side for Arun's retest.
 - D-143: the 93 Android packages MAUI 10.0.110 bundles (scripts/resolve-android-packages.py → legal/android/maui-android-packages.json) in the notices with licence and holder; Glide's BSD text; Play data-safety basis corrected.
+
+### 33. Twelfth combined patch, part 3 (9 Nov, D-145)
+- Mobile UI H-17 (desk header's small buttons in the ··· menu on touch), H-18 (Arrange keeps Document ▾ on touch), H-19 (Find scrolls the match itself into view; all platforms) from `mobile-ui-hooks-6.patch` (3e80750). 327/327; 27/27 identical; W-01/W-02 tests still pass.
