@@ -156,8 +156,31 @@ may not save tabs at all), not at the kill timing. Anyone who switches apps on a
 **Evidence:** R3 run 42537723474 and R3b run 42539596914 › results-phone-api36 › function/results.jsonl (F-15, F-15b),
 10-after-process-death.png.
 
+## AT-12 · S3 · Android · open — Opening a file that is already open adds a duplicate tab (Windows focuses the open tab)
+**Shared behaviour (chuvadi-reader main 2b8899d, PR #11):** `IncomingFiles.Receive` → `OpenDocumentService.Request(path)` →
+Reader → `TabsService.OpenAsync(path, …)`, which **focuses the existing tab when a tab with the same path is already open**
+(`TabsService.cs:123–131`, case-insensitive path match). On Windows, opening an already-open file from Explorer hands the same
+full path over (`DesktopSingleInstance` → `IncomingFiles`), so it focuses that tab — no duplicate. The shared code is right.
+**Android:** `DocumentImport` → `DocumentLinks.Import` copies every incoming content URI into a **new** working folder
+(`work/open/<new GUID>/<name>`, `DocumentLinks.cs:56, 86`), so the same document arrives under a new path each time and
+`OpenAsync` can't recognise it.
+**Steps:** open `doc-12p.pdf` with Open with; open it again from the same app.
+**Expected (as Windows):** the existing tab comes to the front; Home's Recent keeps one entry.
+**Actual:** a second tab with the same name each time (13 tabs of `design-doc.pdf` in R1: "13 of 13 tabs"; Home › Recent lists
+`startup-doc.pdf` three times).
+**Evidence:** R1 run 42518447149 › results-phone-api36 › design/phone-portrait-light-tabs-sheet.png and `*-home.layout.json`;
+`screenshots/r1/themes-phone-home-mark.png` (Recent list).
+**Fix options (for the Android chat):**
+- (a) **Reuse the working copy for a URI already linked** — `Import` first looks up `_links` for the same content URI; if that
+  working file still exists, return its path (so `OpenAsync` focuses the tab). Refresh the copy's bytes only when no tab holds it
+  (or when the source changed and the tab has no unsaved edits). *Pros:* matches Windows exactly, also fixes the Recent duplicates,
+  host-only. *Cons:* the same file reached through two different URIs (e.g. MediaStore and the Files provider) still looks like two
+  documents; needs care not to overwrite a copy with unsaved edits.
+- (b) Key the working folder on a hash of the URI instead of a new GUID. *Pros:* tiny change. *Cons:* overwrites the open tab's
+  working copy on every re-open, unsaved edits included — unsafe.
+- (c) Leave as is. *Cons:* differs from Windows; tabs and Recent fill with duplicates.
+**Recommendation:** (a).
+
 ## Questions for the coordinator (not filed as bugs)
-- **Q-1 Same file opened again → new tab.** Opening the same PDF with Open with twelve times gave 13 tabs of `design-doc.pdf`
-  (phone "13 of 13 tabs"), and Home › Recent lists `startup-doc.pdf` three times. Is that the Windows behaviour too? If Windows
-  focuses the existing tab / keeps one recent entry per file, Android should match (on Android each Open with arrives as a new
-  working copy, so the same document looks new each time).
+- **Q-1 Same file opened again → new tab** — answered by the coordinator (9 Nov 07:12): Windows is the reference. Checked the shared
+  code and filed the difference as **AT-12** (Android).
