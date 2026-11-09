@@ -611,3 +611,11 @@ Merged without conflicts; Reader 226/226, host kit 75/75, Linux 44/44, Web Ui 39
   aggressive collection right after closing gives back ~150 MB (→ 362–368 MB), but within 2 s it is back to
   466–479 MB: something keeps allocating after the close. The close path itself (TabsService.CloseAsync: Release,
   then load the remaining tab) makes no thumbnails. Reported to Foundation; 36c becomes an assertion once fixed.
+
+### 48. Foundation's sixteenth combined patch, part 2 (4f67a4c, 10 Nov)
+Merged without conflicts; Reader 229/229, host kit 75/75, Linux 44/44, Web Ui 39/39, Mobile Ui 16/16. Closing the
+5-sheet drawing now gives memory back when its drawing allocated ≥ 256 MB: cold 36c runs 5 of 7 back to 272–275 MB
+from 257–259 MB. The 2 that weren't peaked lower (424–486 MB, i.e. the drawing allocated just under 256 MB) and kept
+446–523 MB. With the heavy-drawing line at 64 MB (`PROPOSAL-memory-relief-10nov.md`, one line in Core): cold 6 of 6
+(→ 270–277 MB), warm full pass 121/121 (548 → 726 → 351 MB). 36c stays a measurement on `platform/linux` until that
+lands, then becomes the assertion (written and tested on the local branch).

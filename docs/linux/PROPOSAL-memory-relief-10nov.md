@@ -13,7 +13,7 @@ strokes each) allocates close to that line, so it crosses it in some runs and no
 closing a document that allocated 64 MB (74 ms measured by Foundation; still at most once per 30 s).
 
 **Results with it:** Reader 229/229; 36c cold 6 of 6 (peaks 449–536 MB → 270–277 MB after closing); full UI pass
-with 36c as an assertion (warm): RESULT. 36c becomes an assertion on `platform/linux` when this lands.
+with 36c as an assertion (warm): 121/121 (548 MB before, 726 MB with 5 sheets, 351 MB after closing). 36c becomes an assertion on `platform/linux` when this lands.
 
 **Options.** A. 64 MB (this diff). Pros: a drawing of any real size gives memory back; one constant. Cons: more
 documents qualify for the 74 ms collection (still once per 30 s at most). B. Keep 256 MB. Pros: no change.
