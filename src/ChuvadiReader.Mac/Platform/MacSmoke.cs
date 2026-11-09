@@ -290,7 +290,7 @@ internal static class MacSmoke
         => NSTimer.CreateScheduledTimer(seconds, false, _ => action());
 
     private static void Later(double seconds, Func<Task> action)
-        => NSTimer.CreateScheduledTimer(seconds, false, _ => _ = action());
+        => NSTimer.CreateScheduledTimer(seconds, false, timer => _ = action());
 
     /// <summary>
     /// Where the time between WebView ready and the Ui's ready signal goes (M-06), from the WebView's own

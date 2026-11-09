@@ -24,6 +24,7 @@ internal sealed class PageErrorBridge : NSObject, IWKScriptMessageHandler
         view.Configuration.UserContentController.AddScriptMessageHandler(new PageErrorBridge(log), Name);
     }
 
+    [Export("userContentController:didReceiveScriptMessage:")]
     public void DidReceiveScriptMessage(WKUserContentController userContentController, WKScriptMessage message)
     {
         var text = message.Body?.ToString() ?? string.Empty;
