@@ -1,6 +1,6 @@
 # Mac Test — results
 
-Subject: `platform/mac` **7a65178** → c6d7705 → 00a5975 → **83207af** (current). Harness: `tests/mac/` + `.github/workflows/mac-test.yml` on `platform/mac-test`.
+Subject: `platform/mac` **7a65178** → c6d7705 → 00a5975 → 83207af → **b790370** (current). Harness: `tests/mac/` + `.github/workflows/mac-test.yml` on `platform/mac-test`.
 Runs (one each, read before the next — no retries):
 
 | Round | Run | What changed in the harness |
@@ -10,6 +10,36 @@ Runs (one each, read before the next — no retries):
 | 2 | 42490785792 | menu bar and `open -a` found broken (M-01, M-02) → drive through ⌘O / ⌘K instead; quit-crash capture |
 | 3 | 42494662734 | ⌘O found not to open a panel → the Open button; app stdout per launch; diagnostic exception build |
 | 4 | 42517758923 | panel path set through Accessibility (typing into the Go-to field was lossy) → documents open; timing sets skipped |
+
+## Re-test on platform/mac b790370 (10 Nov, D-154) — current state
+
+Runs **42697565346** and **42699530423** (passwords + M-18 recovery, all runners), **42697607808** (full suite, 10-run
+timing sets, all runners).
+
+| Case | macOS 26 | macOS 15 | 15 Intel | Note / bug |
+|---|---|---|---|---|
+| M-18 Accessibility press → recovery | ✅ recovered | ✅ (no crash) | ✅ (no crash) | same screen, tab kept, plain message, log line, no error bar |
+| T1.10 Licences screen | ✅ opens | ✅ | ✅ | Licence agreement · Licence · Privacy · Third-party notices · .NET runtime (`screenshots/T1.10-b790370-licences-screen-macos15.png`); the Mono-notices check runs in the next full suite |
+| T3.7 menus incl. Settings… ⌘, | ✅ | ✅ | ✅ | M-11 fixed; File has Open a file… ⌘O |
+| T4.0 ⌘O opens the panel | ❌ | ❌ | ❌ | M-15 |
+| T3.5 Esc leaves Immersive | ❌ | ❌ | ❌ | M-21 |
+| T5.10 quit | ✅ | ✅ | ✅ | M-03 fixed (0 crash reports) |
+| T4.7 / T4.8 print | ✅ / ✅ | ✅ / ✅ | ✅ / ✅ | |
+| T4.6 passwords | ✅ (pw runs) | ✅ | ✅ | the full-suite failure on 26 is my typing, see harness note |
+| T5.4, T5.5, T5.7, T5.9 | ✅ | | | |
+
+T2 on b790370 (probe, ms, median (worst) of 10):
+
+| Runner | Cold first render | Warm window / first render | PDF first page warm | Open panel → page |
+|---|---|---|---|---|
+| macos-26 | 11 290 (12 488) | 1 080 / 2 713 (3 069) | 3 044 | 985 (1 069) |
+| macos-15 | 6 019 (7 711) | 651 / 2 600 (3 350) | 2 949 | 394 (492) |
+| macos-15-intel | 6 127 (6 690) | 1 307 / 2 314 (2 387) | 2 171 | 713 (819) |
+| Windows, same run | — | 622 / 1 683 (6 737) | — | — |
+
+**Watch:** on macOS 26, Open panel → page has risen three builds running (00a5975 154 → 83207af 586 → b790370 985 ms), and
+so has the cold first render (4.6 → 7.6 → 11.3 s). The other runners moved both ways. It starts with the
+off-Ui-thread page rendering (b41f25c), but one run per build can't separate that from runner noise; see the status.
 
 ## Re-test on platform/mac 83207af (10 Nov) — current state
 
