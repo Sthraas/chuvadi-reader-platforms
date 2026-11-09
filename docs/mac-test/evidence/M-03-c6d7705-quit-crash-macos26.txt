@@ -1,0 +1,38 @@
+Crash report (excerpt) — macOS 26.7.2 runner, platform/mac c6d7705, run 42538220489, 2026-11-09 00:26:36.9252 +0000
+exception: {'codes': '0x0000000000000000, 0x0000000000000000', 'rawCodes': [0, 0], 'type': 'EXC_CRASH', 'signal': 'SIGABRT'}
+
+Last exception backtrace:
+  CoreFoundation  __exceptionPreprocess
+  libobjc.A.dylib  objc_exception_throw
+  CoreFoundation  -[NSObject(NSObject) __retain_OA]
+  UIKitCore  -[UIResponder doesNotRecognizeSelector:]
+  CoreFoundation  ___forwarding___
+  CoreFoundation  _CF_forwarding_prep_0
+  UIKitCore  -[UIKeyboardSceneDelegate inputViews]
+  UIKitCore  -[UIKeyboardSceneDelegate _clearPreservedInputViewsWithRestorableResponder:]
+  UIKitCore  __27-[UIViewController dealloc]_block_invoke
+  UIKitCore  +[UIKeyboardSceneDelegate performOnControllers:]
+  UIKitCore  -[UIViewController dealloc]
+  UIKitCore  -[UIInputWindowController dealloc]
+  libsystem_blocks.dylib  <deduplicated_symbol>
+  libsystem_blocks.dylib  HelperBase<GenericInline>::destroyBlock(Block_layout*, bool, unsigned char*)
+  libsystem_blocks.dylib  _call_dispose_helpers_excp
+  libsystem_blocks.dylib  _Block_release
+  UIKitCore  -[_UIAfterCACommitBlock run]
+  UIKitCore  -[_UIAfterCACommitQueue flush]
+  libdispatch.dylib  _dispatch_call_block_and_release
+  libdispatch.dylib  _dispatch_client_callout
+  libdispatch.dylib  _dispatch_main_queue_drain.cold.6
+  libdispatch.dylib  _dispatch_main_queue_drain
+  libdispatch.dylib  _dispatch_main_queue_callback_4CF
+  CoreFoundation  __CFRUNLOOP_IS_SERVICING_THE_MAIN_DISPATCH_QUEUE__
+  CoreFoundation  __CFRunLoopRun
+  CoreFoundation  _CFRunLoopRunSpecificWithOptions
+  AppKit  -[NSPersistentUIManager _waitForPendingChangesToFinish]
+  AppKit  -[NSPersistentUIManager discardAllPersistentStateAndClose]
+  AppKit  -[NSApplication _pushPersistentStateTerminationGeneration]
+  AppKit  -[NSApplication terminate:]
+  AppKit  -[NSApplication _terminateFromSender:askIfShouldTerminate:saveWindows:]
+  AppKit  __52-[NSApplication(NSAppleEventHandling) _handleAEQuit]_block_invoke
+  CoreFoundation  __CFRUNLOOP_IS_CALLING_OUT_TO_A_BLOCK__
+  CoreFoundation  __CFRunLoopDoBlocks

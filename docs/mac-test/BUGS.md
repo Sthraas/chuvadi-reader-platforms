@@ -10,21 +10,26 @@ Owner: **Mac** = Mac chat (host code) · **Shared** = existing Ui/Core/Hosting (
 
 | ID | Sev | Owner | Title | Seen on | Status |
 |---|---|---|---|---|---|
-| M-16 | S1 | Mac | Opening any document through the Open panel adds the tab and the "Pick up where you left off" card, then the Ui dies: Blazor's "An error occurred" bar (hidden behind the status bar — only a red line shows) and the Reader never renders; every later click does nothing until relaunch | 15 (26, 15-intel in run 42517758923) | fixed 69640cb (trimmed Platform DI types; after the tested 7a65178) — re-verify. Run 42527099579 on 31dfe67: Home → left bar Open → real Open panel → Reader for PDF (5 pages), md, txt, html, docx, xlsx; no error bar, no Error logs. Error bar under the status bar: Shared, for Foundation |
-| M-01 | S2 | Mac | macOS menu bar has no Chuvadi commands: File, Document and Help are empty; View has only ⌘K and the system's Enter Full Screen | 26, 15, 15-intel | partly fixed ca3fd1d (View, Document, Print ⌘P, no Enter Full Screen — run 42522959467); File › Open… ⌘O waits on the shared global-commands patch (Foundation) |
-| M-02 | S2 | Mac | Files handed over by macOS never open — at launch (Open With / double-click) and while running (`open -a`, Dock); single instance can't work | 26, 15, 15-intel | fixed 09bab61 (+ca3fd1d, 69640cb) — re-verify. Run 42527099579 on 31dfe67: launch file and running hand-over (`open -a`) → tabs, one process (a restored session comes back first, the files are added after it) |
-| M-03 | S1 | Mac | Crash on quit on macOS 26: `ObjectDisposedException` (IServiceProvider) in MAUI's `PageViewController.TraitCollectionDidChange` while AppKit saves window state → SIGABRT, "quit unexpectedly" | 26 (intermittent: 25/41 quits in round 1, 2/2 in round 3's second session, 0/2 in its first) | fixed ca3fd1d — re-verify (run 42522959467: one quit on macOS 26, no crash report — the bug was intermittent, so repeat quits) |
-| M-04 | S3 | Mac | An empty 28–32 pt band above the top bar: the hidden native title bar still takes its height, so the page loses height D-10 set out to win | 26, 15, 15-intel | fixed 09bab61 — re-verify (run 42522959467: web view top 0, full height) |
-| M-05 | S3 | Mac | No app icon in the bundle (no `Assets.car`, no `.icns`, no `CFBundleIconName`) — Dock and Finder show the generic icon | bundle; Dock on 15 and 26 | fixed ca3fd1d — re-verify (Assets.car + CFBundleIconName in the bundle) |
-| M-06 | S3 (perf) | Mac + Shared | Startup: warm first render 2.2–2.6 s, cold 4.2–4.7 s on Apple Silicon runners (7.7 s Intel); ~2 s of every launch is between WebView ready and Blazor's first render | 26, 15, 15-intel | improved 09bab61 (WebKit prewarm, ~260 ms); remaining ~1.1–1.4 s is WebKit's process launch on the VM — breakdown in docs/mac/BUILD-LOG.md session 6; re-measure |
-| M-07 | S4 | Mac | Window opens at 1024×768 at the top-left corner, not 1100×720 as `App.CreateWindow` asks (and as Windows does) | 26, 15 | fixed e11011b (+ca3fd1d) — re-verify (1100×720 centred, clamped on a smaller screen) |
-| M-08 | S3 | Shared (kit + reader.js) | Next/previous tab is ⌘Tab on Mac (reader.js `isPrimary` = ⌘ only) — macOS takes ⌘Tab for the app switcher, and ⌃Tab is explicitly rejected; Settings › Shortcuts shows "⌘Tab" | code; runtime in round 2 | shared patch sent to Foundation (docs/mac/foundation/M-08-M-09-M-10-mac-conventions.patch) |
-| M-09 | S3 | Shared (Ui) + Mac | Immersive is labelled "F11" in the Ui (View rail, Settings › Shortcuts, ⌘K) — on a Mac F11 is Show Desktop; the Mac binding is ⌃⌘F, but that lives only in the (empty, M-01) menu | code; runtime in round 2 | shared patch sent to Foundation (same patch); Mac menu already ⌃⌘F (ca3fd1d) |
-| M-10 | S4 | Shared (WindowButtons) | Green traffic light is announced "Exit full screen" while the window is merely zoomed (macOS zoom is not full screen) | 26 | shared patch sent to Foundation (same patch) |
-| M-11 | S4 | Mac | No Settings… ⌘, in the Chuvadi menu (macOS convention; the Ui has Settings) | 26, 15, 15-intel | Mac side done ca3fd1d; appears once the shared global-commands patch lands (docs/mac/foundation/M-01-M-11-global-commands.patch) |
-| M-12 | S4 | Mac | `DOTNET-*.txt` legal files ship with mode 0744 (executable bit from the NuGet cache) | bundle | fixed ca3fd1d — re-verify (bundle step checks every legal/*.txt is 644) |
-| M-14 | S3 | Mac | .NET messages are resource keys, not text ("ObjectDisposed_Generic", "ObjectDisposed_ObjectName_Name") — the Release build strips system resource strings, so every `ex.Message` the Ui shows will be a key (same class as Linux Test B-17) | 26 | fixed 4cc889d — re-verify (run 42522959467: ObjectDisposedException message is text) |
-| M-15 | S3 | Mac | ⌘O does nothing; the left bar's Open button (and the Home drop zone) do open the panel. ⌘K works, so the page gets keys — ⌘O alone is lost | 26, 15, 15-intel | with M-01: Open… ⌘O comes from the shared global-commands patch |
+| M-16 | S1 | Mac | Opening any document through the Open panel adds the tab and the "Pick up where you left off" card, then the Ui dies: Blazor's "An error occurred" bar (hidden behind the status bar — only a red line shows) and the Reader never renders; every later click does nothing until relaunch | 15 (26, 15-intel in run 42517758923) | **verified fixed** — re-verified on c6d7705 (runs 42534074875, 42538220489): Open panel → Reader on all three runners; PDF, docx, xlsx, md, txt, html, Tamil file name; 15 tabs opened and restored |
+| M-17 | S1 | Mac? | Submitting a PDF password — right or wrong — kills the Ui ("An error occurred", blank page); user-password files can't be opened at all | 26 (AES-256, AES-128, RC4) | open |
+| M-18 | S1 | Mac? | Settings opened after using the Reader and Library shows a blank page with "An error occurred" (fresh launch → Settings is fine) | 26 | open |
+| M-19 | S2 | Mac | The new error log (D-132) stays empty when the Ui fails: no `chuvadi.log` in 47 saved log folders, while M-17/M-18 fired | 26 | open |
+| M-20 | S3 | Shared/Library? | The 8 MB one-page vector stand-in never draws in 20 s ("page 1" placeholder, RSS 409 MB); under memory pressure it stays on "Opening…" | 26 | open — needs a Windows comparison |
+| M-21 | S3 | Shared? | Esc doesn't leave Immersive on Mac (⌃⌘F enters; the "exit" button leaves) | 26, 15, 15-intel | open — check Windows behaviour |
+| M-01 | S2 | Mac | macOS menu bar has no Chuvadi commands: File, Document and Help are empty; View has only ⌘K and the system's Enter Full Screen | 26, 15, 15-intel | **partly fixed** — on macOS 15 / 15-Intel the menus are right (File: Close ⌘W, Print ⌘P, Show in folder, Copy file path · View: 26 items incl. Immersive ⌃⌘F, ⌘K · Document: 10 items + Mark/Protect submenus · no Enter Full Screen). **macOS 26: intermittent** — File 0, Document 0, View 1 in run 42534074875 (doc open, after a mode switch + 5 s), right in 42538220489. Open… ⌘O waits on the shared patch; Help still empty |
+| M-02 | S2 | Mac | Files handed over by macOS never open — at launch (Open With / double-click) and while running (`open -a`, Dock); single instance can't work | 26, 15, 15-intel | **verified fixed** — re-verified on c6d7705 (runs 42534074875, 42538220489): launch with a PDF shows page 1 (22/22 per runner); `open -a` two files into the running app → 3 tabs in order, one process, all runners |
+| M-03 | S1 | Mac | Crash on quit on macOS 26: `ObjectDisposedException` (IServiceProvider) in MAUI's `PageViewController.TraitCollectionDidChange` while AppKit saves window state → SIGABRT, "quit unexpectedly" | 26 (intermittent: 25/41 quits in round 1, 2/2 in round 3's second session, 0/2 in its first) | **not fixed on macOS 26** — new form: ObjC `-[UIKeyboardSceneDelegate inputViews]: unrecognized selector` while a `UIInputWindowController` deallocs during `NSApplication terminate:` / quit Apple Event → SIGABRT. 9 reports in run 42534074875, 8 in 42538220489. macOS 15 / 15-Intel: 0. See below |
+| M-04 | S3 | Mac | An empty 28–32 pt band above the top bar: the hidden native title bar still takes its height, so the page loses height D-10 set out to win | 26, 15, 15-intel | **verified fixed** — re-verified on c6d7705 (runs 42534074875, 42538220489): web content at the window's top edge, traffic lights in the Ui bar, no band |
+| M-05 | S3 | Mac | No app icon in the bundle (no `Assets.car`, no `.icns`, no `CFBundleIconName`) — Dock and Finder show the generic icon | bundle; Dock on 15 and 26 | **verified fixed** — bundle has `Assets.car`, `appicon.icns`, `CFBundleIconName`; the Dock shows the Chuvadi icon |
+| M-06 | S3 (perf) | Mac + Shared | Startup: warm first render 2.2–2.6 s, cold 4.2–4.7 s on Apple Silicon runners (7.7 s Intel); ~2 s of every launch is between WebView ready and Blazor's first render | 26, 15, 15-intel | **still open** — re-measured on c6d7705, warm first render (probe, median): macOS 26 2 039 ms, 15 2 916 ms, Intel 2 396 ms — no material change; on 15 the window now appears later (870 ms vs 385–573 before). Numbers in RESULTS |
+| M-07 | S4 | Mac | Window opens at 1024×768 at the top-left corner, not 1100×720 as `App.CreateWindow` asks (and as Windows does) | 26, 15 | **verified fixed** — 1100×720 centred (410,91 on 1920×1080) |
+| M-08 | S3 | Shared (kit + reader.js) | Next/previous tab is ⌘Tab on Mac (reader.js `isPrimary` = ⌘ only) — macOS takes ⌘Tab for the app switcher, and ⌃Tab is explicitly rejected; Settings › Shortcuts shows "⌘Tab" | code; runtime in round 2 | open — waits on the shared patch (Foundation); Ui still shows the old labels |
+| M-09 | S3 | Shared (Ui) + Mac | Immersive is labelled "F11" in the Ui (View rail, Settings › Shortcuts, ⌘K) — on a Mac F11 is Show Desktop; the Mac binding is ⌃⌘F, but that lives only in the (empty, M-01) menu | code; runtime in round 2 | open — waits on the shared patch; the View rail still says "Immersive (full screen) F11" (AX, macOS 26) |
+| M-10 | S4 | Shared (WindowButtons) | Green traffic light is announced "Exit full screen" while the window is merely zoomed (macOS zoom is not full screen) | 26 | open — waits on the shared patch |
+| M-11 | S4 | Mac | No Settings… ⌘, in the Chuvadi menu (macOS convention; the Ui has Settings) | 26, 15, 15-intel | open — waits on the shared patch; no Settings… ⌘, in my runs |
+| M-12 | S4 | Mac | `DOTNET-*.txt` legal files ship with mode 0744 (executable bit from the NuGet cache) | bundle | **verified fixed** — all five `legal/*.txt` are 0644 |
+| M-14 | S3 | Mac | .NET messages are resource keys, not text ("ObjectDisposed_Generic", "ObjectDisposed_ObjectName_Name") — the Release build strips system resource strings, so every `ex.Message` the Ui shows will be a key (same class as Linux Test B-17) | 26 | fixed per the Mac chat (4cc889d); my runs have not yet surfaced a .NET message to check — kept open until one does |
+| M-15 | S3 | Mac | ⌘O does nothing; the left bar's Open button (and the Home drop zone) do open the panel. ⌘K works, so the page gets keys — ⌘O alone is lost | 26, 15, 15-intel | open — waits on the shared patch; ⌘O still opens nothing (all runners) |
 
 Known and already tracked (not re-filed): sample Home data on a fresh install — "Pinned aerb_submission.pdf", "IMCHRC /
 PET-CT", Recent `patient_chart.pdf` …, "Watched folder ~/Documents/Chuvadi · 8 documents found" with an empty state folder
@@ -173,3 +178,48 @@ would make the next such error visible (suggest keeping one in the product, for 
 
 Secondary, Shared: `#blazor-error-ui` sits under the status bar, so a fatal Ui error shows as a 3-px red line with no
 text. Filed here as part of M-16 for the Foundation; not yet checked whether Windows stacks it the same way.
+
+---
+
+## Re-verification on c6d7705 (9 Nov) — what changed
+Runs 42534074875 (full, with 10-run timing sets) and 42538220489 (function cases), both on all three runners.
+
+### M-03 — quit crash, second form (S1, Mac)
+The managed `ObjectDisposedException` is gone. What is left on macOS 26 is an Objective-C exception at quit:
+`-[UIKeyboardSceneDelegate inputViews]` → `doesNotRecognizeSelector:`, thrown while a `UIInputWindowController`
+deallocates in a CoreAnimation after-commit block, driven by `NSApplication terminate:` (NSPersistentUIManager
+`discardAllPersistentStateAndClose`) or the quit Apple Event's `_shouldTerminate` loop. 17 reports over two runs, every
+one at quit; none on macOS 15. Backtrace: `evidence/M-03-c6d7705-quit-crash-macos26.txt`. The keyboard scene delegate
+UIKit expects is presumably the `SceneDelegate` added for M-02 (it doesn't answer `inputViews`) — the Mac chat to judge.
+
+### M-17 — PDF password submit kills the Ui (S1)
+Open `aes256.pdf` (user password `user1`) through the Open panel → the prompt "This PDF is password-protected" appears
+(✅). Focus the Password field, enter `wrong` and Return → blank page + "An error occurred". Relaunch, reopen, enter
+`user1` and Return → the same. Same for AES-128 and RC4. Screenshots: `screenshots/M-17-password-submit-ui-error-macos26.png`
+(wrong left, right right). The value is set through Accessibility, then Return — the same events a person's typing ends
+with. Not yet run on 15 (password cases are in the full suite only).
+
+### M-18 — Settings after the Reader (S1)
+Fresh launch → Settings: fine on every runner (T4.0b). But: open a PDF, switch modes, open Document ▾ and ⌘K, go to
+Library (fine), then Settings → blank page + "An error occurred" (`screenshots/M-18-settings-after-reader-ui-error-macos26.png`).
+
+### M-19 — error log empty when it matters (S2)
+My harness now keeps `~/Library/Logs/Chuvadi` before each case. Across 47 cases (M-17 and M-18 included) the folder
+only ever held `startup.log` — never `chuvadi.log`. So the Blazor renderer's unhandled exceptions (what "An error
+occurred" reports) don't reach the D-132 logger; those are exactly the errors Arun and the friend would need to send.
+
+### M-20 — heavy vector page (S3)
+`heavy-vector.pdf` (A1, ~8 MB uncompressed content stream of 200 k line segments — my stand-in for the 7.9 MB CAD PDF):
+after 20 s the page is still the white "page 1" placeholder; RSS 409 MB. Under `memory_pressure -l critical` the tab
+stays on "Opening heavy-vector.pdf…". Likely the shared renderer, not the Mac host — needs the same file on Windows.
+
+### M-21 — Esc and Immersive (S3)
+⌃⌘F enters Immersive on every runner (✅, chrome hidden, "exit" button). Esc does not leave it; the "exit" button does.
+The plan expected Esc to leave (as F11 mode does on Windows?) — please confirm the Windows behaviour; if Windows leaves
+on Esc this is a Mac/Shared bug, otherwise close it.
+
+### Not bugs (recorded)
+- Immersive is an in-app mode everywhere (no window full screen); the macOS green button zooms. Consistent with the
+  6 Nov decision.
+- Excel cells show raw values (`1234.5` for ₹1,234.50, `46334` for the date) — the shared Sheets display-text work
+  (SHEETS-FMT) isn't released; same in every locale.
