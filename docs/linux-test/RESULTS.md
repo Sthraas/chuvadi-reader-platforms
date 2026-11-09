@@ -96,7 +96,7 @@ Findings
 | T4.7 | **Print is vector** | ✅ The app submits the **source PDF byte-identical** to CUPS (preserved spool file `cmp`-equal) — CUPS test page, `five-pages.pdf`, and a 3-page A3 drawing with 40,000 strokes/page. cups-pdf output: fonts present, text extractable, **0 images**. | `/home/claude/evidence/lt/print/` |
 | T4.7b | Landscape pages | ❌ **B-14** printed at ~½ size on portrait paper | `screenshots/B-14-*` |
 | T4.8 | No-printing permission (qpdf `--print=none`, owner pw only) | ✅ refusal message; no GTK dialog; **0 CUPS jobs** | |
-| T4.8b | Print a file opened with its owner password | 🔒 can't open with a password (B-07) | |
+| T4.8b | Print a file opened with its owner password (D-139, 7595ef3) | ✅ own qpdf fixture (user `u-pass`, owner `o-pass`, `--print=none`): user password → refused, 0 CUPS jobs; owner password → printed, 5 pages, fonts, 0 images (vector). CUPS receives an unencrypted copy (needed — a printer can't decrypt); no copy left in `/tmp` | |
 | T4.9 | Word / Excel viewing | ✅ `sample.docx` renders in the Word view; `.xlsx` in the grid; ⚠️ known: shared-string index shown as value (Sheets 2.0.2, D-87) | |
 | T4.10a | File dialogs (open/save) | ✅ GTK dialogs drive correctly | |
 | T4.10b | Real drag from another app (GTK 4 file-list drag source, xdotool), 2 files (db28319) | ❌ **B-06 confirmed live**: drop accepted, only the first file opens. **Fixed f3d5978: 2 tabs ✅.** No overlay while dragging is correct: D-104 is the portal's overlay; a desktop overlay is option (c), noted for Arun | `screenshots/B-06-*` | |
@@ -201,3 +201,11 @@ CI artifact `linux-arm64/deb/chuvadi-reader_1.0.0~preview_arm64.deb` from run 42
 4. A real printer: landscape/portrait mix, copies, a file opened with its owner password.
 5. Fractional 125 %/150 % on a real HiDPI panel — judge text crispness (sizes already verified).
 6. ARM64 hardware (or the CI runner's screenshots, judged by me): launch and UI pass.
+
+### Re-verification on 7595ef3 (9 Nov 2026, 22:00 IST)
+Build 0 warnings; tests 212 + 75 + 44; lintian 0. **B-24 ✅ and B-08b ✅** (stalled PDF/Excel/Word: "Opening…" < 1 s, Cancel at 10 s, Cancel closes the tab, later opens never blocked) · **B-25 ✅** (WT-10 wording + Details for Excel, Word, PDF) · **owner-password printing ✅** (D-139). Regression ✅: several files on the CLI, single instance (2nd/3rd launch), 2-file drop, Show in folder (one window, no fallback), vector print byte-identical. **Still open: B-26** (Excel number formats, shared).
+
+### Linux readiness (7595ef3)
+**Ready for Arun's check, with one shared item open.** Every Linux-routed and shared bug is verified fixed **except B-26** (Excel shows `₹`/`%`/date formats as raw values — values never altered; shared Ui/Core, Sheets 2.0.2 already has `Cell.GetDisplayText`).
+Waiting elsewhere, not Linux defects: **library** — B-08a (Docs limits; the app already refuses the bomb), B-09a library side (app side fixed), B-27 (CAD render time/memory, profile in `evidence/b27/`); **Reader chat** — the new left-bar collapse button (D-133; existing Collapse works on Linux); **Arun** — Windows timings (D-51).
+**Real-machine checks** (unchanged, listed above in the sign-off): AppArmor + GPU desktop install; GNOME Wayland and KDE window behaviour; drag from Files/Dolphin and Show in folder there; a real printer (mixed orientation, copies, owner password); fractional scaling on a HiDPI panel; ARM64 hardware.
