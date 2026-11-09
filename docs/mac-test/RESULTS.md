@@ -11,6 +11,52 @@ Runs (one each, read before the next — no retries):
 | 3 | 42494662734 | ⌘O found not to open a panel → the Open button; app stdout per launch; diagnostic exception build |
 | 4 | 42517758923 | panel path set through Accessibility (typing into the Go-to field was lossy) → documents open; timing sets skipped |
 
+## Re-verification on platform/mac c6d7705 (9 Nov) — current state
+
+Runs 42534074875 (full + 10-run timing sets) and 42538220489 (function cases), all three runners; 42541303798
+(print via Save as PDF) pending at the time of writing. Bug statuses live in BUGS.md.
+
+| Case | macOS 26 | macOS 15 | 15 Intel | Evidence / bug |
+|---|---|---|---|---|
+| T1 build, tests, restore, bundle audit | ✅ | — | — | 0 warnings; Core 194/194, Hosting 59/59; 279 assemblies all Microsoft or Arun's; icon now in the bundle; legal files 0644; zip 47.7 MB, 495 files identical |
+| T1.6 Launch Services | ✅ | ✅ | ✅ | |
+| T2.3 launch with a PDF → page | ✅ 22/22 | ✅ 22/22 | ✅ 22/22 | M-02 fixed |
+| T3.5 window | ✅ | ✅ | ✅ | 1100×720 centred, page at the top edge, minimise ✅ (M-04, M-07 fixed) |
+| T3.6 Immersive ⌃⌘F | ✅ enters / ❌ Esc | ✅ / ❌ | ✅ / ❌ | M-21 |
+| T3.7 menu bar | ⚠️ intermittent | ✅ except ⌘O, ⌘, | ✅ except ⌘O, ⌘, | M-01 (26), M-11, M-15 |
+| T4.0 ⌘K at launch / ⌘O | ✅ / ❌ | ✅ / ❌ | ✅ / ❌ | M-15 (shared patch) |
+| T4.1 Open panel → Reader | ✅ | ✅ | ✅ | M-16 fixed |
+| T4.6 passwords | ❌ | ⏳ | ⏳ | prompt ✅; any submit kills the Ui — M-17 |
+| T4.8 no-print permission | ✅ | ✅ | ✅ | Windows message shown, no panel, no CUPS job |
+| T4.7 print → macOS panel | ✅ panel | ✅ | ✅ | "Print 2 pages" opens the native panel with preview; vector check via PDF ▸ Save as PDF in run 42541303798 |
+| T4.9 formats | ✅ | | | PDF, docx, xlsx (2 sheets, merged row), md, txt, html, Tamil name; Excel shows raw values (shared Sheets display text not released) |
+| T4.12 clipboard text / PNG | ✅ / ✅ | ✅ / ✅ | ✅ / ✅ | File › Copy file path → path; View › Snapshot a region → Copy → `public.png` |
+| T4.13 Show in Finder | ✅ | ✅ | ✅ | Finder selection = the file |
+| T4.14 single instance | ✅ | ✅ | ✅ | 3 tabs in order, one process |
+| T5.1 damaged / hostile | ✅ | | | truncated, bad xref, garbage, empty → "This PDF is damaged… rebuild as a new copy"; missing docx part → clear message; bomb.docx and far-cell.xlsx don't block the next open |
+| T5.3 large | ✅ 500 pages / ❌ heavy vector | | | many-pages: first page 0.93 s, RSS 240 MB; heavy vector: M-20 |
+| T5.4 many tabs | ✅ | | | 15 opened, RSS 207 → 232 MB, 15/15 restored |
+| T5.5 low memory | ⚠️ | | | alive; the heavy file stays "Opening…" (M-20) |
+| T5.7 network | ✅ | | | no sockets |
+| T5.8 locale | ✅ | | | Ui unaffected by en-IN/de-DE/ta-IN; clock 24 h |
+| T5.9 fresh / upgrade / corrupt / read-only | ✅ | | | no sample data on a fresh install now |
+| T5.10 quit | ❌ | ✅ | ✅ | M-03 second form on 26 |
+| Settings after the Reader | ❌ | — | — | M-18 |
+| Error log (D-132) | ❌ | | | M-19 |
+
+### T2 on c6d7705 (ms, median (worst), 10 launches each)
+
+| Runner | Cold window / first render (probe) | Warm window / first render (probe) | Warm first render (app) | PDF first page — cold / warm (probe) | Open panel → first page |
+|---|---|---|---|---|---|
+| macos-26 arm64 | 2 422 / 4 014 (5 633) | 461 / 2 039 (2 151) | 2 008 | 4 838 (5 224) / 2 689 (2 901) | 161 (651) |
+| macos-15 arm64 | 4 005 / 6 693 (9 088) | 870 / 2 916 (3 726) | 2 792 | 9 695 (11 801) / 4 840 (5 456) | 662 (912) |
+| macos-15-intel | 4 864 / 6 541 (7 771) | 1 374 / 2 396 (2 782) | 2 431 | 7 436 (11 346) / 4 245 (7 107) | 793 (969) |
+| Windows, same run (client-area probe, D-127) | — | 646 / 1 635 (1 890) | — | — | — |
+
+Method as below (same probe, same rule). PDF first page = launch with the file (Finder double-click) → first frame
+with the white page and its text. Open panel → first page = from pressing Open in the panel to the page on screen.
+Reading: the Mac still needs 1.6–2.6 s from window to first render, 1.3–2.5× Windows in the same run (M-06 open).
+
 Runners: `macos-26` = macOS 26.7.2, Apple M1 (virtual), 1920×1080 · `macos-15` = macOS 15.7, Apple Silicon (virtual),
 1920×1080 · `macos-15-intel` = macOS 15.7.9, Intel i7-8700B, 1920×1080. **No HiDPI mode on any runner** (every
 display mode has pixel size = point size), so Retina could not be tested (real-Mac item). **macOS 12, 13, 14: no runner
