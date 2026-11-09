@@ -352,6 +352,18 @@ def run_cmd(label, settle=1.5):
     time.sleep(settle)
 
 
+def focus_field(label):
+    """Clicks the centre of the AX element whose label is `label` (puts the caret in a text field)."""
+    rc, out = find(label, timeout=3)
+    m = re.search(r"@(-?\d+),(-?\d+) (\d+)x(\d+)", out)
+    if rc != 0 or not m:
+        return False
+    x, y, w, h = map(int, m.groups())
+    drive("click", x + w // 2, y + h // 2)
+    time.sleep(0.5)
+    return True
+
+
 def ax_text(name):
     return axdump(name)
 
@@ -969,22 +981,21 @@ def t4_6():
              "messages": [l.strip()[:200] for l in txt.splitlines() if re.search(r"password|encrypted|locked|unlock", l, re.I)][:6]}
         field = "AXSecureTextField" in txt
         if field and f != "owner-only.pdf":
-            press("Password", role="AXTextField")
-            time.sleep(0.5)
-            drive("focusset", NAME, "wrong")
+            e["focused"] = focus_field("Password to open")
+            drive("type", "wrong")
             drive("key", "return")
-            time.sleep(2)
+            time.sleep(2.5)
             wt = axdump("pw-wrong-" + f)
-            e["wrong"] = [l.strip()[:200] for l in wt.splitlines() if re.search(r"wrong|incorrect|didn|password", l, re.I)][:4]
+            e["wrong"] = [l.strip()[:200] for l in wt.splitlines() if re.search(r"wrong|incorrect|didn|doesn|not match|try again", l, re.I)][:4]
             e["wrong_ui_error"] = ui_error()
             e["wrong_shot"] = shot("pw-wrong-" + f.replace(".", "_"))
             if e["wrong_ui_error"]:
                 quit_app()
                 launch(settle=3)
                 open_doc(f"{FX}/{f}", settle=4)
-            press("Password", role="AXTextField")
-            time.sleep(0.5)
-            drive("focusset", NAME, "user1")
+            focus_field("Password to open")
+            drive("key", "cmd+a")
+            drive("type", "user1")
             drive("key", "return")
             time.sleep(4)
             rt = axdump("pw-right-" + f)
@@ -1177,6 +1188,10 @@ def t5_5():
 
 
 def main():
+    if A.suite == "pw":
+        t4_6()
+        m18()
+        return
     if A.suite == "print":
         t4_7()
         reset_state({"theme": "light"})
