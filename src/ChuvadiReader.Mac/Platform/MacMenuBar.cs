@@ -213,6 +213,9 @@ internal static class MacMenuBar
     {
         var seen = new HashSet<string>(StringComparer.Ordinal);
         var items = commands
+            // Settings lives in the Chuvadi menu (M-11). UIKit drops a menu change that repeats a command already in
+            // the bar (same action and id), so a second copy under View › Go to kept Settings… out of the app menu.
+            .Where(c => c.Id != SettingsId)
             .Where(c => seen.Add(c.Label)) // the same action can be registered by two owners
             .Select(c => (UIMenuElement)Item(c, keys))
             .ToArray();
