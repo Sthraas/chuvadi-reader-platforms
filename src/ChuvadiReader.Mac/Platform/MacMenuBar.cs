@@ -177,16 +177,17 @@ internal static class MacMenuBar
             var settings = UIKeyCommand.Create((NSString)"Settings…", null, new Selector(ActionSelector), (NSString)",",
                 UIKeyModifierFlags.Command, new NSString(SettingsId));
             // Catalyst keeps a hidden, empty Preferences menu; an item put in it never showed (Mac Test run on
-            // b41f25c). Remove it and put Settings… in its own section right after About, as macOS apps do.
+            // b41f25c). Remove it and put Settings… in its own section right after About Chuvadi, as macOS apps do.
             var hadPreferences = builder.GetMenu(UIMenuIdentifier.Preferences.GetConstant()!) is not null;
             if (hadPreferences)
             {
                 builder.RemoveMenu(UIMenuIdentifier.Preferences.GetConstant()!);
             }
 
-            builder.InsertSiblingMenuAfter(
-                UIMenu.Create(string.Empty, null, UIMenuIdentifier.None, UIMenuOptions.DisplayInline, new UIMenuElement[] { settings }),
-                UIMenuIdentifier.About.GetConstant()!);
+            // As its own inline section inside About's menu: a separate sibling menu needs an identifier of its own,
+            // and one sharing "None" with the Document menu was silently dropped by the builder.
+            var section = UIMenu.Create(string.Empty, null, UIMenuIdentifier.None, UIMenuOptions.DisplayInline, new UIMenuElement[] { settings });
+            builder.ReplaceChildrenOfMenu(UIMenuIdentifier.About.GetConstant()!, children => children.Append(section).ToArray());
             MacSmoke.Log($"menu-settings inserted (system Preferences menu {(hadPreferences ? "removed" : "absent")})");
             if (MacSmoke.Enabled && builder.GetMenu(UIMenuIdentifier.Application.GetConstant()!) is { } appMenu)
             {
