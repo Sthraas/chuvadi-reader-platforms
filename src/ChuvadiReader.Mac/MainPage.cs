@@ -122,6 +122,7 @@ public sealed class MainPage : ContentPage
         var view = e.WebView;
         WebKitView = view;
         PageErrorBridge.Attach(view, _services); // M-19: page errors to the D-132 log
+        MacImmersive.Attach(view); // M-21: Esc leaves Immersive
         WebContentRecovery.Attach(view, _services.GetRequiredService<Microsoft.Extensions.Logging.ILoggerFactory>().CreateLogger("ChuvadiReader.Mac.WebContent"));
 
         // No page zoom gestures — only the Interface size setting zooms (as on Windows).

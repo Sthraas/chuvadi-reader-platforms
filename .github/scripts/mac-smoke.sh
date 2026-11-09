@@ -204,6 +204,25 @@ cp "$LOG" "$PWD/smoke-appearance.log"; cp -R "$LOGDIR" "$PWD/chuvadi-logs-recove
 quit_app || fail "recovery run did not quit"
 sleep 2
 
+# --- M-21 / M-15 on the tester's path: two documents through the Open panel, then real ⌃⌘F, Esc and ⌘O ----------
+rm -f "$LOG"
+open -n --env CHUVADI_SMOKE=1 --env "CHUVADI_SMOKE_PICK=$DOCS/five-pages.pdf;$DOCS/one.pdf;$DOCS/two.pdf" \
+  --env "CHUVADI_SMOKE_STEPS=pick;pick;native:ctrl-cmd-f;native:escape;native:cmd-o;wait" \
+  --stdout "$LOG" --stderr "$LOG" -a "$APP"
+native_watch 180 &
+NW=$!
+wait_for 'CHUVADI steps done' 180 || fail "M-21/M-15 steps did not finish"
+wait $NW 2>/dev/null || true
+grep -E "CHUVADI (step [0-9]+ native|immersive|menu-command|tabs|picked|log Error)" "$LOG" | cut -c1-400
+s=$(grep -E "CHUVADI step 3 native: route=" "$LOG" | tail -1)
+[[ "$s" == *"immersive=1"* ]] && pass "M-21 after the Open panel, real ⌃⌘F enters Immersive" || fail "M-21 ⌃⌘F after the Open panel: ${s:-no report}"
+s=$(grep -E "CHUVADI step 4 native: route=" "$LOG" | tail -1)
+[[ "$s" == *"immersive=0"* ]] && pass "M-21 after the Open panel, real Esc leaves Immersive" || fail "M-21 Esc after the Open panel: ${s:-no report}"
+grep -qE "CHUVADI tabs 3: .*two\.pdf" "$LOG" && pass "M-15 real ⌘O opens the panel and the file" || fail "M-15 ⌘O opened nothing"
+cp "$LOG" "$PWD/smoke-keys.log"
+quit_app || fail "keys run did not quit"
+sleep 2
+
 # --- M-17 / M-18 / M-21 / M-19: the tester's sequences, scripted --------------------------------------------
 # Locked PDFs (qpdf: a testing tool, never shipped), a real-key sender with Post Event access, then one launch that
 # walks: page error → locked AES-256 file → wrong password → right password (each with a real Return) → real ⌃⌘F →
