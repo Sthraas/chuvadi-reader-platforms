@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using ChuvadiReader.Core.Documents;
 using ChuvadiReader.Core.Licensing;
 using ChuvadiReader.Core.Lifecycle;
@@ -35,76 +36,89 @@ public static class ChuvadiReaderServices
         var life = lifetime == AppStateLifetime.Process ? ServiceLifetime.Singleton : ServiceLifetime.Scoped;
 
         // Same set as the Windows host registered on chuvadi-reader main c7b9e44 (App.xaml.cs).
-        foreach (var (service, impl) in CoreServices)
+        foreach (var r in CoreServices)
         {
-            services.Add(new ServiceDescriptor(service, impl, life));
+            services.Add(new ServiceDescriptor(r.Service, r.Impl, life));
         }
 
         // Platform seams: harmless defaults. Each host replaces the ones it supports.
-        foreach (var (service, impl) in SeamDefaults)
+        foreach (var r in SeamDefaults)
         {
-            services.TryAdd(new ServiceDescriptor(service, impl, life));
+            services.TryAdd(new ServiceDescriptor(r.Service, r.Impl, life));
         }
 
         return services;
     }
 
-    private static readonly (Type Service, Type Impl)[] CoreServices =
+    /// <summary>
+    /// One registration. AT-03: the implementation type carries <see cref="DynamicallyAccessedMembersAttribute"/>
+    /// (public constructors), so a trimmed app (Android Release, Mac Catalyst, any AOT host) keeps the
+    /// constructors the container calls. As an untyped (Type, Type) tuple the trimmer couldn't see that use and
+    /// removed them from the trimmable Platform assembly, and the Android Release app died at launch.
+    /// Still non-generic: nothing extra to JIT at startup.
+    /// </summary>
+    private readonly record struct Registration(
+        Type Service,
+        [property: DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
+        [param: DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
+        Type Impl);
+
+    private static readonly Registration[] CoreServices =
     {
-        (typeof(SaveFolderService), typeof(SaveFolderService)),
-        (typeof(CategoryService), typeof(CategoryService)),
-        (typeof(ThemeService), typeof(ThemeService)),
-        (typeof(UserProfileService), typeof(UserProfileService)),
-        (typeof(RecentFilesService), typeof(RecentFilesService)),
-        (typeof(PinnedService), typeof(PinnedService)),
-        (typeof(WatchedFolderService), typeof(WatchedFolderService)),
-        (typeof(LibraryService), typeof(LibraryService)),
-        (typeof(TagService), typeof(TagService)),
-        (typeof(FolderSearchService), typeof(FolderSearchService)),
-        (typeof(DocumentPropertiesService), typeof(DocumentPropertiesService)),
-        (typeof(ExportService), typeof(ExportService)),
-        (typeof(RedactService), typeof(RedactService)),
-        (typeof(StampService), typeof(StampService)),
-        (typeof(DocxViewService), typeof(DocxViewService)),
-        (typeof(XlsxViewService), typeof(XlsxViewService)),
-        (typeof(FlattenService), typeof(FlattenService)),
-        (typeof(RecoveryService), typeof(RecoveryService)),
-        (typeof(PressService), typeof(PressService)),
-        (typeof(IPdfReader), typeof(ChuvadiPdfReader)),
-        (typeof(TabsService), typeof(TabsService)),
-        (typeof(PdfToolsService), typeof(PdfToolsService)),
-        (typeof(BenchComposer), typeof(BenchComposer)),
-        (typeof(BenchService), typeof(BenchService)),
-        (typeof(SessionService), typeof(SessionService)),
-        (typeof(OpenDocumentService), typeof(OpenDocumentService)),
-        (typeof(BenchDropService), typeof(BenchDropService)),
-        (typeof(RedactRequestService), typeof(RedactRequestService)),
-        (typeof(ShellService), typeof(ShellService)),
-        (typeof(PreferencesService), typeof(PreferencesService)),
-        (typeof(TextViewService), typeof(TextViewService)),
-        (typeof(MeasureService), typeof(MeasureService)),
-        (typeof(SignatureCheckService), typeof(SignatureCheckService)),
-        (typeof(PasswordService), typeof(PasswordService)),
-        (typeof(CertificateSignService), typeof(CertificateSignService)),
-        (typeof(IEntitlements), typeof(DefaultEntitlements)),
-        (typeof(IAppReadySignal), typeof(AppReadySignal)),
-        (typeof(IAppCommands), typeof(ShellAppCommands)),
-        (typeof(IncomingFiles), typeof(IncomingFiles)),
+        new(typeof(SaveFolderService), typeof(SaveFolderService)),
+        new(typeof(CategoryService), typeof(CategoryService)),
+        new(typeof(ThemeService), typeof(ThemeService)),
+        new(typeof(UserProfileService), typeof(UserProfileService)),
+        new(typeof(RecentFilesService), typeof(RecentFilesService)),
+        new(typeof(PinnedService), typeof(PinnedService)),
+        new(typeof(WatchedFolderService), typeof(WatchedFolderService)),
+        new(typeof(LibraryService), typeof(LibraryService)),
+        new(typeof(TagService), typeof(TagService)),
+        new(typeof(FolderSearchService), typeof(FolderSearchService)),
+        new(typeof(DocumentPropertiesService), typeof(DocumentPropertiesService)),
+        new(typeof(ExportService), typeof(ExportService)),
+        new(typeof(RedactService), typeof(RedactService)),
+        new(typeof(StampService), typeof(StampService)),
+        new(typeof(DocxViewService), typeof(DocxViewService)),
+        new(typeof(XlsxViewService), typeof(XlsxViewService)),
+        new(typeof(FlattenService), typeof(FlattenService)),
+        new(typeof(RecoveryService), typeof(RecoveryService)),
+        new(typeof(PressService), typeof(PressService)),
+        new(typeof(IPdfReader), typeof(ChuvadiPdfReader)),
+        new(typeof(TabsService), typeof(TabsService)),
+        new(typeof(PdfToolsService), typeof(PdfToolsService)),
+        new(typeof(BenchComposer), typeof(BenchComposer)),
+        new(typeof(BenchService), typeof(BenchService)),
+        new(typeof(SessionService), typeof(SessionService)),
+        new(typeof(OpenDocumentService), typeof(OpenDocumentService)),
+        new(typeof(BenchDropService), typeof(BenchDropService)),
+        new(typeof(RedactRequestService), typeof(RedactRequestService)),
+        new(typeof(ShellService), typeof(ShellService)),
+        new(typeof(PreferencesService), typeof(PreferencesService)),
+        new(typeof(TextViewService), typeof(TextViewService)),
+        new(typeof(MeasureService), typeof(MeasureService)),
+        new(typeof(SignatureCheckService), typeof(SignatureCheckService)),
+        new(typeof(PasswordService), typeof(PasswordService)),
+        new(typeof(CertificateSignService), typeof(CertificateSignService)),
+        new(typeof(IEntitlements), typeof(DefaultEntitlements)),
+        new(typeof(IAppReadySignal), typeof(AppReadySignal)),
+        new(typeof(IAppCommands), typeof(ShellAppCommands)),
+        new(typeof(IncomingFiles), typeof(IncomingFiles)),
     };
 
-    private static readonly (Type Service, Type Impl)[] SeamDefaults =
+    private static readonly Registration[] SeamDefaults =
     {
-        (typeof(IUiScale), typeof(NoopUiScale)),
-        (typeof(IExternalLinks), typeof(NoExternalLinks)),
-        (typeof(IWindowControls), typeof(NoopWindowControls)),
-        (typeof(IPrintService), typeof(NoopPrintService)),
-        (typeof(IAppInstance), typeof(NoAppInstance)),
-        (typeof(IHostNotices), typeof(NoHostNotices)),
-        (typeof(IDroppedFiles), typeof(NoDroppedFiles)),
-        (typeof(IFileWriteBack), typeof(NoFileWriteBack)),
-        (typeof(IAppPaths), typeof(Desktop.DesktopAppPaths)),
-        (typeof(IAccount), typeof(LocalAccount)),
-        (typeof(IAppLifecycle), typeof(NoAppLifecycle)),
-        (typeof(IFileManager), typeof(NoFileManager)),
+        new(typeof(IUiScale), typeof(NoopUiScale)),
+        new(typeof(IExternalLinks), typeof(NoExternalLinks)),
+        new(typeof(IWindowControls), typeof(NoopWindowControls)),
+        new(typeof(IPrintService), typeof(NoopPrintService)),
+        new(typeof(IAppInstance), typeof(NoAppInstance)),
+        new(typeof(IHostNotices), typeof(NoHostNotices)),
+        new(typeof(IDroppedFiles), typeof(NoDroppedFiles)),
+        new(typeof(IFileWriteBack), typeof(NoFileWriteBack)),
+        new(typeof(IAppPaths), typeof(Desktop.DesktopAppPaths)),
+        new(typeof(IAccount), typeof(LocalAccount)),
+        new(typeof(IAppLifecycle), typeof(NoAppLifecycle)),
+        new(typeof(IFileManager), typeof(NoFileManager)),
     };
 }

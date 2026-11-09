@@ -63,4 +63,28 @@ public sealed class FileAppStorageTests
         Assert.Empty(reasons);
         Assert.Equal("Palm", new FileAppStorage(dir).GetSync("theme"));
     }
+
+    [Fact]
+    public void Settings_are_written_byte_for_byte_as_before_and_read_back_unchanged()
+    {
+        // AT-03: generated JSON instead of reflection. Same bytes, so every existing settings.json reads the same.
+        var values = new Dictionary<string, string>
+        {
+            ["theme"] = "Palm",
+            ["name"] = "Dr.  Arun  S. ",
+            ["ta"] = "தமிழ் உரை",
+            ["quote"] = "He said \"hi\" <b> & </b>",
+            ["lines"] = "one\ntwo\ttab",
+            ["emoji"] = "📄 ok",
+            ["json"] = "[{\"Path\":\"C:\\\\x.pdf\"}]",
+        };
+
+#pragma warning disable IL2026, IL3050 // the old reflection path, kept here only to compare against
+        var before = System.Text.Json.JsonSerializer.Serialize(values);
+#pragma warning restore IL2026, IL3050
+        var now = System.Text.Json.JsonSerializer.Serialize(values, SettingsJson.Default.DictionaryStringString);
+
+        Assert.Equal(before, now);
+        Assert.Equal(values, System.Text.Json.JsonSerializer.Deserialize(now, SettingsJson.Default.DictionaryStringString));
+    }
 }

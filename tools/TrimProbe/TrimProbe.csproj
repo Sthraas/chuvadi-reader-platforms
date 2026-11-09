@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    TESTING ONLY (never shipped; AT-03). A host as small as can be: AddChuvadiReader, then resolve every
+    registered service from a trimmed Release build. Published with TrimMode=partial, which trims only the
+    assemblies marked trimmable (as Android's SdkOnly link mode and Mac Catalyst do), so a seam whose
+    constructor the trimmer removed fails here exactly as it crashed the Android app.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
+    <SelfContained>true</SelfContained>
+    <UseSystemResourceKeys>false</UseSystemResourceKeys>
+    <!-- Its own trim warnings are about this probe (it resolves services by type on purpose), not the kit. -->
+    <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ChuvadiReader.Hosting\ChuvadiReader.Hosting.csproj" />
+  </ItemGroup>
+</Project>
