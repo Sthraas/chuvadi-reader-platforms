@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <!-- One version for every chuvadi-pdf package (they are mono-versioned and must never mix). -->
-    <ChuvadiPdfVersion>3.31.2</ChuvadiPdfVersion>
+    <ChuvadiPdfVersion>3.32.0</ChuvadiPdfVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -29,8 +29,8 @@
     <PackageReference Include="Chuvadi.Pdf.Redaction" Version="$(ChuvadiPdfVersion)" />
     <PackageReference Include="Chuvadi.Pdf.Watermark" Version="$(ChuvadiPdfVersion)" />
     <PackageReference Include="Chuvadi.Pdf.Signatures" Version="$(ChuvadiPdfVersion)" />
-    <PackageReference Include="Chuvadi.Docs" Version="1.1.0" />
-    <PackageReference Include="Chuvadi.Sheets" Version="1.1.2" />
+    <PackageReference Include="Chuvadi.Docs" Version="2.0.0" />
+    <PackageReference Include="Chuvadi.Sheets" Version="2.0.2" />
   </ItemGroup>
 
   <ItemGroup>

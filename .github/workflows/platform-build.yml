@@ -43,7 +43,7 @@ on:
         required: true
         type: string
       pack-check:
-        description: true = also re-pack chuvadi-pdf from the unchanged v3.31.2 tag and check it yields the same package set as ci/packages (a check only; builds always restore from ci/packages).
+        description: true = also re-pack chuvadi-pdf from the unchanged v3.32.0 tag and check it yields the same package set as ci/packages (a check only; builds always restore from ci/packages).
         required: false
         type: boolean
         default: false

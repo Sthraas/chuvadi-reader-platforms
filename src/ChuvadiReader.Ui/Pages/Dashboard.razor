@@ -150,7 +150,7 @@
 
         <section class="block smap">
             <h2 class="eye smap-head">
-                <span>Storage map</span>
+                <span>@(IsPortal ? ChuvadiReader.Ui.Components.Platform.PlatformText.HomeStorageMapTitle : "Storage map")</span>
                 @if (Platform.Capabilities.RevealInFolder)
                 {
                     <span class="smap-folder" title="@Categories.BaseFolder">@Categories.BaseFolder</span>
@@ -230,7 +230,7 @@
                 </span>
                 <span class="plank"></span>
             </span>
-            <span class="shelf-go">@(Books.Count == 0 ? "Your shelves are empty — open the Library" : "Open the shelves") <Icon Name="chevron-right" Size="13" /></span>
+            <span class="shelf-go">@(Books.Count == 0 ? (IsPortal ? ChuvadiReader.Ui.Components.Platform.PlatformText.HomeShelvesEmpty : "Your shelves are empty — open the Library") : "Open the shelves") <Icon Name="chevron-right" Size="13" /></span>
         </button>
 
         @if (Platform.Capabilities.WatchFolders)

@@ -94,7 +94,7 @@ public partial class Bench
     {
         Func<Task> T(Action a) => () => { a(); StateHasChanged(); return Task.CompletedTask; };
         var empty = BenchSvc.IsEmpty ? "The bench is empty" : null;
-        yield return new("a.fetch", "Fetch a file onto the shelf", "Arrange", "folder", null, FetchFile);
+        yield return new("a.fetch", ChuvadiReader.Ui.Components.Platform.PlatformText.FetchOrUpload(Platform, "Fetch a file onto the shelf", "Upload a file onto the shelf"), "Arrange", "folder", null, FetchFile);
         yield return new("a.desk", "Add desk", "Arrange", "plus", null, T(AddDesk), BenchSvc.CanAddDesk ? null : "30-desk limit reached");
         yield return new("a.blank", "Add a blank page", "Arrange", "page-add", null, T(AddBlankToFocused), FocusDeskId is null ? "No desk yet" : null);
         yield return new("a.shelf", _shelfHidden ? "Show the shelf" : "Hide the shelf", "Arrange", "shelf", null, T(() => _shelfHidden = !_shelfHidden));

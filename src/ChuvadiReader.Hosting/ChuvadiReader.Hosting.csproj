@@ -11,6 +11,10 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <!-- AT-03: the trim analyser runs on the kit, so a registration the trimmer can't follow is a build error
+         (warnings are errors here), not a crash in a trimmed Release app. -->
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+    <EnableAotAnalyzer>true</EnableAotAnalyzer>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\ChuvadiReader.Platform\ChuvadiReader.Platform.csproj" />

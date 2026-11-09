@@ -61,7 +61,7 @@ out += ["""* MIT  -  Copyright (c) .NET Foundation and Contributors  -  https://
 
 * SIL Open Font License 1.1  -  LiPi Sans (Inter + Noto Sans), in the interface
   (wwwroot/lipi-sans) and in Chuvadi.Fonts / Chuvadi.Pdf.Fonts.Bundled
-""", rule, 'MIT LICENSE (Chuvadi.Docs, Chuvadi.Sheets, Chuvadi.Print, Chuvadi.Print.Ipp, Chuvadi.Fonts code,\nMicrosoft and .NET components; each with the copyright line shown above)', rule, text('MIT-dotnet.txt'),
+""", rule, 'MIT LICENSE (Chuvadi.Docs, Chuvadi.Sheets, Chuvadi.Zip, Chuvadi.Print, Chuvadi.Print.Ipp, Chuvadi.Fonts code,\nMicrosoft and .NET components; each with the copyright line shown above)', rule, text('MIT-dotnet.txt'),
         rule, 'APACHE LICENSE 2.0 (chuvadi-pdf: Chuvadi.Pdf.* and Chuvadi.Cryptography)\nCopyright © 2025 Chuvadi Contributors', rule, text('Apache-2.0.txt'),
         rule, 'SIL OPEN FONT LICENSE 1.1 - LiPi Sans', rule, text('OFL-lipi-sans.txt')]
 for family, f in fonts:

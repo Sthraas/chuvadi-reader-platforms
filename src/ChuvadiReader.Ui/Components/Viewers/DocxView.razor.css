@@ -10,6 +10,9 @@
     font-family: 'Calibri','Segoe UI',system-ui,sans-serif; font-size: 11pt; line-height: 1.5;
 }
 .dv-sheet.ls { width: 1123px; }
+/* D-136: text as the file holds it. Docs 2.0 keeps tabs and line breaks inside the run text (\t, \n), and
+   Word keeps runs of spaces; the browser would collapse all three. Tab stops at Word's default 0.5 in. */
+.dv-sheet ::deep .wv-run { white-space: pre-wrap; tab-size: 4; }
 @media (max-width: 640px) { .dv-sheet { padding: 32px 24px; } }
 .dv-sec { scroll-margin-top: 12px; }
 

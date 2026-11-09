@@ -24,3 +24,16 @@
 
 ## Windows behaviour change
 None visible when files answer. On a stalled source (a disconnected network drive), "Opening…" now shows at once, Stop/Close works, and other files keep opening.
+
+# Part 2 (coordinator 03:20)
+| Item | From | Where |
+|---|---|---|
+| **Chuvadi.Zip 1.0.0** in `ci/packages`: Arun's release asset of tag `zip-v1.0.0`, unchanged; SHA-256 `e019f9b6…0104` (`PACKAGES-ZIP-1.0.0.md`); notices regenerated (MIT) | Coordinator, for D-129 (Web chat) | `ci/packages`, `legal/THIRD-PARTY-NOTICES.txt`, `scripts/make-notices.py` |
+| **Upload wording** (coordinator 01:42): choosing a file says "Upload…" on the portal in Arrange (empty desk, shelf +, desk image, rail, Ctrl K) and Protect; desktop and Android keep "Fetch…" character for character (`PlatformText.FetchOrUpload`) | Web portal UI (`web-ui-upload-wording.patch`, dd0b705) | `PlatformText.cs`, `Bench.razor`, `Bench.Shell.cs`, `Redact.razor` |
+| **Q-3 (D-119 c)**: portal Home says "Files in this session" for the storage map and "Nothing shelved this session — open the Library" for empty shelves | Web portal UI (`web-ui-home-session-wording.patch`, dd0b705) | `PlatformText.cs`, `Dashboard.razor` |
+| Tests for both wordings (other platforms unchanged; portal says upload; Home's session texts) | Foundation | `PortalWordingTests.cs` |
+
+Proof:
+- Build 0 warnings; tests 305/305 (Reader 191, Hosting 59, Mobile UI 16, Web UI 39).
+- Windows-layout screens vs `d70590a`: 27/27 identical (Home and Reader at 1× differed on the first run only; identical on two re-runs).
+- Preview: the portal shows "Files in this session", "Upload a file" and "Upload a document…"; the desktop shows "Storage map", "Fetch a file" and "Fetch a document…". No page errors.

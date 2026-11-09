@@ -155,3 +155,16 @@
 
 ### 27. Tenth combined patch (9 Nov, D-130)
 - B-24: the PDF open (existence check included) moved off the Reader's thread with a per-tab cancel; closing frees the slot at once; late results disposed; queued opens load side by side. Tests with a thread-blocking reader and a real FIFO (the old path hangs on them). 299/299; 26/27 + Home artefact. `COMBINED-HOOKS-10.md`.
+
+### 28. Tenth combined patch, part 2 (9 Nov)
+- Chuvadi.Zip 1.0.0 (release asset of `zip-v1.0.0`, commit 170bc40) into `ci/packages`, SHA-256 recorded (`PACKAGES-ZIP-1.0.0.md`), notices regenerated. Web UI Upload wording and Q-3 "this session" wording, with tests. 305/305; 27/27.
+
+### 29. Eleventh combined patch (9 Nov, D-136)
+- Chuvadi.Docs 2.0.0 and Chuvadi.Sheets 2.0.2 (release assets of docs-v2.0.0 / sheets-v2.0.2, SHA-256 in `PACKAGES-DOCS-SHEETS-2.md`), namespaces to `.Model`, table cells from `TableCell.Blocks`, whitespace shown as in the file. Library limits (Docs 20 MB / 64 MB; Sheets ForUntrustedInput) and cancellation (token, 60 s) replace Core's guard; viewers stop waiting at once. Corpus with independent expected values: old 18 wrong, new 0. 313/313; 24/27 + About (versions). `COMBINED-HOOKS-11.md`.
+
+### 30. Eleventh combined patch, part 2 (9 Nov, D-137)
+- Word limits keyed on `ServerSide`: portal 20/64 MB, desktop and mobile 100/400 MB (a 30 MB picture opens locally, is refused on the server). List markers from `Document.GetListLabels()`; Symbol/Wingdings bullets drawn as Unicode shapes. 324/324; 26/27 + Home artefact.
+
+### 31. Twelfth combined patch, part 1 (9 Nov, D-139 item 1 + AT-03)
+- chuvadi-pdf 3.32.0 from the release, 34/34 against its SHA256SUMS.txt. Stale commit stamp (aff17e6) checked: packed the signed tag, so 33/33 DLLs are identical in metadata, IL sizes and resources (`PACKAGES-3.32.0.md`). Printing follows `EncryptionInfo.EffectiveFlags` (the owner password prints; D-102 ends). LIB-1 pypdf `/P 4294965243` fixture opens (3.31.2 failed).
+- AT-03: typed registrations with `DynamicallyAccessedMembers`; trim and AOT analysers on Hosting; settings JSON source-generated (byte-identical). `tools/TrimProbe` reproduced 6/53 failures before, 0 after; `trim-check` CI job. `TRIMMING.md`.
