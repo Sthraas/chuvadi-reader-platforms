@@ -597,3 +597,17 @@ count as settled.
 
 The real Linux finding is the scroll itself: held PageDown keeps scrolling for ~12 s after release. Reported with
 options (it's WebKit's smooth scrolling, a host setting).
+
+### 47. Foundation's sixteenth combined patch: memory after closing a heavy document (add7b05, 10 Nov)
+Merged without conflicts; Reader 226/226, host kit 75/75, Linux 44/44, Web Ui 39/39, Mobile Ui 16/16; full UI pass
+121/121. 36c now records the app's memory before opening the 5-sheet drawing, with it open, and after closing
+(target: back within 100 MB of before). A test-only `gc` driver verb reports what an aggressive collection gives back.
+
+- In the full pass (a warm app): 616 MB before, 691 MB with 5 sheets, 691 MB after closing — within the target.
+- On its own (cold app, a small PDF kept open so closing returns to it, not Home): 269 → 360 MB with 5 sheets →
+  **506–525 MB after closing**, i.e. memory *rises* ~150 MB at the close and stays (33 s). It is private memory
+  (not shared/pixel buffers); the .NET heap is ~100–120 MB throughout. The patch's collection doesn't run here:
+  it needs the closed document's rendered pages to hold ≥ 64 MB, and these vector sheets hold far less. An
+  aggressive collection right after closing gives back ~150 MB (→ 362–368 MB), but within 2 s it is back to
+  466–479 MB: something keeps allocating after the close. The close path itself (TabsService.CloseAsync: Release,
+  then load the remaining tab) makes no thumbnails. Reported to Foundation; 36c becomes an assertion once fixed.
