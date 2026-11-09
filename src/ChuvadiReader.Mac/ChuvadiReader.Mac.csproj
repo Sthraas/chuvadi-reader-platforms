@@ -143,13 +143,9 @@
     </ItemGroup>
   </Target>
 
-  <!-- ChuvadiReader.Platform is marked IsTrimmable, so framework-only trimming still trims it, and the
-       kit creates its types only through dependency injection (no static reference): the trimmer then
-       removes their constructors and DI fails at run time (NoAppInstance, seen in the Mac smoke run).
-       Kept whole until the kit's registrations carry trimming annotations (reported to Foundation). -->
-  <ItemGroup>
-    <TrimmerRootAssembly Include="ChuvadiReader.Platform" />
-  </ItemGroup>
+  <!-- No trimming workaround: ChuvadiReader.Platform is trimmed like any trimmable assembly. Foundation's typed
+       registrations (AT-03, D-146) keep every constructor DI needs; the Mac smoke run launches this trimmed
+       Release bundle and opens PDF, Word and Excel to prove it. -->
 
   <ItemGroup>
     <MauiIcon Include="Resources\AppIcon\appicon.png" />
