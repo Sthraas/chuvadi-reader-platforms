@@ -145,8 +145,7 @@
                     </div>
 
                     <div class="rd-find-search">
-                        <input class="rd-find-box" placeholder="Find text…" value="@_query"
-                               @oninput="e => _query = e.Value?.ToString() ?? string.Empty"
+                        <input class="rd-find-box" placeholder="Find text…" @bind="_query" @bind:event="oninput"
                                @onfocus="OnFindFocus" @onkeydown="OnFindKey" />
                         <button class="rd-btn" @onclick="RunSearch" disabled="@_searching">@(_searching ? "…" : "Find")</button>
                     </div>

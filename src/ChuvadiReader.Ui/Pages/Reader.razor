@@ -111,7 +111,7 @@
                             <div class="bm-row @(ReferenceEquals(node, _bmSel) ? "sel" : null)" style="padding-left:@(8 + depth * 16)px" @onclick="() => BmGo(node)" title="Go to page @(node.PageIndex + 1) · double-click to rename">
                                 @if (ReferenceEquals(node, _bmRenaming))
                                 {
-                                    <input class="bm-rename" value="@node.Title" @oninput="e => node.Title = e.Value?.ToString() ?? string.Empty" @onblur="BmEndRename" @onkeydown="BmRenameKey" @onclick:stopPropagation="true" />
+                                    <input class="bm-rename" @bind="node.Title" @bind:event="oninput" @onblur="BmEndRename" @onkeydown="BmRenameKey" @onclick:stopPropagation="true" />
                                 }
                                 else
                                 {
@@ -368,8 +368,7 @@
         @if (_viewerFindOpen)
         {
             <div class="rfind">
-                <input class="rfind-box" placeholder="Find in @tab.Format.Label()…" value="@_viewerFindInput"
-                       @oninput="e => _viewerFindInput = e.Value?.ToString() ?? string.Empty"
+                <input class="rfind-box" placeholder="Find in @tab.Format.Label()…" @bind="_viewerFindInput" @bind:event="oninput"
                        @onkeydown="OnViewerFindKey" />
                 <span class="rfind-count">@(_viewerFind is null ? "" : $"{_viewerFindCount} found")</span>
                 <button class="rfind-x" @onclick="CloseViewerFind" title="Close (Esc)"><Icon Name="x" Size="14" /></button>
@@ -794,7 +793,7 @@
                     <SignaturesCard Path="@tab.Path" Session="@tab.Session" CurrentPage="@tab.CurrentPageIndex" OnClose="CloseCard" OnMessage="OnCardMessage" OnReport="OnSigReport" />
                     break;
                 case "print":
-                    <PrintCard Path="@tab.Path" Session="@tab.Session" CurrentPage="@tab.CurrentPageIndex" OnClose="CloseCard" OnMessage="OnCardMessage" />
+                    <PrintCard Path="@tab.Path" Session="@tab.Session" Password="@tab.Password" CurrentPage="@tab.CurrentPageIndex" OnClose="CloseCard" OnMessage="OnCardMessage" />
                     break;
                 case "password":
                     <PasswordCard Path="@tab.Path" Session="@tab.Session" CurrentPage="@tab.CurrentPageIndex" OnClose="CloseCard" OnMessage="OnCardMessage" OnSaved="OnProtectedSaved" />
@@ -1032,9 +1031,8 @@
     @if (doc is not null && _findOpen)
     {
         <div class="rfind">
-            <input class="rfind-box" placeholder="Find in document…" value="@_findQuery"
+            <input class="rfind-box" placeholder="Find in document…" @bind="_findQuery" @bind:event="oninput"
                    @ref="_findBoxRef"
-                   @oninput="e => _findQuery = e.Value?.ToString() ?? string.Empty"
                    @onfocus="OnFindFocus" @onkeydown="OnFindKey" />
             <button class="rfind-chip @(_findWholeWord ? "on" : null)" @onclick="ToggleWholeWord" title="Whole word">word</button>
             <span class="rfind-count">@FindCountLabel</span>
@@ -1447,10 +1445,15 @@
         return $"{s:0.#} {units[i]}";
     }
 
-    private readonly HashSet<int> _rendering = new();
+    // Pages whose render is in flight, per session (AT-13). Removed when the render ends, so a page that isn't in
+    // its session's cache can always be asked for again: after a reload (Save in place), a dropped cache, or a render
+    // that landed in a session that has since been replaced. Before, the set was keyed by page number and kept the
+    // page after its render, so such a page was never asked for again and stayed a placeholder.
+    private readonly HashSet<(IPdfSession Session, int Page)> _rendering = new();
     private List<int> _pages = new();
 
     private string? _activeId;
+    private IPdfSession? _activeSession;   // AT-13: a reopened document (same tab, same page count) re-renders
     private int _shownPageCount;
     private bool _restoreScroll;
     private int? _pendingJumpPage;
@@ -3134,7 +3137,6 @@
     }
 
     // ── Flatten to a static PDF (XFA form data / AcroForm fields / markup) ──────
-    private bool _isXfaDoc;
     private bool _flattening;
 
     // ── Recovery (opt-in): a page failed to decode, offer to open a repaired copy ──
@@ -3191,12 +3193,6 @@
     private void DocPress() { CloseDocMenu(); ShowPress(); }
     private async Task DocFlatten() { CloseDocMenu(); await FlattenNow(); }
     private void DocNav(string path) { CloseDocMenu(); Nav.NavigateTo(path); }
-
-    private void RefreshDocKind(string? path)
-    {
-        try { _isXfaDoc = !string.IsNullOrEmpty(path) && Flatten.Probe(path!).IsXfa; }
-        catch { _isXfaDoc = false; }
-    }
 
     private async Task FlattenNow()
     {
@@ -3309,6 +3305,7 @@
         if (id != _activeId)
         {
             _activeId = id;
+            _activeSession = tab?.Session;
             _shownPageCount = pageCount;
             _pageInput = (tab?.CurrentPage ?? 1).ToString();
             _rendering.Clear();
@@ -3331,12 +3328,14 @@
                 _mkTagged = false; _mkTaggedPath = null;
                 if (_markup) _ = CheckTaggedAsync();
             }
-            RefreshDocKind(tab?.Path);
             OnActiveDocChanged(tab);
             ApplyShellModeForTab(tab);
         }
-        else if (pageCount != _shownPageCount)
+        else if (pageCount != _shownPageCount || !ReferenceEquals(tab?.Session, _activeSession))
         {
+            // Finished loading, or reopened in place (Save in place, unlock): a new session starts with an empty
+            // cache, so the observers are re-armed (_loadGen) and every visible page is asked for again.
+            _activeSession = tab?.Session;
             _shownPageCount = pageCount;
             _pageInput = (tab?.CurrentPage ?? 1).ToString();
             _rendering.Clear();
@@ -3471,7 +3470,7 @@
     private void EnsureRendered(int n)
     {
         var session = Tabs.Active?.Session;
-        if (session is null || session.TryGetRenderedSvg(n, out _) || !_rendering.Add(n))
+        if (session is null || session.TryGetRenderedSvg(n, out _) || !_rendering.Add((session, n)))
         {
             return;
         }
@@ -3492,6 +3491,7 @@
         }
         finally
         {
+            _rendering.Remove((session, n));
             await InvokeAsync(StateHasChanged);
         }
     }

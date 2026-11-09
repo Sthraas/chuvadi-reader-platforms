@@ -15,7 +15,7 @@
 
     <SettingsCard Title="Greeting">
         <SettingRow Label="Preferred name" Hint="@PlatformText.PreferredNameHint(Platform)" Stack="true">
-            <input class="name-in" value="@_name" @oninput="OnNameInput" placeholder="@Profile.Name" aria-label="Preferred name" spellcheck="false" />
+            <input class="name-in" @bind="_name" @bind:event="oninput" @bind:after="SaveName" placeholder="@Profile.Name" aria-label="Preferred name" spellcheck="false" />
         </SettingRow>
         <SettingRow Label="Show Tamil greeting" Hint="வணக்கம்.">
             <Toggle Value="Prefs.ShowTamilGreeting" ValueChanged="v => Prefs.SetShowTamilGreetingAsync(v)" AriaLabel="Show Tamil greeting" />
@@ -42,9 +42,5 @@
     // the placeholder; every keystroke saves (blank = fall back to the computer's name).
     private string _name = string.Empty;
 
-    private async Task OnNameInput(ChangeEventArgs e)
-    {
-        _name = e.Value?.ToString() ?? string.Empty;
-        await Profile.SetPreferredNameAsync(_name);
-    }
+    private Task SaveName() => Profile.SetPreferredNameAsync(_name ?? string.Empty);
 }
