@@ -144,8 +144,23 @@ public abstract class ViewerBase : ComponentBase, IAsyncDisposable
 
     protected virtual ValueTask DisposeCoreAsync() => ValueTask.CompletedTask;
 
+    private CancellationTokenSource? _loadCancel;
+
+    /// <summary>
+    /// B-08b (D-136): a token for one load, handed to the library. It is cancelled when the next load starts,
+    /// when the viewer goes away (the tab closed, "Stop opening"), and after <see cref="SlowOpenNote.GiveUpAfter"/>,
+    /// when the slow-open note gives up; the library then stops reading within a moment.
+    /// </summary>
+    protected CancellationToken NewLoadToken()
+    {
+        _loadCancel?.Cancel();
+        _loadCancel = new CancellationTokenSource(SlowOpenNote.GiveUpAfter);
+        return _loadCancel.Token;
+    }
+
     public async ValueTask DisposeAsync()
     {
+        _loadCancel?.Cancel();
         if (_disposed) return;
         try { await DisposeCoreAsync(); } catch { /* teardown */ }
         _disposed = true;

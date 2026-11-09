@@ -20,4 +20,8 @@
     <ProjectReference Include="..\..\src\ChuvadiReader.Core\ChuvadiReader.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- D-136: Word/Excel files with what they truly hold (tools/OfficeCorpus/make.py writes expected.json). -->
+    <None Include="Fixtures\Office\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>
