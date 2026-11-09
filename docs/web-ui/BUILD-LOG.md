@@ -288,3 +288,9 @@ Nothing needed fixing.
 
 ### 4. Build and tests
 After a restore for the new library versions: build `-warnaserror` 0 warnings; tests 16 + 39 + 212 + 60 = **327 pass**, 0 fail.
+
+## 2026-11-09 — session 16 (coordinator 07:31: bring the branch up to foundation 022b7c0)
+- Branches checked: `platform/foundation` 022b7c0 (twelfth patch parts 2–3 and D-146), `main` a5f7cf0, `platform/web` c38bd80, `platform/web-test` 277e9a7, `platform/mobile-ui` 558a276. Merged 022b7c0 in (a merge rather than a rebase, so no force push; same result). My `src` equals the Foundation's.
+- W-02 `host-drop.js` loads only in the Windows WebView2 page (`index.html`) and returns at once without `chrome.webview`, so the portal's drop catcher isn't affected. Re-proved U-17 in three browsers: during a drag the zone's contents are hidden, its frame stays and the overlay shows; afterwards everything is restored.
+- Re-shot the 54 portal screenshots against session 15's (eb74e52). The text is identical. Pixels are identical apart from (1) Arrange's desk header on tablet and phone, where Mobile UI's H-17 to H-19 moved the BM, arrow, copy and delete buttons behind ⋯ on touch screens (their intended change; desktop Arrange is unchanged), and (2) the known flaky 3 px sliver on the Chromium 12b chip edge.
+- Build `-warnaserror` 0 warnings; tests 16 + 39 + 212 + 64 = **331 pass**.
