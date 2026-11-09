@@ -426,3 +426,6 @@ Evidence:
   icons on their own line): approved.
 - H-17 to H-19 go to Foundation as `mobile-ui-hooks-6.patch` (applies to 42461ba). Desktop static screens
   pixel-identical (last run: clock only, Arrange ≤ 8-level noise as A/A).
+- Merged Foundation 6fbe24e (twelfth combined patch); `mobile-ui-hooks-6.patch` still applies.
+  Re-run on the merge: 64 touch checks pass at 4 sizes, no Read control under 44 px; desktop Read, Mark and
+  desk menu clock only, Arrange and Home clock plus ≤ 8-level noise (as in A/A runs).
