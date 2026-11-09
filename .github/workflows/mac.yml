@@ -116,6 +116,22 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Prove the bundle is trimmed (AT-03)
+        # The smoke runs below launch this bundle; this shows it is the trimmed Release, with ChuvadiReader.Platform
+        # trimmed (no root-assembly workaround), so a constructor lost to trimming would fail them.
+        run: |
+          OBJ=src/ChuvadiReader.Mac/obj/Release/net10.0-maccatalyst
+          found=0
+          for linked in $(find "$OBJ" -path '*linked*' -name ChuvadiReader.Platform.dll); do
+            found=1
+            input=$(find src/ChuvadiReader.Platform/bin/Release -name ChuvadiReader.Platform.dll | head -1)
+            a=$(stat -f %z "$input"); b=$(stat -f %z "$linked")
+            echo "Platform: $a bytes in, $b bytes after ILLink ($linked)"
+            [ "$b" -lt "$a" ] || { echo "::error::ChuvadiReader.Platform was not trimmed"; exit 1; }
+          done
+          [ "$found" = 1 ] || { echo "::error::no ILLink output found: the Release bundle was not trimmed"; find "$OBJ" -maxdepth 3 -type d | head -30; exit 1; }
+          grep -q TrimmerRootAssembly src/ChuvadiReader.Mac/ChuvadiReader.Mac.csproj && { echo "::error::a root-assembly workaround is back"; exit 1; } || true
+
       - name: Verify both architectures
         if: ${{ !cancelled() }}
         run: |
