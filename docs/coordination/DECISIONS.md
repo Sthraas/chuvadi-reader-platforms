@@ -389,5 +389,8 @@ Both Save buttons are pinned together at the foot of the Mark rail, on touch onl
 ## D-151 — H-20: TOOLS heading on every rail, with an accessible mode label (9 Nov 2026, coordinator)
 Every tools rail shows the heading TOOLS, as D-134 says. The rail component takes a separate accessible label, so screen readers still announce READ, MARK, PROTECT and so on; otherwise the change would make accessibility worse.
 
+## D-152 — AT-13 heavy image page: render off the UI thread (9 Nov 2026, coordinator)
+The fix for pages left blank after a reopen is in the thirteenth patch. The remaining 4 s UI freeze on a 6000×6000 image is fixed properly with A: render off the UI thread, one render at a time per document, with a proof and a guard test (as B-24 did for opens), in the fourteenth patch. B (wait for the Release retest) leaves the freeze in place. C (the library decodes big images at display resolution) goes on Arun's library list as well.
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).

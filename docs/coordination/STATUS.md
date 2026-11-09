@@ -8,7 +8,7 @@ _Last updated: 9 Nov 2026, 06:12 IST. **PR #11 merged into chuvadi-reader main (
 
 **CI:** running again on public-repo minutes (D-93). Repo stays public until the work is complete, then private.
 
-> 9 Nov 20:25 IST: the usage limit has reset and Reader repo access is back. PR #12 has been moved to 58909d7 (Foundation part 4, P-08); CI is green on Windows, Ubuntu, macOS and the linux-x64 trimmed launch. All chats restarted with their next steps (D-148 to D-151).
+> 9 Nov 20:25 IST: the usage limit has reset and Reader repo access is back. PR #12 has been moved to 58909d7 (Foundation part 4, P-08); CI is green on Windows, Ubuntu, macOS and the linux-x64 trimmed launch. All chats restarted with their next steps (D-148 to D-151). 21:00 IST: the usage limit hit again; only Foundation, Linux, Linux Test and Mac Test keep running until Arun picks the plan. 21:25 IST: thirteenth patch part 1 (7d1ac03); PR #12 fast-forwarded to 1e4e365; AT-13 D-152.
 
 | Chat | State |
 |---|---|
