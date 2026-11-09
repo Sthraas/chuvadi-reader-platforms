@@ -4,6 +4,7 @@
 #   D-132 the error log in ~/Library/Logs/Chuvadi: written, scrubbed, rolled over, about 1 MB at most
 #   M-17  locked PDFs (AES-256, RC4): wrong and right passwords; M-18 Settings after the Reader and Library;
 #   M-21  real ⌃⌘F / Esc in and out of Immersive; M-19 page errors reach the error log
+#   D-154 WebKit's content process ends → same screen back, plain message, chuvadi.log; M-18 Accessibility press
 #   M-02  files handed over by macOS open as tabs: at launch, and while running (single instance)
 #   M-01  the menu bar carries Chuvadi's commands (File, View, Document), ⌘ shortcuts, no AppKit Enter Full Screen
 #   M-11  Settings… ⌘, in the Chuvadi menu
@@ -143,36 +144,63 @@ SCRIPTS="$(cd "$(dirname "$0")" && pwd)"
 KEYS="$RUNNER_TEMP/keys"
 xcrun swiftc -O -o "$KEYS" "$SCRIPTS/keys.swift" && sudo python3 "$SCRIPTS/grant-post-event.py" "$KEYS"
 
-# --- M-18: Settings › Appearance (macOS 26) — the page must live, WebKit's content process must not die -----
+# native_watch <seconds>: posts what the app asks for ("CHUVADI native-key …"): a real key, an Accessibility press
+# ("ax-press:Label"), or ending WebKit's content process ("kill-webcontent"). Runs until "steps done".
+native_watch() {
+  local seen=0 end=$((SECONDS + $1)) n k
+  while [ $SECONDS -lt $end ]; do
+    n=$(grep -c "CHUVADI native-key " "$LOG" 2>/dev/null || true)
+    if [ "${n:-0}" -gt "$seen" ]; then
+      seen=$((seen + 1))
+      k=$(grep "CHUVADI native-key " "$LOG" | sed -n "${seen}p" | sed 's/.*native-key //')
+      case "$k" in
+        kill-webcontent) pkill -9 -f com.apple.WebKit.WebContent && echo "killed WebKit's content process" ;;
+        ax-press:*) "$KEYS" "$BUNDLE_ID" ax-press "${k#ax-press:}" ;;
+        *) "$KEYS" "$BUNDLE_ID" "$k" ;;
+      esac
+    fi
+    grep -q "CHUVADI steps done" "$LOG" 2>/dev/null && break
+    sleep 0.3
+  done
+}
+
+# --- M-18 / D-154: WebKit's content process ends → the same screen comes back, with a message and a log entry ----
 wcrep() { ls "$HOME/Library/Logs/DiagnosticReports" /Library/Logs/DiagnosticReports 2>/dev/null | grep -c "WebContent" || true; }
 wc_before=$(wcrep)
-rm -f "$LOG"
-open -n --env CHUVADI_SMOKE=1 --env "CHUVADI_SMOKE_STEPS=click:Settings;click:Appearance;click:Reading;click:Appearance" \
+rm -f "$LOG"; rm -rf "$LOGDIR"
+open -n --env CHUVADI_SMOKE=1 \
+  --env "CHUVADI_SMOKE_STEPS=click:Settings;click:Appearance;native:kill-webcontent;wait;wait;native:ax-press:Appearance;wait;wait" \
   --stdout "$LOG" --stderr "$LOG" -a "$APP"
-# An accessibility client reads the app all along (as the Mac Test driver and VoiceOver do) — WebKit then builds its
-# accessibility tree for every section, Appearance included.
-( end=$((SECONDS + 120)); while [ $SECONDS -lt $end ] && ! grep -q "CHUVADI steps done" "$LOG" 2>/dev/null; do
-    "$KEYS" "$BUNDLE_ID" ax-walk; sleep 1.5; done ) &
-AXW=$!
-wait_for 'CHUVADI steps done' 120 || fail "M-18 Appearance steps did not finish"
-wait $AXW 2>/dev/null || true
-grep -E "CHUVADI (step|log Error)|CHUVADI_STARTUP wk-" "$LOG" | cut -c1-600
-a=$(grep -E "CHUVADI step 2 click: route=" "$LOG" | tail -1)
-[[ "$a" == *"route=/settings"* && "$a" == *"errorbar=none"* ]] && pass "M-18 Settings › Appearance: the Ui lives" || fail "M-18 Settings › Appearance: ${a:-no report}"
-b=$(grep -E "CHUVADI step 4 click: route=" "$LOG" | tail -1)
-[[ "$b" == *"errorbar=none"* ]] && pass "M-18 Appearance again after another section" || fail "M-18 Appearance again: ${b:-no report}"
-reloads=$(grep -c "CHUVADI_STARTUP wk-ui-loading" "$LOG" || true)
-[ "${reloads:-0}" -le 1 ] && pass "M-18 the page loaded once (no WebView reload)" || fail "M-18 the page reloaded ($reloads loads)"
+native_watch 180 &
+NW=$!
+wait_for 'CHUVADI steps done' 180 || fail "M-18 recovery steps did not finish"
+wait $NW 2>/dev/null || true
+grep -E "CHUVADI (step|webcontent|log Error)|ax-press|killed" "$LOG" | cut -c1-600
+s=$(grep -E "CHUVADI step 2 click: route=" "$LOG" | tail -1)
+[[ "$s" == *"route=/settings"* && "$s" == *"errorbar=none"* ]] && pass "M-18 Settings › Appearance (click)" || fail "M-18 Appearance: ${s:-no report}"
+grep -q "CHUVADI webcontent-ended" "$LOG" && pass "D-154 the content process's end is noticed" || fail "D-154 the content process's end went unnoticed"
+s=$(grep -E "CHUVADI step 5 wait: route=" "$LOG" | tail -1)
+[[ "$s" == *"route=/settings"* && "$s" == *"errorbar=none"* ]] && pass "D-154 the Ui comes back on the same screen" || fail "D-154 after the content process ended: ${s:-no report}"
+[[ "$s" == *"notice=1"* ]] && pass "D-154 a plain message says it was reopened" || fail "D-154 no message after reopening: ${s:-no report}"
+grep -h "content process ended" "$LOGDIR"/*.log 2>/dev/null | head -1 | grep -q . && pass "D-154 chuvadi.log records it" || fail "D-154 not in chuvadi.log"
+grep -h "content process ended" "$LOGDIR"/*.log 2>/dev/null | head -2
+ended=$(grep -c "CHUVADI webcontent-ended" "$LOG" || true)
+s=$(grep -E "CHUVADI step 8 wait: route=" "$LOG" | tail -1)
+if [ "${ended:-0}" -ge 2 ]; then
+  echo "M-18 note: the Accessibility press on Appearance ended WebKit's content process (the macOS 26 trigger reproduced)"
+else
+  echo "M-18 note: the Accessibility press on Appearance did not end the content process here"
+fi
+[[ "$s" == *"errorbar=none"* ]] && pass "M-18 after an Accessibility press on Appearance the Ui lives" || fail "M-18 after the Accessibility press: ${s:-no report}"
 sleep 5
 wc_after=$(wcrep)
 if [ "$wc_after" -gt "$wc_before" ]; then
-  fail "M-18 WebKit's content process crashed"
   for d in "$HOME/Library/Logs/DiagnosticReports" /Library/Logs/DiagnosticReports; do
-    ls -t "$d" 2>/dev/null | grep WebContent | head -1 | while read -r f; do echo "== $d/$f"; head -c 6000 "$d/$f"; cp "$d/$f" "$PWD/" 2>/dev/null; done
+    ls -t "$d" 2>/dev/null | grep WebContent | head -1 | while read -r f; do echo "== $d/$f"; grep -oE '"symbol":"[^"]+"' "$d/$f" | head -16; cp "$d/$f" "$PWD/" 2>/dev/null; done
   done
 fi
-cp "$LOG" "$PWD/smoke-appearance.log"
-quit_app || fail "Appearance run did not quit"
+cp "$LOG" "$PWD/smoke-appearance.log"; cp -R "$LOGDIR" "$PWD/chuvadi-logs-recovery" 2>/dev/null || true
+quit_app || fail "recovery run did not quit"
 sleep 2
 
 # --- M-17 / M-18 / M-21 / M-19: the tester's sequences, scripted --------------------------------------------
@@ -187,19 +215,7 @@ rm -f "$LOG"; rm -rf "$LOGDIR"
 STEPS="jserror;pick;pw:wrong;pw:user1;native:ctrl-cmd-f;native:escape;mode:2;click:Document;native:escape;native:cmd-k;native:escape;click:Library;click:Settings;pick;pw:user1"
 open -n --env CHUVADI_SMOKE=1 --env "CHUVADI_SMOKE_PICK=$DOCS/aes256.pdf;$DOCS/rc4.pdf" --env "CHUVADI_SMOKE_STEPS=$STEPS" \
   --stdout "$LOG" --stderr "$LOG" -a "$APP"
-(
-  seen=0; end=$((SECONDS + 300))
-  while [ $SECONDS -lt $end ]; do
-    n=$(grep -c "CHUVADI native-key " "$LOG" 2>/dev/null || true)
-    if [ "${n:-0}" -gt "$seen" ]; then
-      seen=$((seen + 1))
-      k=$(grep "CHUVADI native-key " "$LOG" | sed -n "${seen}p" | sed 's/.*native-key //')
-      "$KEYS" "$BUNDLE_ID" "$k"
-    fi
-    grep -q "CHUVADI steps done" "$LOG" 2>/dev/null && break
-    sleep 0.3
-  done
-) &
+native_watch 300 &
 WATCH=$!
 wait_for 'CHUVADI steps done' 300 || fail "scripted steps did not finish"
 wait $WATCH 2>/dev/null || true

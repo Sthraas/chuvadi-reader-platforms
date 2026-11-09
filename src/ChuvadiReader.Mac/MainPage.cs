@@ -65,7 +65,33 @@ public sealed class MainPage : ContentPage
         // Edge to edge: the page runs under the (transparent, hidden) title bar (Mac Test M-04).
         SafeAreaEdges = SafeAreaEdges.None;
 
+        _web = CreateWebView(null);
+        Content = _web;
+
+        // M-18 (D-154): if WebKit's content process ends, a fresh BlazorWebView reopens the same screen.
+        WebContentRecovery.Reopen = route => UIKit.UIApplication.SharedApplication.BeginInvokeOnMainThread(() =>
+        {
+            var old = _web;
+            _web = CreateWebView(route);
+            Content = _web;
+            if (old is not null)
+            {
+                old.BlazorWebViewInitialized -= OnWebViewInitialized;
+                old.UrlLoading -= OnUrlLoading;
+            }
+
+            _services.GetService<ShellService>()?.Notify(WebContentRecovery.Message);
+        });
+    }
+
+    private BlazorWebView CreateWebView(string? startPath)
+    {
         var web = new BlazorWebView { HostPage = "wwwroot/index.html", BackgroundColor = BackgroundColor };
+        if (!string.IsNullOrEmpty(startPath) && startPath != "/")
+        {
+            web.StartPath = startPath;
+        }
+
         web.RootComponents.Add(new RootComponent
         {
             Selector = "#app",
@@ -73,8 +99,7 @@ public sealed class MainPage : ContentPage
         });
         web.BlazorWebViewInitialized += OnWebViewInitialized;
         web.UrlLoading += OnUrlLoading;
-        _web = web;
-        Content = web;
+        return web;
     }
 
     /// <summary>
@@ -97,6 +122,7 @@ public sealed class MainPage : ContentPage
         var view = e.WebView;
         WebKitView = view;
         PageErrorBridge.Attach(view, _services); // M-19: page errors to the D-132 log
+        WebContentRecovery.Attach(view, _services.GetRequiredService<Microsoft.Extensions.Logging.ILoggerFactory>().CreateLogger("ChuvadiReader.Mac.WebContent"));
 
         // No page zoom gestures — only the Interface size setting zooms (as on Windows).
         // (Catalyst's WKWebView zooms through its scroll view.) The reader's own pinch-to-zoom of
