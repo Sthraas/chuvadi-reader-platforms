@@ -436,3 +436,32 @@ no planted secret (run 42528878885). Privacy-notice wording for Foundation:
   Still failing, as before: File › Open… ⌘O (M-01/M-15) and Settings… (M-11) — the global-commands patch.
 - The three Mac patches for Foundation still apply on 022b7c0; with all three applied: Hosting 72/72, WebUi 39/39,
   Core 212/212.
+
+### 2026-11-09 (23:30) — rebased onto Foundation b41f25c; M-17, M-18, M-19, M-21, M-22, M-03 (second form)
+Rebased onto `platform/foundation` b41f25c (thirteenth patch with the three Mac patches, fourteenth: pages render off
+the Ui thread, D-152). The smoke run now also walks the tester's sequences with **real keys**: `keys.swift` posts
+HID key events (Post Event granted on the runner by `grant-post-event.py`, testing only), locked fixtures come from
+qpdf (testing only), and the app reports the page after each step (route, Reader, error bar, unlock card, Immersive,
+the keys the page received).
+- **M-19 (fixed, 55bf376):** MAUI Blazor's renderer reports a component exception only to the page (the error bar,
+  and message + .NET stack on `console.error`) and rethrows it into an unawaited dispatcher task — no logger sees it.
+  The host page forwards `console.error`, window errors and unhandled rejections to `PageErrorBridge`, which writes
+  them to the D-132 log, scrubbed. Smoke: a planted page error lands in `chuvadi.log` with the file name hashed.
+- **Found through M-19 and fixed (863d442): Blazor was started twice** ("Blazor has already started" on every
+  launch) — MAUI's Mac handler starts it from a WebKit user script, and the page also autostarted it.
+  `autostart="false"` on the Mac host page, as MAUI's own templates do.
+- **M-22 / D-148 (fixed, 55bf376):** `NSLocalNetworkUsageDescription` = "Chuvadi looks for printers on your network
+  only when you open the Print panel. Your documents go only to the printer you choose." Workflow step checks it.
+  Privacy-notice line for Foundation: `docs/mac/foundation/D-148-privacy-notice-mac-printers.patch` (A2b).
+- **M-03 second form (fixed, 2d2ecd3):** `MacQuit.Detach` replaced the root of *every* window in a scene, including
+  UIKit's keyboard window (`UITextEffectsWindow`, root `UIInputWindowController`); its dealloc during AppKit's quit is
+  the tester's backtrace (`-[UIKeyboardSceneDelegate inputViews]`). Only windows whose root is MAUI's are detached
+  now (after `EndEditing`). The smoke log shows `UITextEffectsWindow … detach=False` and counts crash reports over all
+  three quits, two of them after typing in a field: none. The crash was intermittent for the tester; re-verify there.
+- **M-17, M-18, M-21: not reproduced on b41f25c.** AES-256 wrong → prompt stays; right → opens; RC4 right → opens
+  (real Return each time); real ⌃⌘F → Immersive, real Esc → the page gets `Escape` and leaves Immersive; mode switch,
+  Document ▾, ⌘K, Library, then Settings → Settings shows. No error bar, no page errors. A probe with the old quit
+  detach (f2575dc, reverted in 6bdc932) passed the same way, so my keyboard-window theory for M-17/M-18 was wrong;
+  the tester saw them on c6d7705, before Foundation's thirteenth/fourteenth patches. Mac Test to re-verify.
+- **M-11:** `go.settings` reaches the menu code and "Settings… ⌘," is inserted after About, but AppKit's app menu
+  does not show it; diagnosis in progress (the builder's app menu is now logged).
