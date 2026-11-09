@@ -728,7 +728,7 @@ internal static class MemoryRelief
     internal const long HeavyBytes = 64L * 1024 * 1024;
 
     /// <summary>A document whose drawing allocated this much is heavy too, whatever its pages keep.</summary>
-    internal const long HeavyDrawingBytes = 256L * 1024 * 1024;
+    internal const long HeavyDrawingBytes = 64L * 1024 * 1024;
     internal static readonly TimeSpan MinGap = TimeSpan.FromSeconds(30);
     internal static TimeSpan Settle { get; set; } = TimeSpan.FromMilliseconds(500);
 
