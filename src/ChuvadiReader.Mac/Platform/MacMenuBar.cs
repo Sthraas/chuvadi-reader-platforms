@@ -188,6 +188,17 @@ internal static class MacMenuBar
                 UIMenu.Create(string.Empty, null, UIMenuIdentifier.None, UIMenuOptions.DisplayInline, new UIMenuElement[] { settings }),
                 UIMenuIdentifier.About.GetConstant()!);
             MacSmoke.Log($"menu-settings inserted (system Preferences menu {(hadPreferences ? "removed" : "absent")})");
+            if (MacSmoke.Enabled && builder.GetMenu(UIMenuIdentifier.Application.GetConstant()!) is { } appMenu)
+            {
+                // M-11 diagnosis: what UIKit's builder holds for the app menu, before AppKit turns it into NSMenu.
+                static string Describe(UIMenuElement e) => e switch
+                {
+                    UIMenu m => $"[{m.Identifier} {m.Title}: {string.Join(", ", m.Children.Select(Describe))}]",
+                    UICommand c => $"{c.Title}{(c is UIKeyCommand k ? " key=" + k.Input + "/" + k.ModifierFlags : string.Empty)}",
+                    _ => e.Title,
+                };
+                MacSmoke.Log("menu-app-builder " + Describe(appMenu));
+            }
         }
 
         // Help keeps only macOS's own menu search field.
