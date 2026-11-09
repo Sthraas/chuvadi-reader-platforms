@@ -408,20 +408,43 @@ def t4_0b():
 
 @case("M-18 Settings after the Reader")
 def m18():
-    reset_state({"theme": "light"})
-    launch(settle=4)
-    ok, _ = open_doc(f"{FX}/five-pages.pdf")
-    steps = {}
-    for name in ["Mark 2", "Read 1", "Library", "Settings"]:
-        press(name, contains=name.endswith(("1", "2")))
-        time.sleep(2.5)
-        steps[name] = "ERROR" if ui_error() else "ok"
-        if steps[name] == "ERROR":
-            break
-    s = shot("m18-settings-after-reader")
-    bad = "ERROR" in steps.values()
-    record("M-18 Settings after the Reader", "fail" if bad else "pass", f"opened={ok}; steps {steps}", shot=s)
-    quit_app()
+    """Several short paths into Settings, each from a fresh launch, so the step that breaks the Ui is named."""
+    flows = {
+        "mark-read-library-settings": ["Mark 2", "Read 1", "Library", "Settings"],
+        "reader-settings": ["Settings"],
+        "reader-settings-appearance": ["Settings", "Appearance"],
+        "reader-docmenu-settings": ["@Document", "Settings"],
+        "reader-cmdk-settings": ["@cmd+k", "Settings"],
+        "home-settings-appearance": ["@nodoc", "Settings", "Appearance"],
+    }
+    ev, bad = {}, []
+    for fname, flow in flows.items():
+        reset_state({"theme": "light"})
+        launch(settle=4)
+        ok = None
+        if flow[0] != "@nodoc":
+            ok, _ = open_doc(f"{FX}/five-pages.pdf")
+        steps = {}
+        for name in flow:
+            if name == "@nodoc":
+                continue
+            if name == "@Document":
+                press("Document"); time.sleep(1); drive("key", "escape")
+            elif name == "@cmd+k":
+                drive("key", "cmd+k"); time.sleep(1); drive("key", "escape")
+            elif name == "Appearance":
+                press("Appearance", contains=True, index=-1)
+            else:
+                press(name, contains=name.endswith(("1", "2")))
+            time.sleep(2.5)
+            steps[name] = "ERROR" if ui_error() else "ok"
+            if steps[name] == "ERROR":
+                break
+        ev[fname] = {"opened": ok, "steps": steps, "shot": shot("m18-" + fname)}
+        if "ERROR" in steps.values():
+            bad.append(fname)
+        quit_app()
+    record("M-18 Settings after the Reader", "fail" if bad else "pass", f"broke in: {bad}" if bad else "every path fine", **ev)
 
 
 @case("T4.0c single keys on Home and Reader")
