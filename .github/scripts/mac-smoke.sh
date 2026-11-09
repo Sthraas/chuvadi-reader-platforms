@@ -46,6 +46,10 @@ for name in ("one", "two", "three"):
     open(os.path.join(sys.argv[1], name + ".pdf"), "wb").write(out)
 EOF
 
+# Crash reports are counted across every quit in this run (M-03): three launches, two after typing in a field.
+REPORTS=("$HOME/Library/Logs/DiagnosticReports" "/Library/Logs/DiagnosticReports")
+before=$(ls "${REPORTS[@]}" 2>/dev/null | grep -c "^$EXE" || true)
+
 # Open-panel fixtures (M-16): five-page PDF, Markdown, text, HTML, Word, Excel — minimal but valid.
 python3 - "$DOCS" <<'EOF'
 import sys, os, zipfile
@@ -190,8 +194,6 @@ cp "$LOG" "$PWD/smoke-steps.log"; cp -R "$LOGDIR" "$PWD/chuvadi-logs-steps" 2>/d
 quit_app || fail "scripted run did not quit"
 sleep 2
 
-REPORTS=("$HOME/Library/Logs/DiagnosticReports" "/Library/Logs/DiagnosticReports")
-before=$(ls "${REPORTS[@]}" 2>/dev/null | grep -c "^$EXE" || true)
 
 # --- M-02 (a): launched with a file (tabs saved by the run above come back first; the file is added) ---------------------------------------------------------------
 rm -f "$LOG"
@@ -272,7 +274,7 @@ if [ "$after" -gt "$before" ]; then
 else
   pass "M-03 quit without a crash report"
 fi
-grep -E 'CHUVADI quit|quit-exception' "$LOG" || true
+grep -hE 'CHUVADI (quit|quit-window|quit-exception)' "$LOG" "$PWD/smoke-steps.log" "$PWD/smoke-open-panel.log" 2>/dev/null || true
 
 echo "== ${#FAILED[@]} failed"
 for f in "${FAILED[@]}"; do echo " - $f"; done
