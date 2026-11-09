@@ -205,8 +205,9 @@ quit_app || fail "recovery run did not quit"
 sleep 2
 
 # --- M-21 / M-15 on the tester's path: two documents through the Open panel, then real ⌃⌘F, Esc and ⌘O ----------
+for k in k1 k2 k3; do cp "$DOCS/five-pages.pdf" "$DOCS/$k.pdf"; done   # names no other phase opens
 rm -f "$LOG"
-open -n --env CHUVADI_SMOKE=1 --env "CHUVADI_SMOKE_PICK=$DOCS/five-pages.pdf;$DOCS/one.pdf;$DOCS/two.pdf" \
+open -n --env CHUVADI_SMOKE=1 --env "CHUVADI_SMOKE_PICK=$DOCS/k1.pdf;$DOCS/k2.pdf;$DOCS/k3.pdf" \
   --env "CHUVADI_SMOKE_STEPS=pick;pick;native:ctrl-cmd-f;native:escape;native:cmd-o;wait" \
   --stdout "$LOG" --stderr "$LOG" -a "$APP"
 native_watch 180 &
@@ -218,7 +219,8 @@ s=$(grep -E "CHUVADI step 3 native: route=" "$LOG" | tail -1)
 [[ "$s" == *"immersive=1"* ]] && pass "M-21 after the Open panel, real ⌃⌘F enters Immersive" || fail "M-21 ⌃⌘F after the Open panel: ${s:-no report}"
 s=$(grep -E "CHUVADI step 4 native: route=" "$LOG" | tail -1)
 [[ "$s" == *"immersive=0"* ]] && pass "M-21 after the Open panel, real Esc leaves Immersive" || fail "M-21 Esc after the Open panel: ${s:-no report}"
-grep -qE "CHUVADI tabs 3: .*two\.pdf" "$LOG" && pass "M-15 real ⌘O opens the panel and the file" || fail "M-15 ⌘O opened nothing"
+grep -qE "CHUVADI menu-command file.open ran=True" "$LOG" && grep -qE "CHUVADI tabs [0-9]+: .*k3\.pdf" "$LOG" \
+  && pass "M-15 real ⌘O opens the panel and the file" || fail "M-15 ⌘O opened nothing"
 cp "$LOG" "$PWD/smoke-keys.log"
 quit_app || fail "keys run did not quit"
 sleep 2
