@@ -8,6 +8,8 @@ _Last updated: 9 Nov 2026, 06:12 IST. **PR #11 merged into chuvadi-reader main (
 
 **CI:** running again on public-repo minutes (D-93). Repo stays public until the work is complete, then private.
 
+> 9 Nov 19:10 IST: all chats idle about 11–12 h. Linux and Android stopped by a usage limit; every chat shows "Approaching weekly limit". GitHub access to arunshivab/chuvadi-reader lost (push 403), so PR #12 can't move from cc6b653 to 58909d7 (Foundation part 4, P-08). Waiting on Arun: reconnect GitHub, and how to spend the remaining weekly usage.
+
 | Chat | State |
 |---|---|
 | Foundation | platform/foundation 022b7c0: twelfth patch (pdf 3.32.0, W-01, W-02, H-17..H-19, notices) + AT-03 typed registrations. PR #12 (cc6b653) green, waits for Arun. Next: P-08 from Android 4260ca4 |
