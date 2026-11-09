@@ -12,13 +12,13 @@ _Last updated: 9 Nov 2026, 06:12 IST. **PR #11 merged into chuvadi-reader main (
 
 | Chat | State |
 |---|---|
-| Foundation | platform/foundation 022b7c0: twelfth patch (pdf 3.32.0, W-01, W-02, H-17..H-19, notices) + AT-03 typed registrations. PR #12 (cc6b653) green, waits for Arun. Next: P-08 from Android 4260ca4 |
+| Foundation | platform/foundation-pr 556090b (fourteenth patch, D-152). PR #12 at 556090b, 5/5 green after one osx-arm64 hang (being looked at). Next: H-20 (Mobile UI, D-151) |
 | Mac | Rebasing onto 022b7c0 and checking the trimmed Mac Catalyst Release launch (9 Nov 07:30 IST) |
-| Linux | Rebasing onto 022b7c0 (not waiting for main), then hand to Linux Test for B-24/B-08b/B-26 |
+| Linux | 7595ef3: thirteenth patch merged, 118/118 build-log steps; ready for Arun |
 | Android | 4260ca4: AT-02, AT-07 (P-08 patch for Foundation), AT-08; rebasing onto 022b7c0 and running emulators incl. Release launch |
 | Web | Rebasing onto 022b7c0 for pdf 3.32.0 (LIB-1) and WT-17 |
 | Mobile app UI | Rebasing onto 022b7c0; checking TOOLS/Mark rails against desktop, then drop tablet Save pin |
-| Linux Test | Waiting for Linux head on 022b7c0 to re-verify B-24, B-08b, B-26; open: library items, B-27, real-machine checks |
+| Linux Test | **Linux 7595ef3 verified ready for Arun's check** (9 Nov 22:00 IST): every Linux and shared bug fixed except B-26 (deferred by D-147); open elsewhere: library B-08a, B-09a, B-27; Reader chat collapse button; Windows timings; six real-machine checks |
 | Mac Test | Long re-verify of M-01..M-16 running (~2h45m); then trimmed Release check |
 | Web Test | Waiting for Web on pdf 3.32.0 (LIB-1, WT-17); staging VM items and manual checks for a person |
 | Android Test | Round 4 running (incl. same-file-opened-twice vs Windows) |
