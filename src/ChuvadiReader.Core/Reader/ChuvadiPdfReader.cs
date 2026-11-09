@@ -113,8 +113,18 @@ public sealed class ChuvadiPdfSession : IPdfSession
 
     private readonly bool _transparentBackground;
     private SvgRenderer _svgRenderer;
-    private readonly Dictionary<int, string> _svgCache = new();
+    private readonly Dictionary<int, string> _svgCache = new(); // guarded by lock (_svgCache): the Ui thread reads, renders write
     private PdfDocument? _document;
+
+    // D-152 (AT-13): pages render on a worker thread, one at a time per document. A PdfDocument is not for concurrent
+    // use (chuvadi-pdf: "loads objects and pages on demand into plain caches and reads through one stream"), so every
+    // use of _document after the open holds this gate: the render, a measurement, and closing the document.
+    // Layers are read once at the open, before anything else can touch the document.
+    private readonly SemaphoreSlim _gate = new(1, 1);
+    private volatile bool _closeRequested;
+
+    /// <summary>Tests only: runs on the render's thread, inside the gate, before the page is drawn.</summary>
+    internal Action<int>? BeforeRenderForTests { get; set; }
 
     // Layers: the file's groups (read once, lazily) and this view's overrides (name → visible).
     // Overrides only ever reach the renderers — the document itself is never modified.
@@ -127,14 +137,40 @@ public sealed class ChuvadiPdfSession : IPdfSession
         _document = document;
         Document = vm;
         _transparentBackground = transparentBackground;
+        _layerEntries = ReadLayers(document); // on the open's thread, before any render can run (D-152)
         _svgRenderer = CreateSvgRenderer();
     }
 
     public PdfDocumentVm Document { get; }
 
-    /// <summary>The open library document, for Core services that work on the same handle
-    /// (e.g. <see cref="MeasureService"/>). Null once disposed.</summary>
-    internal PdfDocument? PdfDocument => _document;
+    /// <summary>
+    /// Runs <paramref name="use"/> on the open document, for Core services that work on the same handle
+    /// (<see cref="MeasureService"/>). Never waits: while a page is rendering (a heavy page can take seconds) it
+    /// returns false at once instead of holding up the Ui thread, and the caller tries again on the next move.
+    /// </summary>
+    internal bool TryUseDocument<T>(Func<PdfDocument, T> use, out T result)
+    {
+        result = default!;
+        if (!_gate.Wait(0))
+        {
+            return false;
+        }
+
+        try
+        {
+            if (_document is null || _closeRequested)
+            {
+                return false;
+            }
+
+            result = use(_document);
+            return true;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
 
     public event EventHandler? RenderInvalidated;
 
@@ -185,8 +221,12 @@ public sealed class ChuvadiPdfSession : IPdfSession
     private void InvalidateRender()
     {
         _svgRenderer = CreateSvgRenderer();
-        _svgCache.Clear();
-        _renderGeneration++;
+        lock (_svgCache)
+        {
+            _svgCache.Clear();
+            _renderGeneration++; // a render already running for the old layers won't be kept (D-152)
+        }
+
         RenderInvalidated?.Invoke(this, EventArgs.Empty);
     }
 
@@ -203,7 +243,7 @@ public sealed class ChuvadiPdfSession : IPdfSession
             LayerVisibility = CurrentOverrides,
         });
 
-    private List<LayerEntry> LayerEntries => _layerEntries ??= ReadLayers(_document);
+    private List<LayerEntry> LayerEntries => _layerEntries ?? [];
 
     private sealed record LayerEntry(string Name, bool DefaultVisible, bool Locked, IReadOnlyList<string> Intents, int Count);
 
@@ -278,59 +318,112 @@ public sealed class ChuvadiPdfSession : IPdfSession
         return names;
     }
 
-    public bool TryGetRenderedSvg(int pageNumber, out string svg) => _svgCache.TryGetValue(pageNumber, out svg!);
-
-    public Task<string> RenderPageSvgAsync(int pageNumber, CancellationToken cancellationToken = default)
+    public bool TryGetRenderedSvg(int pageNumber, out string svg)
     {
-        if (_document is null)
+        lock (_svgCache)
         {
-            return Task.FromResult(string.Empty);
+            return _svgCache.TryGetValue(pageNumber, out svg!);
+        }
+    }
+
+    /// <summary>
+    /// D-152 (AT-13): renders on a worker thread, one page at a time for this document, so a heavy page (a
+    /// 6000 × 6000 image takes seconds) never holds up the Ui or the next open. Requests wait their turn in order;
+    /// a page already rendered (or rendered while it waited) comes straight from the cache.
+    /// </summary>
+    public async Task<string> RenderPageSvgAsync(int pageNumber, CancellationToken cancellationToken = default)
+    {
+        if (TryGetRenderedSvg(pageNumber, out var cached))
+        {
+            return cached;
         }
 
-        if (_svgCache.TryGetValue(pageNumber, out var cached))
+        if (_document is null || _closeRequested)
         {
-            return Task.FromResult(cached);
+            return string.Empty;
         }
 
-        var page = _document.Pages[pageNumber];
-        string svg;
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (TryGetRenderedSvg(pageNumber, out cached))
+            {
+                return cached;
+            }
+
+            if (_document is not { } document || _closeRequested)
+            {
+                return string.Empty;
+            }
+
+            // Taken now, on one side of any layer change: a render for the old layers is never kept.
+            int generation;
+            SvgRenderer renderer;
+            IReadOnlyDictionary<string, bool>? overrides;
+            lock (_svgCache)
+            {
+                generation = _renderGeneration;
+                renderer = _svgRenderer;
+                overrides = CurrentOverrides;
+            }
+
+            var svg = await Task.Run(() => RenderPage(document, renderer, overrides, pageNumber), cancellationToken)
+                .ConfigureAwait(false);
+
+            lock (_svgCache)
+            {
+                if (generation == _renderGeneration && !_closeRequested)
+                {
+                    _svgCache[pageNumber] = svg;
+                }
+            }
+
+            return svg;
+        }
+        finally
+        {
+            if (_closeRequested)
+            {
+                CloseDocument(); // Dispose came while this render held the document; close it now
+            }
+
+            _gate.Release();
+        }
+    }
+
+    private string RenderPage(PdfDocument document, SvgRenderer renderer, IReadOnlyDictionary<string, bool>? overrides, int pageNumber)
+    {
+        BeforeRenderForTests?.Invoke(pageNumber);
+        var page = document.Pages[pageNumber];
 
         // Large-format sheets (CAD/architectural) are rasterised up front: their vector
         // SVG is too dense for the WebView. Everything else renders as selectable-text SVG,
         // with a safety fallback if a normal-size page's SVG is unexpectedly huge.
         if (page.Width * page.Height > LargeFormatAreaPt)
         {
-            svg = RenderPageAsRasterSvg(page);
-        }
-        else
-        {
-            // SvgRenderer renders at the page's natural size; zoom is applied in the
-            // UI (CSS), so there is no scale parameter here.
-            svg = _svgRenderer.RenderPage(_document, pageNumber);
-            if (svg.Length > HeavySvgBytes)
-            {
-                svg = RenderPageAsRasterSvg(page);
-            }
+            return RenderPageAsRasterSvg(document, page, overrides);
         }
 
-        _svgCache[pageNumber] = svg;
-        return Task.FromResult(svg);
+        // SvgRenderer renders at the page's natural size; zoom is applied in the
+        // UI (CSS), so there is no scale parameter here.
+        var svg = renderer.RenderPage(document, pageNumber);
+        return svg.Length > HeavySvgBytes ? RenderPageAsRasterSvg(document, page, overrides) : svg;
     }
 
     /// <summary>Renders a page to a raster image (via the library rasteriser + PNG encoder)
     /// and wraps it in a minimal SVG carrying a single &lt;image&gt;, so the UI's SVG display
     /// path is unchanged while the WebView only has to hold one image node instead of
     /// hundreds of thousands of vector paths.</summary>
-    private string RenderPageAsRasterSvg(PdfPage page)
+    private static string RenderPageAsRasterSvg(PdfDocument document, PdfPage page, IReadOnlyDictionary<string, bool>? overrides)
     {
         var buffer = new PageRasterizer(
-                _document!.Objects,
+                document.Objects,
                 new RenderOptions
                 {
                     Dpi = RasterDpi,
                     Background = ColorF.White,
                     AntiAlias = true,
-                    LayerVisibility = CurrentOverrides,
+                    LayerVisibility = overrides,
                 })
             .Rasterize(page);
 
@@ -346,12 +439,36 @@ public sealed class ChuvadiPdfSession : IPdfSession
                $"href=\"{dataUri}\"/></svg>";
     }
 
-    public void DropRenderCache() => _svgCache.Clear();
+    public void DropRenderCache()
+    {
+        lock (_svgCache)
+        {
+            _svgCache.Clear();
+        }
+    }
 
+    /// <summary>Closes the document. If a page is rendering, the render closes it when it ends (it holds the
+    /// document); nothing new starts after this. Never waits.</summary>
     public void Dispose()
+    {
+        _closeRequested = true;
+        DropRenderCache();
+        if (_gate.Wait(0))
+        {
+            try
+            {
+                CloseDocument();
+            }
+            finally
+            {
+                _gate.Release();
+            }
+        }
+    }
+
+    private void CloseDocument()
     {
         _document?.Dispose();
         _document = null;
-        _svgCache.Clear();
     }
 }

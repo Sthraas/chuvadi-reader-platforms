@@ -37,7 +37,7 @@ public class LayersMeasureSignatureTests
 
     /// <summary>200×200 page: red square (no layer) bottom-left, blue square in "Blue layer"
     /// (on, locked) bottom-right, green square in "Green layer" (off by default) top-left.</summary>
-    private static string LayeredPdf()
+    internal static string LayeredPdf()
     {
         const string content =
             "1 0 0 rg 10 10 80 80 re f " +

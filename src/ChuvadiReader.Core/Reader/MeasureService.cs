@@ -93,13 +93,14 @@ public sealed class MeasureService
     public MeasureResult? Measure(IPdfSession session, int pageIndex, PagePoint a, PagePoint b, int viewRotation = 0)
     {
         ArgumentNullException.ThrowIfNull(session);
-        var doc = (session as ChuvadiPdfSession)?.PdfDocument;
-        if (doc is null || pageIndex < 0 || pageIndex >= doc.PageCount)
+        // D-152: never waits for a page that is rendering; the next pointer move measures again.
+        if (session is not ChuvadiPdfSession pdf
+            || !pdf.TryUseDocument(doc => pageIndex >= 0 && pageIndex < doc.PageCount ? Measure(doc.Pages[pageIndex], a, b, viewRotation) : null, out var result))
         {
             return null;
         }
 
-        return Measure(doc.Pages[pageIndex], a, b, viewRotation);
+        return result;
     }
 
     /// <summary>Measures on a file (opened and closed for the call).</summary>
@@ -118,13 +119,13 @@ public sealed class MeasureService
     public PolylineMeasureResult? MeasurePolyline(IPdfSession session, int pageIndex, IReadOnlyList<PagePoint> points, bool closed, int viewRotation = 0)
     {
         ArgumentNullException.ThrowIfNull(session);
-        var doc = (session as ChuvadiPdfSession)?.PdfDocument;
-        if (doc is null || pageIndex < 0 || pageIndex >= doc.PageCount)
+        if (session is not ChuvadiPdfSession pdf
+            || !pdf.TryUseDocument(doc => pageIndex >= 0 && pageIndex < doc.PageCount ? MeasurePolyline(doc.Pages[pageIndex], points, closed, viewRotation) : null, out var result))
         {
             return null;
         }
 
-        return MeasurePolyline(doc.Pages[pageIndex], points, closed, viewRotation);
+        return result;
     }
 
     /// <summary>Measures a polyline on a file.</summary>

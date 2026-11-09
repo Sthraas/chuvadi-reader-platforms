@@ -214,3 +214,19 @@
 - desktop 27/27 identical;
 - StartupProbe the same (JIT 1453 both; times within noise).
 
+### 37. Fourteenth combined patch: pages render off the Ui thread (9 Nov, D-152, AT-13)
+- `ChuvadiPdfSession.RenderPageSvgAsync` draws the page on a worker thread, one page at a time per document (a per-session gate, requests in the order asked). A heavy page no longer holds up the Ui or the next open.
+- **Why it's safe:** chuvadi-pdf says a `PdfDocument` is not for concurrent use. So after the open, every use of the session's document holds the same gate:
+  - the render;
+  - a measurement (`TryUseDocument`, which never waits: during a render it skips, and the next pointer move measures);
+  - closing (`Dispose` never waits; a render in progress closes the document when it ends, and nothing new starts).
+  - Layers are read once, at the open.
+  - The page cache is locked.
+  - A page drawn for layers that changed meanwhile isn't kept.
+- Redact's lazy render keyed by (session, page) and forgotten when done, as the Reader's (§36).
+- **Measured** with a 26 MB file holding one 6000 × 6000 JPEG, as AT-13: the call took 6549 ms to return before (the Ui thread blocked for the whole render); now 1.9 ms, with the page ready at 7.1 s. Its SVG is 4.0 MB after the raster fallback, from a ~35 MB vector SVG first, so the library ask (C, decode at display size) stands.
+- **Guard:** `RenderOffUiThreadTests` (6 stall tests).
+  - Rendering on the caller's thread fails 3 of them (caller held, two documents can't render together, measure held).
+  - The other 3 pin one-at-a-time and order, closing mid-render, and dropping a stale-layer page.
+- 348/348 tests (Reader 218); 0 warnings in both solutions; trimmed probe 54/54; desktop 27/27 identical; find-typing 3/3.
+
