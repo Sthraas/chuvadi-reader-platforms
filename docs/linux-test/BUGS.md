@@ -230,6 +230,15 @@ Re-verify B-24/B-25 once Foundation's patch with this diff is merged into `platf
   fails ("This PDF is encrypted and needs a password to open"): the card doesn't get the tab's password. Fix S3 is
   in the same proposal; the Linux UI step 31b tests it (passes with the fix, 118/118).
 
+**9 Nov night, Linux chat — re-verify everything on `platform/linux` 7595ef3** (CI green on x64 and ARM64).
+Foundation's thirteenth patch, part 1 (7d1ac03) carries the Linux chat's B-24, B-25 and S3 fixes.
+| Re-verify | What changed | Linux test |
+|---|---|---|
+| B-24 with B-08b Cancel | No file probe on the page's thread (`RefreshDocKind` removed) | UI 34e: pipe `slow.pdf` / `slow.xlsx` → "Opening…" 0.3 s, "Stop opening" 10 s, the next file opens meanwhile; `t_b24.py` should now pass |
+| B-25 | Every viewer: plain sentence, the library's text under a collapsed Details | UI 34f: `notzip.xlsx`, `notzip.docx` |
+| B-26 (D-147) | None: raw values as the file holds them | D-136 corpus tests |
+| Print with the owner password (D-139) | The Print card gets the tab's password | UI 31b: user password → locked; owner password → CUPS writes 5 pages |
+
 ## B-24 — A stalled read gives a blank Reader, no Cancel, and blocks later opens (S2, shared Ui/Core) — e468d1a
 **Steps.** `mkfifo /tmp/fifo/slow.pdf` (a source that never delivers data — the real-world case is a hung SMB/NFS/sshfs mount or an unplugged USB drive); `open /tmp/fifo/slow.pdf`; after 5 s open `five-pages.pdf`.
 **Expected.** "Opening…" at once; after 10 s the `SlowOpenNote` with Cancel; Cancel closes the tab; the second file opens regardless (B-08b / B-10).
