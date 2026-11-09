@@ -86,8 +86,17 @@ to Release-only behaviour (trimming, AOT).
 | R-02a | Owner-only AES-256 file renders | R3, R3b: laid out, page 1 not rendered within 40 s — watching | **PASS** |
 | everything else in the R2 table | | **PASS** again | **PASS** again |
 
-## 5. Robustness
-PENDING (round 3).
+## 5. Robustness — R4 (run 42543057904; Foundation 053e8e4 + Mobile UI 770bfdf + Android b731cfe; API 36, Debug fallback)
+| # | Case | Phone | Tablet |
+|---|---|---|---|
+| R-01 | Truncated / broken-xref / random bytes / 0-byte "PDF" | **PASS** — "This PDF is damaged … Chuvadi can try to rebuild it as a new copy"; no crash; app usable | **PASS** |
+| R-03 | 600-page PDF: first page | **PASS** 1.6 s, PSS 262 MB | **PASS** 2.2 s, PSS 258 MB |
+| R-03b | 600-page PDF: jump to the end, last page renders | **PASS** 0.2 s | **PASS** 0.3 s |
+| R-03c | 6000 × 6000 px image page (28 MB file) | **not painted in 90 s** — re-run isolated in R4b before filing | **PASS** 3.9 s, PSS 325 MB |
+| R-04 | DocumentsProvider URI (`com.android.externalstorage.documents`) | blocked behind the heavy page above | **PASS** |
+| R-05 | Airplane mode: start + open a PDF | **PASS** | **PASS** |
+| R-06 | en-IN / ta-IN / hi-IN | test tool stopped (navigated before Blazor was up), R4b | en-IN **PASS** (no overflow; "Monday 9 Nov 2026") |
+| R-07 | Fresh install | R4b | R4b |
 
 ## Blocked in CI: Reader on Android 15 (API 35)
 The API 35 image ships WebView 124, so the app correctly shows only its update screen (D-105). Updating it in CI from the API 36
