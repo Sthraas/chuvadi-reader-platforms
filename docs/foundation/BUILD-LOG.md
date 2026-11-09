@@ -244,3 +244,22 @@
   - Proved by making the gate block (`Wait(Timeout.Infinite)`): the suite goes red on the 5 s guard.
 - 350/350 tests. Tests only; no behaviour change.
 
+### 39. Fifteenth combined patch: fast paging (Linux on the fourteenth, platform/linux ba94dfa)
+- **The finding:** every page entering the view queued a render and nothing withdrew it, and renders ran in order, so after 150 fast PageDowns the landed page waited behind the backlog (about 2 s on the CAD PDF, with memory growing).
+- **Session (`ChuvadiPdfSession`):** renders wait in the session's own queue, not on the gate.
+  - A render that hasn't started is dropped when its token is cancelled; nothing is drawn for it, and its task reports cancelled.
+  - The worker takes the waiting page nearest the focus page (`IPdfSession.SetFocusPage`, a default no-op for other sessions), oldest first among equals. With no focus set (Bench, Redact) it's the order asked, as before.
+  - Still one worker and the same gate, so D-152's guarantees stand: the document is never used by two threads, and nothing on the Ui waits.
+- **Reader:**
+  - one token per (session, page) render;
+  - `PageLeft` (from the page observer, sent only for pages it asked for, so a long document doesn't send one message per far page) cancels it;
+  - `OnPageVisible` sets the focus page;
+  - a changed tab or reopened document cancels everything waiting.
+- **Guard tests:**
+  - 150 fast PageDowns at 40 ms a page: the landed page is drawn within the first 3, and at most 4 pages are drawn in all;
+  - waiting pages drawn nearest the page in view first (exact order pinned);
+  - a cancelled render never draws.
+  - With the old queue (in order, not cancellable) all 3 fail.
+- 353/353 tests; 0 warnings in both solutions; trimmed probe 54/54; desktop 27/27 identical (Home's relative-time artefact cleared on re-run).
+- **Behaviour on every platform, Linux included:** pages render nearest the one in view first, and pages scrolled past aren't drawn.
+
