@@ -145,14 +145,16 @@ or the IME. The Android chat's "garbled typing" (D-81) was this. Other Blazor-bo
 form fields, desk names) likely share the pattern; to check next round.
 **Evidence:** R3 › results-*-api36 › function/results.jsonl (F-03b); `screenshots/r1/r3-print-dialog-find-typing.png` (right).
 
-## AT-11 · S2 · Android / Foundation · open, seen once — Open tabs not restored after Android ends the app in the background
-**Steps:** phone API 36, 6 tabs open, Home key, `am kill in.chuvadi.reader` (what Android does to a background app under memory
+## AT-11 · S2 · Android / Foundation · open — On the phone, open tabs are lost when Android ends the app in the background
+**Steps:** phone API 36, several tabs open, Home key, `am kill in.chuvadi.reader` (what Android does to a background app under memory
 pressure), open the app again.
-**Expected:** the six tabs come back, on the same document (as on the tablet in R3 and on both in R2).
-**Actual (R3 phone):** the app opened on Home with **0 tabs**; "Pick up where you left off" still lists `doc-12p.pdf`.
-Seen 1 of 4 runs so far (R2 phone + tablet, R3 tablet passed), so likely a race between saving the session in `OnPause`
-(`RaiseSuspendingAsync`, not awaited) and the kill. **Evidence:** R3 › results-phone-api36 › function/10-after-process-death.png,
-results.jsonl (F-15). I'll repeat this case 10× next round to give a rate.
+**Expected:** the tabs come back on the same document.
+**Actual:** the phone opens on Home with **0 tabs** ("Pick up where you left off" still lists the document). Rate: **phone 11 of 11
+lost** (R3: 1 of 1; R3b: 10 of 10 with 1–3 s in the background), **tablet 0 of 11** (same runs). R2's single phone run passed.
+Phone-only points at the phone path of saving the session on `OnPause` (`RaiseSuspendingAsync` isn't awaited, and the phone shell
+may not save tabs at all), not at the kill timing. Anyone who switches apps on a phone with low memory loses their tabs.
+**Evidence:** R3 run 42537723474 and R3b run 42539596914 › results-phone-api36 › function/results.jsonl (F-15, F-15b),
+10-after-process-death.png.
 
 ## Questions for the coordinator (not filed as bugs)
 - **Q-1 Same file opened again → new tab.** Opening the same PDF with Open with twelve times gave 13 tabs of `design-doc.pdf`

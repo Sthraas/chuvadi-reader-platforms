@@ -138,19 +138,15 @@ def pull(remote, local):
     return local if os.path.exists(local) else None
 
 
-def newest_download(after_epoch, pattern=".pdf"):
-    rows = sh("ls -l --time-style=+%s /storage/emulated/0/Download/ /storage/emulated/0/Documents/ 2>/dev/null")
-    best = None
-    for line in rows.splitlines():
-        parts = line.split(None, 6)
-        if len(parts) == 7 and parts[6].endswith(pattern):
-            try:
-                t = int(parts[5])
-            except ValueError:
-                continue
-            if t >= after_epoch and (best is None or t > best[0]):
-                best = (t, parts[6])
-    return best[1] if best else None
+def mark_time():
+    sh("touch /data/local/tmp/at-mark")
+
+
+def newest_download(_after=None, pattern=".pdf"):
+    """Newest PDF anywhere in shared storage written after mark_time() (toybox `find -newer`)."""
+    rows = sh("find /storage/emulated/0/ -type f -name '*%s' -newer /data/local/tmp/at-mark 2>/dev/null" % pattern)
+    files = [l.strip() for l in rows.splitlines() if l.strip()]
+    return files[-1] if files else None
 
 
 def saf_pick(name):
@@ -267,7 +263,8 @@ dismiss_toasts()
 command("Print")
 time.sleep(1.5)
 shot("print-card")
-t0 = int(sh("date +%s").strip())
+mark_time()
+t0 = None
 pr = tap("Print", sel="section.chvd-card .footer button")
 time.sleep(5)
 shot("print-dialog")
@@ -290,12 +287,13 @@ if m:
     sh(f"input tap {(x1 + x2) // 2} {(y1 + y2) // 2}")
 open(os.path.join(OUT, "print-dialog.xml"), "w").write(xml)
 time.sleep(4)
+shot("save-picker")
 xml = ui_dump()
 if 'text="SAVE"' in xml or 'text="Save"' in xml:
     ui_tap_text("SAVE", "Save")
-time.sleep(4)
-saved = newest_download(t0)
-local = pull(f"/storage/emulated/0/Download/{saved}", os.path.join(OUT, "printed.pdf")) if saved else None
+time.sleep(5)
+saved = newest_download()
+local = pull(saved, os.path.join(OUT, "printed.pdf")) if saved else None
 vec = None
 if local:
     r = PdfReader(local)
