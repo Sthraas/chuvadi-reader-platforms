@@ -263,3 +263,32 @@
 - 353/353 tests; 0 warnings in both solutions; trimmed probe 54/54; desktop 27/27 identical (Home's relative-time artefact cleared on re-run).
 - **Behaviour on every platform, Linux included:** pages render nearest the one in view first, and pages scrolled past aren't drawn.
 
+### 40. Sixteenth combined patch: memory after closing a heavy document (Linux 36c, platform/linux-test ba94dfa note)
+Measured with Linux's own CAD stand-in (`tools/linux/make-heavy-pdfs.py`, run here test-only), with a GC heap dump (dotnet-gcdump / dotnet-dump, testing tools, never shipped) after closing:
+
+| After closing (one or two A1 sheets) | Live managed | Resident | Who held it |
+|---|---|---|---|
+| Before this patch | 205 MB | 1666 MB | a 134 MB `char[]` in the shared array pool, plus memory the runtime kept |
+| Pool fix only | 77 MB* | 1404–1745 MB | memory the runtime kept for later use (committed, nothing alive in it) |
+| Pool fix + relief | 77 MB* | 127–129 MB | — |
+
+\* The 77 MB left was the probe's own stack slot holding its last page (gcroot: the probe's `Render` frame), not the app.
+
+- **Our code, fixed:**
+  1. The raster page's SVG was built three times over (base64, data URI, then an interpolated string that grew through `ArrayPool<char>.Shared`). The pool kept a 134 MB buffer for the life of the app, and three 77 MB copies existed at once while drawing.
+     - Now `RasterSvg` writes the base64 straight into the final string, in one allocation, with the same characters as before (pinned against the old formula for 7 lengths).
+  2. The runtime keeps the memory a big drawing used, even with nothing alive in it, so the app stayed near 1.7 GB after the tab closed.
+     - `MemoryRelief`: when a closed document's pages held ≥ 64 MB, one aggressive collection runs on a worker 0.5 s after the close, at most once per 30 s (so a shared Web server never runs them back to back).
+     - Measured: 1745 → 129 MB resident, a 74 ms pause.
+- **Closing releases everything of ours:**
+  - the session's page cache is cleared at close;
+  - queued renders end empty;
+  - an in-flight render closes the document when it ends;
+  - session and document were collected (weak references dead).
+- **Test (`MemoryAfterCloseTests`, run alone):** a large-format page of noise (≈ 96 MB of page SVG, the raster path the CAD sheets take). After close, live memory is within 16 MB of where it was, and memory kept by the runtime within 64 MB. It fails without the relief (563 → 655 MB kept) and with the old string building (1 → 129 MB live).
+- **Left for the library (with B-27):**
+  - drawing one A1 sheet of 120,000 strokes peaks at about 1.8 GB resident inside the rasteriser, and takes about 37 s here;
+  - a page holding one big image first comes out as a vector SVG of about 35 MB before the raster fallback.
+- 356/356 tests; 0 warnings in both solutions; trimmed probe 54/54.
+- **Every platform, Linux and Web included:** that one collection after a heavy close.
+
