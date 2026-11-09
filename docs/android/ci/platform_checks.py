@@ -746,12 +746,21 @@ def row_colour(img, y):
     return max(counts, key=counts.get)
 
 
-def light_icons_requested():
-    """From the window manager: does our window ask for dark (light-bar) status icons? None if not shown."""
-    out = adb("shell", "dumpsys", "window", "windows")
-    block = next((b for b in re.split(r"\n  Window #", out) if PKG in b.split("\n", 1)[0]), "")
-    m = re.search(r"appearance=([A-Z_|]+|0)", block)
-    return None if not m else "LIGHT_STATUS_BARS" in m.group(1)
+def icons_are_light(img, bar):
+    """Status-bar icons (clock, signal, battery) seen in the top 3.5 % of the screen: True if they are
+    lighter than the bar, False if darker, None if none found. (The window manager's dump doesn't show the
+    requested appearance on API 36, run 42541330985, so the pixels decide.)"""
+    w, h, px = img
+    lum = lambda r, g, b: 0.299 * r + 0.587 * g + 0.114 * b
+    base = lum(*bar)
+    far = []
+    for y in range(int(h * 0.035)):
+        for x in range(0, w, 2):
+            i = (y * w + x) * 4
+            v = lum(px[i], px[i + 1], px[i + 2])
+            if abs(v - base) > 60:
+                far.append(v)
+    return None if len(far) < 50 else sum(far) / len(far) > base
 
 
 # tokens.css --chvd-surface-hi: the Ui's bars that meet the screen edges.
@@ -769,10 +778,10 @@ for name in ["Night paper", "Palm leaf", "Indigo ink", "High contrast", "Cream p
     top, bottom = row_colour(img, 4), row_colour(img, img[1] - 3)
     shot("p10c-theme-" + name.split()[0].lower())
     ok = all(abs(a - b) <= 6 for c in (top, bottom) for a, b in zip(c, BAR[name]))
-    light = light_icons_requested()
-    icons_ok = light is None or light == (name != "Night paper")
+    light = icons_are_light(img, top)
+    icons_ok = light == (name == "Night paper")
     bars[name] = {"top": "#%02x%02x%02x" % top, "bottom": "#%02x%02x%02x" % bottom,
-                  "want": "#%02x%02x%02x" % BAR[name], "lightBarIcons": light, "pass": ok and icons_ok}
+                  "want": "#%02x%02x%02x" % BAR[name], "lightIcons": light, "pass": ok and icons_ok}
 check("status and navigation bar areas take each theme's bar colour, light icons on Night paper (AT-08)",
       all(v["pass"] for v in bars.values()), bars)
 

@@ -641,3 +641,11 @@ same screen; no crash), smoke pass. With round 6 (API 36 phone and tablet, all c
 - **Release on the emulators:** after the Debug suites (and in `suite=smoke`), `emulator-tests.sh` uninstalls and runs
   the smoke test on the Release .apk (it carries x86_64). AT-03 (Release crash from trimming) is Foundation's.
 - Sandbox: Android Debug and Release `-warnaserror` 0 warnings; Hosting 60, MobileUi 16, WebUi 39 tests pass.
+- **Run 42541330985** (phone and tablet API 36, full, 863112c): build pass, Release manifest check 14/14; gestures 10/10
+  and 9/9; platform 27/27 and 25/25, including AT-07 (no cache path; names such as `chuvadi-test.docx`) and AT-08 (top and
+  bottom rows exactly `#241b15` / `#f6f2e1` / `#f8f9fc` / `#ffffff` / `#fbf7ec`). **Release launch: FAIL on both** —
+  AT-03 as filed: `NoConstructorMatch, ChuvadiReader.Platform.NoAppInstance` in `MainActivity.OnCreate` (Foundation's fix
+  is not in 42461ba). Note for that fix: P-08's `PlainPathLabels` is another seam default of the same kind.
+- AT-08's icon half wasn't judged in that run (the window dump on API 36 doesn't show the requested appearance). The check
+  now reads the status-bar icons from the pixels; on that run's own screenshots it gives light icons on Night paper and
+  dark on the other four, on both devices. It runs in the next round.
