@@ -103,3 +103,16 @@ public class DroppedFilesTests
         Assert.Equal([opened.Path], kept);                                // refused files leave nothing behind
     }
 }
+
+/// <summary>D-137: the portal reads Word files with the strict server limits, never the desktop's.</summary>
+public class PortalLimitsTests
+{
+    [Fact]
+    public void The_portal_counts_as_server_side_so_word_files_get_20_and_64_mb()
+    {
+        Assert.True(WebPlatformInfo.WebCapabilities.ServerSide);
+        var o = ChuvadiReader.Core.Documents.DocxViewService.ReadOptions(serverSide: true);
+        Assert.Equal(20L * 1024 * 1024, o.MaxPartBytes);
+        Assert.Equal(64L * 1024 * 1024, o.MaxTotalUncompressedBytes);
+    }
+}

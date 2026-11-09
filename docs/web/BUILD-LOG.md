@@ -284,3 +284,9 @@ dotnet test tests/ChuvadiReader.Web.Tests -c Release   # 123 passed, 0 warnings
 - **D-137:** the portal keeps the shared Core's Word limits (20 MB per part, 64 MB in total) and Excel's untrusted-input limits; nothing on the host loosens them. Checked through the portal: a normal .docx opens with its double spaces as in the file; a .docx showing a 25 MB picture and a 100 KB zip bomb unpacking to 100 MB both say "too large to open"; the portal keeps answering.
 - Tests: `ZipSaveTests` (one zip holding every file exactly, read back with .NET's reader as a test-only interoperability check; one file as itself; picked folders not sent file by file; save folders unchanged; names). `flows.py` step 4 (split → one .zip of every page). New `office_limits.py`.
 - A Blazor "navigation cancelled" log line and Firefox's "WebSocket is not in the OPEN state" appeared only when a test left a page mid-update; the scripts now let the page settle, and neither appears in normal use.
+
+### 28. chuvadi-pdf 3.32.0 on the portal (LIB-1, WT-17) — 9 Nov, morning
+- Rebased onto `platform/foundation` @ `022b7c0`: chuvadi-pdf 3.32.0 (`EncryptionInfo.OpenedWith` / `EffectiveFlags`, the unsigned /P fix), the twelfth combined patch and the AT-03 typed registrations (D-146; same services, order and lifetimes). No host change needed.
+- The published portal carries `Chuvadi.Pdf/3.32.0` (checked in `deps.json`).
+- D-137 kept: the portal reports `ServerSide`, so Word files get the strict 20 MB per part and 64 MB in total (the desktop gets 100/400). New test `PortalLimitsTests` pins it. Layout's `ForUntrustedInput` is for when Layout arrives.
+- Checks: shared solution 0 warnings and its tests (Reader 212, Hosting 64, Mobile UI 16, Web UI 39); Web 165/165; package check; `flows.py` 10/10 and `office_limits.py` 6/6 in Chrome and WebKit.
