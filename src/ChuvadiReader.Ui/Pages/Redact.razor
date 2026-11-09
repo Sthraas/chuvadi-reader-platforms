@@ -9,6 +9,8 @@
 @inject NavigationManager Nav
 @inject IEntitlements Entitlements
 @inject IJSRuntime JS
+@inject ChuvadiReader.Platform.IFileWriteBack WriteBack
+@inject ChuvadiReader.Platform.IPlatformInfo Platform
 
 <div class="redact-root mview">
     <div class="rd-col">
@@ -59,7 +61,7 @@
             <Icon Name="redact" Size="40" />
             <div class="rd-empty-t">Send a document here to redact it</div>
             <div class="rd-empty-sub">Redaction permanently removes the content under each box and always writes a new file.</div>
-            <button class="rd-empty-btn" @onclick="Fetch">Fetch a document…</button>
+            <button class="rd-empty-btn" @onclick="Fetch">@ChuvadiReader.Ui.Components.Platform.PlatformText.FetchOrUpload(Platform, "Fetch a document…", "Upload a document…")</button>
         </div>
     }
     else if (_loading)
@@ -74,7 +76,7 @@
         <div class="rd-empty">
             <Icon Name="warning" Size="40" />
             <div class="rd-empty-t">@_error</div>
-            <button class="rd-empty-btn" @onclick="Fetch">Fetch a document…</button>
+            <button class="rd-empty-btn" @onclick="Fetch">@ChuvadiReader.Ui.Components.Platform.PlatformText.FetchOrUpload(Platform, "Fetch a document…", "Upload a document…")</button>
         </div>
     }
     else if (_session is not null)
@@ -417,6 +419,7 @@
             try
             {
                 await _js.InvokeVoidAsync("init", _desk, _ref);
+                await FitWidthOnPhoneAsync();
             }
             catch { }
         }
@@ -424,6 +427,20 @@
         {
             // Re-observe in case the page list changed (new document opened).
             try { await _js.InvokeVoidAsync("observe"); } catch { }
+        }
+    }
+
+    // Phone (Portal & Android): open at fit width, not the desktop's 100 % (the page is wider than the
+    // screen). The width is measured by the phone's own script; tablets and desktops keep 100 %.
+    private async Task FitWidthOnPhoneAsync()
+    {
+        if (Platform.FormFactor != ChuvadiReader.Platform.FormFactor.Phone) return;
+        await using var mobile = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/ChuvadiReader.Ui/js/mobile.js");
+        var fit = await mobile.InvokeAsync<double>("fitWidthZoom", _desk);
+        if (fit > 0 && Math.Abs(fit - _zoom) > 0.005)
+        {
+            _zoom = fit;
+            StateHasChanged();
         }
     }
 
@@ -582,6 +599,7 @@
             var boxesArg = boxesByPage.ToDictionary(kv => kv.Key, kv => (IReadOnlyList<NormBox>)kv.Value);
 
             await RedactSvc.ApplyAsync(_path, output!, boxesArg, patterns, _glyphOnly, _color, padding: 1.5);
+            await WriteBack.DeliverOrThrowAsync(output);
             _savedPath = output;
             _status = $"Saved → {System.IO.Path.GetFileName(output)}";
             _statusErr = false;

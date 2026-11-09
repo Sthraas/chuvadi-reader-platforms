@@ -9,8 +9,12 @@
 @inject PressService Press
 @inject DocumentPropertiesService DocProps
 @inject SessionService Session
+@inject ChuvadiReader.Platform.IPlatformInfo Platform
 @inject RedactRequestService RedactReq
 @inject BenchDropService BenchDrop
+@inject ChuvadiReader.Platform.IFileWriteBack WriteBack
+@inject ChuvadiReader.Platform.IAppPaths Paths
+@inject ChuvadiReader.Platform.IPlatformInfo Platform
 @implements IAsyncDisposable
 
 <PageTitle>Chuvadi · Bench</PageTitle>
@@ -56,13 +60,13 @@
             {
                 <div class="shelf-empty">
                     <Icon Name="folder" Size="20" />
-                    <span>Fetch a PDF to start.</span>
-                    <button class="bt bt-fetch" @onclick="FetchFile" disabled="@_fetching"><Icon Name="folder" Size="14" /> Fetch a file</button>
+                    <span>@ChuvadiReader.Ui.Components.Platform.PlatformText.FetchOrUpload(Platform, "Fetch a PDF to start.", "Upload a PDF to start.")</span>
+                    <button class="bt bt-fetch" @onclick="FetchFile" disabled="@_fetching"><Icon Name="folder" Size="14" /> @ChuvadiReader.Ui.Components.Platform.PlatformText.FetchOrUpload(Platform, "Fetch a file", "Upload a file")</button>
                 </div>
             }
             else if (BenchSvc.HasSources)
             {
-                <button class="shelf-add" @onclick="FetchFile" disabled="@_fetching" title="Fetch another PDF onto the shelf">
+                <button class="shelf-add" @onclick="FetchFile" disabled="@_fetching" title="@(ChuvadiReader.Ui.Components.Platform.PlatformText.FetchOrUpload(Platform, "Fetch another PDF onto the shelf", "Upload another PDF onto the shelf"))">
                     <Icon Name="folder" Size="14" /><span>Add a file</span>
                 </button>
                 <div class="shelf-zoom" title="Thumbnail size">
@@ -215,7 +219,7 @@
                         <span class="desk-count">@desk.Pages.Count pg</span>
                         @if (!desk.IsEmpty)
                         {
-                            <button class="desk-sel" @onclick="() => BenchSvc.SelectAllInDesk(deskId)" title="Select all pages on this desk (Ctrl+A)" aria-label="Select all">All</button>
+                            <button class="desk-sel" @onclick="() => BenchSvc.SelectAllInDesk(deskId)" title="Select all pages on this desk (@Platform.Keys.Format("Ctrl A"))" aria-label="Select all">All</button>
                             <button class="desk-sel" @onclick="() => BenchSvc.InvertSelectionInDesk(deskId)" title="Invert selection on this desk" aria-label="Invert selection">Inv</button>
                         }
                         @if (!string.IsNullOrEmpty(desk.NormalizeSize))
@@ -237,6 +241,34 @@
                         <div class="desk-menu">
                             <button @onclick="() => OpenDeskInReader(deskId)" disabled="@(_busy || desk.IsEmpty)"><Icon Name="reader" Size="13" /> Open in Reader</button>
                             <button @onclick="() => SendDeskToRedact(deskId)" disabled="@(_busy || desk.IsEmpty)"><Icon Name="redact" Size="13" /> Send to Redact</button>
+                            @if (TouchDesks)
+                            {
+                                @* Touch (Portal & Android 12f / 12i): the desk's footer actions live here, with their
+                                   labels, instead of a toolbar under every desk. *@
+                                <div class="desk-menu-sep"></div>
+                                <button @onclick="() => DeskMenuDo(() => FetchImageToDesk(deskId))"><Icon Name="file-image" Size="13" /> Image</button>
+                                <button @onclick="() => DeskMenuDo(() => AddBlank(deskId))"><Icon Name="file" Size="13" /> Blank page</button>
+                                <button @onclick="() => DeskMenuDo(() => ReverseDesk(deskId))" disabled="@(desk.Pages.Count < 2)"><Icon Name="rotate-ccw" Size="13" /> Reverse</button>
+                                <button @onclick="() => DeskMenuDo(() => SortDesk(deskId))" disabled="@(desk.Pages.Count < 2)"><Icon Name="menu" Size="13" /> Sort into source order</button>
+                                <button @onclick="() => DeskMenuDo(() => OpenImpose(deskId))" disabled="@(desk.IsEmpty || !BenchSvc.CanAddDesk)"><Icon Name="columns" Size="13" /> Impose</button>
+                                <button @onclick="() => DeskMenuDo(() => OpenNumbering(deskId))" disabled="@desk.IsEmpty"><Icon Name="hash" Size="13" /> Number pages</button>
+                                <select class="desk-menu-size" title="Normalise every page to this size at Bind / Export" @onchange="e => SetDeskSize(deskId, e.Value?.ToString())">
+                                    <option value="" selected="@string.IsNullOrEmpty(desk.NormalizeSize)">Size: original</option>
+                                    <option value="A4" selected="@(desk.NormalizeSize == "A4")">Size: A4</option>
+                                    <option value="Letter" selected="@(desk.NormalizeSize == "Letter")">Size: Letter</option>
+                                </select>
+                                <div class="desk-menu-sep"></div>
+                                <button @onclick="() => DeskMenuDo(() => OpenWatermark(deskId))"><Icon Name="watermark" Size="13" /> Watermark</button>
+                                <button @onclick="() => DeskMenuDo(() => OpenHeaderFooter(deskId))"><Icon Name="text-box" Size="13" /> Header / footer</button>
+                                <button @onclick="() => DeskMenuDo(() => OpenScatter(deskId))" disabled="@desk.IsEmpty"><Icon Name="split" Size="13" /> Scatter</button>
+                                <button @onclick="() => DeskMenuDo(() => OpenExport(deskId))" disabled="@desk.IsEmpty"><Icon Name="download" Size="13" /> Export</button>
+                                <button @onclick="() => DeskMenuDo(() => LiftDesk(deskId))" disabled="@(_busy || sel == 0)"><Icon Name="upload" Size="13" /> Lift@(sel > 0 ? $" ({sel})" : " selected")</button>
+                                @if (sel > 0)
+                                {
+                                    <button @onclick="() => DeskMenuDo(() => DeleteSelected(deskId))"><Icon Name="trash" Size="13" /> Delete selected (@sel)</button>
+                                }
+                                <button @onclick="() => DeskMenuDo(() => BindDesk(deskId))" disabled="@(_busy || desk.IsEmpty)"><Icon Name="save" Size="13" /> Bind desk</button>
+                            }
                             <div class="desk-menu-sep"></div>
                             <button @onclick="() => SaveDeskAsTemplate(deskId)" disabled="@_busy">Save as template…</button>
                             @if (_templates.Count == 0)
@@ -349,9 +381,11 @@
                         }
                     </div>
 
+                    @if (!TouchDesks)
+                    {
                     <div class="desk-foot">
                         <div class="desk-foot-acts">
-                            <button class="bt sm" @onclick="() => FetchImageToDesk(deskId)" title="Fetch image"><Icon Name="file-image" Size="13" /><span class="btxt">Image</span></button>
+                            <button class="bt sm" @onclick="() => FetchImageToDesk(deskId)" title="@(ChuvadiReader.Ui.Components.Platform.PlatformText.FetchOrUpload(Platform, "Fetch image", "Upload image"))"><Icon Name="file-image" Size="13" /><span class="btxt">Image</span></button>
                             <button class="bt sm" @onclick="() => AddBlank(deskId)" title="Add blank page"><Icon Name="file" Size="13" /><span class="btxt">Blank</span></button>
                             <button class="bt sm" @onclick="() => ReverseDesk(deskId)" disabled="@(desk.Pages.Count < 2)" title="Reverse page order"><Icon Name="rotate-ccw" Size="13" /><span class="btxt">Reverse</span></button>
                             <button class="bt sm" @onclick="() => SortDesk(deskId)" disabled="@(desk.Pages.Count < 2)" title="Sort pages into source order"><Icon Name="menu" Size="13" /><span class="btxt">Sort</span></button>
@@ -378,6 +412,7 @@
                             <button class="bt sm bt-bind" @onclick="() => BindDesk(deskId)" disabled="@(_busy || desk.IsEmpty)" title="Bind desk"><Icon Name="save" Size="13" /><span class="btxt">Bind</span></button>
                         </div>
                     </div>
+                    }
                 </div>
             }
 
@@ -656,7 +691,10 @@
                 <p class="modal-body">Write every page of this desk as its own single-page PDF into:</p>
                 <div class="folder-row">
                     <span class="folder-path" title="@_scatterFolder">@_scatterFolder</span>
-                    <button class="link" @onclick="ChangeScatterFolder">change…</button>
+                    @if (Platform.Capabilities.PickFolders)
+                    {
+                        <button class="link" @onclick="ChangeScatterFolder">change…</button>
+                    }
                 </div>
                 <div class="modal-foot">
                     <span style="flex:1"></span>
@@ -705,7 +743,10 @@
                 {
                     <div class="folder-row">
                         <span class="folder-path" title="@_expFolder">@_expFolder</span>
+                        @if (Platform.Capabilities.PickFolders)
+                    {
                         <button class="link" @onclick="ChangeExportFolder">change…</button>
+                    }
                     </div>
                 }
                 <div class="modal-foot">
@@ -865,7 +906,10 @@
                 <p class="modal-note">@PresetHint(_pressPreset)</p>
                 <div class="folder-row">
                     <span class="folder-path" title="@_pressFolder">@_pressFolder</span>
-                    <button class="link" @onclick="ChangePressFolder">change…</button>
+                    @if (Platform.Capabilities.PickFolders)
+                    {
+                        <button class="link" @onclick="ChangePressFolder">change…</button>
+                    }
                 </div>
                 @if (_pressResult is { } r)
                 {
@@ -1082,7 +1126,7 @@
     <div class="mview-rails">
         <SideRail Kind="tools" Heading="ARRANGE">
             <RailButton Icon="shelf" Label="Shelf" Active="!_shelfHidden" OnClick="() => _shelfHidden = !_shelfHidden" />
-            <RailButton Icon="folder" Label="Fetch file" Disabled="@(_busy || _fetching)" OnClick="FetchFile" />
+            <RailButton Icon="folder" Label="@(ChuvadiReader.Ui.Components.Platform.PlatformText.FetchOrUpload(Platform, "Fetch file", "Upload file"))" Disabled="@(_busy || _fetching)" OnClick="FetchFile" />
             <RailButton Icon="plus" Label="Add desk" Disabled="@(_busy || !BenchSvc.CanAddDesk)" DisabledReason="@(BenchSvc.CanAddDesk ? null : "30-desk limit reached")" OnClick="AddDesk" />
             <RailButton Icon="page-add" Label="Blank page" Disabled="@(_busy || FocusDeskId is null)" OnClick="AddBlankToFocused" />
             <RailSep />
@@ -1503,6 +1547,7 @@
         try
         {
             await Session.SaveSessionAsync(path, BenchSvc.ExportSession());
+            await WriteBack.DeliverOrThrowAsync(path);
             _error = false;
             _status = $"Session saved to {System.IO.Path.GetFileName(path)}.";
         }
@@ -1580,6 +1625,21 @@
         _status = $"Applied template \"{template.Name}\" to the desk.";
     }
 
+    // Tablet and phone: the desk footer's actions are in the desk's ··· menu (TouchDesks).
+    private bool TouchDesks => Platform.FormFactor != ChuvadiReader.Platform.FormFactor.Desktop;
+
+    private void DeskMenuDo(Action act)
+    {
+        _deskMenu = null;
+        act();
+    }
+
+    private Task DeskMenuDo(Func<Task> act)
+    {
+        _deskMenu = null;
+        return act();
+    }
+
     private async Task OpenDeskInReader(Guid deskId) => await BindDeskAndRoute(deskId, toRedact: false);
 
     private async Task SendDeskToRedact(Guid deskId) => await BindDeskAndRoute(deskId, toRedact: true);
@@ -1604,7 +1664,7 @@
                 safe = safe.Replace(c, '_');
             }
 
-            var tmp = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"{safe}-{Guid.NewGuid():N}.pdf");
+            var tmp = System.IO.Path.Combine(ScratchFiles.Folder(Paths), $"{safe}-{Guid.NewGuid():N}.pdf");
             await BenchSvc.BindDeskAsync(deskId, tmp);
 
             if (toRedact)
@@ -2066,6 +2126,7 @@
         try
         {
             var n = await BenchSvc.BindAllAsync(folder!);
+            if (n > 0) await WriteBack.DeliverOrThrowAsync(folder);
             _status = n == 0 ? "Nothing to bind." : $"Bound {n} desk{(n == 1 ? "" : "s")} into {folder}";
             _resultPath = null;
         }
@@ -2082,6 +2143,7 @@
         try
         {
             var n = await BenchSvc.CombineAllAsync(path!);
+            if (n > 0) await WriteBack.DeliverOrThrowAsync(path);
             _status = n == 0 ? "Nothing to combine." : $"Combined {n} desk{(n == 1 ? "" : "s")} → {System.IO.Path.GetFileName(path)}";
             _resultPath = n == 0 ? null : path;
         }
@@ -2096,6 +2158,7 @@
         try
         {
             await action();
+            await WriteBack.DeliverOrThrowAsync(path);
             _status = $"{verb} → {System.IO.Path.GetFileName(path)}";
             _resultPath = path;
         }
@@ -2624,6 +2687,7 @@
         try
         {
             var n = await BenchSvc.ScatterDeskAsync(deskId, _scatterFolder);
+            if (n > 0) await WriteBack.DeliverOrThrowAsync(_scatterFolder);
             _scatterDesk = null;
             _status = $"Scattered {n} page{(n == 1 ? "" : "s")} into {_scatterFolder}";
             _error = false; _resultPath = null;
@@ -2679,6 +2743,7 @@
                     await BenchSvc.BindDeskAsync(deskId, path);
                 }
 
+                await WriteBack.DeliverOrThrowAsync(path);
                 _expDesk = null;
                 _status = $"Exported PDF: {System.IO.Path.GetFileName(path)}";
                 _error = false; _resultPath = path;
@@ -2692,6 +2757,7 @@
         try
         {
             var n = await BenchSvc.ExportDeskAsync(deskId, _expFolder, _expFormat, _expDpi, _expSelectedOnly);
+            if (n > 0) await WriteBack.DeliverOrThrowAsync(_expFolder);
             _expDesk = null;
             _status = $"Exported {n} image{(n == 1 ? "" : "s")} into {_expFolder}";
             _error = false; _resultPath = null;
@@ -2738,6 +2804,7 @@
         try
         {
             _pressResult = await Press.PressAsync(_pressSrc, _pressFolder, PressOptions.For(_pressPreset));
+            await WriteBack.DeliverOrThrowAsync(_pressResult?.OutputPath);
         }
         catch (Exception ex) { _status = ex.Message; _error = true; _pressSrc = null; }
         finally { _pressBusy = false; StateHasChanged(); }

@@ -1,0 +1,61 @@
+@using ChuvadiReader.Platform
+@implements IDisposable
+@inject IPlatformInfo Platform
+@inject IWindowControls Win
+
+@*
+    Left-hand window buttons: macOS order (close · minimise · zoom). MainLayout instantiates this when
+    Chrome.Buttons is Left; right-hand buttons (Windows) stay inline in MainLayout so the Windows markup
+    and startup are exactly as before. Android and Web: none (Web shows the account menu instead).
+
+    With Items (the desktop's exact layout, Chrome.ButtonLayout — Linux), this draws exactly those
+    buttons in that order at the Side it is placed on, any subset, either side.
+*@
+
+@if (Items is { } items)
+{
+    @if (items.Count > 0)
+    {
+        <div class="traffic @(Side == ChuvadiReader.Platform.WindowButtons.Left ? "traffic-left" : null)" @onmousedown:stopPropagation="true" @ondblclick:stopPropagation="true">
+            @foreach (var b in items)
+            {
+                @switch (b)
+                {
+                    case WindowButton.Minimize:
+                        <button class="tl tl-min" @onclick="() => Win.Minimize()" aria-label="Minimize"><Icon Name="minus" Size="10" /></button>
+                        break;
+                    case WindowButton.Maximize:
+                        <button class="tl tl-max" @onclick="() => Win.ToggleMaximize()" aria-label="@(Win.IsMaximized ? "Restore" : "Maximize")"><Icon Name="@(Win.IsMaximized ? "restore" : "square")" Size="9" /></button>
+                        break;
+                    case WindowButton.Close:
+                        <button class="tl tl-close" @onclick="() => Win.Close()" aria-label="Close"><Icon Name="x" Size="10" /></button>
+                        break;
+                }
+            }
+        </div>
+    }
+}
+else if (Platform.Chrome.Buttons == Side)
+{
+    <div class="traffic traffic-left" @onmousedown:stopPropagation="true" @ondblclick:stopPropagation="true">
+        <button class="tl tl-close" @onclick="() => Win.Close()" aria-label="Close"><Icon Name="x" Size="10" /></button>
+        <button class="tl tl-min" @onclick="() => Win.Minimize()" aria-label="Minimize"><Icon Name="minus" Size="10" /></button>
+        <button class="tl tl-max" @onclick="() => Win.ToggleMaximize()" aria-label="@(Win.IsMaximized ? "Exit full screen" : "Zoom")"><Icon Name="@(Win.IsMaximized ? "restore" : "square")" Size="9" /></button>
+    </div>
+}
+
+@code {
+    /// <summary>Which end of the top bar this instance sits at.</summary>
+    [Parameter, EditorRequired]
+    public ChuvadiReader.Platform.WindowButtons Side { get; set; }
+
+    /// <summary>The exact buttons, in order (from <see cref="ShellChrome.ButtonLayout"/>); null: the usual set.</summary>
+    [Parameter]
+    public IReadOnlyList<WindowButton>? Items { get; set; }
+
+    protected override void OnInitialized() => Win.StateChanged += OnWindowStateChanged;
+
+    private void OnWindowStateChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Win.StateChanged -= OnWindowStateChanged;
+}

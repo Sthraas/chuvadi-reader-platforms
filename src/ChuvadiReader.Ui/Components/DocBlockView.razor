@@ -8,11 +8,11 @@ else if (Block is WordPara p)
 {
     @if (p.ListKind == "bullet")
     {
-        <div class="wv-li wv-bullet" style="margin-left:@(Indent(p.ListLevel))px"><span class="wv-marker">•</span><span class="wv-li-body"><DocRunsView Runs="p.Runs" /></span></div>
+        <div class="wv-li wv-bullet" style="margin-left:@(Indent(p.ListLevel))px"><span class="wv-marker">@(p.ListLabel ?? "•")</span><span class="wv-li-body"><DocRunsView Runs="p.Runs" /></span></div>
     }
     else if (p.ListKind == "number")
     {
-        <div class="wv-li wv-num" style="margin-left:@(Indent(p.ListLevel))px"><span class="wv-marker">–</span><span class="wv-li-body"><DocRunsView Runs="p.Runs" /></span></div>
+        <div class="wv-li wv-num" style="margin-left:@(Indent(p.ListLevel))px"><span class="wv-marker">@(p.ListLabel ?? "–")</span><span class="wv-li-body"><DocRunsView Runs="p.Runs" /></span></div>
     }
     else if (p.Quote)
     {

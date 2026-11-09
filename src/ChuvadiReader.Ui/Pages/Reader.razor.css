@@ -144,6 +144,8 @@
 
 .rload-icon { color: var(--chvd-binding); animation: rpulse 1.1s ease-in-out infinite; }
 @keyframes rpulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+.rempty-acts { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+details.rempty-sub summary { cursor: pointer; }
 .rempty-btn {
     font-size: 13px;
     color: var(--chvd-ink);

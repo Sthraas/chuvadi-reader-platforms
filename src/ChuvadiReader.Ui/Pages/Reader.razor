@@ -19,6 +19,12 @@
 @inject ChuvadiReader.Core.Documents.RecoveryService Recovery
 @inject RedactRequestService RedactHandoff
 @inject IEntitlements Entitlements
+@inject ChuvadiReader.Platform.IPlatformInfo Platform
+@inject ChuvadiReader.Platform.IClipboard TextClip
+@inject ChuvadiReader.Platform.IFileWriteBack WriteBack
+@inject ChuvadiReader.Platform.IAppPaths Paths
+@inject ChuvadiReader.Platform.IFileManager FileManager
+@inject ChuvadiReader.Platform.IAppLifecycle Lifecycle
 @using ChuvadiReader.Core.Documents
 
 <PageTitle>Chuvadi · Reader</PageTitle>
@@ -85,7 +91,7 @@
             else
             {
                 <div class="bm-acts">
-                    <button class="bm-act" @onclick="BmAddCurrent" title="Add a bookmark at the current page (Ctrl B)"><Icon Name="plus" Size="13" /> Add</button>
+                    <button class="bm-act" @onclick="BmAddCurrent" title="Add a bookmark at the current page (@Platform.Keys.Format("Ctrl B"))"><Icon Name="plus" Size="13" /> Add</button>
                     <button class="bm-act" @onclick="() => BmMove(-1)" disabled="@(_bmSel is null)" title="Move up"><Icon Name="chevron-up" Size="13" /></button>
                     <button class="bm-act" @onclick="() => BmMove(1)" disabled="@(_bmSel is null)" title="Move down"><Icon Name="chevron-down" Size="13" /></button>
                     <button class="bm-act" @onclick="BmIndent" disabled="@(_bmSel is null)" title="Indent (nest under the entry above)"><Icon Name="chevron-right" Size="13" /></button>
@@ -189,7 +195,10 @@
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;font-family:var(--chvd-mono);font-size:11px;color:var(--chvd-ink-muted)">
                     <Icon Name="folder" Size="13" />
                     <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="@_expFolder">@_expFolder</span>
-                    <button @onclick="ChangeExportFolder" style="background:none;border:none;color:var(--chvd-binding);cursor:pointer;font-family:var(--chvd-mono);font-size:11px">change…</button>
+                    @if (Platform.Capabilities.PickFolders)
+                    {
+                        <button @onclick="ChangeExportFolder" style="background:none;border:none;color:var(--chvd-binding);cursor:pointer;font-family:var(--chvd-mono);font-size:11px">change…</button>
+                    }
                 </div>
 
                 <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
@@ -253,7 +262,10 @@
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;font-family:var(--chvd-mono);font-size:11px;color:var(--chvd-ink-muted)">
                     <Icon Name="folder" Size="13" />
                     <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="@_pressFolder">@_pressFolder</span>
-                    <button @onclick="ChangePressFolder" style="background:none;border:none;color:var(--chvd-binding);cursor:pointer;font-family:var(--chvd-mono);font-size:11px">change…</button>
+                    @if (Platform.Capabilities.PickFolders)
+                    {
+                        <button @onclick="ChangePressFolder" style="background:none;border:none;color:var(--chvd-binding);cursor:pointer;font-family:var(--chvd-mono);font-size:11px">change…</button>
+                    }
                 </div>
 
                 @if (_pressResult is not null)
@@ -278,7 +290,7 @@
         <div class="rempty">
             <Icon Name="file-pdf" Size="40" />
             <div class="rempty-t">Open a document to start reading</div>
-            <button class="rempty-btn" @onclick="OpenViaPicker">Fetch…</button>
+            <button class="rempty-btn" @onclick="OpenViaPicker">@OpenAnotherLabel</button>
         </div>
     }
     else if (tab.IsLoading)
@@ -286,6 +298,36 @@
         <div class="rempty">
             <div class="rload-icon"><Icon Name="file-pdf" Size="40" /></div>
             <div class="rempty-t">Opening @tab.FileName…</div>
+            <SlowOpenNote OnStop="StopOpening" />
+        </div>
+    }
+    else if (tab.NeedsPassword)
+    {
+        @* B-07: a password-protected PDF asks for its password, as Word and Excel tabs do. *@
+        <UnlockCard Kind="PDF" Error="@tab.PasswordError" Busy="tab.IsLoading" OnUnlock="pw => Tabs.UnlockAsync(tab.Id, pw)" />
+    }
+    else if (tab.IsDamaged)
+    {
+        @* B-11: the handout's "Can't open · damaged file" state (States & Feedback 8e). *@
+        <div class="rempty">
+            <Icon Name="warning" Size="40" />
+            <div class="rempty-t">This PDF is damaged</div>
+            <div class="rempty-sub">Chuvadi couldn't read this file, maybe because a download or copy didn't finish. Chuvadi can try to rebuild it as a new copy.</div>
+            <div class="rempty-acts">
+                <button class="rempty-btn" @onclick="TryRecovery" disabled="@_recovering">@(_recovering ? "Repairing…" : "Try to repair (new copy)")</button>
+                @if (FileManager.IsAvailable)
+                {
+                    <button class="rempty-btn" @onclick="() => FileManager.RevealAsync(tab.Path)">Show in folder</button>
+                }
+            </div>
+            @if (_recoverStatus is not null)
+            {
+                <div class="rempty-sub">@_recoverStatus</div>
+            }
+            @if (!string.IsNullOrEmpty(tab.ErrorDetail))
+            {
+                <details class="rempty-sub"><summary>Details</summary>@tab.ErrorDetail</details>
+            }
         </div>
     }
     else if (tab.Error is not null)
@@ -293,7 +335,11 @@
         <div class="rempty">
             <Icon Name="file-pdf" Size="40" />
             <div class="rempty-t">@tab.Error</div>
-            <button class="rempty-btn" @onclick="OpenViaPicker">Fetch…</button>
+            <button class="rempty-btn" @onclick="OpenViaPicker">@OpenAnotherLabel</button>
+            @if (!string.IsNullOrEmpty(tab.ErrorDetail))
+            {
+                <details class="rempty-sub"><summary>Details</summary>@tab.ErrorDetail</details>
+            }
         </div>
     }
     else if (viewOnly)
@@ -302,19 +348,19 @@
             @switch (tab.Format)
             {
                 case DocumentFormat.Docx:
-                    <DocxView @ref="_viewer" Path="@tab.Path" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" />
+                    <DocxView @ref="_viewer" Path="@tab.Path" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" OnStopOpening="StopOpening" />
                     break;
                 case DocumentFormat.Xlsx:
-                    <XlsxView @ref="_viewer" Path="@tab.Path" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" />
+                    <XlsxView @ref="_viewer" Path="@tab.Path" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" OnStopOpening="StopOpening" />
                     break;
                 case DocumentFormat.Markdown:
-                    <MarkdownView @ref="_viewer" Path="@tab.Path" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" />
+                    <MarkdownView @ref="_viewer" Path="@tab.Path" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" OnStopOpening="StopOpening" />
                     break;
                 case DocumentFormat.Html:
-                    <HtmlView @ref="_viewer" Path="@tab.Path" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" />
+                    <HtmlView @ref="_viewer" Path="@tab.Path" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" OnStopOpening="StopOpening" />
                     break;
                 default:
-                    <TextView @ref="_viewer" Path="@tab.Path" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" />
+                    <TextView @ref="_viewer" Path="@tab.Path" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" OnStopOpening="StopOpening" />
                     break;
             }
         </div>
@@ -548,7 +594,8 @@
                     </div>
                     @if (doc is not null)
                     {
-                        <button class="rpage-send" title="Send page @(n + 1) to a desk"
+                        @* B-23: a hover control on every page; out of the Tab order, so Tab reaches the rails first. *@
+                        <button class="rpage-send" title="Send page @(n + 1) to a desk" tabindex="-1"
                                 @onclick="() => ToggleSendMenu(n)" @onclick:stopPropagation="true">
                             <Icon Name="grid-view" Size="14" />
                         </button>
@@ -737,19 +784,19 @@
             @switch (_card)
             {
                 case "layers":
-                    <LayersCard Path="@tab.Path" Session="@tab.Session" CurrentPage="@CurPage" OnClose="CloseCard" OnMessage="OnCardMessage" OnLayersChanged="OnLayersChanged" />
+                    <LayersCard Path="@tab.Path" Session="@tab.Session" CurrentPage="@tab.CurrentPageIndex" OnClose="CloseCard" OnMessage="OnCardMessage" OnLayersChanged="OnLayersChanged" />
                     break;
                 case "measure":
-                    <MeasureCard Path="@tab.Path" Session="@tab.Session" CurrentPage="@CurPage" OnClose="CloseMeasure" OnMessage="OnCardMessage" Measurement="@_measure" OnClear="ClearMeasure" />
+                    <MeasureCard Path="@tab.Path" Session="@tab.Session" CurrentPage="@tab.CurrentPageIndex" OnClose="CloseMeasure" OnMessage="OnCardMessage" Measurement="@_measure" OnClear="ClearMeasure" />
                     break;
                 case "signatures":
-                    <SignaturesCard Path="@tab.Path" Session="@tab.Session" CurrentPage="@CurPage" OnClose="CloseCard" OnMessage="OnCardMessage" OnReport="OnSigReport" />
+                    <SignaturesCard Path="@tab.Path" Session="@tab.Session" CurrentPage="@tab.CurrentPageIndex" OnClose="CloseCard" OnMessage="OnCardMessage" OnReport="OnSigReport" />
                     break;
                 case "print":
-                    <PrintCard Path="@tab.Path" Session="@tab.Session" CurrentPage="@CurPage" OnClose="CloseCard" OnMessage="OnCardMessage" />
+                    <PrintCard Path="@tab.Path" Session="@tab.Session" CurrentPage="@tab.CurrentPageIndex" OnClose="CloseCard" OnMessage="OnCardMessage" />
                     break;
                 case "password":
-                    <PasswordCard Path="@tab.Path" Session="@tab.Session" CurrentPage="@CurPage" OnClose="CloseCard" OnMessage="OnCardMessage" OnSaved="OnProtectedSaved" />
+                    <PasswordCard Path="@tab.Path" Session="@tab.Session" CurrentPage="@tab.CurrentPageIndex" OnClose="CloseCard" OnMessage="OnCardMessage" OnSaved="OnProtectedSaved" />
                     break;
                 case "cert":
                     <FloatCard Title="Sign with certificate" Meta="always a new file" OnClose="CloseCard">
@@ -1029,7 +1076,7 @@
             <button @onclick="() => RotateCurrent(90)" title="Rotate this page (view only)"><Icon Name="rotate-cw" Size="14" /> Rotate page</button>
             <button @onclick="() => ToggleSendMenu(CurPage - 1)" title="Send this page to a desk in Arrange"><Icon Name="grid-view" Size="14" /> To desk</button>
             <button @onclick="() => SetTool(ReaderTool.Snapshot)" title="Snapshot a region (S)"><Icon Name="snapshot" Size="14" /> Snapshot</button>
-            <button @onclick="AddBookmarkHere" title="Bookmark this page (Ctrl B)"><Icon Name="bookmark" Size="14" /> Bookmark</button>
+            <button @onclick="AddBookmarkHere" title="Bookmark this page (@Platform.Keys.Format("Ctrl B"))"><Icon Name="bookmark" Size="14" /> Bookmark</button>
             <button disabled title="Peek — coming soon"><Icon Name="eye" Size="14" /> Peek</button>
         </div>
     }
@@ -1188,7 +1235,7 @@
             try
             {
                 var temp = System.IO.Path.Combine(
-                    System.IO.Path.GetTempPath(),
+                    ScratchFiles.Folder(Paths),
                     System.IO.Path.GetFileNameWithoutExtension(active.Path) + "-toredact-" + Guid.NewGuid().ToString("N").Substring(0, 8) + ".pdf");
                 await Redact.FlattenToFileAsync(
                     active.Path, temp,
@@ -1269,6 +1316,7 @@
         try
         {
             var n = await Export.ExportAsync(active.Path, _expFolder, _expFormat, _expAll, CurPage - 1, _expDpi);
+            if (n > 0) await WriteBack.DeliverOrThrowAsync(_expFolder);
             _expStatus = $"Exported {n} file{(n == 1 ? "" : "s")} → {_expFolder}";
         }
         catch (Exception ex)
@@ -1332,6 +1380,7 @@
                 _pressResult = await Press.PressAsync(active.Path, _pressFolder, opts);
             }
 
+            await WriteBack.DeliverOrThrowAsync(_pressResult?.OutputPath);
             _pressStatus = null;
         }
         catch (Exception ex)
@@ -1445,6 +1494,19 @@
     private ReaderTab? Tab => Tabs.Active;
     private PdfDocumentVm? Doc => Tab?.Session?.Document;
     private int CurPage => Tab?.CurrentPage ?? 1;
+
+    // WT-10: the portal uploads rather than opening local files (as MainLayout's "Upload", U-11);
+    // other platforms keep "Fetch…".
+    // B-08b: "Stop opening" / "Close this tab" on a slow open closes the tab being opened.
+    private async Task StopOpening()
+    {
+        if (Tabs.Active is { } t)
+        {
+            await Tabs.CloseAsync(t.Id);
+        }
+    }
+
+    private string OpenAnotherLabel => Platform.Kind == ChuvadiReader.Platform.PlatformKind.Web ? "Upload…" : "Fetch…";
     private double CurScale => Tab?.Scale ?? 1.0;
     private string Zoom => CurScale.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
 
@@ -1819,6 +1881,7 @@
             {
                 _stampStatus = $"Saved → {System.IO.Path.GetFileName(output)}";
             }
+            await WriteBack.DeliverOrThrowAsync(inPlace ? finalPath : output);
             _stampError = false;
         }
         catch (Exception ex)
@@ -1883,6 +1946,7 @@
         try
         {
             await System.IO.File.WriteAllBytesAsync(path!, bytes);
+            await WriteBack.DeliverOrThrowAsync(path);
             ShowToast("Saved snapshot");
             CloseSnapMenu();
         }
@@ -1931,7 +1995,7 @@
         if (bytes is null) return null;
         try
         {
-            var dir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "chuvadi-snaps");
+            var dir = System.IO.Path.Combine(ScratchFiles.Folder(Paths), "chuvadi-snaps");
             System.IO.Directory.CreateDirectory(dir);
             var path = System.IO.Path.Combine(dir, $"snap-{Guid.NewGuid():N}.png");
             await System.IO.File.WriteAllBytesAsync(path, bytes);
@@ -2188,7 +2252,7 @@
         _bmBusy = true; _bmStatus = null; StateHasChanged();
         try
         {
-            var output = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"chuvadi-toc-{Guid.NewGuid():N}.pdf");
+            var output = System.IO.Path.Combine(ScratchFiles.Folder(Paths), $"chuvadi-toc-{Guid.NewGuid():N}.pdf");
             await _outline.WriteToFileAsync(path, output, _bmTree);
             await Tabs.ReloadActiveAsync(async () =>
             {
@@ -2204,6 +2268,7 @@
                 }
                 await Task.CompletedTask;
             });
+            await WriteBack.DeliverOrThrowAsync(path);
             _bmStatus = $"Saved {BmFlat().Count()} bookmark(s)";
         }
         catch (Exception ex) { _bmStatus = ex.Message; }
@@ -2996,6 +3061,8 @@
                 await Task.CompletedTask;
             });
 
+            await WriteBack.DeliverOrThrowAsync(src);
+
             // Flattened into the file now — clear the editable overlays.
             _texts.Clear();
             _shapes.Clear();
@@ -3035,6 +3102,7 @@
             var shps = BuildShapesDict();
 
             await Redact.FlattenToFileAsync(active.Path, output!, new Dictionary<int, PageRedaction>(), _mkColor, texts, imgs, shps);
+            await WriteBack.DeliverOrThrowAsync(output);
             _mkSavedPath = output;
             _mkStatus = $"Saved → {System.IO.Path.GetFileName(output)}";
             _mkError = false;
@@ -3141,6 +3209,7 @@
             if (string.IsNullOrEmpty(output)) return;
 
             await Flatten.FlattenToFileAsync(source!, output);
+            await WriteBack.DeliverOrThrowAsync(output);
 
             var name = System.IO.Path.GetFileName(output);
             var format = DocumentFormatExtensions.FromPath(output);
@@ -3171,6 +3240,7 @@
     {
         Tabs.Changed += OnTabsChanged;
         OpenDoc.Requested += OnOpenRequestedLive;
+        Lifecycle.BackRequested += OnBackRequested;
 
         ShellInit();
 
@@ -3187,21 +3257,29 @@
     // open: navigation to /reader is a no-op, so consume the pending open directly.
     private void OnOpenRequestedLive() => _ = InvokeAsync(OpenPendingAsync);
 
+    // Takes every waiting request in order; each is taken once, so two requests made
+    // before the Reader ran open two tabs, each with its own file and name.
+    // B-24: each tab is added at once and loads on its own; a file that never delivers data
+    // doesn't hold up the requests behind it (they used to wait for it in this loop).
     private async Task OpenPendingAsync()
     {
-        if (string.IsNullOrEmpty(OpenDoc.PendingPath))
+        var loading = new List<Task>();
+        while (OpenDoc.TryTake(out var open))
         {
-            return;
+            var path = open.Path;
+            var name = string.IsNullOrEmpty(open.Name) ? System.IO.Path.GetFileName(path) : open.Name;
+            var format = DocumentFormatExtensions.FromPath(path);
+            _pendingJumpPage = open.Page;
+            await Recents.TouchAsync(new RecentItem(name, path, format, DateTimeOffset.Now, false));
+            loading.Add(Tabs.OpenAsync(path, name, format)); // adds and shows the tab before it loads
+            StateHasChanged();
         }
 
-        var path = OpenDoc.PendingPath!;
-        var name = OpenDoc.PendingName ?? System.IO.Path.GetFileName(path);
-        var format = DocumentFormatExtensions.FromPath(path);
-        _pendingJumpPage = OpenDoc.PendingPage;
-        OpenDoc.Clear();
-        await Recents.TouchAsync(new RecentItem(name, path, format, DateTimeOffset.Now, false));
-        await Tabs.OpenAsync(path, name, format);
-        StateHasChanged();
+        if (loading.Count > 0)
+        {
+            await Task.WhenAll(loading);
+            StateHasChanged();
+        }
     }
 
     private void OnTabsChanged()
@@ -3306,12 +3384,13 @@
 
             if (!_initiallyFitted.Contains(tab.Id))
             {
-                // First time this document is shown — open it fitted to the page.
+                // First time this document is shown — open it fitted to the page; on a phone, fitted to
+                // the width (Portal & Android 12g–12j: the page fills the screen's width).
                 _initiallyFitted.Add(tab.Id);
                 _restoreScroll = false;
                 tab.TwoPage = false;
                 tab.Continuous = false;
-                await ApplyFit(ReaderFitMode.Page);
+                await ApplyFit(Platform.FormFactor == ChuvadiReader.Platform.FormFactor.Phone ? ReaderFitMode.Width : ReaderFitMode.Page);
             }
             else if (_restoreScroll)
             {
@@ -3503,8 +3582,14 @@
         StateHasChanged();
     }
 
+    // From reader.js (← / →). A JS call doesn't re-render the page, so the counter would lag behind
+    // (on a phone, one snapped page per screen, until the next tap).
     [JSInvokable]
-    public Task NavPage(int delta) => GoTo(CurPage + delta);
+    public async Task NavPage(int delta)
+    {
+        await GoTo(CurPage + delta);
+        StateHasChanged();
+    }
 
     private async Task GoTo(int page)
     {
@@ -3976,6 +4061,7 @@
         ShellDispose();
         Tabs.Changed -= OnTabsChanged;
         OpenDoc.Requested -= OnOpenRequestedLive;
+        Lifecycle.BackRequested -= OnBackRequested;
 
         try
         {

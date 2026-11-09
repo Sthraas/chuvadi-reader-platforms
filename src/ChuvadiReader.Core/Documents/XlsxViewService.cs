@@ -1,5 +1,5 @@
 using System.Globalization;
-using Chuvadi.Sheets.Excel;
+using Chuvadi.Sheets.Model;
 
 namespace ChuvadiReader.Core.Documents;
 
@@ -34,12 +34,28 @@ public sealed record SheetCell(
 /// <summary>Loads an .xlsx into a <see cref="WorkbookView"/> via <c>Chuvadi.Sheets</c>.</summary>
 public sealed class XlsxViewService
 {
-    public WorkbookView Load(string path, string? password = null)
+    /// <summary>B-08 (D-136): the library's limits for files from outside (256 MB per part, 1 GB in total,
+    /// 500:1 compression, Excel's row maximum), checked against declared and actually inflated sizes; plus
+    /// the read's cancellation (B-08b), which the library checks on every row.</summary>
+    public static XlsxReaderOptions ReadOptions(CancellationToken cancellationToken)
+    {
+        var options = XlsxReaderOptions.ForUntrustedInput();
+        options.CancellationToken = cancellationToken;
+        return options;
+    }
+
+    /// <param name="cancellationToken">Stops the read (B-08b): "Stop opening", a closed tab, or the viewer's time limit.</param>
+    public WorkbookView Load(string path, string? password = null, CancellationToken cancellationToken = default)
     {
         Workbook wb;
         try
         {
-            wb = string.IsNullOrEmpty(password) ? Workbook.Load(path) : Workbook.Load(path, password);
+            wb = Workbook.Load(path, string.IsNullOrEmpty(password) ? null : password, ReadOptions(cancellationToken));
+        }
+        catch (XlsxLimitExceededException ex)
+        {
+            throw new DocumentViewException(ViewErrorReason.TooLarge,
+                "This Excel workbook is too large to open: it goes beyond what Chuvadi allows. It may be damaged.", ex);
         }
         catch (XlsxPasswordRequiredException ex)
         {

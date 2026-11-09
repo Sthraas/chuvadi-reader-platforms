@@ -18,7 +18,7 @@
     }
     else if (_view is null)
     {
-        @if (!string.IsNullOrEmpty(Path)) { <ViewerMessage IconName="clock" Text="Opening…" /> }
+        @if (!string.IsNullOrEmpty(Path)) { <ViewerMessage IconName="clock" Text="Opening…" /><SlowOpenNote OnStop="OnStopOpening" /> }
     }
     else
     {
@@ -113,10 +113,11 @@
 
         var path = Path;
         var pw = _password;
+        var token = NewLoadToken();
         try
         {
             _busy = true;
-            var view = await Task.Run(() => Docx.Load(path, pw));
+            var view = await Task.Run(() => Docx.Load(path, pw, token)).WaitAsync(token); // B-24: never wait past a stop
             if (v != _version || Disposed) return;
             _locked = false;
             _unlockError = null;
@@ -128,6 +129,13 @@
             _locked = true;
             _unlockError = pw is null ? null : "That password didn't work. Try again.";
             _password = null;
+        }
+        catch (OperationCanceledException)
+        {
+            // B-08b: the time limit ran out (a stop or a new load also cancels; then nothing is shown).
+            if (v != _version || Disposed) return;
+            _locked = false;
+            _error = SlowOpenNote.GaveUp;
         }
         catch (Exception ex)
         {

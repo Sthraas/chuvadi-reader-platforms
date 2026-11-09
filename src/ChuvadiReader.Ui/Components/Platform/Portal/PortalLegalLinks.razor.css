@@ -1,0 +1,5 @@
+/* 12 px muted line; links in the binding colour, as the 12a footer. */
+.pll { font-family: var(--chvd-sans-display); font-size: 12px; line-height: 1.5; color: var(--chvd-ink-muted); }
+.pll a { color: var(--chvd-binding); }
+.pll a:hover { color: var(--chvd-marigold); }
+.pll a:focus-visible { outline: 1.5px solid var(--chvd-binding); outline-offset: 1px; }

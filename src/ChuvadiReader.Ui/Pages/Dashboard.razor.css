@@ -68,6 +68,9 @@
 button.drop:hover { border-color: var(--chvd-binding); }
 button.drop:focus-visible { outline: 2px solid var(--chvd-binding); outline-offset: 2px; }
 .drop.first { height: auto; min-height: 220px; cursor: default; }
+/* D-109 (U-17 b): on the portal, while files are dragged over the window ("Drop to open" showing), the
+   zone keeps its frame but hides its own icon and text. The class is set only by portal-drop.js. */
+html.chvd-dragging .drop > * { visibility: hidden; }
 .drop-ic { display: flex; color: var(--chvd-binding); }
 .drop-title { font-family: var(--chvd-serif-display); font-size: 26px; color: var(--chvd-ink); text-align: center; }
 .drop-sub { font-size: var(--chvd-fs-body); color: var(--chvd-ink-soft); text-align: center; }

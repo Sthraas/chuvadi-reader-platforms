@@ -104,6 +104,11 @@ export function scrollToLine(el, line, approxPx, center) {
     requestAnimationFrame(settle);
 }
 
+/** Scrolls a grid's container to a vertical offset (virtualised rows: bring a row on screen first). */
+export function scrollGridTo(el, top) {
+    if (el) el.scrollTop = Math.max(0, top - el.clientHeight / 2);
+}
+
 export function scrollToSelector(el, selector) {
     if (!el) return;
     const t = el.querySelector(selector);

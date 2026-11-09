@@ -5,6 +5,13 @@
 // keyboard shortcuts. During a toolbar-driven scroll the indicator tracking is
 // suppressed so it does not flicker through the pages it passes.
 
+// The primary shortcut modifier: ⌘ on macOS (data-platform set by MainLayout), Ctrl everywhere else.
+function isPrimary(e) {
+    return document.documentElement.getAttribute('data-platform') === 'macos'
+        ? (e.metaKey === true && e.ctrlKey !== true)
+        : (e.ctrlKey === true && e.metaKey !== true);
+}
+
 let lazy = null;
 let spy = null;
 let dotnet = null;
@@ -24,6 +31,7 @@ let currentTool = 'none';
 let wheelHandler = null;
 let deskPointer = null;
 let panning = null;
+let penSplit = null;
 let marq = null;
 let marqEl = null;
 let loupeEl = null;
@@ -44,6 +52,25 @@ let lastTapTime = 0, lastTapX = 0, lastTapY = 0;
 let sawPinch = false;      // did the current finger-sequence involve 2 fingers?
 let dblZoomedIn = false, dblBaseZoom = 1;
 
+// The page the reader is looking at: the one covering the most of the view, measured now from the
+// page boxes. (Ratios are kept by the observer only at threshold crossings and are relative to each
+// page's own height, so at a high zoom a page filling the view, ~1/3 of a tall page, lost to a stale
+// ratio of a page long gone: Android round 3, double-tap on page 2 showed "1 / 6".)
+function reportVisiblePage() {
+    if (!scrollTarget) return;
+    const dr = scrollTarget.getBoundingClientRect();
+    let best = -1, bestPx = 0;
+    for (const k in ratios) {
+        if (!(ratios[k] > 0)) continue;
+        const w = scrollTarget.querySelector('.rpage-wrap[data-page="' + k + '"]');
+        if (!w) continue;
+        const r = w.getBoundingClientRect();
+        const px = Math.min(r.bottom, dr.bottom) - Math.max(r.top, dr.top);
+        if (px > bestPx) { bestPx = px; best = parseInt(k, 10); }
+    }
+    if (best >= 0) invoke('OnPageVisible', best + 1);
+}
+
 export function init(deskEl, dotnetRef) {
     dotnet = dotnetRef;
     teardownObservers();
@@ -63,11 +90,7 @@ export function init(deskEl, dotnetRef) {
     spy = new IntersectionObserver((entries) => {
         for (const e of entries) ratios[pageOf(e.target)] = e.isIntersecting ? e.intersectionRatio : 0;
         if (performance.now() < suppressUntil) return;
-        let best = -1, bestRatio = -1;
-        for (const k in ratios) {
-            if (ratios[k] > bestRatio) { bestRatio = ratios[k]; best = parseInt(k, 10); }
-        }
-        if (best >= 0) invoke('OnPageVisible', best + 1);
+        reportVisiblePage();
     }, { root: deskEl, threshold: [0, 0.25, 0.5, 0.75, 1] });
 
     deskEl.querySelectorAll('[data-page]').forEach(el => { lazy.observe(el); spy.observe(el); });
@@ -81,6 +104,9 @@ export function init(deskEl, dotnetRef) {
         scrollTimer = setTimeout(() => {
             scrollTimer = 0;
             invoke('OnScroll', scrollTarget ? scrollTarget.scrollTop : 0);
+            // A zoomed-in page is taller than the view, so scrolling within it crosses no visibility
+            // threshold; re-check the page here too.
+            if (performance.now() >= suppressUntil) reportVisiblePage();
         }, 200);
     };
     deskEl.addEventListener('scroll', scrollHandler, { passive: true });
@@ -95,7 +121,7 @@ export function init(deskEl, dotnetRef) {
         if (e.key === 'Escape') { invoke('OnEscape'); return; }
 
         // Tab-close shortcuts: handle the Alt/Shift variants of W before the no-Alt block.
-        if (e.ctrlKey && !e.metaKey && e.key.toLowerCase() === 'w') {
+        if (isPrimary(e) && e.key.toLowerCase() === 'w') {
             e.preventDefault();
             if (e.altKey) invoke('CloseOtherTabs');
             else if (e.shiftKey) invoke('CloseAllTabs');
@@ -103,7 +129,7 @@ export function init(deskEl, dotnetRef) {
             return;
         }
 
-        if (e.ctrlKey && !e.altKey && !e.metaKey) {
+        if (isPrimary(e) && !e.altKey) {
             const k = e.key.toLowerCase();
             if (k === 'z') { e.preventDefault(); invoke('Undo'); }
             else if (e.key === 'Tab') { e.preventDefault(); invoke('CycleTab', e.shiftKey ? -1 : 1); }
@@ -114,7 +140,7 @@ export function init(deskEl, dotnetRef) {
             else if (k === 'f') { e.preventDefault(); invoke('OpenFind'); }   // app find, not WebView2's native find
             return;
         }
-        if (e.altKey || e.metaKey) return;
+        if (e.altKey || e.metaKey || e.ctrlKey) return;
 
         // Below here are bare navigation keys; don't steal them from focused controls.
         if (tag === 'BUTTON' || tag === 'A' || tag === 'SELECT') return;
@@ -310,6 +336,21 @@ function setupViewTools(deskEl) {
     deskRef.addEventListener('pointerup', deskPointer.up);
     deskRef.addEventListener('pointerleave', deskPointer.leave);
 
+    // Tablets with a pen (<html data-input~="pen">, design 12e, D-42): the pen draws on the Mark
+    // layer, a finger pans. A finger on a Mark layer never reaches its (Blazor) stroke handler and
+    // pans the desk instead. data-input is absent on Windows, so nothing changes there.
+    if (penSplit) deskRef.removeEventListener('pointerdown', penSplit, true);
+    penSplit = (e) => {
+        if (e.pointerType !== 'touch') return;
+        if (!/(^|\s)pen(\s|$)/.test(document.documentElement.getAttribute('data-input') || '')) return;
+        const layer = e.target && e.target.closest ? e.target.closest('.mk-layer') : null;
+        if (!layer) return;
+        e.stopPropagation();
+        panning = { x: e.clientX, y: e.clientY, sl: deskRef.scrollLeft, st: deskRef.scrollTop };
+        try { deskRef.setPointerCapture(e.pointerId); } catch (_) { }
+    };
+    deskRef.addEventListener('pointerdown', penSplit, true);
+
     // Touchscreen: two-finger pinch zooms the page canvas only (chrome never moves);
     // double-tap toggles a readable zoom. One finger is left alone for native panning.
     if (touchHandlers) {
@@ -422,6 +463,24 @@ function setZoomVar(s) {
 function clampZoom(s) { return Math.max(0.1, Math.min(8, Math.round(s * 1000) / 1000)); }
 
 function anchorZoom(cx, cy, oldS, newS) {
+    // Keep the point under the finger / cursor on the same spot of the same page. Scaling the whole
+    // scroll offset (below) also scales the fixed gaps between pages, which drifts by a page or more
+    // at a high zoom (Android round 3: double-tap on page 2 zoomed into page 3). Vertically the page's
+    // .rpage-wrap is measured (not zoomed itself, so its box is right in every WebView); sideways the
+    // page itself, as zoomToRect does.
+    const hit = document.elementFromPoint(cx, cy);
+    const wrap = hit && hit.closest ? hit.closest('.rpage-wrap') : null;
+    const subj = wrap ? (wrap.querySelector('.rpage svg') || wrap.querySelector('.rpage')) : null;
+    if (wrap && subj && deskRef.contains(wrap)) {
+        const w1 = wrap.getBoundingClientRect(), p1 = subj.getBoundingClientRect();
+        const fy = w1.height ? (cy - w1.top) / w1.height : 0;
+        const fx = p1.width ? (cx - p1.left) / p1.width : 0;
+        setZoomVar(newS);
+        const w2 = wrap.getBoundingClientRect(), p2 = subj.getBoundingClientRect();
+        deskRef.scrollTop += (w2.top + fy * w2.height) - cy;
+        deskRef.scrollLeft += (p2.left + fx * p2.width) - cx;
+        return;
+    }
     const r = deskRef.getBoundingClientRect();
     const x = deskRef.scrollLeft + (cx - r.left);
     const y = deskRef.scrollTop + (cy - r.top);
@@ -455,15 +514,40 @@ function notifyZoom(s) {
 }
 
 // Returns the absolute scale that fits the page width / whole page; 0 if not measurable.
-export function measureFit(deskEl, mode) {
-    const page = deskEl && deskEl.querySelector('.rpage');
+// A page's size at 100 %. From the rendered SVG's own width / height (e.g. "595pt") when there is one,
+// else offsetWidth / offsetHeight (layout size, unzoomed). Never getBoundingClientRect ÷ zoom: older
+// WebViews (Android API 35) report a CSS-zoomed box unzoomed, which made Fit page 147 px wide on a
+// 402 px phone (round 3).
+function naturalSize(page) {
+    const svg = page.querySelector('svg');
+    const toPx = (v) => {
+        const m = /^\s*([\d.]+)\s*(pt|px)?\s*$/.exec(v || '');
+        return m ? parseFloat(m[1]) * (m[2] === 'pt' ? 96 / 72 : 1) : 0;
+    };
+    let natW = svg ? toPx(svg.getAttribute('width')) : 0;
+    let natH = svg ? toPx(svg.getAttribute('height')) : 0;
+    if (!natW || !natH) { natW = page.offsetWidth; natH = page.offsetHeight; }
+    return { natW, natH };
+}
+
+// A newly opened document is fitted right after init, often before any page has rendered. The
+// placeholder (.rpage-load) is sized in points (595 × 842), 3/4 of a rendered page (96/72 px per pt),
+// so measuring it fitted pages 4/3 too large on a slow device (Android emulator: Fit page 456 px on a
+// 411 px screen). Wait briefly for a rendered page and measure that; fall back to the placeholder.
+export async function measureFit(deskEl, mode) {
+    for (let i = 0; i < 40 && deskEl && !deskEl.querySelector('.rpage svg'); i++) {
+        await new Promise(r => setTimeout(r, 50));
+    }
+    const rendered = deskEl && deskEl.querySelector('.rpage svg');
+    const page = rendered ? rendered.closest('.rpage') : deskEl && deskEl.querySelector('.rpage');
     if (!page) return 0;
-    const z = readZoom();
-    const rect = page.getBoundingClientRect();
-    const natW = rect.width / z, natH = rect.height / z;
+    const { natW, natH } = naturalSize(page);
     if (!natW || !natH) return 0;
     const cols = deskEl.classList.contains('two') ? 2 : 1;
-    const gap = 18, padX = 60, padY = 44;
+    // Side padding the fit leaves: 60 px on the desktop; a shell can set --rfit-pad-x on the desk
+    // (the phone: 24 px, so the page fills the screen's width as in Portal & Android 12g).
+    const padX = parseFloat(getComputedStyle(deskEl).getPropertyValue('--rfit-pad-x')) || 60;
+    const gap = 18, padY = 44;
     const perPageW = (deskEl.clientWidth - padX - (cols - 1) * gap) / cols;
     const s = mode === 'width'
         ? perPageW / natW
@@ -695,6 +779,7 @@ export function dispose() {
         deskRef.removeEventListener('pointerup', deskPointer.up);
         deskRef.removeEventListener('pointerleave', deskPointer.leave);
     }
+    if (deskRef && penSplit) deskRef.removeEventListener('pointerdown', penSplit, true);
     if (deskRef && touchHandlers) {
         deskRef.removeEventListener('touchstart', touchHandlers.start);
         deskRef.removeEventListener('touchmove', touchHandlers.move);
@@ -707,7 +792,7 @@ export function dispose() {
     if (zoomNotifyTimer) { clearTimeout(zoomNotifyTimer); zoomNotifyTimer = 0; }
     removeMarqEl(); hideLoupe();
     document.body.classList.remove('chvd-immersive');
-    wheelHandler = null; deskPointer = null; panning = null; marq = null;
+    wheelHandler = null; deskPointer = null; penSplit = null; panning = null; marq = null;
     touchHandlers = null; pinch = null; pinchActive = false; tapCand = null; sawPinch = false;
     deskRef = null; currentTool = 'none';
 }
