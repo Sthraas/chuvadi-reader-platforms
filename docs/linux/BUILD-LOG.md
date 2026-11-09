@@ -564,3 +564,20 @@ card gets the tab's password, so an owner-password open prints, D-139). The test
 
 Built with warnings as errors; Reader 212/212, host kit 75/75, Linux 44/44, Web Ui 39/39, Mobile Ui 16/16; full
 UI pass 118/118.
+
+### 45. Foundation's fourteenth combined patch: pages render off the Ui thread (21a222d, b41f25c; 9 Nov)
+No conflicts; no Linux change. Built with warnings as errors; Reader 220/220 (incl. `RenderOffUiThreadTests`),
+host kit 75/75, Linux 44/44, Web Ui 39/39, Mobile Ui 16/16. Full UI pass 121/121 with three new steps on
+generated PDFs (`tools/linux/make-heavy-pdfs.py`, test-only; no real drawing used):
+- 36a, 400 pages, 6 bursts of 25 PageDowns: the page answers within 0.10 s throughout; page 400 draws after a jump.
+  **Finding:** the page landed on (103) draws 7.5–8.3 s after the last key: every page that scrolled past queued
+  a render (`EnsureRendered` from the page observer) and nothing cancels it when the page leaves the view, so the
+  visible page waits behind the backlog (one render at a time per document). Shared Ui/Core; reported.
+- 36b, a CAD tab closed as it opens: next file drawn in 0.1 s, page answers ≤ 0.06 s, no errors. (Sheet 1 draws in
+  ~0.3 s, so the close usually lands just after it; Core's `RenderOffUiThreadTests` hold a render open with a hook
+  for the deterministic case. A generated page couldn't be made reliably slow: a 6000 x 6000 CMYK image draws
+  in 0.3 s.)
+- 36c, 5 A1 sheets of ~120,000 strokes: sheets draw in 0.2–0.3 s (4.7 s for sheet 1 in the full flow, behind
+  earlier work); the page answers ≤ 0.14 s. Memory after 5 sheets: app 600–700 MB, web 246 MB, and it stays high
+  after the tab closes (B-27's growth, smaller). Once in four runs a ~2.2 s pause held either a sheet or the
+  page's answer — consistent with a full garbage collection on that heap; not yet proven.
