@@ -13,7 +13,7 @@ on:
         description: launches per timing set
         default: '10'
       only:
-        description: "all | windows (Windows startup probe only)"
+        description: "all | windows (Windows startup probe only) | print (print case only, all runners)"
         default: all
   push:
     branches: [platform/mac-test]
@@ -35,7 +35,7 @@ jobs:
   # T1 — build and package from clean, exactly as the Mac chat's workflow does, then audit the bundle.
   build:
     name: T1 build + audit (macos-26)
-    if: ${{ (inputs.only || 'all') == 'all' }}
+    if: ${{ (inputs.only || 'all') != 'windows' }}
     runs-on: macos-26
     timeout-minutes: 75
     steps:
@@ -227,7 +227,7 @@ jobs:
           sudo cupsdisable ChvdTest
           lpstat -t || true
       - name: Run T2–T5 (${{ matrix.suite }})
-        run: python3 harness/tests/mac/run_ui.py "$RUNNER_TEMP/macdrive" /tmp/fixtures "$PWD/evidence" --suite ${{ matrix.suite }} --runs "$RUNS"
+        run: python3 harness/tests/mac/run_ui.py "$RUNNER_TEMP/macdrive" /tmp/fixtures "$PWD/evidence" --suite ${{ inputs.only == 'print' && 'print' || matrix.suite }} --runs "$RUNS"
         timeout-minutes: 100
       - name: Logs
         if: always()

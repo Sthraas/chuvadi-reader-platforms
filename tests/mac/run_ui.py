@@ -852,7 +852,7 @@ def t4_7():
     ev["panel"] = screen("print-panel")
     axdump("print-panel")
     # macOS print panel → PDF ▸ Save as PDF (what a person does to check the output; no printer needed)
-    for d in (f"{HOME}/Documents", f"{HOME}/Desktop"):
+    for d in (f"{HOME}/Documents", f"{HOME}/Desktop", FX, "/private/tmp/fixtures"):
         for f in os.listdir(d) if os.path.isdir(d) else []:
             if f.startswith("chvd-printed"):
                 os.remove(os.path.join(d, f))
@@ -867,7 +867,7 @@ def t4_7():
     time.sleep(0.8)
     drive("key", "return")
     time.sleep(6)
-    _, found = sh(f"ls -1 {HOME}/Documents/chvd-printed*.pdf {HOME}/Desktop/chvd-printed*.pdf 2>/dev/null")
+    _, found = sh(f"ls -1 {FX}/chvd-printed*.pdf {HOME}/Documents/chvd-printed*.pdf {HOME}/Desktop/chvd-printed*.pdf 2>/dev/null")
     ev["saved"] = found
     good = False
     if found.strip():
@@ -1150,6 +1150,14 @@ def t5_5():
 
 
 def main():
+    if A.suite == "print":
+        t4_7()
+        reset_state({"theme": "light"})
+        launch(settle=3)
+        ok, _ = open_doc(f"{FX}/five-pages.pdf")
+        record("print: five-pages opened for the landscape check", "info", f"opened={ok}")
+        quit_app()
+        return
     if A.suite == "diag":
         t4_0b()
         t4_0()
