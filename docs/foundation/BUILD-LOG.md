@@ -230,3 +230,17 @@
   - The other 3 pin one-at-a-time and order, closing mid-render, and dropping a stale-layer page.
 - 348/348 tests (Reader 218); 0 warnings in both solutions; trimmed probe 54/54; desktop 27/27 identical; find-typing 3/3.
 
+### 38. The osx-arm64 trimmed-launch "hang" on 556090b (9 Nov, coordinator 22:28)
+- **What it was:** run 42654252893, first attempt. The osx-arm64 job has no runner name and no steps: it never got a macOS runner and sat in the queue until it was cancelled. On the re-run it also queued for 5 min before starting. Nothing ran, so nothing could hang.
+  - That job runs only `tools/TrimProbe`, which builds the services and never renders a page, so D-152's code isn't on its path at all.
+- **Could the render queue and a Ui dispatcher wait on each other? No.** A cycle needs the Ui thread to block on something the render side holds. Nothing on the Ui thread blocks:
+  - `Dispose` and `TryUseDocument` take the gate with `Wait(0)` and never wait;
+  - the render runs in `Task.Run` and never posts to the Ui;
+  - its continuations use `ConfigureAwait(false)` inside the session;
+  - callers only `await`; nothing uses `.Result` or `.Wait()` on a render.
+- **Guard added anyway:** two tests on a one-thread dispatcher (posted work runs in order, as the WPF, Mac Catalyst, GTK and Android Ui threads do):
+  - the Ui thread keeps answering (measure, cache, layer toggle, drop cache) while pages render, and each render comes back to it;
+  - closing a tab on the Ui thread mid-render never blocks it.
+  - Proved by making the gate block (`Wait(Timeout.Infinite)`): the suite goes red on the 5 s guard.
+- 350/350 tests. Tests only; no behaviour change.
+

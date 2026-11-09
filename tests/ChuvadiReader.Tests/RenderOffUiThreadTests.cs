@@ -149,6 +149,114 @@ public sealed class RenderOffUiThreadTests
         Assert.Equal(fresh, cached);
     }
 
+    // ── No wait cycle with a Ui dispatcher (coordinator 9 Nov 22:28) ─────────────────────────────────────────────
+
+    /// <summary>One thread that runs posted work in order, as the WPF, Mac Catalyst, GTK and Android Ui threads do.</summary>
+    private sealed class UiThread : SynchronizationContext, IDisposable
+    {
+        private readonly System.Collections.Concurrent.BlockingCollection<(SendOrPostCallback, object?)> _work = new();
+        private readonly Thread _thread;
+
+        public UiThread()
+        {
+            _thread = new Thread(() =>
+            {
+                SetSynchronizationContext(this);
+                foreach (var (callback, state) in _work.GetConsumingEnumerable())
+                {
+                    callback(state);
+                }
+            }) { IsBackground = true, Name = "test Ui thread" };
+            _thread.Start();
+        }
+
+        public override void Post(SendOrPostCallback d, object? state) => _work.Add((d, state));
+
+        public override void Send(SendOrPostCallback d, object? state) => throw new NotSupportedException("the Ui thread is never blocked on");
+
+        public Task Run(Func<Task> work)
+        {
+            var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            Post(async _ =>
+            {
+                try { await work(); done.SetResult(); }
+                catch (Exception e) { done.SetException(e); }
+            }, null);
+            return done.Task;
+        }
+
+        public void Dispose() => _work.CompleteAdding();
+    }
+
+    [Fact]
+    public async Task The_Ui_thread_keeps_working_while_pages_render_and_every_render_comes_back_to_it()
+    {
+        // What the Reader does on its dispatcher: ask for pages, keep answering the person while they render
+        // (measure, look up the cache, toggle a layer, drop the cache), and redraw when each render comes back.
+        // A wait cycle between the render queue and the Ui thread would hang here; the guard fails it instead.
+        using var session = await Open(LayersMeasureSignatureTests.LayeredPdf());
+        using var ui = new UiThread();
+        using var release = new ManualResetEventSlim();
+        session.BeforeRenderForTests = _ => release.Wait(Guard);
+        var measure = new MeasureService();
+        var backOnUi = 0;
+        Task<string>? first = null, second = null;
+        try
+        {
+            await ui.Run(async () =>
+            {
+                first = session.RenderPageSvgAsync(0);
+                second = session.RenderPageSvgAsync(0);           // the same page asked again while it renders
+                Assert.Null(measure.Measure(session, 0, new PagePoint(0, 0), new PagePoint(72, 0)));
+                Assert.False(session.TryGetRenderedSvg(0, out _));
+                session.SetLayerVisible("Green layer", true);
+                session.DropRenderCache();
+                await Task.Yield();                                 // the Ui thread goes back to its queue
+            }).WaitAsync(Guard);
+
+            release.Set();
+            await ui.Run(async () =>
+            {
+                await first!;
+                Interlocked.Increment(ref backOnUi);                // continuations come back to the Ui thread
+                Assert.Equal("test Ui thread", Thread.CurrentThread.Name);
+                await second!;
+                Interlocked.Increment(ref backOnUi);
+                Assert.NotNull(measure.Measure(session, 0, new PagePoint(0, 0), new PagePoint(72, 0)));
+            }).WaitAsync(Guard);
+        }
+        finally
+        {
+            release.Set(); // a failure never leaves a render held
+        }
+
+        Assert.Equal(2, backOnUi);
+    }
+
+    [Fact]
+    public async Task Closing_a_tab_on_the_Ui_thread_mid_render_never_blocks_it()
+    {
+        var session = await Open(ThreePages());
+        using var ui = new UiThread();
+        using var started = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        session.BeforeRenderForTests = _ => { started.Set(); release.Wait(Guard); };
+        Task<string>? render = null;
+
+        try
+        {
+            await ui.Run(() => { render = session.RenderPageSvgAsync(1); return Task.CompletedTask; }).WaitAsync(Guard);
+            Assert.True(started.Wait(Guard));
+            await ui.Run(() => { session.Dispose(); return Task.CompletedTask; }).WaitAsync(Guard); // returns while the render holds the document
+        }
+        finally
+        {
+            release.Set();
+        }
+
+        await ui.Run(async () => await render!).WaitAsync(Guard);
+    }
+
     private static void InterlockedMax(ref int target, int value)
     {
         int seen;
