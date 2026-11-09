@@ -287,13 +287,27 @@ def open_doc(path, settle=4.0, label=None, how="button"):
         launch(settle=3)
     drive("activate", NAME)
     time.sleep(0.3)
+    def panel_up(timeout):
+        t0 = time.time()
+        while time.time() - t0 < timeout:
+            _, w = drive("windows")
+            if sum(1 for l in w.splitlines() if l.startswith(NAME + "\t") and "layer=0" in l) > 1:
+                return round(time.time() - t0, 1)
+            time.sleep(0.3)
+        return None
     if how == "key":
         drive("key", "cmd+o")
     else:
         rc, o = press("Open ⌘O")
         if rc != 0:
             press("Open document")
-    time.sleep(2.5)
+    waited = panel_up(10)
+    if waited is None:
+        PANEL_RETRIES.append(os.path.basename(path))
+        press("Open ⌘O")
+        waited = panel_up(10)
+    PANEL_WAITS.append(waited)
+    time.sleep(0.8)
     global PANEL_SHOT
     if not PANEL_SHOT:
         PANEL_SHOT = screen("open-panel-" + how)
@@ -322,6 +336,8 @@ def open_doc(path, settle=4.0, label=None, how="button"):
 
 
 PANEL_SHOT = None
+PANEL_WAITS = []
+PANEL_RETRIES = []
 
 
 def run_cmd(label, settle=1.5):
@@ -1162,7 +1178,7 @@ def main():
         reset_state({"theme": "light"})
         launch(settle=3)
         ok, _ = open_doc(f"{FX}/five-pages.pdf")
-        record("print: five-pages opened for the landscape check", "info", f"opened={ok}")
+        record("print: five-pages opened for the landscape check", "info", f"opened={ok}; panel waits {PANEL_WAITS}; retries {PANEL_RETRIES}")
         quit_app()
         return
     if A.suite == "diag":
