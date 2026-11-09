@@ -18,10 +18,24 @@ internal sealed class PageErrorBridge : NSObject, IWKScriptMessageHandler
 
     private PageErrorBridge(ILogger log) => _log = log;
 
+    internal static IDisposable? ReloadWatch; // kept for the app's life
+
     public static void Attach(WKWebView view, IServiceProvider services)
     {
         var log = services.GetRequiredService<ILoggerFactory>().CreateLogger("ChuvadiReader.Ui.Page");
         view.Configuration.UserContentController.AddScriptMessageHandler(new PageErrorBridge(log), Name);
+
+        // Mac Test M-19 / M-18: when WebKit's content process ends, nothing throws in the page or in .NET first —
+        // WebKit loads the page again and the old Blazor session is disposed (only that follow-on error was logged).
+        // The Ui never navigates its own page, so any load after the first is that event: log it as the error.
+        var loads = 0;
+        ReloadWatch = view.AddObserver("loading", NSKeyValueObservingOptions.New, _ =>
+        {
+            if (view.IsLoading && ++loads > 1)
+            {
+                log.LogError("the page was loaded again (load {Count}) — WebKit's content process ended or the page was reset; the Ui session was lost", loads);
+            }
+        });
     }
 
     [Export("userContentController:didReceiveScriptMessage:")]
