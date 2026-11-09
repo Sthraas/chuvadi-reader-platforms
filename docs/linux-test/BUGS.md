@@ -286,3 +286,24 @@ The tenth patch moved the load off-thread, but adding the tab raises `TabsChange
 **Measured** (2 vCPU, no GPU; `tools/t_cadtime.py`, `tools/t_cad.py`): from process start, "Opening…" clears at 6.0 s warm / 6.6 s cold and page 1 is fully drawn at 6.9 s warm (worst 7.2) / 7.5 s cold (worst 11.9); the UI-test launch accounts for ~2.8 s, so **~3–4 s to open + ~1 s to draw**. Poppler draws page 1 in ~1 s on the same machine. App memory: 835 MB after page 1, **1,607 MB after paging through all 5** (not released while open), WebKit ~480 MB at 180 %.
 **Expected.** Arun's bar is "loads in milliseconds"; at minimum a first page in ~1–2 s and memory that doesn't grow with every page viewed.
 **Notes.** Rendering is correct (crisp vector at 180 %). Printing sends the file byte-identical (✅). Where the time and memory go (parse vs. render vs. page cache) needs a profile on the library side — I can run `dotnet-trace` here if wanted.
+
+
+---
+**10 Nov, Linux chat — the single head for re-verification and Arun's check: `platform/linux` 64c9c16**
+(CI green on x64 and ARM64; full UI pass 121/121). It carries Foundation's patches 14 (pages render off the Ui
+thread), 15 (render queue: pages that left the view are cancelled, the page in view goes first) and 16 (memory
+after closing a heavy document). Please move the checklist for Arun from 7595ef3 to this head.
+
+**Correction to my 9 Nov note:** the "render backlog" (landed page drawn 7.5–8.3 s after fast paging) was my
+mistake. WebKitGTK plays each PageDown as a smooth-scroll step, so after 150 fast PageDowns the view keeps moving for
+~12 s; the pages were already drawn. Measured from when the view settles, the landed page is drawn within 1 s
+(UI 36a). Expect the long scroll after holding PageDown — a separate Linux finding, with the coordinator.
+
+Re-verify on 64c9c16:
+| What | Linux test | Linux result |
+|---|---|---|
+| Fast paging, big PDF | 36a | page answers ≤ 0.08 s; drawn within 1 s of the view settling |
+| Closing a tab while it renders | 36b | next file drawn in 0.3 s, no errors |
+| CAD PDF (B-27): time per sheet, memory before / open / after close | 36c | sheets 0.1–0.2 s; full pass 616 → 691 → 691 MB. On its own: 269 → 360 → ~520 MB after closing (rises at close; reported) |
+| B-24 + B-08b Cancel, B-25, owner-password printing | 34e, 34f, 31b | pass |
+| B-26 (D-147) | — | raw values, unchanged |
