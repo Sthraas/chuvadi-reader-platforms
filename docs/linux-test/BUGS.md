@@ -33,10 +33,13 @@ Every bug gets fixed; I re-verify on the fixing commit and mark it here.
 | B-21 | S3 | Linux | Show in folder: 5 s D-Bus timeout → `xdg-open` fallback → two file-manager windows | **verified fixed f3d5978** — cold Nautilus: one window; `xdg-open` fallback never called (logging stub) |
 | B-22 | S4 | shared Ui/Core | No designed keyboard-focus style: each engine draws its own (GTK blue on Linux) | **verified fixed e468d1a** (Foundation 8th patch) — focus ring 2 px solid in the theme accent (#8a3a1c in light) |
 | B-23 | S4 | shared Ui/Core | Tab order starts with one "Send page N to a desk" button per page | **verified fixed e468d1a** (Foundation 8th patch) — Tab starts on the current page's strip (rotate, send, snapshot, bookmark), not one button per page |
-| B-24 | S2 | **shared Ui/Core** | A stalled read (hung network share) shows a blank Reader with no "Opening…" or Cancel, and blocks every later open | **verified fixed 7595ef3** (13th patch) — stalled `.pdf`/`.xlsx`/`.docx`: "Opening…" at 0.3–0.9 s, Cancel at 10 s, Cancel closes the tab, later opens never blocked |
-| B-25 | S4 | **shared Ui/Core** | Excel viewer errors still use the old one-line wording (no WT-10 sentence + Details) | **verified fixed 7595ef3** — Excel "This file couldn't be read as an Excel workbook.", Word "…as a Word document.", damaged PDF "This PDF is damaged…", each with Details |
+| B-24 | S2 | **shared Ui/Core** | A stalled read (hung network share) shows a blank Reader with no "Opening…" or Cancel, and blocks every later open | **verified fixed 7595ef3** (13th patch) — stalled `.pdf`/`.xlsx`/`.docx`: "Opening…" at 0.3–0.9 s, Cancel at 10 s, Cancel closes the tab, later opens never blocked · re-verified 64c9c16 |
+| B-25 | S4 | **shared Ui/Core** | Excel viewer errors still use the old one-line wording (no WT-10 sentence + Details) | **verified fixed 7595ef3** — Excel "This file couldn't be read as an Excel workbook.", Word "…as a Word document.", damaged PDF "This PDF is damaged…", each with Details · re-verified 64c9c16 |
 | B-26 | S3 | **shared Ui/Core** | Excel number formats not applied: `"₹"#,##0.00` shows `1234.5`, `0.00%` shows `0.125` (values unaltered) — Sheets 2.0.2 now has `Cell.GetDisplayText` | **deferred by decision (D-147)** — raw stored value is the decided behaviour for now (Arun's data-integrity rule); option A (formatted display text, exact value on hover) is a later improvement, with Arun |
-| B-27 | S3 (perf) | **library + shared Ui/Core** | Large vector CAD PDF (5 × A1, ~1.44 M path ops): ~3–4 s to open + ~1 s to draw page 1; app memory 1.6 GB after viewing 5 pages | open — e242d92, measurements only |
+| B-27 | S3 (perf) | **library + shared Ui/Core** | Large vector CAD PDF (5 × A1, ~1.44 M path ops): ~3–4 s to open + ~1 s to draw page 1; app memory 1.6 GB after viewing 5 pages | open — 64c9c16 (render off the Ui thread): the page stays responsive, but sheet 1 takes 6.0–8.4 s and each new sheet 10.5–13.5 s; Linux's generated stand-in takes 53–55 s for sheet 1 (Poppler 0.9 s). Hot path: `PageRasterizer.PaintStrokeOp` |
+| B-28 | S2 | Linux (UI test) | UI tests 36a–36c count the 24×24 loading icon as a drawn page, so their sheet times (0.1–0.2 s) and 36c memory don't measure the real drawing | **open** — 64c9c16 |
+| B-29 | S3 | **shared Ui/Core** (render queue) | Closing the CAD tab mid-render: the next file sometimes waits 3.7–4.6 s for its first page (2 of 6 closes) | **open** — 64c9c16 |
+| B-30 | S2 (perf) | **shared Ui/Core + Foundation** | Memory isn't given back after closing the CAD drawing: 1.43–1.77 GB stays for 60 s+, and 680 MB of managed heap is still live after a full collection | **open** — 64c9c16 |
 | K-01 | — | Linux | GNOME close-only layout showed all three buttons (known, 7 Nov) | **verified fixed f7d0034, re-verified f3d5978** (6 layouts) |
 
 Routing (coordinator, 8 Nov): **Linux** → the Linux chat. **shared Ui/Core** → Foundation's combined patch, as exact diffs from the Linux chat or Foundation. **library** → the coordinator compiles them for Arun (library coordinator).
@@ -307,3 +310,63 @@ Re-verify on 64c9c16:
 | CAD PDF (B-27): time per sheet, memory before / open / after close | 36c | sheets 0.1–0.2 s; full pass 616 → 691 → 691 MB. On its own: 269 → 360 → ~520 MB after closing (rises at close; reported) |
 | B-24 + B-08b Cancel, B-25, owner-password printing | 34e, 34f, 31b | pass |
 | B-26 (D-147) | — | raw values, unchanged |
+
+---
+## Linux Test — 10 Nov, re-verification on `platform/linux` 64c9c16 (B-28 to B-30, and an update to B-27)
+Built from source (`-p:UiTest=true`); 2 vCPU, no GPU, Xvfb + mutter. Tool: `tools/t_render.py`. Arun's CAD file is
+run locally only. **Nothing from it is committed** (no file, screenshot or text); numbers and stack frames only.
+
+## B-28 — UI tests 36a–36c count the loading icon as a drawn page (S2, Linux UI test)
+**Found.** `rendered(i)` in `tools/linux/uitest.py` checks for any `svg` inside `.rpage-wrap`. While a page is
+drawing, that wrapper already holds the loading icon: an `svg` with `viewBox="0 0 24 24"` and 4 elements. The real
+drawing arrives later as a page-sized `svg` (for example `viewBox="0 0 2384 1684"` holding one image).
+**Effect.** 36c's "sheets 0.1–0.2 s" is the time until the icon appears. On the same build, the stand-in's sheet 1
+actually draws at 53–55 s, and sheet 2 hadn't drawn after 4 min. 36c's memory "after closing" is taken after a
+drawing that never finished, so it isn't the B-27 number. 36a and 36b pass either way, because big.pdf pages are
+simple; but their timings carry the same flaw.
+**Fix.** Treat a page as drawn only when its page-sized `svg` is present (viewBox width > 100), or when the Reader
+sets an attribute on the page as the drawing lands. Then raise 36c's limits to what the drawing really takes, or
+mark it as reported until B-27 lands.
+
+## B-29 — Closing the CAD tab mid-render sometimes delays the next file (S3, shared Ui/Core)
+**Steps.** Open Arun's CAD PDF and close its tab after 0.3 s, while sheet 1 is still drawing. Then open `five-pages.pdf`.
+**Result.** 6 closes, all mid-render, over two app runs. The next file's page 1 drew in 0.17, 0.53, 0.62 and 0.36 s
+in four of them, and in **3.66 s and 4.62 s** in the other two. The page itself kept answering in ≤ 0.02 s
+throughout. The stand-in: 3 of 3 closes drew the next file in 0.33–0.37 s.
+**Likely cause.** The closed tab's raster pass isn't cancelled mid-sheet, so the next document waits behind it.
+`platform/linux` 4f67a4c ("nothing keeps drawing for a closed tab", after 64c9c16) may fix this; I'll re-check it
+on the next head.
+
+## B-30 — Memory not given back after closing the CAD drawing (S2 perf, shared Ui/Core + Foundation)
+**Steps.** Fresh app. Open Arun's CAD PDF, visit sheets 1–5 and back, close the tab, then wait 60 s.
+**Result.** Three runs. Memory as app/WebKit, in MB:
+
+| Point | Memory (app / WebKit, MB) |
+|---|---|
+| Before opening | 248–250 / 221–222 |
+| Sheet 1 drawn | 875–880 / 287–300 |
+| All 5 sheets | 1,433–1,773 / 568–677 |
+| 60 s after closing | 1,425–1,773 / 536–712 |
+
+The app's memory didn't move at all after closing. The test-only `gc` verb (an aggressive full collection) brought
+the app to 456–472 MB. But **the managed heap is still 680–682 MB after that collection**, so something still
+holds the closed document's memory (its page cache or rasters). Freeing memory won't help while that reference remains.
+**Expected (16th patch).** Back to within ~100 MB of where it started.
+Linux's 4f67a4c ("memory back after vector sheets too") and Foundation's 3759b6f (memory part 3) are after
+64c9c16. I'll re-check this on the next head, with the corrected drawn-page check.
+
+## B-27 — update on 64c9c16
+- **UI.** The UI stays responsive while sheets draw: the page answers in ≤ 0.23 s, with one 1.22 s answer in three
+  runs. This is the fourteenth patch working.
+- **Draw times.** Each draw is no faster. From the `open` command:
+  - Sheet 1 takes **6.0 / 7.1 / 8.4 s**. On e242d92 it was about 3–4 s to open plus ~1 s to draw.
+  - Sheets 2–3 take **10.5–13.5 s each**.
+  - Sheets 4–5 are already drawn by the time I reach them, because they draw in the background.
+  - Poppler draws sheet 1 in 1.0 s.
+- **The generated stand-in** (`make-heavy-pdfs.py` cad.pdf):
+  - Sheet 1 takes **53–55 s**; sheet 2 hadn't drawn after **4 min**.
+  - The app holds 1.0–2.7 GB the whole time, at 80–100 % CPU.
+  - Poppler draws a sheet in 0.9 s.
+- **Where the time goes.** The stacks taken during sheet 2 show the time is spent painting strokes:
+  `ChuvadiPdfSession.DrainAsync → RenderInGate → RenderPageAsRasterSvg → PageRasterizer.Guard → RasterizeUpright →
+  RasterizeInternal → PaintDisplayList → PaintStrokeOp`. This is a job for the library's rasteriser. It is not a hang.

@@ -212,9 +212,66 @@ Waiting elsewhere, not Linux defects: **library** — B-08a (Docs limits; the ap
 
 ---
 
-## Arun's check — Linux 7595ef3
+## Re-verification on 64c9c16 (10 Nov) — Foundation's patches 14–16: rendering off the Ui thread
 
-**Get the package.** GitHub → `Sthraas/chuvadi-reader-platforms` → Actions → run **Linux** on `7595ef3` ([run 42652452497](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/42652452497)) → Artifacts → **linux-x64** (ARM machine: `linux-arm64`). Unzip it and use **`deb/chuvadi-reader_1.0.0~preview_amd64.deb`** — the self-contained one (37.7 MB, needs no .NET). SHA-256 `22b4e168b978efac5a2ef971f4fca8971efe504081cdda84f2aeda8253ebee10`. (`deb-framework-dependent/` is the smaller variant that pulls in Microsoft's .NET runtime package.) Or with the CLI: `gh run download 42652452497 -R Sthraas/chuvadi-reader-platforms -n linux-x64`.
+This build was made from source with `-p:UiTest=true` and run on 2 vCPU, with no GPU. The tools are
+`tools/t_final.py`, `t_multi.py`, `t_drag.py`, `t_print.py` and `t_render.py`. Arun's CAD file was run here only;
+I've committed numbers only.
+
+**Regression ✅**
+
+| Case | Result |
+|---|---|
+| B-24 + B-08b Cancel | Stalled `.pdf`, `.xlsx` and `.docx`: "Opening…" shows in 0.3–0.4 s, Cancel appears at 10.1–10.3 s, Cancel closes the tab, and the next file opens. |
+| B-25 | Excel, Word and PDF errors each show a WT-10 sentence with Details. |
+| Owner-password printing (D-139) | Opened with the user password: printing refused, 0 CUPS jobs. Opened with the owner password: prints 5 vector pages. |
+| Single instance | 3 files on the command line give 3 tabs. A second launch hands its file to the first window and exits: one window, 4 tabs. |
+| Drops | The overlay shows; dropping 2 files gives 2 tabs. |
+| Print | `five-pages.pdf` is submitted byte-identical, and the output is vector with fonts. |
+| B-26 | Raw values, as decided (D-147). |
+
+No new files appear in `/tmp`.
+
+**Render steps**
+
+| Step | Result |
+|---|---|
+| 36a fast paging (400 pages) | ✅ The page answers in ≤ 0.18 s while paging. After 150 PageDowns, the view settles 13–19 s after the last key (WebKitGTK's smooth scroll, a separate Linux finding), and the landed page is already drawn. 40 jumps through the page box, 50 ms apart: the landed page draws in 0.03 s. Page 400 draws in 0.04–0.52 s. |
+| 36b closing a tab mid-render | Stand-in ✅: 3 of 3 closes, the next file draws in 0.33–0.37 s. Real CAD ⚠️: in 4 of 6 closes the next file draws in 0.17–0.62 s, but in the other 2 it takes **3.7 s and 4.6 s** (**B-29**). The page answers in ≤ 0.08 s throughout. |
+| 36c Arun's CAD, on its own, 3 runs | **Sheet 1 draws in 6.0 / 7.1 / 8.4 s.** Sheets 2–3 take **10.5–13.5 s each**; sheets 4–5 are drawn in the background by the time I reach them; paging back is instant. The page answers in ≤ 0.23 s (once 1.22 s). See the memory table below. |
+| 36c Linux's stand-in | **Sheet 1: 53–55 s. Sheet 2: not drawn after 4 min** (busy in `PageRasterizer.PaintStrokeOp`). Poppler draws a sheet in 0.9 s. |
+
+Memory during 36c with Arun's CAD, app / WebKit, in MB:
+
+| Point | Memory |
+|---|---|
+| Before opening | 248 / 221 |
+| Sheet 1 drawn | ~880 / 290 |
+| All 5 sheets | 1,430–1,770 / 570–680 |
+| 60 s after closing | **unchanged** (**B-30**) |
+
+The test-only full collection brings the app to ~460 MB, but 680 MB of managed heap is still live after closing.
+
+**My own test had a measurement bug.** My first numbers were 0.3 s for sheet 1 and memory rising *after* closing.
+Both were artefacts: the check counted the 24×24 loading icon as a drawn page. Linux's UI tests 36a–36c use the same
+check, so their "sheets 0.1–0.2 s" figure doesn't measure the drawing either (**B-28**). With a check that waits for
+the page-sized drawing, the numbers above are the real ones.
+
+**Where this leaves Linux.**
+- The regression set is clean.
+- The UI stays responsive while heavy pages draw.
+- Fast paging works.
+- Heavy drawings are still slow to draw. **B-27** is the library's job: the stroke rasteriser.
+- Memory isn't given back after closing (**B-30**).
+- Closing mid-render can occasionally delay the next file (**B-29**).
+
+`platform/linux` already has 4f67a4c after 64c9c16 ("nothing keeps drawing for a closed tab; memory back after vector
+sheets"), and 3759b6f is on its way. On the next head I'll re-check 36c with the corrected check, 36b, and a quick
+regression pass. **Linux is ready for Arun's check, with these known**, and the checklist below has moved to 64c9c16.
+
+## Arun's check — Linux 64c9c16
+
+**Get the package.** GitHub → `Sthraas/chuvadi-reader-platforms` → Actions → run **Linux** on `64c9c16` ([run 42685693367](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/42685693367)) → Artifacts → **linux-x64** (ARM machine: `linux-arm64`). Unzip it and use **`deb/chuvadi-reader_1.0.0~preview_amd64.deb`** — the self-contained one (37.8 MB, needs no .NET; artifacts kept until 7 Feb 2027). SHA-256 `2f6519b6b2166dd24efa4069aa16cf5941ecad1c177ca8ad9d123aeeaf13f356`. (`deb-framework-dependent/` is the smaller variant that pulls in Microsoft's .NET runtime package.) Or with the CLI: `gh run download 42685693367 -R Sthraas/chuvadi-reader-platforms -n linux-x64`.
 
 **Install** (Ubuntu 24.04 or 26.04, desktop):
 ```
@@ -228,7 +285,7 @@ It appears in the app grid as **Chuvadi Reader**; it also installs and loads its
 1. **Start from the app grid**, cold and again warm — note how long until Home shows (here: ~1.0 s warm on 2 CPUs without a GPU).
 2. **Open a PDF by double-clicking it in Files**, then select **three files** → right-click → Open With → Chuvadi: each becomes its own tab in the one window.
 3. **Drag two files from Files onto the window** — two tabs.
-4. **The KDMC CAD drawing**: open it, page through, zoom in and out — note the time to the first page and the memory in System Monitor (B-27 is with the library; this is your real-hardware number).
+4. **The KDMC CAD drawing**: open it, page through all 5 sheets, close it. Note the time each sheet takes to draw, and the memory in System Monitor before opening, with 5 sheets, and a minute after closing. Here, on 2 CPUs with no GPU, sheet 1 takes 6–8 s, each new sheet 10–13 s, and memory isn't given back after closing (B-27, B-30). Your real-hardware numbers are the useful ones. The window should stay responsive while it draws.
 5. **Print to your real printer**: a mixed portrait/landscape file, 2 copies; check it's crisp (vector), and that a file whose permissions forbid printing is refused — then works when opened with its owner password.
 6. **A password-protected PDF**: wrong password, then the right one.
 7. **Mark → annotate → Save as**, and **Protect → Find & redact** a word → Save redacted copy — then search the saved copy for the word (it must be gone).
