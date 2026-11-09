@@ -78,7 +78,12 @@ internal static class MacQuit
                 // — the second M-03 crash (-[UIKeyboardSceneDelegate inputViews] unrecognized selector, macOS 26).
                 var own = window.RootViewController?.GetType().Namespace?.StartsWith("Microsoft.Maui", StringComparison.Ordinal) == true;
                 MacSmoke.Log($"quit-window {window.Class.Name} root={window.RootViewController?.Class.Name} detach={own}");
-                _ = own; // PROBE: the old behaviour — every window detached, keyboard windows included
+                if (!own)
+                {
+                    continue;
+                }
+
+                window.EndEditing(true); // hand back keyboard focus first, so no input view points at the page
                 window.RootViewController = new UIViewController();
             }
         }
