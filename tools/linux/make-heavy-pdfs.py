@@ -4,8 +4,10 @@
   tools/linux/make-heavy-pdfs.py <folder>
 
   big.pdf — 400 A4 pages, each with a large page number and a light vector grid: for paging fast.
-  cad.pdf — 5 A1 sheets, each with ~120,000 stroked line segments and labels: a stand-in for a vector CAD
-            drawing (B-27's kind of file; no real drawing is used or committed).
+  cad.pdf — 5 A1 sheets, each with 10,000 stroked line segments and labels: a stand-in for a vector CAD drawing
+            (B-27's kind of file; no real drawing is used or committed). Sized to the real one's memory profile:
+            ~1 GB at sheet 1, ~2 GB over 5 sheets; ~6 s a sheet here (the real one ~1 s). 120,000 strokes took
+            ~49 s a sheet and memory to 2.4 GB, far heavier than the real file.
 """
 import os, random, sys, zlib
 
@@ -61,7 +63,7 @@ def big_page(n):
     return w, h, b"\n".join(s)
 
 
-def cad_page(n, segments=120_000):
+def cad_page(n, segments=10_000):
     w, h = 2384, 1684  # A1 landscape, points
     rnd = random.Random(n)
     s = [b"0.2 w 0 0 0.6 RG"]
