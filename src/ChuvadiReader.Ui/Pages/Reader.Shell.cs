@@ -89,9 +89,25 @@ public partial class Reader
     }
 
     /// <summary>Open a Protect tool requested by the redaction view (after the document loads).</summary>
+    // A tab its Document ▾ items can run on: a PDF once its session is open, any other format once loaded.
+    private static bool DocReady(ReaderTab tab) => tab.Format.IsViewOnly() ? !tab.IsLoading : tab.Session is not null;
+
     private async Task ConsumePendingToolAsync()
     {
         var tool = Shell.PendingTool;
+        if (tool is not null && tool.StartsWith("doc:", StringComparison.Ordinal) && Tab is { } docTab && DocReady(docTab))
+        {
+            // A Document ▾ item chosen in Arrange (tablet / phone): run it here, on the active tab.
+            Shell.PendingTool = null;
+            if (DocumentMenuItems(docTab).FirstOrDefault(c => c.Id == tool[4..]) is { IsEnabled: true } cmd)
+            {
+                await cmd.Run();
+                StateHasChanged();
+            }
+
+            return;
+        }
+
         if (tool is null || Tab?.Session is null)
         {
             return;
@@ -323,7 +339,7 @@ public partial class Reader
             return;
         }
 
-        if (Shell.PendingTool is not null && Tab?.Session is not null)
+        if (Shell.PendingTool is not null && Tab is { } pt && (pt.Session is not null || DocReady(pt)))
         {
             _ = InvokeAsync(ConsumePendingToolAsync);
         }

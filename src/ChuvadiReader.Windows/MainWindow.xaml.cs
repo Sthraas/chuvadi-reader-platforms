@@ -55,18 +55,38 @@ public partial class MainWindow : Window
 
     private void OnFileDrop(object sender, DragEventArgs e)
     {
-        if (e.Data.GetData(DataFormats.FileDrop) is not string[] files)
+        if (e.Data.GetData(DataFormats.FileDrop) is string[] files)
+        {
+            OpenDropped(files);
+        }
+    }
+
+    // W-02: a drop on the page (almost the whole window) arrives from the page itself: host-drop.js hands the
+    // dropped File objects over with postMessageWithAdditionalObjects, and WebView2 gives the host their paths.
+    // (WebView2's native window covers the WPF window, so the window's own Drop only fires on its edges; the
+    // earlier fix, turning WebView2's drop off, left drops on the page doing nothing.)
+    private void OnWebMessageReceived(object? sender, Microsoft.Web.WebView2.Core.CoreWebView2WebMessageReceivedEventArgs e)
+    {
+        if (e.WebMessageAsJson != "\"chvd:files-dropped\"" || e.AdditionalObjects is not { Count: > 0 } objects)
         {
             return;
         }
 
+        var paths = objects.OfType<Microsoft.Web.WebView2.Core.CoreWebView2File>()
+            .Select(f => f.Path)
+            .Where(p => !string.IsNullOrEmpty(p))
+            .ToArray();
+        OpenDropped(paths);
+    }
+
+    private void OpenDropped(IReadOnlyList<string> files)
+    {
         var supported = files.Where(IsSupportedFile).ToArray();
         if (supported.Length == 0)
         {
             return;
         }
 
-        // The web layer never sees a real file path (WebView2 security), so the open starts here.
         // The shared router (ChuvadiReader.Hosting.IncomingFiles) sends the files to the Bench shelf
         // when the Bench is open, otherwise each to its own Reader tab (approved 7 Nov: every
         // dropped file opens, not just the first).
@@ -75,41 +95,6 @@ public partial class MainWindow : Window
             incoming.Receive(supported);
             Activate();
         }
-    }
-
-    // WebView2 handles its own drag/drop by default, which would swallow file drops
-    // before the host window sees them. Turn that off so our window-level Drop fires.
-    private void TryReleaseWebViewDrop()
-    {
-        try
-        {
-            var wv2 = FindByTypeName(Web, "WebView2");
-            wv2?.GetType().GetProperty("AllowExternalDrop")?.SetValue(wv2, false);
-        }
-        catch
-        {
-            // best-effort; if unavailable, drops over the page area may not register
-        }
-    }
-
-    private static DependencyObject? FindByTypeName(DependencyObject root, string typeName)
-    {
-        if (root.GetType().Name == typeName)
-        {
-            return root;
-        }
-
-        var count = VisualTreeHelper.GetChildrenCount(root);
-        for (var i = 0; i < count; i++)
-        {
-            var found = FindByTypeName(VisualTreeHelper.GetChild(root, i), typeName);
-            if (found is not null)
-            {
-                return found;
-            }
-        }
-
-        return null;
     }
 
     private void OnBlazorWebViewInitializing(object? sender, BlazorWebViewInitializingEventArgs e)
@@ -138,7 +123,8 @@ public partial class MainWindow : Window
             // older WebView2 runtime without these settings — non-fatal
         }
 
-        TryReleaseWebViewDrop();
+        // W-02: dropped files come from the page (host-drop.js); WebView2 keeps its own drop handling on.
+        e.WebView.CoreWebView2.WebMessageReceived += OnWebMessageReceived;
 
         // Interface size (Settings) zooms the whole WebView; attach now that it exists.
         if (_services.GetService(typeof(ChuvadiReader.Core.Window.IUiScale)) is ChuvadiReader.Windows.Platform.WpfUiScale scale)

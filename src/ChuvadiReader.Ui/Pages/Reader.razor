@@ -2132,14 +2132,16 @@
     {
         var m = CurrentFindMatch;
         if (m is null || _js is null) return;
-        try { await _js.InvokeVoidAsync("scrollToPage", _desk, m.PageIndex); } catch { }
         if (Tab is { } t)
         {
             t.CurrentPage = m.PageIndex + 1;   // keep the top-bar counter in step with the jump
             _pageInput = t.CurrentPage.ToString();
         }
 
+        // Render the current highlight first: the scroll goes to the match itself (AT-09), not its page's top.
         StateHasChanged();
+        await Task.Yield();
+        try { await _js.InvokeVoidAsync("scrollToMatch", _desk, m.PageIndex); } catch { }
     }
 
     // ── Bookmarks panel (#41): read, navigate, edit, save ────────────────────────

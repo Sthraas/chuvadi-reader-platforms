@@ -1,0 +1,754 @@
+{
+ "maui": "10.0.110",
+ "target": "net10.0-android",
+ "packages": [
+  {
+   "id": "GoogleGson",
+   "version": "2.13.1.1",
+   "licences": [
+    "Apache-2.0"
+   ],
+   "sha256": "ab95fef6cc0d67e408c658d78f3ecb4ebe88d9d304a9d84bbb003dacfbeb47b3"
+  },
+  {
+   "id": "Xamarin.Android.Glide",
+   "version": "4.16.0.14",
+   "licences": [
+    "Simplified BSD License",
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "e3859b7066d79718b442905d76f8a4d6c8b5142ae3e797e9e7258ff9e2b426b0"
+  },
+  {
+   "id": "Xamarin.Android.Glide.Annotations",
+   "version": "4.16.0.14",
+   "licences": [
+    "Simplified BSD License",
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "628096fef3cc88c6dd026d374509f4903668b7e506a71d0d2b941b7104585074"
+  },
+  {
+   "id": "Xamarin.Android.Glide.DiskLruCache",
+   "version": "4.16.0.14",
+   "licences": [
+    "Simplified BSD License",
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "67d841b42d3293a24f279bf6cc395b1c199038b8dc4efbed892c523582db2b1c"
+  },
+  {
+   "id": "Xamarin.Android.Glide.GifDecoder",
+   "version": "4.16.0.14",
+   "licences": [
+    "Simplified BSD License",
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "5418848177e5e123e5cd05792a458b54d897601e846c660e502dd5ecd27bb807"
+  },
+  {
+   "id": "Xamarin.AndroidX.Activity",
+   "version": "1.10.1.3",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "f7e2cdcf82d5553e60501a4226c8bd6dabe505bbf2168bbba6edb3d890a87c72"
+  },
+  {
+   "id": "Xamarin.AndroidX.Activity.Ktx",
+   "version": "1.10.1.3",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "5d5e2a89e7d5c2e9e0a46fde6c9bfb3c91ada9782f415ce52e412ccef05f6cb4"
+  },
+  {
+   "id": "Xamarin.AndroidX.Annotation",
+   "version": "1.9.1.5",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "f35c59ddc9c90a3642e4034294bf5c5f3b015a78927af01b2c6e0e93dce6b2a9"
+  },
+  {
+   "id": "Xamarin.AndroidX.Annotation.Experimental",
+   "version": "1.5.1.1",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "46573b397183b4767d928f4e4b5b66ad21a942f9ee29773a8be21de6e2e4403b"
+  },
+  {
+   "id": "Xamarin.AndroidX.Annotation.Jvm",
+   "version": "1.9.1.5",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "23e88dce023bee232799a8c6d72a74cbd5464251ef8dcddb92eaa52e307581fa"
+  },
+  {
+   "id": "Xamarin.AndroidX.AppCompat",
+   "version": "1.7.1.1",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "1fcf98f9841a5c19f52652a27c1ef5a9559bbacad1dc2e61cb6f5f2d1ee8986e"
+  },
+  {
+   "id": "Xamarin.AndroidX.AppCompat.AppCompatResources",
+   "version": "1.7.1.1",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "8569eaecea94d6f855394c6e84f927e9f25f00c2fa155d8a9b308026731748e2"
+  },
+  {
+   "id": "Xamarin.AndroidX.Arch.Core.Common",
+   "version": "2.2.0.18",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "edc43e8965d829bfeb8e128284c37fb823a74ce226f583408f51137d29d5c62f"
+  },
+  {
+   "id": "Xamarin.AndroidX.Arch.Core.Runtime",
+   "version": "2.2.0.18",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "01672724f4739c7a61f4e965e9979f8e4fbc7969a0b053151f63269ad2e914ec"
+  },
+  {
+   "id": "Xamarin.AndroidX.Browser",
+   "version": "1.8.0.11",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "32b1cbe369e84e31b370b45b42afde7a4272c61c3263a8ead7c0a7a7fb08ef0b"
+  },
+  {
+   "id": "Xamarin.AndroidX.CardView",
+   "version": "1.0.0.36",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "4c67b5ceed65263cf44f9a29af6a139380782a3eeb9d130f63be26c22c3fc549"
+  },
+  {
+   "id": "Xamarin.AndroidX.Collection",
+   "version": "1.5.0.3",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "df364f26dcf6cb856a2ea3264105ed10a5e9a925447eeb532e610fc5e56f2a19"
+  },
+  {
+   "id": "Xamarin.AndroidX.Collection.Jvm",
+   "version": "1.5.0.3",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "3e42f1707a69b4be2dd8be736b6fd9430961fdb8016f2ea5eedbb84b6bcf068b"
+  },
+  {
+   "id": "Xamarin.AndroidX.Collection.Ktx",
+   "version": "1.5.0.3",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "74681da355b240eac0839193cfbaae96e1d57cb93fd7fd98a704c8ec78bfead0"
+  },
+  {
+   "id": "Xamarin.AndroidX.Concurrent.Futures",
+   "version": "1.3.0.1",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "bc9d5571f3d3b812e2ca212b2523f6e5faeaca3e8d4448af339deb620b3f6f5b"
+  },
+  {
+   "id": "Xamarin.AndroidX.ConstraintLayout",
+   "version": "2.2.1.3",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "69d3e05421586fa6f8623b5ecf02cc55530e1322bf4b450bfede5d1bcae52271"
+  },
+  {
+   "id": "Xamarin.AndroidX.ConstraintLayout.Core",
+   "version": "1.1.1.3",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "a67855a059e9940c355bfb745f6744192ed091c483ed8b53919ef37768a7596a"
+  },
+  {
+   "id": "Xamarin.AndroidX.CoordinatorLayout",
+   "version": "1.3.0.3",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "235259551c4b72ba82ef6481ae9df2775884b8ae16476d073fa062bdbc456bf1"
+  },
+  {
+   "id": "Xamarin.AndroidX.Core",
+   "version": "1.16.0.3",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "bc4e3043d3bf0acec69ecb0a0d3424bb1423208e2a3b0a6744bd8159eb647cc9"
+  },
+  {
+   "id": "Xamarin.AndroidX.Core.Core.Ktx",
+   "version": "1.16.0.3",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "ab55df63df1caf633e0bebab5102deca37a8bf48af4a87d80a6d67bfd4141fbf"
+  },
+  {
+   "id": "Xamarin.AndroidX.Core.ViewTree",
+   "version": "1.0.0.3",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "dd3ba0fd44c8418085c8657a993bee67cb8710fc9d78bf0ec312ae0b54b372ed"
+  },
+  {
+   "id": "Xamarin.AndroidX.CursorAdapter",
+   "version": "1.0.0.34",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "c4f32dff8ab81562eaaa222607d13c2ca71cc68dbb785cde731e8aa846f35551"
+  },
+  {
+   "id": "Xamarin.AndroidX.CustomView",
+   "version": "1.2.0.1",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "da881f5fd3b1bb8102d496c0732acd42fd09a7494dd66a7552fa3ae9e211ee6a"
+  },
+  {
+   "id": "Xamarin.AndroidX.CustomView.PoolingContainer",
+   "version": "1.1.0.1",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "4cb9415b09e6e8c6eb3a7e9d77ab3fed2694256a83357d933029c6e5ff46f8e3"
+  },
+  {
+   "id": "Xamarin.AndroidX.DrawerLayout",
+   "version": "1.2.0.18",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "def688404225b02bdb27ed614d1879a93a00c16f82ecee7aec477815a67bd371"
+  },
+  {
+   "id": "Xamarin.AndroidX.DynamicAnimation",
+   "version": "1.1.0.3",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "9ec9f8be32bc3b7d24c0077bc23a725af3d93c7965e9898f36518a34e2f0049c"
+  },
+  {
+   "id": "Xamarin.AndroidX.Emoji2",
+   "version": "1.5.0.6",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "cad321bc01b4e80942e5f95594fb2892bf373d42e04243a839d012e77d37e568"
+  },
+  {
+   "id": "Xamarin.AndroidX.Emoji2.ViewsHelper",
+   "version": "1.5.0.6",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "e52e6cf1298783152bf82a8458f80c9739d7215a02abc440377d5796cb118154"
+  },
+  {
+   "id": "Xamarin.AndroidX.ExifInterface",
+   "version": "1.4.1.1",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "421fc2de03f6a5cd363e1f6213446ad5498da7a5e07af0b98dfc69fc0adf55cf"
+  },
+  {
+   "id": "Xamarin.AndroidX.Fragment",
+   "version": "1.8.8.1",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "19e5c8fbb2be56f782cac78bd3311fea7db9f407b49c826d99880f2d86fd7821"
+  },
+  {
+   "id": "Xamarin.AndroidX.Fragment.Ktx",
+   "version": "1.8.8.1",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "809bc4633c2f5752b5cf4cd650f057fbe78fce4c22257b8e311e0342ebf9cb70"
+  },
+  {
+   "id": "Xamarin.AndroidX.Interpolator",
+   "version": "1.0.0.34",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "e03ce7ff03f44422a3aaad209dbafbb44cc6faa1737cdb1b13cd670cae2d557c"
+  },
+  {
+   "id": "Xamarin.AndroidX.Lifecycle.Common",
+   "version": "2.9.2.1",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "c9eb3f2e02c3e592670864d0a017978e92d609305467b90cf8de21bbe070e806"
+  },
+  {
+   "id": "Xamarin.AndroidX.Lifecycle.Common.Jvm",
+   "version": "2.9.2.1",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "2967d9229a07952fbc4ee031acb57feda120f80f9c3ea5ce8321ffd32e3c93a7"
+  },
+  {
+   "id": "Xamarin.AndroidX.Lifecycle.LiveData",
+   "version": "2.9.2.1",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "fd08334f8d8862d8faea9f58a4c63648f656e4691f3ed1811993fa209dc28e21"
+  },
+  {
+   "id": "Xamarin.AndroidX.Lifecycle.LiveData.Core",
+   "version": "2.9.2.1",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "592cf90158dadb48978ffe4605cc696a27d67333fcf8cc59d0cf31bef79ba0a6"
+  },
+  {
+   "id": "Xamarin.AndroidX.Lifecycle.LiveData.Core.Ktx",
+   "version": "2.9.2.1",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "68bce83a300f0442fd24579ce385b4e80527a4bf1276d367f3806056bbdfa3de"
+  },
+  {
+   "id": "Xamarin.AndroidX.Lifecycle.Process",
+   "version": "2.9.2.1",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "1cde9d49b8cd3a0e493294d84030373d65e008907a85169678bbe1b8852f25b2"
+  },
+  {
+   "id": "Xamarin.AndroidX.Lifecycle.Runtime",
+   "version": "2.9.2.1",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "472451940467e03f1a124501507c5a76e83f8a4af34b90ee6a39f66918fe92a2"
+  },
+  {
+   "id": "Xamarin.AndroidX.Lifecycle.Runtime.Android",
+   "version": "2.9.2.1",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "ad4f0d13f663a139ec77155c1734ecf397d9d844420b0fcb765341f6527f8ddf"
+  },
+  {
+   "id": "Xamarin.AndroidX.Lifecycle.Runtime.Ktx",
+   "version": "2.9.2.1",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "f81252edca3d4d4082691b2bc3bbd0d3727cdb556ea07294947203899ea9398d"
+  },
+  {
+   "id": "Xamarin.AndroidX.Lifecycle.Runtime.Ktx.Android",
+   "version": "2.9.2.1",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "2df7d6fa7d5411f7f1e6f75edd63c633d890beecd221472483172566319e9904"
+  },
+  {
+   "id": "Xamarin.AndroidX.Lifecycle.ViewModel",
+   "version": "2.9.2.1",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "b37302e0fd6dd43988e0b98478941b177dd0ec5c9b8569d9a080c87125462153"
+  },
+  {
+   "id": "Xamarin.AndroidX.Lifecycle.ViewModel.Android",
+   "version": "2.9.2.1",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "cb5843695184f5690d4f7462a4f47e52efb58affbcf8693b2839162029c65dd5"
+  },
+  {
+   "id": "Xamarin.AndroidX.Lifecycle.ViewModel.Ktx",
+   "version": "2.9.2.1",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "87ef9b3a6aa7775e5dcfecf407b82db32724081f4605341d6f2affa108b60315"
+  },
+  {
+   "id": "Xamarin.AndroidX.Lifecycle.ViewModelSavedState",
+   "version": "2.9.2.1",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "ab7de1b2cb62ad5cab8ba24405be84f4a65fbeb02f5e0cee5998737a941d0d08"
+  },
+  {
+   "id": "Xamarin.AndroidX.Lifecycle.ViewModelSavedState.Android",
+   "version": "2.9.2.1",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "72c6cb3c5f021e1c208fa2659df59779740fd87cc0b3a0e365d5ba44d96cbbcd"
+  },
+  {
+   "id": "Xamarin.AndroidX.Loader",
+   "version": "1.1.0.34",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "3e1a3b75de27b9c16ca5b5ec64a6e4c1826e7ec91309ca522b6ca4ad92a46696"
+  },
+  {
+   "id": "Xamarin.AndroidX.Navigation.Common",
+   "version": "2.9.2.1",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "545e6062d171ec61e4ddef579a774c5b6c678554d3ab948043f94a808708fffd"
+  },
+  {
+   "id": "Xamarin.AndroidX.Navigation.Common.Android",
+   "version": "2.9.2.1",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "79731218d87ad9cd06ebe0e2508ff6ccd094c11a5a646f6536f21ba2e679dc3f"
+  },
+  {
+   "id": "Xamarin.AndroidX.Navigation.Fragment",
+   "version": "2.9.2.1",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "8bf7e81d89712a7397cbac3e20191037af6f517bb33234baa7925617f02ef9f2"
+  },
+  {
+   "id": "Xamarin.AndroidX.Navigation.Runtime",
+   "version": "2.9.2.1",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "5b3dced80a8232215bc889fdb3821791ac12ed87cf6140d4c88078964625bbba"
+  },
+  {
+   "id": "Xamarin.AndroidX.Navigation.Runtime.Android",
+   "version": "2.9.2.1",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "36b7c4cc885efb6d223dcc71a3a34e41d37d5da5e3d81a0cd4cc09475ab0557d"
+  },
+  {
+   "id": "Xamarin.AndroidX.Navigation.UI",
+   "version": "2.9.2.1",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "235113c01ff8f0465d7b104bc0caefd7dd9783295e23d12929a08e449ccd3232"
+  },
+  {
+   "id": "Xamarin.AndroidX.ProfileInstaller.ProfileInstaller",
+   "version": "1.4.1.5",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "156f176a3a583d011c82f1c35d4e0418c7d982dc92aa84ee23ae5e949e8abae1"
+  },
+  {
+   "id": "Xamarin.AndroidX.RecyclerView",
+   "version": "1.4.0.3",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "2ca8aea800475df15d583a3c1df954e963647e624e5b6ffca2d61e7462f4b1cd"
+  },
+  {
+   "id": "Xamarin.AndroidX.ResourceInspection.Annotation",
+   "version": "1.0.1.22",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "44ac0d55f207d11daf30624e8ddec4adb3350286bc0e005342b192ac3763fe46"
+  },
+  {
+   "id": "Xamarin.AndroidX.SavedState",
+   "version": "1.3.1.1",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "cb2d4b5b997fe42dd698690d48beb543d1009481fccf7606a5dd894a83d0a4eb"
+  },
+  {
+   "id": "Xamarin.AndroidX.SavedState.SavedState.Android",
+   "version": "1.3.1.1",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "4531c538ee15ef7bce0abf85cdbfcf6c14573bad45f3f5eb723650779ee15d5f"
+  },
+  {
+   "id": "Xamarin.AndroidX.SavedState.SavedState.Ktx",
+   "version": "1.3.1.1",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "6cccd82180d623a970e0ad418586b71e723fdc10fc739fd670f79267f3c94405"
+  },
+  {
+   "id": "Xamarin.AndroidX.Security.SecurityCrypto",
+   "version": "1.1.0.4-alpha07",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "5a18328bb5a0f4f805e122228d6f74607724548803f7665610e270e907bc48cc"
+  },
+  {
+   "id": "Xamarin.AndroidX.SlidingPaneLayout",
+   "version": "1.2.0.22",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "9b1b63596832258e9e2aea6a5d08cb07368cd53a9feba78e0cae4b8cbd6773fd"
+  },
+  {
+   "id": "Xamarin.AndroidX.Startup.StartupRuntime",
+   "version": "1.2.0.5",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "c2da9ba4714ab1bb11333bd11475166571eab039ffee848ededf00a626db8af7"
+  },
+  {
+   "id": "Xamarin.AndroidX.SwipeRefreshLayout",
+   "version": "1.1.0.29",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "d729c78fbb49186e8d0da2da4203c8a7c4d7811ff3300a76353703c3a0d24a07"
+  },
+  {
+   "id": "Xamarin.AndroidX.Tracing.Tracing",
+   "version": "1.3.0.1",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "c7a5571102dcce305d9eaa1a8360803e8a9eea6e5ac99c8804c4c3221f4644a5"
+  },
+  {
+   "id": "Xamarin.AndroidX.Tracing.Tracing.Android",
+   "version": "1.3.0.1",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "3bf2ae8258bdacf3e23a3b3cabdb00939aa60fb480342f0f74aec3f0f69efe09"
+  },
+  {
+   "id": "Xamarin.AndroidX.Transition",
+   "version": "1.6.0.1",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "ee7a63f4a37461f0b5857353a2dfadaaadee8f38b6673fb6533372bbaf86b98e"
+  },
+  {
+   "id": "Xamarin.AndroidX.VectorDrawable",
+   "version": "1.2.0.8",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "fe6b4aba6c3a4d3ec7f18ebf93278a2885065486fe85dcef56a4821ca569e859"
+  },
+  {
+   "id": "Xamarin.AndroidX.VectorDrawable.Animated",
+   "version": "1.2.0.8",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "d02a6d4612c42cc0e85bc4be751ab95f787509003d6f2842a672080ec662611d"
+  },
+  {
+   "id": "Xamarin.AndroidX.VersionedParcelable",
+   "version": "1.2.1.3",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "bb9a27e6a18ad5fd9876402ee821688a9a6a9b4a5a068df7e9cf86c6a53a41b0"
+  },
+  {
+   "id": "Xamarin.AndroidX.ViewPager",
+   "version": "1.1.0.4",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "6297ef65c8a9269bd96a97811951bd2df4e6df42b5dff5a33a191000acd4e2f8"
+  },
+  {
+   "id": "Xamarin.AndroidX.ViewPager2",
+   "version": "1.1.0.8",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "1622f664ec81141d1a8b904d97fa4fba2e297ace93d1be281a4008fa51061d29"
+  },
+  {
+   "id": "Xamarin.AndroidX.Window",
+   "version": "1.4.0.1",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "0130de12b014482fb584682a365dbad1c23eb5a8c92380cbb556c35b7e6c7f73"
+  },
+  {
+   "id": "Xamarin.AndroidX.Window.WindowCore",
+   "version": "1.4.0.1",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "3a2ce53f16d9d632d235563db8a19eebaf87a8879530c25689a0b36971c6065b"
+  },
+  {
+   "id": "Xamarin.AndroidX.Window.WindowCore.Jvm",
+   "version": "1.4.0.1",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "5c7b589fa6e7b47b60fde0f4b28071d09b4a247bf7ecdf4b1876563a372a945d"
+  },
+  {
+   "id": "Xamarin.Google.Android.Material",
+   "version": "1.12.0.5",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "52c9e468d6fa8e85127dfd8b5ea1dd32a0c2ca28d2a950973611bd9c59b995cb"
+  },
+  {
+   "id": "Xamarin.Google.Code.FindBugs.JSR305",
+   "version": "3.0.2.21",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "16f495a8015ae747355d217ed146e76ff1b3cf24d7acbd91e6cb2733827fc9b6"
+  },
+  {
+   "id": "Xamarin.Google.Crypto.Tink.Android",
+   "version": "1.18.0.1",
+   "licences": [
+    "Apache License, Version 2.0"
+   ],
+   "sha256": "0b52c085f24107d12fdd9655bf9bd655b3b3b316690f187383902f92f5724fc0"
+  },
+  {
+   "id": "Xamarin.Google.ErrorProne.Annotations",
+   "version": "2.41.0.1",
+   "licences": [
+    "Apache 2.0"
+   ],
+   "sha256": "94a3604a8cb2531695da893168c2bbb05942a541cdcdb9dd0200b4054f4465fb"
+  },
+  {
+   "id": "Xamarin.Google.Guava.ListenableFuture",
+   "version": "1.0.0.29",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "cd98a727bfa04fe8aec8707622f1199b26ead25a99663e2526d2fc37d4ac1208"
+  },
+  {
+   "id": "Xamarin.Jetbrains.Annotations",
+   "version": "26.0.2.3",
+   "licences": [
+    "The Apache Software License, Version 2.0"
+   ],
+   "sha256": "6311c3d3a9d4653a98a63324314492ebde4dfda6afacc370cd43c2d22ab3d5e2"
+  },
+  {
+   "id": "Xamarin.JSpecify",
+   "version": "1.0.0.4",
+   "licences": [
+    "The Apache License, Version 2.0"
+   ],
+   "sha256": "8d4200cc4a760add15ad7a2322a01cbfa14700d2196605f80fd343db49863bc8"
+  },
+  {
+   "id": "Xamarin.Kotlin.StdLib",
+   "version": "2.2.0.1",
+   "licences": [
+    "The Apache License, Version 2.0"
+   ],
+   "sha256": "630c8de10d460448105b2aaad3db93765045bb76e43b534f2e66ed6937aca7ec"
+  },
+  {
+   "id": "Xamarin.KotlinX.Coroutines.Android",
+   "version": "1.10.2.1",
+   "licences": [
+    "Apache-2.0"
+   ],
+   "sha256": "fd3311a992bec300d6b292f9a5ce65f40411f85508e6bbf1025bcffe446156ba"
+  },
+  {
+   "id": "Xamarin.KotlinX.Coroutines.Core",
+   "version": "1.10.2.1",
+   "licences": [
+    "Apache-2.0"
+   ],
+   "sha256": "775192720e6d605cb796011fd47a56fb419b3d7d00555ca9bc4db0c0e925264a"
+  },
+  {
+   "id": "Xamarin.KotlinX.Coroutines.Core.Jvm",
+   "version": "1.10.2.1",
+   "licences": [
+    "Apache-2.0"
+   ],
+   "sha256": "ef1af77b570758da40331116c6a9e54dd87bb8dc3f51345f9c13d6b0d60b8c9c"
+  },
+  {
+   "id": "Xamarin.KotlinX.Serialization.Core",
+   "version": "1.9.0.1",
+   "licences": [
+    "Apache-2.0"
+   ],
+   "sha256": "5d109a345d6de5edf688833e08e2f0daef56bc80124de52817a9fd5ac895844d"
+  },
+  {
+   "id": "Xamarin.KotlinX.Serialization.Core.Jvm",
+   "version": "1.9.0.1",
+   "licences": [
+    "Apache-2.0"
+   ],
+   "sha256": "147f21396ab56e911f76d229ce64a5dc3161eb20d801500a2109f17f89a0480a"
+  }
+ ]
+}
