@@ -3,10 +3,10 @@
   Permissions are deliberately minimal (Play data-safety: the app collects nothing).
   Files arrive only through the Storage Access Framework or Open-with/Share intents, which
   grant per-file access — no storage permission is requested.
-  INTERNET / Wi-Fi multicast are NOT declared yet: they belong to network printing, whose
-  design is waiting on Arun (docs/android/DECISIONS.md, A-04).
+  No INTERNET either: printing goes through Android's own print framework (A-04 (a)).
 -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          xmlns:tools="http://schemas.android.com/tools">
   <application
       android:label="Chuvadi Reader"
       android:icon="@mipmap/appicon"
@@ -21,6 +21,19 @@
         android:authorities="${applicationId}.files"
         android:exported="false"
         android:grantUriPermissions="true" />
+
+    <!--
+      AT-02: MAUI Essentials declares these for features the app doesn't use (web sign-in, its own
+      file provider, connectivity / battery / energy-saver monitoring). Removed from the shipped
+      manifest; Share and Open use SharedFileProvider and the Storage Access Framework. ci/manifest-check.sh
+      fails the build if any comes back.
+    -->
+    <activity android:name="crc6468b6408a11370c2f.WebAuthenticatorIntermediateActivity" tools:node="remove" />
+    <activity android:name="crc64ba438d8f48cf7e75.IntermediateActivity" tools:node="remove" />
+    <provider android:name="microsoft.maui.essentials.fileProvider" tools:node="remove" />
+    <receiver android:name="crc64e53d2f592022988e.ConnectivityBroadcastReceiver" tools:node="remove" />
+    <receiver android:name="crc640a8d9a12ddbf2cf2.BatteryBroadcastReceiver" tools:node="remove" />
+    <receiver android:name="crc640a8d9a12ddbf2cf2.EnergySaverBroadcastReceiver" tools:node="remove" />
   </application>
   <!-- Lets "Open" list other apps that can show a document when one is shared out. -->
   <queries>

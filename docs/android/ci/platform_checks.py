@@ -703,6 +703,80 @@ check("Home wording says open, not drop (D-89 B, DropFiles false)",
        "openLines": re.findall(r"[^\n]*\bOpen\b[^\n]*", home_text)[:5]})
 
 
+# ── 7b. AT-07: no private cache path in anything shown or read aloud ───────
+# Home is showing, with the documents opened above as tabs, cards and recent rows. Every title,
+# accessible name and visible text must name the document, never the working copy in the app's cache.
+LABELS_JS = r"""
+(() => {
+  const leak = v => /\/data\/|\/cache\/work|in\.chuvadi\.reader/.test(v || '');
+  const sel = '.rtab, .rcard, .rrow, .prow, .ph-tab, .lib-path, .libp-folder, .w-path, [title], [aria-label]';
+  const all = [...document.querySelectorAll(sel)];
+  const leaks = all.flatMap(e => [e.getAttribute('title'), e.getAttribute('aria-label')].filter(leak)
+                                   .map(v => e.className + ': ' + v));
+  if (leak(document.body.innerText)) leaks.push('text: ' + document.body.innerText.match(/[^\n]*(\/data\/|cache\/work)[^\n]*/)[0]);
+  const named = [...document.querySelectorAll('.rcard, .rrow, .rtab')].map(e => e.getAttribute('title')).filter(Boolean);
+  return { leaks: leaks.slice(0, 8), named: named.slice(0, 6), count: named.length };
+})()
+"""
+try:
+    labels = cdp.evaluate(LABELS_JS) or {}
+except SystemExit as e:
+    labels = {"error": str(e)}
+check("no private cache path in tab, card or row titles, accessible names or text (AT-07)",
+      "error" not in labels and labels.get("count", 0) > 0 and not labels.get("leaks")
+      and all(re.search(r"\.(pdf|docx|xlsx)$", n, re.I) for n in labels.get("named", [])), labels)
+
+
+# ── 7c. AT-08: the status and navigation bar areas follow the theme ──────────
+def screen_rgba():
+    """Raw screencap: a 12- or 16-byte header (width, height, format[, colour space]) then RGBA rows."""
+    raw = subprocess.run(["adb", "exec-out", "screencap"], capture_output=True).stdout
+    w, h = int.from_bytes(raw[0:4], "little"), int.from_bytes(raw[4:8], "little")
+    return w, h, raw[len(raw) - w * h * 4:]
+
+
+def row_colour(img, y):
+    """The most common colour along one pixel row (icons, the camera cut-out and the gesture handle are small)."""
+    w, h, px = img
+    counts = {}
+    for x in range(0, w, 3):
+        i = (y * w + x) * 4
+        c = (px[i], px[i + 1], px[i + 2])
+        counts[c] = counts.get(c, 0) + 1
+    return max(counts, key=counts.get)
+
+
+def light_icons_requested():
+    """From the window manager: does our window ask for dark (light-bar) status icons? None if not shown."""
+    out = adb("shell", "dumpsys", "window", "windows")
+    block = next((b for b in re.split(r"\n  Window #", out) if PKG in b.split("\n", 1)[0]), "")
+    m = re.search(r"appearance=([A-Z_|]+|0)", block)
+    return None if not m else "LIGHT_STATUS_BARS" in m.group(1)
+
+
+# tokens.css --chvd-surface-hi: the Ui's bars that meet the screen edges.
+BAR = {"Cream paper": (0xFB, 0xF7, 0xEC), "Night paper": (0x24, 0x1B, 0x15), "Palm leaf": (0xF6, 0xF2, 0xE1),
+       "Indigo ink": (0xF8, 0xF9, 0xFC), "High contrast": (0xFF, 0xFF, 0xFF)}
+tap_el('button[title="Settings"]')
+wait_for(lambda s: (s.get("route") or "").startswith("/settings"), 15, "Settings")
+tap_el(".snav-item", "Appearance")  # the phone shows the section list first (D-45); the tablet already shows it
+time.sleep(1.5)
+bars = {}
+for name in ["Night paper", "Palm leaf", "Indigo ink", "High contrast", "Cream paper"]:
+    tap_el(f'button.tc[title="Use {name}"]')
+    time.sleep(1.5)
+    img = screen_rgba()
+    top, bottom = row_colour(img, 4), row_colour(img, img[1] - 3)
+    shot("p10c-theme-" + name.split()[0].lower())
+    ok = all(abs(a - b) <= 6 for c in (top, bottom) for a, b in zip(c, BAR[name]))
+    light = light_icons_requested()
+    icons_ok = light is None or light == (name != "Night paper")
+    bars[name] = {"top": "#%02x%02x%02x" % top, "bottom": "#%02x%02x%02x" % bottom,
+                  "want": "#%02x%02x%02x" % BAR[name], "lightBarIcons": light, "pass": ok and icons_ok}
+check("status and navigation bar areas take each theme's bar colour, light icons on Night paper (AT-08)",
+      all(v["pass"] for v in bars.values()), bars)
+
+
 # ── 8. Split screen ──────────────────────────────────────────────────────────
 def task_id():
     out = adb("shell", "dumpsys", "activity", "activities")

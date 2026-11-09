@@ -621,3 +621,23 @@ same screen; no crash), smoke pass. With round 6 (API 36 phone and tablet, all c
   double-tap read the fit from the page, so they will show it.
 - Smoke check, run 42518163924 (phone API 36, `suite=smoke`): build pass, smoke pass on 839d39d + 95b9d79.
 - Android Test chat opened (`platform/android-test`, ee4f66c): BUGS.md has none filed yet (its round 1 running).
+
+### 54. Android Test bugs AT-02, AT-07, AT-08; Release on the emulators; rebase onto 42461ba — coordinator, 9 Nov 05:55 IST
+- Composition: Foundation `42461ba` + Mobile UI `1f4b4c3` merged (clean). My copy of mobile-ui-hooks-5 dropped (Foundation
+  has it; compose.sh no longer applies Mobile UI hook patches). P-06 and P-07 moved to `proposal/applied/`.
+- **AT-02** (unused MAUI Essentials manifest entries): `tools:node="remove"` for the web-sign-in activities, Essentials'
+  file provider and the connectivity / battery / energy-saver receivers. Test: `ci/manifest-check.sh` on the Release
+  .apk (aapt2): those gone, our provider, activity and Open-with / Share filters present, no permissions requested.
+  Now a build-job step. Sandbox Release: 14/14 pass. (AndroidX.Browser's `KeepAliveService` stays with AT-01.)
+- **AT-07** (cache path as tab / card / row labels): new kit seam proposed, P-08 `IPathLabels` (default: the path, so
+  desktops are unchanged), used in the 13 places the Ui shows or reads out a path; `AndroidPathLabels` answers from the
+  document links (device storage: `Download/report.pdf`; other providers: the name; picked folders: folder + place).
+  The composition applies P-08 until Foundation decides. Test: `platform_checks.py` "no private cache path in tab, card
+  or row titles, accessible names or text"; Hosting test `Default_path_labels_show_the_path`.
+- **AT-08** (bars cream in every theme): `SystemBars` now follows `ThemeService.Changed` while the app runs (it read the
+  theme only at start), with the colour of the Ui's edge bars (`--chvd-surface-hi`) and light icons on Night paper. Test:
+  `platform_checks.py` sets each theme in Settings › Appearance and reads the top and bottom pixel rows of a raw
+  screencap, plus the window's requested bar appearance.
+- **Release on the emulators:** after the Debug suites (and in `suite=smoke`), `emulator-tests.sh` uninstalls and runs
+  the smoke test on the Release .apk (it carries x86_64). AT-03 (Release crash from trimming) is Foundation's.
+- Sandbox: Android Debug and Release `-warnaserror` 0 warnings; Hosting 60, MobileUi 16, WebUi 39 tests pass.

@@ -87,8 +87,8 @@ Move `theme.js` into `ChuvadiReader.Ui/wwwroot/js/` and the host service registr
 ## P-05 — withdrawn (6 Nov)
 A-10 is solved host-side through `IAccount` (Foundation's `UserProfileService` reads it first); no Core edit.
 
-## P-06 Back closes the open card — for Foundation's combined patch (coordinator decision (a), 7 Nov)
-Patch: [`proposal/P-06-back-closes-card.patch`](proposal/P-06-back-closes-card.patch), against
+## P-06 Back closes the open card — for Foundation's combined patch (coordinator decision (a), 7 Nov) — **taken by Foundation**
+Patch: [`proposal/applied/P-06-back-closes-card.patch`](proposal/applied/P-06-back-closes-card.patch) (in Foundation), against
 platform/foundation **2fafb60**; applies cleanly to 2fafb60 and to **615afde** (third combined patch). Files: `Ui/Pages/Reader.razor` (+3 lines:
 inject `IAppLifecycle`, subscribe, unsubscribe) and `Ui/Pages/Reader.Shell.cs` (+28: `OnBackRequested`).
 
@@ -109,7 +109,7 @@ that consumes.
   the desktop). Same pattern, a few lines each.
 
 ## P-07 Open from another app: no duplicate "/reader" history entry — **taken by Foundation (seventh combined patch part 2a, 9fbed93)**
-Patch: [`proposal/P-07-no-duplicate-reader-history.patch`](proposal/P-07-no-duplicate-reader-history.patch), against
+Patch: [`proposal/applied/P-07-no-duplicate-reader-history.patch`](proposal/applied/P-07-no-duplicate-reader-history.patch), against
 platform/foundation **8098695**; one file, `Ui/Layout/MainLayout.razor` (+9 −1).
 
 `OnOpenRequested` navigates to `/reader` on every open request, even when the Reader is already showing (it takes the
@@ -122,3 +122,38 @@ navigates only when the Reader isn't the current page.
 - **Against:** one more condition in MainLayout.
 - **Verified (sandbox):** Platforms `-warnaserror` 0 warnings; tests 171 + 54 + 32 + 16 pass. On device: round 6
   (the composition applies Android's pending proposals), check "back steps back … with no dead presses".
+
+## P-08 Paths shown to the person go through a host seam, `IPathLabels` (AT-07) — **for the coordinator to decide**
+Patch: [`proposal/P-08-path-labels.patch`](proposal/P-08-path-labels.patch), against platform/foundation **42461ba** +
+platform/mobile-ui **1f4b4c3** (it touches Mobile UI's `PhoneShell.razor`); 10 files, +52 −13.
+
+AT-07: on Android every document is a working copy in the app's private cache, and the Ui uses the path as the
+`title` (tooltip, and the accessible name TalkBack reads) of tablet tabs, phone tabs, Home's cards and rows and pinned
+rows, Merge and Split sources, and shows it as text for the Library folder, each Library row, the watched folder and
+Settings › Library. So TalkBack reads `/data/user/0/in.chuvadi.reader/cache/work/open/1429e6d5…/report.pdf`.
+
+The patch adds one kit seam in `ChuvadiReader.Platform/Services.cs`:
+```csharp
+public interface IPathLabels { string Describe(string? path); }      // the person-facing label for a path
+public sealed class PlainPathLabels : IPathLabels { … path ?? "" }   // kit default: the path itself
+```
+registered in the kit's `SeamDefaults`, and uses `PathLabels.Describe(…)` in those 13 places. Android's
+`AndroidPathLabels` (host, already on `platform/android`) answers from the document links: a file from the device's
+storage shows its place there (`Download/report.pdf`), a file from another app or a cloud provider shows its name, a
+file inside a picked folder shows that folder and its place in it.
+
+Options:
+- **(a) This seam (recommended).** Windows, macOS, Linux and Web keep showing the real path exactly as now (default
+  `PlainPathLabels`); Android shows where the file really is. *For:* one rule for every place a path is shown, and
+  later ones get it by using the same call; no behaviour change on any desktop. *Against:* a new kit interface and 13
+  call sites to keep using it (a missed one shows the cache path again on Android only; the emulator check below
+  catches tabs and Home).
+- (b) Ui uses the file name instead of the path for these titles, on every platform. *For:* no new interface.
+  *Against:* Windows loses the full-path tooltip it has today (a design change), and the visible Library and
+  watched-folder paths would still need something for Android.
+- (c) Host only: give working copies a readable path. *Against:* still an app-private path, and the name is already
+  the last part of it; doesn't fix what TalkBack reads.
+
+- **Verified (sandbox):** composition 42461ba + 1f4b4c3 + this patch: Android host Debug `-warnaserror` 0 warnings;
+  Hosting tests 60 pass (new `Default_path_labels_show_the_path`), MobileUi 16 and WebUi 39 pass. On device:
+  `platform_checks.py` "no private cache path in tab, card or row titles" (AT-07).

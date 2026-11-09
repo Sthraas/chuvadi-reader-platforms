@@ -1,0 +1,265 @@
+diff --git a/src/ChuvadiReader.Hosting/ChuvadiReaderServices.cs b/src/ChuvadiReader.Hosting/ChuvadiReaderServices.cs
+index b223008..2f49d9f 100644
+--- a/src/ChuvadiReader.Hosting/ChuvadiReaderServices.cs
++++ b/src/ChuvadiReader.Hosting/ChuvadiReaderServices.cs
+@@ -106,5 +106,6 @@ public static class ChuvadiReaderServices
+         (typeof(IAccount), typeof(LocalAccount)),
+         (typeof(IAppLifecycle), typeof(NoAppLifecycle)),
+         (typeof(IFileManager), typeof(NoFileManager)),
++        (typeof(IPathLabels), typeof(PlainPathLabels)),
+     };
+ }
+diff --git a/src/ChuvadiReader.Platform/Services.cs b/src/ChuvadiReader.Platform/Services.cs
+index 1d84f5c..39acc42 100644
+--- a/src/ChuvadiReader.Platform/Services.cs
++++ b/src/ChuvadiReader.Platform/Services.cs
+@@ -59,6 +59,24 @@ public sealed class NoFileWriteBack : IFileWriteBack
+         Task.FromResult(WriteBackResult.NotNeeded);
+ }
+ 
++/// <summary>
++/// How a file or folder path is shown to the person: tooltips, accessible names (TalkBack reads them),
++/// and the Library and watched-folder paths. Desktop paths are the real files, so they show as they
++/// are; on Android every document is a working copy in the app's private cache, so the host shows
++/// the document's own name and where it came from instead (AT-07).
++/// </summary>
++public interface IPathLabels
++{
++    /// <summary>The person-facing label for a path; empty for a null or empty path.</summary>
++    string Describe(string? path);
++}
++
++/// <summary>Default: the path itself (Windows, macOS, Linux, Web).</summary>
++public sealed class PlainPathLabels : IPathLabels
++{
++    public string Describe(string? path) => path ?? string.Empty;
++}
++
+ /// <summary>Folders the app uses. Replaces direct use of Environment.SpecialFolder in Core and Ui.</summary>
+ public interface IAppPaths
+ {
+diff --git a/src/ChuvadiReader.Ui/Components/Platform/Phone/PhoneShell.razor b/src/ChuvadiReader.Ui/Components/Platform/Phone/PhoneShell.razor
+index 2713aa8..a938673 100644
+--- a/src/ChuvadiReader.Ui/Components/Platform/Phone/PhoneShell.razor
++++ b/src/ChuvadiReader.Ui/Components/Platform/Phone/PhoneShell.razor
+@@ -6,6 +6,7 @@
+ @inject IAppLifecycle Life
+ @inject UserProfileService Profile
+ @inject IJSRuntime JS
++@inject ChuvadiReader.Platform.IPathLabels PathLabels
+ 
+ @*
+     Android phone shell — Portal & Android 12g-12j. Rendered by MainLayout in place of the top bar,
+@@ -139,7 +140,7 @@
+                 var on = tab.Id == Tabs.Active?.Id;
+                 <div class="ph-row ph-tab @(on ? "on" : null)" @key="tab.Id">
+                     <button class="ph-tab-b" @onclick="() => Then(() => SwitchTab is null ? Task.CompletedTask : SwitchTab(tab.Id))"
+-                            aria-current="@(on ? "true" : null)" title="@tab.Path">
++                            aria-current="@(on ? "true" : null)" title="@PathLabels.Describe(tab.Path)">
+                         <Icon Name="@tab.Format.IconName()" Size="18" />
+                         <span class="ph-row-l">@tab.FileName</span>
+                         <span class="ph-row-v">@(tab.IsLoading ? "opening…" : tab.Error is not null ? "couldn't open" : $"p {tab.CurrentPage}")</span>
+diff --git a/src/ChuvadiReader.Ui/Components/Settings/LibrarySection.razor b/src/ChuvadiReader.Ui/Components/Settings/LibrarySection.razor
+index bbd0cb9..1169dbd 100644
+--- a/src/ChuvadiReader.Ui/Components/Settings/LibrarySection.razor
++++ b/src/ChuvadiReader.Ui/Components/Settings/LibrarySection.razor
+@@ -5,6 +5,7 @@
+ @inject LibraryService Lib
+ @inject IFilePicker Picker
+ @inject ChuvadiReader.Platform.IPlatformInfo Platform
++@inject ChuvadiReader.Platform.IPathLabels PathLabels
+ 
+ <SettingsSection Title="@SectionTitle" Sub="Where Chuvadi looks for documents.">
+     @if (Platform.Capabilities.WatchFolders)
+@@ -25,7 +26,7 @@
+ 
+     <SettingsCard Title="Watched folders">
+         <SettingRow Label="Watched folder" Hint="@($"{Watched.DocumentCount} documents found · scanned {Relative(Watched.LastScanned)}")" Stack="true">
+-            <ValueChip Text="@(Watched.FolderPath ?? "—")" Wrap="true" />
++            <ValueChip Text="@(Watched.FolderPath is { } watched ? PathLabels.Describe(watched) : "—")" Wrap="true" />
+             <RowButton IconName="folder" OnClick="ChangeWatched">Change…</RowButton>
+         </SettingRow>
+         <SettingRow Soon="true" SoonText="Coming soon — one watched folder for now">
+diff --git a/src/ChuvadiReader.Ui/Layout/MainLayout.razor b/src/ChuvadiReader.Ui/Layout/MainLayout.razor
+index 966983b..9f23b81 100644
+--- a/src/ChuvadiReader.Ui/Layout/MainLayout.razor
++++ b/src/ChuvadiReader.Ui/Layout/MainLayout.razor
+@@ -16,6 +16,7 @@
+ @inject BenchService Bench
+ @inject UserProfileService Profile
+ @inject ChuvadiReader.Platform.IPlatformInfo Platform
++@inject ChuvadiReader.Platform.IPathLabels PathLabels
+ 
+ @*
+     D-10 shell. One thin 40 px top bar (wordmark · tabs · ‹ n / N › · Document ▾ · Ctrl K ·
+@@ -79,7 +80,7 @@
+                 {
+                     var isActive = t.Id == Tabs.Active?.Id && OnDocView;
+                     <div class="rtab @(isActive ? "active" : null) fmt-@t.Format.ToString().ToLowerInvariant()" @key="t.Id"
+-                         data-tab-id="@t.Id" @onclick="() => SwitchTab(t.Id)" title="@t.Path"
++                         data-tab-id="@t.Id" @onclick="() => SwitchTab(t.Id)" title="@PathLabels.Describe(t.Path)"
+                          @onmousedown:stopPropagation="true" @ondblclick:stopPropagation="true"
+                          @onmouseup="(e) => OnTabMouseUp(e, t.Id)">
+                         <span class="rtab-ic"><Icon Name="@t.Format.IconName()" Size="12" /></span>
+diff --git a/src/ChuvadiReader.Ui/Pages/Dashboard.razor b/src/ChuvadiReader.Ui/Pages/Dashboard.razor
+index f67007c..5e9364d 100644
+--- a/src/ChuvadiReader.Ui/Pages/Dashboard.razor
++++ b/src/ChuvadiReader.Ui/Pages/Dashboard.razor
+@@ -14,6 +14,7 @@
+ @inject SaveFolderService SaveFolders
+ @inject PreferencesService Prefs
+ @inject ChuvadiReader.Platform.IPlatformInfo Platform
++@inject ChuvadiReader.Platform.IPathLabels PathLabels
+ 
+ <PageTitle>Chuvadi · Home</PageTitle>
+ 
+@@ -108,7 +109,7 @@
+                 <div class="resume">
+                     @foreach (var t in ResumeTabs)
+                     {
+-                        <button type="button" class="rcard" @key="t.Id" @onclick="() => OpenTab(t)" title="@t.Path">
++                        <button type="button" class="rcard" @key="t.Id" @onclick="() => OpenTab(t)" title="@PathLabels.Describe(t.Path)">
+                             <span class="mini-page" aria-hidden="true">
+                                 <span class="mp-head fmt-@FmtClass(t.Format)"></span>
+                                 <span class="mp-line"></span><span class="mp-line"></span><span class="mp-line short"></span>
+@@ -132,7 +133,7 @@
+                 <div class="recent">
+                     @foreach (var r in Recents.Items.Take(RecentCount))
+                     {
+-                        <button type="button" class="rrow" @onclick="() => OpenRecent(r)" title="@r.Path">
++                        <button type="button" class="rrow" @onclick="() => OpenRecent(r)" title="@PathLabels.Describe(r.Path)">
+                             <span class="r-ic fmt-@FmtClass(r.Format)"><Icon Name="@r.Format.IconName()" Size="16" /></span>
+                             <span class="r-name">@r.FileName</span>
+                             <span class="r-lock">
+@@ -183,7 +184,7 @@
+             {
+                 if (p.IsFolder)
+                 {
+-                    <div class="prow" title="@p.Path">
++                    <div class="prow" title="@PathLabels.Describe(p.Path)">
+                         <span class="p-ic folder"><Icon Name="folder" Size="17" /></span>
+                         <span class="p-name">@p.Name</span>
+                     </div>
+@@ -191,7 +192,7 @@
+                 else
+                 {
+                     var fmt = p.Format ?? DocumentFormat.Pdf;
+-                    <button type="button" class="prow" title="@p.Path" @onclick="() => OpenPinned(p)">
++                    <button type="button" class="prow" title="@PathLabels.Describe(p.Path)" @onclick="() => OpenPinned(p)">
+                         <span class="p-ic fmt-@FmtClass(fmt)"><Icon Name="@fmt.IconName()" Size="17" /></span>
+                         <span class="p-name">@p.Name</span>
+                     </button>
+@@ -204,7 +205,7 @@
+                 <Icon Name="library" Size="12" /> Library
+                 @if (Platform.Capabilities.RevealInFolder)
+                 {
+-                <span class="shelf-meta" title="@Lib.FolderPath">@ShortFolder(Lib.FolderPath) · @(Lib.IsScanning ? "scanning…" : $"{Lib.Entries.Count} pdf{(Lib.Entries.Count == 1 ? "" : "s")}")</span>
++                <span class="shelf-meta" title="@PathLabels.Describe(Lib.FolderPath)">@ShortFolder(Lib.FolderPath) · @(Lib.IsScanning ? "scanning…" : $"{Lib.Entries.Count} pdf{(Lib.Entries.Count == 1 ? "" : "s")}")</span>
+                 }
+                 else
+                 {
+@@ -237,7 +238,7 @@
+         {
+         <section class="watch">
+             <h2 class="eye"><Icon Name="folder" Size="12" /> Watched folder</h2>
+-            <span class="w-path" title="@Watched.FolderPath">@Watched.FolderPath</span>
++            <span class="w-path" title="@PathLabels.Describe(Watched.FolderPath)">@PathLabels.Describe(Watched.FolderPath)</span>
+             <span class="w-sub">@Watched.DocumentCount documents found · scanned @HomeFormat.Relative(Watched.LastScanned)</span>
+             <span class="w-actions">
+                 <button type="button" class="mini accent" @onclick="ChangeWatched">change</button>
+diff --git a/src/ChuvadiReader.Ui/Pages/Library.razor b/src/ChuvadiReader.Ui/Pages/Library.razor
+index a03495a..a1828af 100644
+--- a/src/ChuvadiReader.Ui/Pages/Library.razor
++++ b/src/ChuvadiReader.Ui/Pages/Library.razor
+@@ -9,6 +9,7 @@
+ @inject OpenDocumentService OpenDoc
+ @inject RecentFilesService Recents
+ @inject NavigationManager Nav
++@inject ChuvadiReader.Platform.IPathLabels PathLabels
+ @implements IDisposable
+ 
+ <PageTitle>Chuvadi · Library</PageTitle>
+@@ -18,7 +19,7 @@
+         <span class="libp-title">Library</span>
+         @if (Platform.Capabilities.RevealInFolder)
+         {
+-        <span class="libp-folder">@Lib.FolderPath</span>
++        <span class="libp-folder">@PathLabels.Describe(Lib.FolderPath)</span>
+         }
+         <span class="libp-count">@(Lib.IsScanning ? "scanning…" : $"{Lib.Entries.Count} pdf{(Lib.Entries.Count == 1 ? "" : "s")}")</span>
+     </div>
+@@ -116,7 +117,7 @@
+                         <input type="checkbox" class="libcheck" checked="@_sel.Contains(e.Path)" @onchange="() => ToggleSel(e.Path)" />
+                         <button class="lib-name" @onclick="() => OpenEntry(e)">
+                             <span class="lib-name-row"><Icon Name="file-pdf" Size="14" /> @e.Name</span>
+-                            <span class="lib-path" title="@e.Path">@e.Path</span>
++                            <span class="lib-path" title="@PathLabels.Describe(e.Path)">@PathLabels.Describe(e.Path)</span>
+                         </button>
+                         <div class="lib-tags">
+                             @if (e.Category is not null)
+diff --git a/src/ChuvadiReader.Ui/Pages/Merge.razor b/src/ChuvadiReader.Ui/Pages/Merge.razor
+index fcf7a87..cdeb88d 100644
+--- a/src/ChuvadiReader.Ui/Pages/Merge.razor
++++ b/src/ChuvadiReader.Ui/Pages/Merge.razor
+@@ -5,6 +5,7 @@
+ @inject OpenDocumentService OpenDoc
+ @inject NavigationManager Nav
+ @inject ChuvadiReader.Platform.IFileWriteBack WriteBack
++@inject ChuvadiReader.Platform.IPathLabels PathLabels
+ 
+ <PageTitle>Chuvadi · Merge</PageTitle>
+ 
+@@ -37,7 +38,7 @@
+                 <li class="mrow" @key="entry.Path">
+                     <span class="mrow-n">@(idx + 1)</span>
+                     <Icon Name="file-pdf" Size="16" />
+-                    <span class="mrow-name" title="@entry.Path">@entry.FileName</span>
++                    <span class="mrow-name" title="@PathLabels.Describe(entry.Path)">@entry.FileName</span>
+                     <span class="mrow-tools">
+                         <button class="mico" @onclick="() => MoveUp(idx)" disabled="@(idx == 0)" aria-label="Move up"><Icon Name="chevron-up" Size="14" /></button>
+                         <button class="mico" @onclick="() => MoveDown(idx)" disabled="@(idx == _entries.Count - 1)" aria-label="Move down"><Icon Name="chevron-down" Size="14" /></button>
+diff --git a/src/ChuvadiReader.Ui/Pages/Split.razor b/src/ChuvadiReader.Ui/Pages/Split.razor
+index 92db8f5..63ef9f2 100644
+--- a/src/ChuvadiReader.Ui/Pages/Split.razor
++++ b/src/ChuvadiReader.Ui/Pages/Split.razor
+@@ -6,6 +6,7 @@
+ @inject NavigationManager Nav
+ @inject IAppStorage Storage
+ @inject ChuvadiReader.Platform.IFileWriteBack WriteBack
++@inject ChuvadiReader.Platform.IPathLabels PathLabels
+ 
+ <PageTitle>Chuvadi · Split</PageTitle>
+ 
+@@ -31,7 +32,7 @@
+     {
+         <div class="ssource">
+             <Icon Name="file-pdf" Size="16" />
+-            <span class="ssource-name" title="@_sourcePath">@_sourceName</span>
++            <span class="ssource-name" title="@PathLabels.Describe(_sourcePath)">@_sourceName</span>
+             <span class="ssource-pages">@_pageCount pages</span>
+             <button class="slink" @onclick="ClearSource">change</button>
+         </div>
+diff --git a/tests/ChuvadiReader.Hosting.Tests/HostingTests.cs b/tests/ChuvadiReader.Hosting.Tests/HostingTests.cs
+index f6adf60..93c19c0 100644
+--- a/tests/ChuvadiReader.Hosting.Tests/HostingTests.cs
++++ b/tests/ChuvadiReader.Hosting.Tests/HostingTests.cs
+@@ -68,6 +68,19 @@ public sealed class HostingTests
+         Assert.IsType<TestWriteBack>(sp.GetRequiredService<IFileWriteBack>());
+     }
+ 
++    /// <summary>AT-07: desktop hosts keep showing real paths; the default label is the path itself.</summary>
++    [Fact]
++    public void Default_path_labels_show_the_path()
++    {
++        var services = new ServiceCollection();
++        services.AddChuvadiReader(AppStateLifetime.Process);
++        using var sp = services.BuildServiceProvider();
++        var labels = sp.GetRequiredService<IPathLabels>();
++        Assert.IsType<PlainPathLabels>(labels);
++        Assert.Equal(@"C:\Users\a\Documents\report.pdf", labels.Describe(@"C:\Users\a\Documents\report.pdf"));
++        Assert.Equal(string.Empty, labels.Describe(null));
++    }
++
+     private sealed class TestWriteBack : IFileWriteBack
+     {
+         public bool IsNeeded => true;

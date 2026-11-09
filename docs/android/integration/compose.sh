@@ -3,8 +3,7 @@
 #   1. a checkout of platform/foundation at FOUNDATION_REF (Core, Ui with the combined hooks, kit)
 #   2. + platform/mobile-ui at MOBILEUI_REF, merged in (not committed). The Mobile UI branch is based on
 #        an earlier Foundation; the merge brings its phone components, mobile.css and mobile.js.
-#   3. + the Mobile UI chat's pending hook patch (docs/mobile-ui/proposal/mobile-ui-hooks-*.patch, the
-#        highest number). PENDING Foundation's next combined patch; skipped when already applied.
+#   (Mobile UI's hook patches are Foundation's to take into its combined patches; not applied here — coordinator, 9 Nov.)
 #   4. + Android's pending proposals (docs/android/proposal/*.patch), PENDING Foundation's combined patch
 #   5. + this branch's src/ChuvadiReader.Android
 #
@@ -20,18 +19,6 @@ echo "Merge platform/mobile-ui $MOBILEUI_REF into Foundation $("${G[@]}" rev-par
 "${G[@]}" cat-file -e "$MOBILEUI_REF^{commit}" 2>/dev/null || "${G[@]}" fetch -q origin "$MOBILEUI_REF"
 "${G[@]}" merge --no-commit --no-ff "$MOBILEUI_REF" >/dev/null \
     || { echo "platform/mobile-ui does not merge cleanly into Foundation"; "${G[@]}" diff --name-only --diff-filter=U; exit 1; }
-
-PATCH="$(ls "$READER"/docs/mobile-ui/proposal/mobile-ui-hooks-*.patch 2>/dev/null | sort -V | tail -1 || true)"
-if [ -n "$PATCH" ]; then
-    if "${G[@]}" apply --check --whitespace=nowarn "$PATCH" 2>/dev/null; then
-        echo "Mobile UI hooks: $(basename "$PATCH")"
-        "${G[@]}" apply --whitespace=nowarn "$PATCH"
-    elif "${G[@]}" apply --check --reverse --whitespace=nowarn "$PATCH" 2>/dev/null; then
-        echo "Mobile UI hooks already in Foundation: $(basename "$PATCH")"
-    else
-        echo "$(basename "$PATCH") does not apply"; exit 1
-    fi
-fi
 
 # 4. Android's own pending proposals for Foundation's combined patch (docs/android/proposal/*.patch),
 #    so the emulators test them; skipped once Foundation has applied them.

@@ -1,8 +1,8 @@
 name: Android
 
 # Builds the Android test composition (docs/android/integration/compose.sh): a pinned snapshot of
-# platform/foundation + a pinned platform/mobile-ui merged in + the Mobile UI chat's pending hook
-# patch + this branch's Android host.
+# platform/foundation + a pinned platform/mobile-ui merged in + Android's pending proposals + this
+# branch's Android host.
 # Produces the Play Store .aab plus an .apk, then on Android emulators — phone and tablet, API 35
 # (the minimum) and API 36 (the latest) — runs the smoke test and real touch-gesture checks.
 #
@@ -26,10 +26,10 @@ on:
         options: [full, smoke]
 
 env:
-  # platform/foundation: eighth combined patch (Test chats' shared fixes, H-14 phone Fit width, U-17), P-06, P-07.
-  FOUNDATION_REF: 839d39d9b68fb6f1afa99d1375b00e1b6e03dff9
-  # platform/mobile-ui: D-112 Save at the tablet rail's foot, H-16 desk actions in the desk menu on touch (all hooks in Foundation).
-  MOBILEUI_REF: 95b9d799349c6e83d11d8ab77c8b81c219de4f7a
+  # platform/foundation: eleventh combined patch part 2 (D-137; Chuvadi.Docs 2.0.0, Chuvadi.Sheets 2.0.2), with Mobile UI's hooks-5.
+  FOUNDATION_REF: 42461ba5da431933bc21a501694c02c74fbab66b
+  # platform/mobile-ui: latest (9 Nov).
+  MOBILEUI_REF: 1f4b4c358ac472fa71b54486ad90ceb9e4b15d74
   DOTNET_NOLOGO: '1'
   DOTNET_CLI_TELEMETRY_OPTOUT: '1'
 
@@ -69,7 +69,7 @@ jobs:
           path: reader
           fetch-depth: 0
 
-      - name: Compose Foundation + Mobile UI (merged) + its hooks + Android host
+      - name: Compose Foundation + Mobile UI (merged) + Android proposals + Android host
         run: bash platforms/docs/android/integration/compose.sh reader ${{ env.MOBILEUI_REF }} platforms
 
       - uses: actions/setup-dotnet@v4
@@ -104,6 +104,10 @@ jobs:
           dotnet publish src/ChuvadiReader.Android/ChuvadiReader.Android.csproj
           -c Release -f net10.0-android --no-restore
           -p:AndroidSdkDirectory=$ANDROID_HOME
+
+      # AT-02: the shipped manifest declares only what the app uses, and asks for no permissions.
+      - name: Check the Release manifest
+        run: bash platforms/docs/android/ci/manifest-check.sh "$(find reader/src/ChuvadiReader.Android/bin/Release -name '*-Signed.apk' | head -1)"
 
       # Debug x86_64 .apk for the emulators.
       - name: Build Debug .apk for emulators (x86_64)
@@ -170,7 +174,8 @@ jobs:
             sed -i '/^hw.keyboard=/d' ~/.android/avd/test.avd/config.ini 2>/dev/null || true
             echo 'hw.keyboard=no' >> ~/.android/avd/test.avd/config.ini
             grep hw.keyboard ~/.android/avd/test.avd/config.ini
-          script: SUITE=${{ inputs.suite }} bash docs/android/ci/emulator-tests.sh out/chuvadi-reader-debug-x64.apk results/${{ matrix.device }}-api${{ matrix.api }}
+          # Debug for the checks (WebView DevTools), then the Release .apk people get: install, start, no crash.
+          script: SUITE=${{ inputs.suite }} bash docs/android/ci/emulator-tests.sh out/chuvadi-reader-debug-x64.apk results/${{ matrix.device }}-api${{ matrix.api }} out/chuvadi-reader-release.apk
 
       - uses: actions/upload-artifact@v4
         if: always()

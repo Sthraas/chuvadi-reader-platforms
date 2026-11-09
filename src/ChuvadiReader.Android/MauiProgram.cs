@@ -39,6 +39,7 @@ public static class MauiProgram
 
         builder.Services.AddSingleton<DocumentLinks>();
         builder.Services.AddSingleton<IFileWriteBack, AndroidFileWriteBack>();
+        builder.Services.AddSingleton<IPathLabels, AndroidPathLabels>();
         builder.Services.AddSingleton<DocumentImport>();
         builder.Services.AddSingleton<IFilePicker, AndroidFilePicker>();
 

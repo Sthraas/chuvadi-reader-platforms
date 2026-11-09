@@ -41,6 +41,27 @@ public sealed class DocumentLinks
         }
     }
 
+    /// <summary>The link of this path, or of the nearest folder above it that came from a folder picker.</summary>
+    public (string LocalPath, DocumentLink Link)? FindOwner(string localPath)
+    {
+        lock (_gate)
+        {
+            for (var path = Path.GetFullPath(localPath); !string.IsNullOrEmpty(path); path = Path.GetDirectoryName(path))
+            {
+                if (_links.TryGetValue(path, out var link) && (link.IsTree || path == Path.GetFullPath(localPath)))
+                {
+                    return (path, link);
+                }
+            }
+
+            return null;
+        }
+    }
+
+    /// <summary>True for a path inside the app's private working folder (working copies, never shown).</summary>
+    public bool IsWorkingCopy(string localPath)
+        => Path.GetFullPath(localPath).StartsWith(Path.GetFullPath(_workingRoot) + Path.DirectorySeparatorChar, StringComparison.Ordinal);
+
     public void Add(string localPath, AUri uri, bool isTree, bool persisted)
     {
         lock (_gate)
