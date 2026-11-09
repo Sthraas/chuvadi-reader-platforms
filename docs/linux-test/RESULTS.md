@@ -119,7 +119,7 @@ Findings
 | T5.1f | Stuck open blocks later opens | ❌ **B-10** |
 | T5.1g | Missing `document.xml` docx, not-a-zip xlsx | ✅ no crash; docx: clear message naming the missing part; ❌ xlsx: "Couldn't open this workbook: **EOCDNotFound**" — resource key (B-17) |
 | T5.2 | Encrypted RC4-40 / RC4-128 / AES-128 / AES-256 | ❌ **B-07** (can't enter a password); no crash |
-| T5.3 | 7.9 MB vector CAD PDF | 🔒 file not reachable from here — **needs Arun / the Reader chat's upload**. Stand-in: 1.6 MB, 120,000-stroke A3 drawing views and prints vector ✅ |
+| T5.3 | **7.9 MB vector CAD PDF** (Arun's KDMC LINAC site layout, attached 9 Nov 05:46; 8,294,223 bytes, 5 × A1, ~1.44 M path operators, 170 images, 38 fonts, produced by Chuvadi). **Not committed — the repo is public; no screenshots of it either.** Build e242d92 | ✅ opens and renders correctly (lines, hatching, labels crisp at 180 %); all 5 pages; zoom; no errors. Time from process start (UI-test build, incl. ~2.8 s driver launch): "Opening…" gone **6.0 s** warm / 6.6 s cold, page drawn **6.9 s** warm (worst 7.2) / **7.5 s** cold (worst 11.9) — i.e. ~3–4 s to open + ~1 s to draw (poppler draws page 1 in ~1 s). Memory: app 835 MB after page 1, **1.6 GB** after all 5 pages (+ WebKit ~480 MB) → **B-27**. Print: the app sends the file **byte-identical** to CUPS ✅; the cups-pdf output is 5 page rasters (0 fonts) — but so is `lp cad.pdf` with no app at all: cups-pdf's Ghostscript pass rasterises this file itself; a real PDF-capable printer gets the vector file. ⚠️ frame-watcher "settled" (1.3 s) was the steady "Opening…" card, not the page — CAD timings above come from `tools/t_cadtime.py` |
 | T5.4 | 30 tabs | ✅ (T4.13) |
 | T5.5 | Low memory (600 MB cgroup) | ✅ starts, opens PDF, ~260 MB RSS |
 | T5.6 | Read-only home | ❌ **B-16** crash at startup |
@@ -192,7 +192,7 @@ CI artifact `linux-arm64/deb/chuvadi-reader_1.0.0~preview_arm64.deb` from run 42
 
 **Waiting on the library (via Arun):** B-08a Chuvadi.Docs input limits · B-09a Sheets range layout (app side fixed) — fixtures in `fixtures/` · B-11a chuvadi-pdf xref rebuild · Sheets 2.0.2 shared-string fix (D-87) · form filling and certificate signing (*Coming soon* in the Ui).
 
-**Waiting on Arun:** the 7.9 MB vector CAD PDF (T5.3); Windows end-to-end timings (D-51) for a side-by-side.
+**Waiting on Arun:** Windows end-to-end timings (D-51) for a side-by-side. (CAD PDF received and tested 9 Nov — T5.3.)
 
 **Manual items for a real machine** (not possible in this sandbox):
 1. Ubuntu 24.04 desktop with AppArmor on and a GPU: install the `.deb`, launch from the app grid, check the AppArmor profile loads and timings with a real GPU.

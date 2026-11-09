@@ -33,9 +33,10 @@ Every bug gets fixed; I re-verify on the fixing commit and mark it here.
 | B-21 | S3 | Linux | Show in folder: 5 s D-Bus timeout → `xdg-open` fallback → two file-manager windows | **verified fixed f3d5978** — cold Nautilus: one window; `xdg-open` fallback never called (logging stub) |
 | B-22 | S4 | shared Ui/Core | No designed keyboard-focus style: each engine draws its own (GTK blue on Linux) | **verified fixed e468d1a** (Foundation 8th patch) — focus ring 2 px solid in the theme accent (#8a3a1c in light) |
 | B-23 | S4 | shared Ui/Core | Tab order starts with one "Send page N to a desk" button per page | **verified fixed e468d1a** (Foundation 8th patch) — Tab starts on the current page's strip (rotate, send, snapshot, bookmark), not one button per page |
-| B-24 | S2 | **shared Ui/Core** | A stalled read (hung network share) shows a blank Reader with no "Opening…" or Cancel, and blocks every later open | ❌ **reopened — not fixed in the running app on 1016987** (tenth patch d70590a included). Root cause from a managed stack dump: `TabsService.OpenAsync` → `Reader.OnTabsChanged` → `SyncActive` → **`RefreshDocKind` → `FlattenService.Probe` → `PdfDocument.Open(path)`** on the UI thread → `open(2)` blocks (for `.xlsx` too). Foundation's tests drive `TabsService` without the Reader page, so they don't hit it. Fix: run `Probe` off-thread with the tab's token, or after the load; and skip it for non-PDFs |
+| B-24 | S2 | **shared Ui/Core** | A stalled read (hung network share) shows a blank Reader with no "Opening…" or Cancel, and blocks every later open | ❌ **reopened — not fixed in the running app on 1016987** (tenth patch d70590a included). Root cause from a managed stack dump: `TabsService.OpenAsync` → `Reader.OnTabsChanged` → `SyncActive` → **`RefreshDocKind` → `FlattenService.Probe` → `PdfDocument.Open(path)`** on the UI thread → `open(2)` blocks (for `.xlsx` too). Foundation's tests drive `TabsService` without the Reader page, so they don't hit it. Fix: run `Probe` off-thread with the tab's token, or after the load; and skip it for non-PDFs — **also reproduced on the official head e242d92** (stalled PDF: no "Opening…", no Cancel, next open blocked) |
 | B-25 | S4 | **shared Ui/Core** | Excel viewer errors still use the old one-line wording (no WT-10 sentence + Details) | **verified fixed 1016987** — "This file couldn't be read as an Excel workbook." (Excel · couldn't open) |
 | B-26 | S3 | **shared Ui/Core** | Excel number formats not applied: `"₹"#,##0.00` shows `1234.5`, `0.00%` shows `0.125` (values unaltered) — Sheets 2.0.2 now has `Cell.GetDisplayText` | open — 1016987 |
+| B-27 | S3 (perf) | **library + shared Ui/Core** | Large vector CAD PDF (5 × A1, ~1.44 M path ops): ~3–4 s to open + ~1 s to draw page 1; app memory 1.6 GB after viewing 5 pages | open — e242d92, measurements only |
 | K-01 | — | Linux | GNOME close-only layout showed all three buttons (known, 7 Nov) | **verified fixed f7d0034, re-verified f3d5978** (6 layouts) |
 
 Routing (coordinator, 8 Nov): **Linux** → the Linux chat. **shared Ui/Core** → Foundation's combined patch, as exact diffs from the Linux chat or Foundation. **library** → the coordinator compiles them for Arun (library coordinator).
@@ -43,7 +44,7 @@ Routing (coordinator, 8 Nov): **Linux** → the Linux chat. **shared Ui/Core** �
 |---|---|
 | Linux chat | B-01, B-04, B-05, B-06, B-12, B-13, B-14, B-15, B-17, B-19, B-20, B-21, and the Linux stanzas of B-02 |
 | shared Ui/Core | B-03, B-07, B-08b, B-10, B-11b, B-16, B-18, B-22, B-23, B-24, B-25, B-26, and the OFL texts next to the fonts in B-02 |
-| library | B-08a (Chuvadi.Docs input limits), B-09a (Chuvadi.Sheets: don't materialise to the sheet's extent), B-11a (chuvadi-pdf: rebuild the xref on a bad `startxref`) |
+| library | B-27 (with shared: parse/render time and memory on the CAD drawing), B-08a (Chuvadi.Docs input limits), B-09a (Chuvadi.Sheets: don't materialise to the sheet's extent), B-11a (chuvadi-pdf: rebuild the xref on a bad `startxref`) |
 B-09's "no cancel / no timeout" half is the same fix as B-08b.
 
 Known and already tracked (not re-filed): sample recent files / watched folder on a fresh profile (D-94 H-12);
@@ -238,3 +239,9 @@ The tenth patch moved the load off-thread, but adding the tab raises `TabsChange
 **Steps.** Open `fixtures/exact.xlsx`.
 **Expected.** Displayed text as Excel shows it, value untouched: B23 `1234.5` with `"₹"#,##0.00` → `₹1,234.50`; B24 `0.125` with `0.00%` → `12.50%`; B22 `45000` with built-in 14 → the locale's short date (en-IN `15-03-2023`); B21 General → `1.23457E+19`.
 **Actual.** `1234.5`, `0.125`, `2023-03-15`, `1.2345678901234567E+19`. `XlsxViewService.FormatValue` shows values as-is by design, waiting for "Chuvadi.Sheets [to expose] a formatted display string per cell" — Sheets 2.0.2 now has `Cell.GetDisplayText(NumberFormatOptions)` and `NumberFormatter.FormatDetailed(...)`. All text cells come through exactly (see RESULTS).
+
+## B-27 — Large vector CAD PDF: slow to open, heavy on memory (S3 perf, library + shared Ui/Core) — e242d92
+**File.** Arun's 7.9 MB KDMC LINAC site layout (5 × A1, ~1.44 M path operators, 170 images, 38 fonts; produced by Chuvadi). **Not committed (public repo)** — the library team should get it from Arun directly.
+**Measured** (2 vCPU, no GPU; `tools/t_cadtime.py`, `tools/t_cad.py`): from process start, "Opening…" clears at 6.0 s warm / 6.6 s cold and page 1 is fully drawn at 6.9 s warm (worst 7.2) / 7.5 s cold (worst 11.9); the UI-test launch accounts for ~2.8 s, so **~3–4 s to open + ~1 s to draw**. Poppler draws page 1 in ~1 s on the same machine. App memory: 835 MB after page 1, **1,607 MB after paging through all 5** (not released while open), WebKit ~480 MB at 180 %.
+**Expected.** Arun's bar is "loads in milliseconds"; at minimum a first page in ~1–2 s and memory that doesn't grow with every page viewed.
+**Notes.** Rendering is correct (crisp vector at 180 %). Printing sends the file byte-identical (✅). Where the time and memory go (parse vs. render vs. page cache) needs a profile on the library side — I can run `dotnet-trace` here if wanted.
