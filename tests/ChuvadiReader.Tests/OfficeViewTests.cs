@@ -8,7 +8,7 @@ using Xunit;
 namespace ChuvadiReader.Tests;
 
 /// <summary>
-/// D-136: Word and Excel viewing on Chuvadi.Docs 2.0.0 and Chuvadi.Sheets 2.0.2. Every value comes through as
+/// D-136: Word and Excel viewing on Chuvadi.Docs 2.0.0 and Chuvadi.Sheets 2.0.2 (now 2.0.4, seventeenth patch). Every value comes through as
 /// the file holds it. The truth is <c>Fixtures/Office/expected.json</c>, written by
 /// <c>tools/OfficeCorpus/make.py</c> from the files' own XML and openpyxl, never from Chuvadi. Plus the
 /// libraries' limits (B-08) and cancellation (B-08b).
