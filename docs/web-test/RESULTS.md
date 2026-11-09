@@ -161,3 +161,28 @@ Rebased head: 3548bdd (= the 1b32ad8 fixes, rebased) + d180f2e (WT-14, WT-15).
 - **WT-14:** `sangam_signin.py` (real Sangam rc.16) WebKit **13/13 × 5 runs**, Chrome 13/13, Firefox 13/13 (one Firefox run printed 12 lines; re-run 13/13).
 - **WT-13:** `load.py` 5 people: output folder created, results in ms, no errors (print median 834 ms on this 2-vCPU sandbox), peak 179 MB per worker.
 - **Regression:** `flows.py` 9/9 × Chrome, Firefox, WebKit.
+
+## Re-verification on `platform/web` @ **c38bd80** (9 Nov 06:05–07:00 IST)
+Rebased on Foundation's latest: WT-10 Arrange wording, Q-3 wording, Chuvadi.Docs **2.0.0**, Chuvadi.Sheets **2.0.2**, Chuvadi.Zip **1.0.0** (WT-16).
+
+- **Build from clean:** shared solution 0 warnings — Reader **199**, Hosting **59**, Mobile UI **16**, Web UI **39**; Web + Web.Tests 0 warnings, Web **164/164**; `check-package.sh` PASS; no third-party assemblies. New packages' SHA-256 match `PACKAGES-DOCS-SHEETS-2.md` / `PACKAGES-ZIP-1.0.0.md`.
+- **WT-10** ✅ no "Fetch" on the failed-open screen or in Arrange (3 engines). **Q-3** ✅ Home: "FILES IN THIS SESSION", "Nothing shelved this session — open the Library" (3 engines).
+- **WT-14** ✅ WebKit 13/13 × 3, Chrome 13/13, Firefox 13/13 (real Sangam rc.16). **WT-15** ✅ refuses `http://` Sangam in Production.
+- **WT-16** ✅ Split to folder (13 pages) → one `text-13.zip` in Chromium, Firefox and WebKit (Chromium/WebKit with a real Sangam cookie — see note), zip intact, 13 entries `text-13_p01…p13.pdf`, each the right single page; a one-file Mark save stays `text-3-edited.pdf`.
+- **Regression:** `verify_fixes.py` — WT-02 (Chromium, Firefox), WT-03, WT-04, WT-06, WT-08, WT-09 ✅ in 3 engines.
+
+### Word and Excel data fidelity (Docs 2.0.0, Sheets 2.0.2)
+Corpus `tests/web-test/make_fidelity.py`: 14 text tokens built to catch normalisation (double/leading/trailing spaces, mIxEd case, misspellings kept as written, Tamil, Hindi, `<>&"'`, `00123`, a 20-digit string, accents, a tab) + 9 formatted numbers + a formula. Each file made by python-docx/openpyxl **and** re-saved by LibreOffice. Checked from the page DOM (`textContent`, which keeps every space) — Word runs render with `white-space: pre-wrap`, grid cells with `pre`.
+
+| File | Result |
+|---|---|
+| fid.docx (python-docx) | ✅ **14/14 exact**, every space, case, misspelling and script as in the file |
+| fid-lo.docx (LibreOffice) | ✅ 14/14 — LibreOffice stores the two leading spaces as their own run (`<w:t xml:space="preserve">  </w:t>`); the portal draws that run, nothing lost |
+| fid.xlsx (openpyxl, absolute part paths) | ✅ opens (LIB-2 fixed in 2.0.2); text cells **14/14 exact**; General number 3.14159265358979 exact; formatted numbers ❌ **WT-17**; uncached formula blank (never recalculated — as designed) |
+| fid-lo.xlsx (LibreOffice) | Same as above; the formula's cached result **2** shown |
+| doc.docx, sheet.xlsx, sheet-libreoffice.xlsx (session-1 files) | ✅ open; sheet.xlsx no longer refused |
+| zip-bomb.docx / .xlsx | ✅ refused: "…its contents unpack to more than 2,048 MB" |
+
+"As printed" (xlsx) is disabled — waits on Chuvadi.Layout (D-08), as expected.
+
+**Harness note:** with the Development header (`X-Dev-User`, injected by Playwright) Chromium and WebKit don't send the header on a download request, so the person's worker refuses the link (404). With a real Sangam cookie every engine downloads. Firefox carries the header. Not a portal bug; recorded so nobody re-reports it.

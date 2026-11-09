@@ -15,13 +15,14 @@ Severity: **High** = wrong result, security weakness, or a screen that doesn't w
 | WT-07 | Low | Security | The circuit (`/_blazor`) accepts a foreign `Origin` | Web | **Verified fixed** in 1b32ad8 and **d180f2e** — foreign Origin → 403, own → 200 |
 | WT-08 | Low | Security | File names keep Unicode bidi controls (U+202E), so a name can display reversed | Web | **Verified fixed** in 1b32ad8 and **d180f2e** — U+202E removed, 3 engines |
 | WT-09 | Low | UX | The no-print reason is only a hover tooltip on a disabled button (invisible on touch) | Existing file → Arun | **Verified fixed** in 1b32ad8 and **d180f2e** — reason in the card body, 3 engines |
-| WT-10 | Low | UX | A file that can't be opened shows raw parser text, and a "Fetch…" button where the portal says "Upload" | Existing file → Arun (text) / Web portal UI (label) | **Partly fixed** (d180f2e) — damaged-file sentence and "Upload" ✅; Arrange still "Fetch…" (diff on `platform/web-ui` 99ba339, waiting for Foundation → Web) |
+| WT-10 | Low | UX | A file that can't be opened shows raw parser text, and a "Fetch…" button where the portal says "Upload" | Existing file → Arun (text) / Web portal UI (label) | **Verified fixed** in **c38bd80** — no "Fetch" on the failed-open screen or anywhere in Arrange; "This PDF is damaged" sentence; 3 engines |
 | WT-11 | Low | Packaging | Publish output carries `web.config` (IIS), `appsettings.Development.json`, `.pdb` and `.xml` files | Web | **Verified fixed** in 1b32ad8 and **d180f2e** — `check-package.sh` PASS, no third-party assemblies |
 | WT-12 | Low | Docs/CI | The plan's build command fails from a clean clone; Web is built without `-warnaserror` in CI and isn't in Platforms.slnx | Web | **Verified fixed** in 1b32ad8 and **d180f2e** — documented restore works from an empty cache; 0 warnings with `-warnaserror` |
 | WT-13 | Low | Test tooling | `load.py`: no output folder created; "paging" is mostly fixed sleeps; one browser for everyone | Web | **Verified fixed** in **d180f2e** — `load.py` creates its output folder, reports ms, no errors (5 people) |
-| WT-14 | Low | Test tooling | `sangam_signin.py` sign-out step races in WebKit (1 in 5 runs) | Web | **Verified fixed** in **d180f2e** — WebKit sign-in suite 13/13 in 5 of 5 runs; Chrome 13/13, Firefox 13/13 |
-| WT-15 | Medium | Security | Production starts with an `http://` Sangam address | Web | **Verified fixed** in **d180f2e** — Production with `http://` Sangam refuses to start ("Sangam:Authority must be an https address outside Development."); https starts |
-| WT-16 | Low | UX | "Split to folder" on the portal arrives as one download per page | Web (D-129: one .zip via Chuvadi.Zip) | Open — D-129: one .zip via Chuvadi.Zip, waiting for Chuvadi.Zip in `ci/packages` |
+| WT-14 | Low | Test tooling | `sangam_signin.py` sign-out step races in WebKit (1 in 5 runs) | Web | **Verified fixed** in d180f2e and **c38bd80** — WebKit 13/13 × 8 runs in total; Chrome, Firefox 13/13 |
+| WT-15 | Medium | Security | Production starts with an `http://` Sangam address | Web | **Verified fixed** in d180f2e and **c38bd80** — Production + `http://` Sangam refuses to start; https starts |
+| WT-16 | Low | UX | "Split to folder" on the portal arrives as one download per page | Web (D-129: one .zip via Chuvadi.Zip) | **Verified fixed** in **c38bd80** — Split to folder → one `text-13.zip` (Chuvadi.Zip 1.0.0), zip intact, 13 entries, each the right page; Chromium, Firefox, WebKit; a one-file save stays a plain PDF |
+| WT-17 | High | Fidelity | Excel grid ignores each cell's number format (shows 0.125 for 12.50%, 1234.5 for ₹1,234.50, 7 for 007, ISO dates) — Sheets 2.0.2's `NumberFormatter` is not called | Existing file (Core `XlsxViewService`) → Foundation combined patch → Arun | Open |
 
 Library items (Arun's libraries; not app bugs, recorded so they aren't lost): **LIB-1**, **LIB-2** at the end — on the coordinator's list for Arun's library coordinator (20:40).
 
@@ -124,7 +125,21 @@ After "Sign out", the script waits for `networkidle`, which WebKit sometimes rea
 ## WT-16 — Split to folder = one download per page (Low, UX — option)
 On the portal "Split to folder" of a 13-page PDF hands the browser 13 separate downloads in 0.6 s (all 13 arrive in headless runs). Real Chrome asks "This site is trying to download multiple files" and Safari may block them. Option O-3 in `OPTIONS-FOR-COORDINATOR.md`.
 
+## WT-17 — Excel grid shows stored values, not the cell's number format (High, fidelity; existing code, Windows too)
+**Build:** `platform/web` c38bd80 (Sheets 2.0.2). **File:** `tests/web-test/make_fidelity.py` → `fid.xlsx` (openpyxl) and the same saved by LibreOffice — both behave the same.
+
+| Cell value | Number format in the file | Excel / LibreOffice show | Chuvadi grid shows |
+|---|---|---|---|
+| 0.125 | `0.00%` | 12.50% | 0.125 |
+| 1234.5 | `#,##0.00` | 1,234.50 | 1234.5 |
+| 1234.5 | `"₹"#,##0.00` | ₹1,234.50 | 1234.5 |
+| 2026-11-09 | `dd-mm-yyyy` | 09-11-2026 | 2026-11-09 |
+| 7 | `000` | 007 | 7 |
+| 1E-07 | `0.00E+00` | 1.00E-07 | 1E-07 |
+
+Text cells, General numbers and cached formula results are exact (below). **Cause:** `ChuvadiReader.Core/Documents/XlsxViewService.cs` builds each cell's text with its own `FormatValue` (ISO dates, `CurrentCulture` numbers — so it also depends on the server's culture) and never reads the cell's number format; Sheets 2.0.2 ships `NumberFormatter.GetDisplayText` (SHEETS-FMT) for exactly this, unused (`grep` finds no caller). The layout requirements put "displayed cell text via the NumberFormatter" first for xlsx: a grid showing 0.125 for 12.50% can be misread. Underlying data is not changed — this is display. **Fix route:** existing Core file → listed change in Foundation's combined patch → Arun (PR #11); changes Windows output (correctly). Evidence: `screenshots/v3-xlsx-grid-formats.png`.
+
 ## Library items (Arun's libraries)
 - **LIB-1 chuvadi-pdf refuses `/P` written as an unsigned 32-bit number.** PDFs whose encryption dictionary has e.g. `/P 4294965240` (pypdf writes this) fail with "Invalid integer … must be a valid 32-bit signed integer". qpdf, poppler and pdf.js open them (reading the bits). Ask: accept 0…4294967295 and reinterpret as signed. Not worked around in the app (rule 2).
-- **LIB-2 Chuvadi.Sheets 1.1.2 can't open XLSX with absolute relationship targets.** openpyxl (and so pandas) writes `Target="/xl/worksheets/sheet1.xml"`; Core reports "Couldn't open this workbook: Part '/xl/xl/worksheets/sheet1.xml' not found in package." LibreOffice/Excel (relative targets) open fine. Sheets 2.0.2 fixed `./` and `..` targets; to confirm whether absolute targets are covered when the Reader moves to 2.0.2 (D-87).
+- **LIB-2 Chuvadi.Sheets 1.1.2 can't open XLSX with absolute relationship targets.** openpyxl (and so pandas) writes `Target="/xl/worksheets/sheet1.xml"`; Core reports "Couldn't open this workbook: Part '/xl/xl/worksheets/sheet1.xml' not found in package." LibreOffice/Excel (relative targets) open fine. Sheets 2.0.2 fixed `./` and `..` targets; to confirm whether absolute targets are covered when the Reader moves to 2.0.2 (D-87). **9 Nov: fixed in Sheets 2.0.2** — openpyxl files (`Target="/xl/worksheets/sheet1.xml"`) open in c38bd80.
 - **Known gap, not new:** a PDF with an open (user) password can't be opened on the portal — "This PDF is encrypted and needs a password to open." with no way to type it. Listed as library-gated in DESIGN-NOTE ("password API"); recorded so the test is re-run when that lands. **9 Nov: works in 1b32ad8** (prompt, wrong-password message, opens; 3 engines).
