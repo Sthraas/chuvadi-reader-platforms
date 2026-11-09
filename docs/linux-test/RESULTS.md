@@ -203,9 +203,37 @@ CI artifact `linux-arm64/deb/chuvadi-reader_1.0.0~preview_arm64.deb` from run 42
 6. ARM64 hardware (or the CI runner's screenshots, judged by me): launch and UI pass.
 
 ### Re-verification on 7595ef3 (9 Nov 2026, 22:00 IST)
-Build 0 warnings; tests 212 + 75 + 44; lintian 0. **B-24 ✅ and B-08b ✅** (stalled PDF/Excel/Word: "Opening…" < 1 s, Cancel at 10 s, Cancel closes the tab, later opens never blocked) · **B-25 ✅** (WT-10 wording + Details for Excel, Word, PDF) · **owner-password printing ✅** (D-139). Regression ✅: several files on the CLI, single instance (2nd/3rd launch), 2-file drop, Show in folder (one window, no fallback), vector print byte-identical. **Still open: B-26** (Excel number formats, shared).
+Build 0 warnings; tests 212 + 75 + 44; lintian 0. **B-24 ✅ and B-08b ✅** (stalled PDF/Excel/Word: "Opening…" < 1 s, Cancel at 10 s, Cancel closes the tab, later opens never blocked) · **B-25 ✅** (WT-10 wording + Details for Excel, Word, PDF) · **owner-password printing ✅** (D-139). Regression ✅: several files on the CLI, single instance (2nd/3rd launch), 2-file drop, Show in folder (one window, no fallback), vector print byte-identical. B-26 deferred by decision (D-147).
 
 ### Linux readiness (7595ef3)
-**Ready for Arun's check, with one shared item open.** Every Linux-routed and shared bug is verified fixed **except B-26** (Excel shows `₹`/`%`/date formats as raw values — values never altered; shared Ui/Core, Sheets 2.0.2 already has `Cell.GetDisplayText`).
+**Ready for Arun's check.** Every Linux-routed and shared bug is verified fixed; **B-26 is deferred by decision (D-147)** — Excel shows the stored value, never a reformatted one (Arun's data-integrity rule); formatted display with the exact value on hover is a later option.
 Waiting elsewhere, not Linux defects: **library** — B-08a (Docs limits; the app already refuses the bomb), B-09a library side (app side fixed), B-27 (CAD render time/memory, profile in `evidence/b27/`); **Reader chat** — the new left-bar collapse button (D-133; existing Collapse works on Linux); **Arun** — Windows timings (D-51).
 **Real-machine checks** (unchanged, listed above in the sign-off): AppArmor + GPU desktop install; GNOME Wayland and KDE window behaviour; drag from Files/Dolphin and Show in folder there; a real printer (mixed orientation, copies, owner password); fractional scaling on a HiDPI panel; ARM64 hardware.
+
+---
+
+## Arun's check — Linux 7595ef3
+
+**Get the package.** GitHub → `Sthraas/chuvadi-reader-platforms` → Actions → run **Linux** on `7595ef3` ([run 42652452497](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/42652452497)) → Artifacts → **linux-x64** (ARM machine: `linux-arm64`). Unzip it and use **`deb/chuvadi-reader_1.0.0~preview_amd64.deb`** — the self-contained one (37.7 MB, needs no .NET). SHA-256 `22b4e168b978efac5a2ef971f4fca8971efe504081cdda84f2aeda8253ebee10`. (`deb-framework-dependent/` is the smaller variant that pulls in Microsoft's .NET runtime package.) Or with the CLI: `gh run download 42652452497 -R Sthraas/chuvadi-reader-platforms -n linux-x64`.
+
+**Install** (Ubuntu 24.04 or 26.04, desktop):
+```
+cd ~/Downloads/linux-x64/deb
+sha256sum chuvadi-reader_1.0.0~preview_amd64.deb      # compare with the value above
+sudo apt install ./chuvadi-reader_1.0.0~preview_amd64.deb
+```
+It appears in the app grid as **Chuvadi Reader**; it also installs and loads its AppArmor profile. If the window ever opens blank, run `sudo apparmor_parser -r /etc/apparmor.d/chuvadi-reader` and start it again. To remove: `sudo apt remove chuvadi-reader` (`purge` also removes settings).
+
+**Ten things worth trying first**
+1. **Start from the app grid**, cold and again warm — note how long until Home shows (here: ~1.0 s warm on 2 CPUs without a GPU).
+2. **Open a PDF by double-clicking it in Files**, then select **three files** → right-click → Open With → Chuvadi: each becomes its own tab in the one window.
+3. **Drag two files from Files onto the window** — two tabs.
+4. **The KDMC CAD drawing**: open it, page through, zoom in and out — note the time to the first page and the memory in System Monitor (B-27 is with the library; this is your real-hardware number).
+5. **Print to your real printer**: a mixed portrait/landscape file, 2 copies; check it's crisp (vector), and that a file whose permissions forbid printing is refused — then works when opened with its owner password.
+6. **A password-protected PDF**: wrong password, then the right one.
+7. **Mark → annotate → Save as**, and **Protect → Find & redact** a word → Save redacted copy — then search the saved copy for the word (it must be gone).
+8. **Word and Excel files** of your own — the data should read exactly as in the file (spaces, spelling, case untouched); Excel numbers show their stored value (D-147).
+9. **Document ▾ → Show in folder** opens Files with the file selected; **Snapshot → Copy** then paste into another app.
+10. **Settings**: switch the five themes and the interface size; change GNOME's window-button layout (Tweaks → Window Titlebars) and see the buttons follow; maximise and restore (corners square when maximised, rounded otherwise).
+
+Anything odd: note the step and what you saw; I reproduce it here and file it in `BUGS.md`.
