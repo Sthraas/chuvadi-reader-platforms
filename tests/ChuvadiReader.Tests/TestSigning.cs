@@ -189,10 +189,10 @@ public static class TestSigning
 
     /// <summary>TEST FIXTURE ONLY: writes a restricted, encrypted copy (sets the init-only
     /// permissions by reflection) so the app's handling of such files can be tested.</summary>
-    public static void ProtectRestricted(string source, string output, string openPassword, int mask)
+    public static void ProtectRestricted(string source, string output, string openPassword, int mask, string? ownerPassword = null)
     {
         using var doc = PdfDocument.Open(source);
-        var enc = Chuvadi.Pdf.IO.EncryptionOptions.Aes256(openPassword, "owner-" + Guid.NewGuid().ToString("N"));
+        var enc = Chuvadi.Pdf.IO.EncryptionOptions.Aes256(openPassword, ownerPassword ?? "owner-" + Guid.NewGuid().ToString("N"));
         typeof(Chuvadi.Pdf.IO.EncryptionOptions).GetProperty("Permissions")!.SetValue(enc, mask);
         using var fs = File.Create(output);
         doc.Save(fs, enc);

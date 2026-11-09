@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <!-- One version for every chuvadi-pdf package (they are mono-versioned and must never mix). -->
-    <ChuvadiPdfVersion>3.31.2</ChuvadiPdfVersion>
+    <ChuvadiPdfVersion>3.32.0</ChuvadiPdfVersion>
   </PropertyGroup>
 
   <ItemGroup>

@@ -39,7 +39,7 @@ jobs:
       build: ChuvadiReader.slnx
       test: tests/ChuvadiReader.Tests/ChuvadiReader.Tests.csproj
 
-  # Check only: chuvadi-pdf re-packed from the unchanged v3.31.2 tag yields the same package set as ci/packages.
+  # Check only: chuvadi-pdf re-packed from the unchanged v3.32.0 tag yields the same package set as ci/packages.
   pack-check:
     uses: ./.github/workflows/platform-build.yml
     with:
@@ -47,6 +47,33 @@ jobs:
       label: pack-check
       build: ChuvadiReader.Platforms.slnx
       pack-check: true
+
+  # AT-03: a trimmed Release app must be able to build every service the kit registers. The probe is
+  # published trimmed (TrimMode=partial: only trimmable assemblies, as Android SdkOnly and Mac Catalyst)
+  # and launched; it fails if any constructor was trimmed away. Hosts also launch their own Release builds
+  # (docs/foundation/TRIMMING.md).
+  trim-check:
+    name: trimmed Release launch (${{ matrix.rid }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: ubuntu-latest,    rid: linux-x64 }
+          - { runner: ubuntu-24.04-arm, rid: linux-arm64 }
+          - { runner: macos-latest,     rid: osx-arm64 }
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+      - name: Local package feed
+        shell: bash
+        run: scripts/setup-feed.sh
+      - name: Publish trimmed
+        run: dotnet publish tools/TrimProbe/TrimProbe.csproj -c Release -r ${{ matrix.rid }} -o trimprobe -warnaserror
+      - name: Launch
+        run: ./trimprobe/TrimProbe
 
   # ── Platform host jobs (added by each platform chat) ─────────────────────────────────────
   # mac:      runner macos-latest,     build src/ChuvadiReader.Mac/…,     workloads maui-maccatalyst
