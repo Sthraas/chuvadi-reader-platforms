@@ -1449,7 +1449,18 @@
     // its session's cache can always be asked for again: after a reload (Save in place), a dropped cache, or a render
     // that landed in a session that has since been replaced. Before, the set was keyed by page number and kept the
     // page after its render, so such a page was never asked for again and stayed a placeholder.
-    private readonly HashSet<(IPdfSession Session, int Page)> _rendering = new();
+    private readonly Dictionary<(IPdfSession Session, int Page), CancellationTokenSource> _rendering = new();
+
+    /// <summary>Fifteenth patch (Linux, fast paging): a page that scrolled out of view no longer waits to be drawn.</summary>
+    private void CancelRenders()
+    {
+        foreach (var cts in _rendering.Values)
+        {
+            cts.Cancel();
+        }
+
+        _rendering.Clear();
+    }
     private List<int> _pages = new();
 
     private string? _activeId;
@@ -3308,7 +3319,7 @@
             _activeSession = tab?.Session;
             _shownPageCount = pageCount;
             _pageInput = (tab?.CurrentPage ?? 1).ToString();
-            _rendering.Clear();
+            CancelRenders();
             _pages = pageCount > 0 ? Enumerable.Range(0, pageCount).ToList() : new();
             _loadGen++;
             _restoreScroll = pageCount > 0;
@@ -3338,7 +3349,7 @@
             _activeSession = tab?.Session;
             _shownPageCount = pageCount;
             _pageInput = (tab?.CurrentPage ?? 1).ToString();
-            _rendering.Clear();
+            CancelRenders();
             _pages = pageCount > 0 ? Enumerable.Range(0, pageCount).ToList() : new();
             _loadGen++;
             _restoreScroll = pageCount > 0;
@@ -3470,19 +3481,25 @@
     private void EnsureRendered(int n)
     {
         var session = Tabs.Active?.Session;
-        if (session is null || session.TryGetRenderedSvg(n, out _) || !_rendering.Add((session, n)))
+        if (session is null || session.TryGetRenderedSvg(n, out _) || _rendering.ContainsKey((session, n)))
         {
             return;
         }
 
-        _ = RenderOneAsync(session, n);
+        var cts = new CancellationTokenSource();
+        _rendering[(session, n)] = cts;
+        _ = RenderOneAsync(session, n, cts);
     }
 
-    private async Task RenderOneAsync(IPdfSession session, int n)
+    private async Task RenderOneAsync(IPdfSession session, int n, CancellationTokenSource cts)
     {
         try
         {
-            await session.RenderPageSvgAsync(n);
+            await session.RenderPageSvgAsync(n, cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Its page left the view before it was drawn; it is asked for again if it comes back.
         }
         catch
         {
@@ -3491,7 +3508,12 @@
         }
         finally
         {
-            _rendering.Remove((session, n));
+            if (_rendering.TryGetValue((session, n), out var mine) && ReferenceEquals(mine, cts))
+            {
+                _rendering.Remove((session, n));
+            }
+
+            cts.Dispose();
             await InvokeAsync(StateHasChanged);
         }
     }
@@ -3500,6 +3522,19 @@
     public Task RenderPage(int n)
     {
         EnsureRendered(n);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>From the page observer: page <paramref name="n"/> (0-based) left the render zone. A render still
+    /// waiting for it is dropped, so fast paging never builds a backlog in front of the page you land on.</summary>
+    [JSInvokable]
+    public Task PageLeft(int n)
+    {
+        if (Tabs.Active?.Session is { } session && _rendering.TryGetValue((session, n), out var cts))
+        {
+            cts.Cancel();
+        }
+
         return Task.CompletedTask;
     }
 
@@ -3513,6 +3548,7 @@
         }
 
         page = Math.Clamp(page, 1, tab.Session.Document.PageCount);
+        tab.Session.SetFocusPage(page - 1); // the page in view is drawn before the others waiting
         if (page != tab.CurrentPage)
         {
             tab.CurrentPage = page;
