@@ -61,6 +61,8 @@
             });
         })();
     </script>
-    <script src="_framework/blazor.webview.js"></script>
+    <!-- autostart="false": MAUI's Mac handler starts Blazor itself (a WebKit user script calling Blazor.start()),
+         so an autostart here started it twice — "Blazor has already started" on every launch. -->
+    <script src="_framework/blazor.webview.js" autostart="false"></script>
 </body>
 </html>

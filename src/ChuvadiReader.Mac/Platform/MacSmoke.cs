@@ -30,7 +30,7 @@ internal static class MacSmoke
     /// <summary>
     /// Smoke only: walks CHUVADI_SMOKE_STEPS (';'-separated), 3 s apart, reporting the page after each as
     /// "step n name: route=… reader=… errorbar=…". Steps: "pick" (Open button → panel → next CHUVADI_SMOKE_PICK),
-    /// "pw:text" (type into the unlock field and press Return — M-17), "click:Title" (the button whose title
+    /// "pw:text" (put text in the unlock field, then a real Return — M-17), "click:Title" (the button whose title
     /// starts with Title — M-18), "mode:n" (the n-th mode button), "key:Name" (a synthetic page key) and
     /// "native:name" (a real key posted by the smoke script — M-21).
     /// </summary>
@@ -82,10 +82,6 @@ internal static class MacSmoke
                       i.focus();
                       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, {{System.Text.Json.JsonSerializer.Serialize(arg)}});
                       i.dispatchEvent(new Event('input', { bubbles: true }));
-                      setTimeout(function () {
-                        i.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }));
-                        i.form.requestSubmit();
-                      }, 200);
                       return 'typed';
                     })()
                     """,
@@ -122,9 +118,14 @@ internal static class MacSmoke
                 {
                     Log($"step {index + 1} {kind} failed: " + ex.Message);
                 }
+
+                if (kind == "pw")
+                {
+                    Log("native-key return"); // the password is submitted with a real Return, as a person does
+                }
             }
 
-            Later(2.5, async () =>
+            Later(kind == "pw" ? 4.0 : 2.5, async () =>
             {
                 Log($"step {index + 1} {step.Split(':')[0]}: " + await UiTextAsync(view));
                 RunSteps(view, index + 1);

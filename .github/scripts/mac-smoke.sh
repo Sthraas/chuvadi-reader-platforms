@@ -141,8 +141,8 @@ sleep 2
 
 # --- M-17 / M-18 / M-21 / M-19: the tester's sequences, scripted --------------------------------------------
 # Locked PDFs (qpdf: a testing tool, never shipped), a real-key sender with Post Event access, then one launch that
-# walks: page error → locked AES-256 file → wrong password → right password → real ⌃⌘F → real Esc → another mode →
-# Library → Settings → RC4 file → right password. After each step the app reports the page.
+# walks: page error → locked AES-256 file → wrong password → right password (each with a real Return) → real ⌃⌘F →
+# real Esc → another mode → Document ▾ → Esc → real ⌘K → Esc → Library → Settings → RC4 file → right password. After each step the app reports the page.
 SCRIPTS="$(cd "$(dirname "$0")" && pwd)"
 command -v qpdf >/dev/null || brew install qpdf >/dev/null 2>&1 || true
 qpdf --encrypt user1 own1 256 -- "$DOCS/five-pages.pdf" "$DOCS/aes256.pdf"
@@ -150,7 +150,7 @@ qpdf --allow-weak-crypto --encrypt user1 own1 40 -- "$DOCS/five-pages.pdf" "$DOC
 KEYS="$RUNNER_TEMP/keys"
 xcrun swiftc -O -o "$KEYS" "$SCRIPTS/keys.swift" && sudo python3 "$SCRIPTS/grant-post-event.py" "$KEYS"
 rm -f "$LOG"; rm -rf "$LOGDIR"
-STEPS="jserror;pick;pw:wrong;pw:user1;native:ctrl-cmd-f;native:escape;mode:2;click:Library;click:Settings;pick;pw:user1"
+STEPS="jserror;pick;pw:wrong;pw:user1;native:ctrl-cmd-f;native:escape;mode:2;click:Document;native:escape;native:cmd-k;native:escape;click:Library;click:Settings;pick;pw:user1"
 open -n --env CHUVADI_SMOKE=1 --env "CHUVADI_SMOKE_PICK=$DOCS/aes256.pdf;$DOCS/rc4.pdf" --env "CHUVADI_SMOKE_STEPS=$STEPS" \
   --stdout "$LOG" --stderr "$LOG" -a "$APP"
 (
@@ -176,8 +176,8 @@ s=$(step 3); ok_ui "$s" && [[ "$s" == *"unlock=1"* ]] && pass "M-17 wrong passwo
 s=$(step 4); ok_ui "$s" && [[ "$s" == *"unlock=0"* && "$s" == *"reader=1"* ]] && pass "M-17 right password (AES-256) opens the PDF" || fail "M-17 right password: ${s:-no report}"
 s=$(step 5); [[ "$s" == *"immersive=1"* ]] && pass "M-21 real ⌃⌘F enters Immersive" || fail "M-21 ⌃⌘F: ${s:-no report}"
 s=$(step 6); [[ "$s" == *"immersive=0"* ]] && pass "M-21 real Esc leaves Immersive" || fail "M-21 Esc: ${s:-no report}"
-s=$(step 9); ok_ui "$s" && [[ "$s" == *"route=/settings"* ]] && pass "M-18 Settings after the Reader and Library" || fail "M-18 Settings: ${s:-no report}"
-s=$(step 11); ok_ui "$s" && [[ "$s" == *"unlock=0"* && "$s" == *"reader=1"* ]] && pass "M-17 right password (RC4) opens the PDF" || fail "M-17 RC4: ${s:-no report}"
+s=$(step 13); ok_ui "$s" && [[ "$s" == *"route=/settings"* ]] && pass "M-18 Settings after the Reader and Library" || fail "M-18 Settings: ${s:-no report}"
+s=$(step 15); ok_ui "$s" && [[ "$s" == *"unlock=0"* && "$s" == *"reader=1"* ]] && pass "M-17 right password (RC4) opens the PDF" || fail "M-17 RC4: ${s:-no report}"
 # M-19: page errors reach the D-132 log, scrubbed; and every error bar seen has a logged cause.
 if grep -h "smoke-page-error" "$LOGDIR"/*.log 2>/dev/null | grep -q 'PageError.*<\.pdf #[0-9a-f]\{8\}>'; then
   pass "M-19 a page error reaches ~/Library/Logs/Chuvadi, scrubbed"

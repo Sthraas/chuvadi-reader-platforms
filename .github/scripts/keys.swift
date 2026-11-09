@@ -13,6 +13,7 @@ let keys: [String: (CGKeyCode, CGEventFlags)] = [
     "escape": (53, []),
     "return": (36, []),
     "ctrl-cmd-f": (3, [.maskControl, .maskCommand]),
+    "cmd-k": (40, [.maskCommand]),
 ]
 guard let (code, flags) = keys[args[2]] else { print("unknown key \(args[2])"); exit(2) }
 let src = CGEventSource(stateID: .hidSystemState)
