@@ -214,3 +214,33 @@
 - desktop 27/27 identical;
 - StartupProbe the same (JIT 1453 both; times within noise).
 
+### 37. Fourteenth combined patch: pages render off the Ui thread (9 Nov, D-152, AT-13)
+- `ChuvadiPdfSession.RenderPageSvgAsync` draws the page on a worker thread, one page at a time per document (a per-session gate, requests in the order asked). A heavy page no longer holds up the Ui or the next open.
+- **Why it's safe:** chuvadi-pdf says a `PdfDocument` is not for concurrent use. So after the open, every use of the session's document holds the same gate:
+  - the render;
+  - a measurement (`TryUseDocument`, which never waits: during a render it skips, and the next pointer move measures);
+  - closing (`Dispose` never waits; a render in progress closes the document when it ends, and nothing new starts).
+  - Layers are read once, at the open.
+  - The page cache is locked.
+  - A page drawn for layers that changed meanwhile isn't kept.
+- Redact's lazy render keyed by (session, page) and forgotten when done, as the Reader's (§36).
+- **Measured** with a 26 MB file holding one 6000 × 6000 JPEG, as AT-13: the call took 6549 ms to return before (the Ui thread blocked for the whole render); now 1.9 ms, with the page ready at 7.1 s. Its SVG is 4.0 MB after the raster fallback, from a ~35 MB vector SVG first, so the library ask (C, decode at display size) stands.
+- **Guard:** `RenderOffUiThreadTests` (6 stall tests).
+  - Rendering on the caller's thread fails 3 of them (caller held, two documents can't render together, measure held).
+  - The other 3 pin one-at-a-time and order, closing mid-render, and dropping a stale-layer page.
+- 348/348 tests (Reader 218); 0 warnings in both solutions; trimmed probe 54/54; desktop 27/27 identical; find-typing 3/3.
+
+### 38. The osx-arm64 trimmed-launch "hang" on 556090b (9 Nov, coordinator 22:28)
+- **What it was:** run 42654252893, first attempt. The osx-arm64 job has no runner name and no steps: it never got a macOS runner and sat in the queue until it was cancelled. On the re-run it also queued for 5 min before starting. Nothing ran, so nothing could hang.
+  - That job runs only `tools/TrimProbe`, which builds the services and never renders a page, so D-152's code isn't on its path at all.
+- **Could the render queue and a Ui dispatcher wait on each other? No.** A cycle needs the Ui thread to block on something the render side holds. Nothing on the Ui thread blocks:
+  - `Dispose` and `TryUseDocument` take the gate with `Wait(0)` and never wait;
+  - the render runs in `Task.Run` and never posts to the Ui;
+  - its continuations use `ConfigureAwait(false)` inside the session;
+  - callers only `await`; nothing uses `.Result` or `.Wait()` on a render.
+- **Guard added anyway:** two tests on a one-thread dispatcher (posted work runs in order, as the WPF, Mac Catalyst, GTK and Android Ui threads do):
+  - the Ui thread keeps answering (measure, cache, layer toggle, drop cache) while pages render, and each render comes back to it;
+  - closing a tab on the Ui thread mid-render never blocks it.
+  - Proved by making the gate block (`Wait(Timeout.Infinite)`): the suite goes red on the 5 s guard.
+- 350/350 tests. Tests only; no behaviour change.
+
