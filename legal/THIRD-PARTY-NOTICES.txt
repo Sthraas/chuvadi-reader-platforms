@@ -55,7 +55,7 @@ COMPONENTS
     Chuvadi.Docs 2.0.0
     Chuvadi.Print 1.0.0-rc.2
     Chuvadi.Print.Ipp 1.0.0-rc.2
-    Chuvadi.Sheets 2.0.2
+    Chuvadi.Sheets 2.0.4
     Chuvadi.Zip 1.0.0
 
 * MIT AND OFL-1.1  -  Arun  -  https://github.com/arunshivab/chuvadi
