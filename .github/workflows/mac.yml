@@ -116,6 +116,12 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Local-network text names printers only (M-22, D-148)
+        run: |
+          T=$(/usr/libexec/PlistBuddy -c 'Print :NSLocalNetworkUsageDescription' "$APP/Contents/Info.plist")
+          echo "NSLocalNetworkUsageDescription: $T"
+          [[ "$T" == *printer* ]] || { echo "::error::NSLocalNetworkUsageDescription missing or not about printers"; exit 1; }
+
       - name: Prove the bundle is trimmed (AT-03)
         # The smoke runs below launch this bundle; this shows it is the trimmed Release, with ChuvadiReader.Platform
         # trimmed (no root-assembly workaround), so a constructor lost to trimming would fail them.
@@ -202,6 +208,8 @@ jobs:
             smoke.log
             smoke-files.log
             smoke-open-panel.log
+            smoke-steps.log
+            chuvadi-logs-steps/
             chuvadi-logs/
             smoke-checks.txt
           if-no-files-found: ignore

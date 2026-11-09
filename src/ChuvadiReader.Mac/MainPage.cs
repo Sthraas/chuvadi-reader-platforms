@@ -96,6 +96,7 @@ public sealed class MainPage : ContentPage
         StartupTimeline.Mark("webview-ready");
         var view = e.WebView;
         WebKitView = view;
+        PageErrorBridge.Attach(view, _services); // M-19: page errors to the D-132 log
 
         // No page zoom gestures — only the Interface size setting zooms (as on Windows).
         // (Catalyst's WKWebView zooms through its scroll view.) The reader's own pinch-to-zoom of

@@ -24,6 +24,114 @@ internal static class MacSmoke
     /// <summary>Smoke only: the next fixture file the Open panel "chooses" (CHUVADI_SMOKE_PICK, ';'-separated).</summary>
     public static string? NextPick() => Enabled && Picks.Count > 0 ? Picks.Dequeue() : null;
 
+    private static readonly string[] Steps = (Environment.GetEnvironmentVariable("CHUVADI_SMOKE_STEPS") ?? string.Empty)
+        .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    /// <summary>
+    /// Smoke only: walks CHUVADI_SMOKE_STEPS (';'-separated), 3 s apart, reporting the page after each as
+    /// "step n name: route=… reader=… errorbar=…". Steps: "pick" (Open button → panel → next CHUVADI_SMOKE_PICK),
+    /// "pw:text" (type into the unlock field and press Return — M-17), "click:Title" (the button whose title
+    /// starts with Title — M-18), "mode:n" (the n-th mode button), "key:Name" (a synthetic page key) and
+    /// "native:name" (a real key posted by the smoke script — M-21).
+    /// </summary>
+    private static void RunSteps(WKWebView view, int index = 0)
+    {
+        if (index >= Steps.Length)
+        {
+            Log("steps done");
+            return;
+        }
+
+        var step = Steps[index];
+        Later(3.0, async () =>
+        {
+            var colon = step.IndexOf(':');
+            var kind = colon < 0 ? step : step[..colon];
+            var arg = colon < 0 ? string.Empty : step[(colon + 1)..];
+            if (kind == "native")
+            {
+                // The smoke script watches for this line and posts the real key (keys.swift), so the key travels
+                // macOS → UIKit → WKWebView as a person's does (M-21). Recorded page keys show what arrived.
+                Log("native-key " + arg);
+                Later(4.0, async () =>
+                {
+                    Log($"step {index + 1} native: " + await UiTextAsync(view) + " sent=" + arg);
+                    RunSteps(view, index + 1);
+                });
+                return;
+            }
+
+            var js = kind switch
+            {
+                "pick" => null,
+                "jserror" => """
+                    (function () {
+                      console.error("smoke-page-error opening '/Users/someone/Documents/smoke-secret-name.pdf'\n   at Smoke.Page.Frame()");
+                      return 'logged';
+                    })()
+                    """,
+                "mode" => $$"""
+                    (function () {
+                      var b = document.querySelectorAll('button.lb-mode')[{{int.Parse(arg, System.Globalization.CultureInfo.InvariantCulture) - 1}}];
+                      if (!b) { return 'no-mode-button'; } b.click(); return 'clicked ' + (b.getAttribute('title') || '');
+                    })()
+                    """,
+                "pw" => $$"""
+                    (function () {
+                      var i = document.querySelector('input.uc-pw'); if (!i) { return 'no-password-field'; }
+                      i.focus();
+                      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, {{System.Text.Json.JsonSerializer.Serialize(arg)}});
+                      i.dispatchEvent(new Event('input', { bubbles: true }));
+                      setTimeout(function () {
+                        i.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }));
+                        i.form.requestSubmit();
+                      }, 200);
+                      return 'typed';
+                    })()
+                    """,
+                "click" => $$"""
+                    (function () {
+                      var t = {{System.Text.Json.JsonSerializer.Serialize(arg)}};
+                      var b = Array.prototype.find.call(document.querySelectorAll('button'), function (x) {
+                        return (x.getAttribute('title') || x.getAttribute('aria-label') || '').indexOf(t) === 0; });
+                      if (!b) { return 'no-button'; } b.click(); return 'clicked';
+                    })()
+                    """,
+                "key" => $$"""
+                    (function () {
+                      var k = {{System.Text.Json.JsonSerializer.Serialize(arg)}};
+                      var t = document.activeElement || document.body;
+                      t.dispatchEvent(new KeyboardEvent('keydown', { key: k, code: k, bubbles: true, cancelable: true }));
+                      t.dispatchEvent(new KeyboardEvent('keyup', { key: k, code: k, bubbles: true }));
+                      return 'pressed';
+                    })()
+                    """,
+                _ => "'unknown-step'",
+            };
+            if (js is null)
+            {
+                await PressOpenAsync(view);
+            }
+            else
+            {
+                try
+                {
+                    Log($"step {index + 1} {kind}: " + (await view.EvaluateJavaScriptAsync(js))?.ToString());
+                }
+                catch (Exception ex)
+                {
+                    Log($"step {index + 1} {kind} failed: " + ex.Message);
+                }
+            }
+
+            Later(2.5, async () =>
+            {
+                Log($"step {index + 1} {step.Split(':')[0]}: " + await UiTextAsync(view));
+                RunSteps(view, index + 1);
+            });
+        });
+    }
+
     /// <summary>Smoke only: presses the left bar's Open button, as a person does (M-16).</summary>
     private static async Task PressOpenAsync(WKWebView view)
     {
@@ -79,7 +187,7 @@ internal static class MacSmoke
                 if (view is not null)
                 {
                     _ = UiStateAsync(view);
-                    if (Picks.Count > 0)
+                    if (Picks.Count > 0 && Steps.Length == 0)
                     {
                         Later(1.0, () => _ = PressOpenAsync(view)); // next format through the Open panel
                     }
@@ -103,7 +211,11 @@ internal static class MacSmoke
         Log("dotnet-text " + new ObjectDisposedException("IServiceProvider").Message.Replace('\n', ' ')); // M-14
         tabs.Changed += () => UIApplication.SharedApplication.BeginInvokeOnMainThread(ReportTabs);
         ReportTabs();
-        if (Picks.Count > 0 && view is not null)
+        if (Steps.Length > 0 && view is not null)
+        {
+            RunSteps(view); // a scripted sequence (M-17, M-18, M-21)
+        }
+        else if (Picks.Count > 0 && view is not null)
         {
             Later(2.0, () => _ = PressOpenAsync(view)); // first file through the Open panel, from Home
         }
@@ -136,11 +248,24 @@ internal static class MacSmoke
     /// "An error occurred" bar is showing.</summary>
     private static async Task UiStateAsync(WKWebView view)
     {
-        const string script = """
+        Log("ui " + await UiTextAsync(view));
+    }
+
+    private const string UiScript = """
             (function () {
+              if (!window.__chvdKeys) {
+                window.__chvdKeys = [];
+                window.addEventListener('keydown', function (k) {
+                  window.__chvdKeys.push((k.ctrlKey ? '⌃' : '') + (k.metaKey ? '⌘' : '') + k.key);
+                }, true);
+              }
+              var keys = window.__chvdKeys.splice(0).join(',');
               var e = document.getElementById('blazor-error-ui');
               return 'route=' + location.pathname + ' reader=' + (document.querySelector('.reader') ? 1 : 0)
-                + ' errorbar=' + (e ? getComputedStyle(e).display : 'none') + (function () {
+                + ' errorbar=' + (e ? getComputedStyle(e).display : 'none')
+                + ' unlock=' + (document.querySelector('.uc') ? 1 : 0)
+                + ' immersive=' + (document.body.classList.contains('chvd-immersive') ? 1 : 0)
+                + ' keys=[' + keys + ']' + (function () {
                   var f = document.querySelector('iframe.htv-frame');
                   if (!f) { return ''; }
                   var b = f.contentDocument && f.contentDocument.body;
@@ -148,18 +273,24 @@ internal static class MacSmoke
                 })();
             })()
             """;
+
+    private static async Task<string> UiTextAsync(WKWebView view)
+    {
         try
         {
-            Log("ui " + (await view.EvaluateJavaScriptAsync(script))?.ToString());
+            return (await view.EvaluateJavaScriptAsync(UiScript))?.ToString() ?? string.Empty;
         }
         catch (Exception ex)
         {
-            Log("ui failed: " + ex.Message);
+            return "failed: " + ex.Message;
         }
     }
 
     private static void Later(double seconds, Action action)
         => NSTimer.CreateScheduledTimer(seconds, false, _ => action());
+
+    private static void Later(double seconds, Func<Task> action)
+        => NSTimer.CreateScheduledTimer(seconds, false, _ => _ = action());
 
     /// <summary>
     /// Where the time between WebView ready and the Ui's ready signal goes (M-06), from the WebView's own
