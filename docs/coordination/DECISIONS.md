@@ -395,5 +395,8 @@ The fix for pages left blank after a reopen is in the thirteenth patch. The rema
 ## D-153 — M-21 is Mac-only (9 Nov 2026, coordinator)
 On the Reader's main branch, `Reader.razor` `OnEscape` closes Measure, the card, the pages drawer, Find and the drawer, then leaves Immersive (`_reading = false; SetImmersive(false)`); `reader.js` sends Escape to it. So Esc leaves Immersive on Windows, and M-21 goes to the Mac chat (Esc probably not reaching the WebView on Catalyst). Linux re-verifies on the fourteenth patch before Arun's push, since rendering moved off the Ui thread (D-152).
 
+## D-154 — M-18 re-scoped: recover from a WebContent crash (10 Nov 2026, coordinator)
+Mac Test found that a real mouse click on Settings › Appearance works on macOS 26. The crash comes from a press through Accessibility, as VoiceOver and Voice Control users would make it, which kills Apple's WebContent process. M-18 drops from S1 to S2 and stays a bug. The Mac app handles WebContent termination by reloading back to the same screen, with a plain message and a chuvadi.log entry; it avoids the trigger if it can; and Apple gets a Feedback report.
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).
