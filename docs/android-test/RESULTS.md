@@ -81,7 +81,7 @@ to Release-only behaviour (trimming, AOT).
 | F-01b | Share to Chuvadi → new tab | **PASS** | **PASS** |
 | F-03 | Find "zephyrine" (one key per 250 ms) | **PASS** (R3, R3b: 1/1, page 3) | R3 **FAIL** (typed "zphyrine" → AT-10); R3b **PASS** |
 | F-03b | Fast typing: Find box vs plain field | **FAIL → AT-10** ("burtwordt", "butot") | **FAIL → AT-10** ("butwort", "butest") |
-| F-11a/b | Print → dialog → Save as PDF; vector | dialog opens with "Save as PDF" and a vector-looking preview; the test didn't get the file saved (my tool: `ls --time-style` isn't in toybox) — fixed, R3c | same |
+| F-11a/b | Print → Android dialog → Save as PDF; output vector | **PASS** (R3c run 42541494724: 12 pages, 40,561 chars of text, **0 images**, Find marker present) | dialog reached in R3/R3b; R3c's tap on the card button missed (test selector) — tablet printing still to re-run |
 | F-15 / F-15b | Tabs back after a background kill | **FAIL → AT-11** (11 of 11 lost) | **PASS** (11 of 11) |
 | R-02a | Owner-only AES-256 file renders | R3, R3b: laid out, page 1 not rendered within 40 s — watching | **PASS** |
 | everything else in the R2 table | | **PASS** again | **PASS** again |

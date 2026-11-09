@@ -1,7 +1,7 @@
 {
-  "round": "3c",
+  "round": 4,
   "emulators": "phone-36,tablet-36",
-  "suites": "function",
+  "suites": "robust",
   "foundation_ref": "053e8e4f5102a312da75a876329f6b393dfe8f76",
   "mobileui_ref": "770bfdf403a44cbdff95e9690c918de033b82b7a",
   "android_ref": "b731cfe7a784dc62beb879381ca9f27691305e46"
