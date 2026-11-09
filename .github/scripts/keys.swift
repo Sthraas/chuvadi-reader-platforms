@@ -4,7 +4,29 @@
 import AppKit
 
 let args = CommandLine.arguments
-guard args.count == 3 else { print("usage: keys <bundle-id> <key>"); exit(2) }
+guard args.count == 3 else { print("usage: keys <bundle-id> <key|ax-walk>"); exit(2) }
+
+// ax-walk: read the app's accessibility tree, as VoiceOver or the Mac Test driver does (makes WebKit build its own).
+if args[2] == "ax-walk" {
+    guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: args[1]).first else { print("not running"); exit(1) }
+    let root = AXUIElementCreateApplication(app.processIdentifier)
+    var count = 0, webAreas = 0
+    func walk(_ e: AXUIElement, _ depth: Int) {
+        if depth > 40 || count > 20000 { return }
+        count += 1
+        var role: CFTypeRef?
+        if AXUIElementCopyAttributeValue(e, kAXRoleAttribute as CFString, &role) == .success, (role as? String) == "AXWebArea" { webAreas += 1 }
+        var title: CFTypeRef?
+        _ = AXUIElementCopyAttributeValue(e, kAXTitleAttribute as CFString, &title)
+        var kids: CFTypeRef?
+        if AXUIElementCopyAttributeValue(e, kAXChildrenAttribute as CFString, &kids) == .success, let list = kids as? [AXUIElement] {
+            for k in list { walk(k, depth + 1) }
+        }
+    }
+    walk(root, 0)
+    print("ax-walk nodes=\(count) webAreas=\(webAreas) trusted=\(AXIsProcessTrusted())")
+    exit(0)
+}
 for app in NSRunningApplication.runningApplications(withBundleIdentifier: args[1]) {
     app.activate(options: [.activateAllWindows])
 }
