@@ -393,6 +393,24 @@ def t4_0b():
     quit_app()
 
 
+@case("M-18 Settings after the Reader")
+def m18():
+    reset_state({"theme": "light"})
+    launch(settle=4)
+    ok, _ = open_doc(f"{FX}/five-pages.pdf")
+    steps = {}
+    for name in ["Mark 2", "Read 1", "Library", "Settings"]:
+        press(name, contains=name.endswith(("1", "2")))
+        time.sleep(2.5)
+        steps[name] = "ERROR" if ui_error() else "ok"
+        if steps[name] == "ERROR":
+            break
+    s = shot("m18-settings-after-reader")
+    bad = "ERROR" in steps.values()
+    record("M-18 Settings after the Reader", "fail" if bad else "pass", f"opened={ok}; steps {steps}", shot=s)
+    quit_app()
+
+
 @case("T4.0c single keys on Home and Reader")
 def t4_0c():
     bad = {}
@@ -1190,6 +1208,8 @@ def main():
     t4_7()
     t4_8()
     t3_5()
+    t4_6()
+    m18()
     if A.runs > 0:
         t2(A.runs)
     if A.suite == "full":
@@ -1198,7 +1218,6 @@ def main():
         t3_2()
         t3_3()
         t4_9()
-        t4_6()
         t4_15()
         t5_1()
         t5_3()
