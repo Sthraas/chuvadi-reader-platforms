@@ -239,6 +239,18 @@ Foundation's thirteenth patch, part 1 (7d1ac03) carries the Linux chat's B-24, B
 | B-26 (D-147) | None: raw values as the file holds them | D-136 corpus tests |
 | Print with the owner password (D-139) | The Print card gets the tab's password | UI 31b: user password → locked; owner password → CUPS writes 5 pages |
 
+**10 Nov, Linux chat — quick re-verify on `platform/linux` ba94dfa** (Foundation's fourteenth patch, 21a222d +
+b41f25c: pages render off the Ui thread, D-152/AT-13; CI green on x64 and ARM64; UI pass 121/121).
+Please re-run your regression and these, since rendering changed:
+- Paging fast through a big PDF (Linux UI 36a: 400 pages, 150 PageDowns — page answers ≤ 0.10 s).
+  **Known, reported:** the page landed on draws 7.5–8.3 s after the last key (renders for pages paged past
+  aren't cancelled, so it waits behind them). Expect that; note your own numbers.
+- Closing a tab while it renders (36b): the next file draws at once; no errors.
+- The CAD PDF (B-27): open, page through the 5 sheets, close; note time per sheet, memory before/after close,
+  and any pause over 1 s. Linux's generated stand-in (36c): sheets 0.2–0.3 s, memory 600–700 MB that stays
+  after closing, and a ~2.2 s pause once in four runs.
+- B-24 / B-08b / B-25 / owner-password printing (31b, 34e, 34f) still pass on this head.
+
 ## B-24 — A stalled read gives a blank Reader, no Cancel, and blocks later opens (S2, shared Ui/Core) — e468d1a
 **Steps.** `mkfifo /tmp/fifo/slow.pdf` (a source that never delivers data — the real-world case is a hung SMB/NFS/sshfs mount or an unplugged USB drive); `open /tmp/fifo/slow.pdf`; after 5 s open `five-pages.pdf`.
 **Expected.** "Opening…" at once; after 10 s the `SlowOpenNote` with Cancel; Cancel closes the tab; the second file opens regardless (B-08b / B-10).
