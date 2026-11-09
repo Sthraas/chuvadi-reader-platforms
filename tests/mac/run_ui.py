@@ -408,61 +408,70 @@ def t4_0b():
 
 @case("M-18 Settings after the Reader")
 def m18():
-    """Several short paths into Settings, each from a fresh launch, so the step that breaks the Ui is named."""
+    """M-18 (D-154): an Accessibility press on Settings › Appearance or About › Licences ends WebKit's content process on
+    macOS 26. Expected since ac4e1a2: the app reopens the same screen with a plain message, no "An error occurred",
+    and chuvadi.log gets the first error (M-19). Mouse-click paths are the control."""
+    LOG = f"{HOME}/Library/Logs/Chuvadi/chuvadi.log"
     flows = {
-        "mark-read-library-settings": ["Mark 2", "Read 1", "Library", "Settings"],
-        "reader-settings": ["Settings"],
-        "reader-settings-appearance": ["Settings", "Appearance"],
-        "reader-docmenu-settings": ["@Document", "Settings"],
-        "reader-cmdk-settings": ["@cmd+k", "Settings"],
-        "home-settings-appearance": ["@nodoc", "Settings", "Appearance"],
-        "home-settings-appearance-mouse": ["@nodoc", "Settings", "@clickAppearance"],
-        "reader-settings-appearance-mouse": ["Settings", "@clickAppearance"],
+        # name: (open a doc first?, how to get to the section, final press, AX or mouse, marker of the target screen)
+        "ax-appearance-home": (False, None, "Appearance", False, "Cream paper"),
+        "ax-appearance-reader": (True, None, "Appearance", False, "Cream paper"),
+        "ax-licences-home": (False, "About", "Licences", False, ".NET runtime"),
+        "mouse-appearance-home": (False, None, "Appearance", True, "Cream paper"),
+        "mouse-licences-home": (False, "About", "Licences", True, ".NET runtime"),
     }
     ev, bad = {}, []
-    for fname, flow in flows.items():
+    for fname, (with_doc, section, target, mouse, marker) in flows.items():
         reset_state({"theme": "light"})
         launch(settle=4)
-        ok = None
-        if flow[0] != "@nodoc":
-            ok, _ = open_doc(f"{FX}/five-pages.pdf")
-        steps = {}
-        for name in flow:
-            if name == "@nodoc":
-                continue
-            if name == "@Document":
-                press("Document"); time.sleep(1); drive("key", "escape")
-            elif name == "@cmd+k":
-                drive("key", "cmd+k"); time.sleep(1); drive("key", "escape")
-            elif name == "Appearance":
-                press("Appearance", contains=True, index=-1)
-            elif name == "@clickAppearance":
-                press("Appearance", contains=True, index=-1, click=True)
-            else:
-                press(name, contains=name.endswith(("1", "2")))
-            time.sleep(2.5)
-            steps[name] = "ERROR" if ui_error() else "ok"
-            if steps[name] == "ERROR":
-                break
-        diag = {}
-        if "ERROR" in steps.values():
-            # what WebKit and the app said around the failure, and any WebContent crash report
-            _, lg = sh(["log", "show", "--last", "45s", "--style", "compact", "--predicate",
-                        'process == "ChuvadiReader.Mac" OR process == "com.apple.WebKit.WebContent" OR '
-                        'eventMessage CONTAINS[c] "WebContent" OR eventMessage CONTAINS[c] "crash"'], timeout=90)
-            os.makedirs(f"{OUT}/logs", exist_ok=True)
-            open(f"{OUT}/logs/m18-{fname}.txt", "w").write(lg)
-            diag["webkit_lines"] = [l[:240] for l in lg.splitlines()
-                                    if re.search(r"crash|terminat|didClose|ProcessDidTerminate|exited|jetsam|reload|navigat", l, re.I)][:25]
-            _, ls = sh(f"ls -t {DIAG} 2>/dev/null | head -20")
-            diag["crash_reports"] = [x for x in ls.splitlines() if re.search(r"WebContent|Chuvadi|GPU", x, re.I)]
-            for x in diag["crash_reports"][:3]:
-                sh(["cp", f"{DIAG}/{x}", f"{OUT}/logs/"])
-        ev[fname] = {"opened": ok, "steps": steps, "shot": shot("m18-" + fname), **diag}
-        if "ERROR" in steps.values():
+        if with_doc:
+            open_doc(f"{FX}/five-pages.pdf")
+        press("Settings")
+        time.sleep(2)
+        if section:
+            press(section, contains=True, index=-1, click=True)
+            time.sleep(1.5)
+        before_log = open(LOG, errors="replace").read() if os.path.exists(LOG) else ""
+        _, before_diag = sh(f"ls {DIAG} 2>/dev/null")
+        rc, out = press(target, contains=True, index=-1, click=mouse)
+        e = {"press": out[:120]}
+        # the message may be short-lived: look early, then again once things settle
+        time.sleep(1.5)
+        t1 = axdump(f"m18-{fname}-early")
+        e["early_shot"] = shot(f"m18-{fname}-early")
+        e["early_error_bar"] = ui_error()
+        time.sleep(5)
+        t2 = axdump(f"m18-{fname}-late")
+        e["late_shot"] = shot(f"m18-{fname}-late")
+        e["late_error_bar"] = ui_error()
+        e["on_target_screen"] = marker in t2
+        e["doc_tab_kept"] = ("five-pages.pdf" in t2) if with_doc else None
+        msg_re = r"reopen|reload|restart|sorry|went wrong|problem|stopped|again|recover"
+        e["messages"] = sorted({l.strip()[:200] for l in (t1 + "\n" + t2).splitlines() if re.search(msg_re, l, re.I)})[:6]
+        after_log = open(LOG, errors="replace").read() if os.path.exists(LOG) else ""
+        e["new_log"] = [l[:400] for l in after_log[len(before_log):].splitlines() if l.strip()][:6]
+        _, after_diag = sh(f"ls {DIAG} 2>/dev/null")
+        new_reports = sorted(set(after_diag.split()) - set(before_diag.split()))
+        e["new_crash_reports"] = [x for x in new_reports if re.search(r"WebContent|Chuvadi", x, re.I)]
+        for x in e["new_crash_reports"][:2]:
+            sh(["cp", f"{DIAG}/{x}", f"{OUT}/logs/"])
+        e["alive"] = bool(pids())
+        crashed = bool(e["new_crash_reports"])
+        if mouse:
+            e["verdict"] = "ok" if (not e["late_error_bar"] and e["on_target_screen"] and not crashed) else "FAIL"
+        elif crashed:
+            # the content process ended: the app must come back on the same screen, explain, and log the first error
+            ok = (e["alive"] and not e["late_error_bar"] and e["on_target_screen"] and bool(e["messages"]) and bool(e["new_log"])
+                  and (e["doc_tab_kept"] is not False))
+            e["verdict"] = "recovered" if ok else "FAIL"
+        else:
+            e["verdict"] = "ok (no content-process end)" if (not e["late_error_bar"] and e["on_target_screen"]) else "FAIL"
+        ev[fname] = e
+        if e["verdict"] == "FAIL":
             bad.append(fname)
         quit_app()
-    record("M-18 Settings after the Reader", "fail" if bad else "pass", f"broke in: {bad}" if bad else "every path fine", **ev)
+    record("M-18 Settings after the Reader", "fail" if bad else "pass",
+           f"failed: {bad}" if bad else "; ".join(f"{k}: {v['verdict']}" for k, v in ev.items()), **ev)
 
 
 @case("T4.0c single keys on Home and Reader")
