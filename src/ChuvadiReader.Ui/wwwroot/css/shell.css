@@ -75,6 +75,8 @@
 .topbar:not(.lb-open) .tb-brand { margin: 0 auto 0 4px; }
 .tb-mid { display: flex; justify-content: center; }
 .tb-right { display: flex; align-items: center; justify-content: flex-end; gap: 8px; min-width: 0; }
+/* W-01: wraps the controls so they keep their press; draws no box, so the empty space moves the window. */
+.tb-ctl { display: contents; }
 
 .topbar .rtabs { flex: 0 1 auto; min-width: 0; display: flex; align-items: center; gap: 4px; height: 100%; margin: 0; padding: 0; overflow-x: auto; overflow-y: hidden; }
 .topbar .rtab { height: 26px; min-width: 84px; max-width: 190px; padding: 0 5px 0 9px; gap: 6px; border-radius: 7px; }
