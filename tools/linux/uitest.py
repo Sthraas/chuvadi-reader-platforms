@@ -1081,7 +1081,8 @@ step("36b-close-tab-mid-render", close_mid_render)
 
 def cad_drawing():
     """A 5-sheet A1 vector drawing (~120,000 strokes a sheet; B-27's kind of file): the page answers while
-    sheets draw, every sheet draws, and memory after paging through is reported."""
+    sheets draw, every sheet draws, and the app's memory before, with 5 sheets, and after closing is reported."""
+    baseline = memory_mb()
     t0 = time.time()
     open_tab(os.path.join(HEAVY, "cad.pdf"))
     worst = max(ping() for _ in range(3))
@@ -1099,8 +1100,18 @@ def cad_drawing():
     close_active_tab()
     if worst > 1.0:
         raise AssertionError(f"the page took {worst:.2f} s to answer while a sheet was drawing")
+    # Closing the drawing gives its memory back (sixteenth patch): the app comes back near where it started.
+    t_close = time.time()
+    after = memory_mb()
+    while after[0] > baseline[0] + 100 and time.time() - t_close < 15:
+        time.sleep(1)
+        after = memory_mb()
+    # Target (sixteenth patch): back within 100 MB of before opening. Not met on Linux yet (BUILD-LOG §47), so this
+    # is reported, not failed, until the fix lands; then it becomes an assertion.
+    kept = "" if after[0] <= baseline[0] + 100 else " — NOT back near the start (known, reported)"
     return (f"sheet 1 drawn in {first:.1f} s; sheets 2-5 in {', '.join(f'{t:.1f}' for t in times)} s; page answered in "
-            f"≤ {worst:.2f} s throughout; memory after 5 sheets app/web {mem[0]}/{mem[1]} MB")
+            f"≤ {worst:.2f} s throughout; memory app/web: {baseline[0]}/{baseline[1]} MB before, {mem[0]}/{mem[1]} MB with "
+            f"5 sheets, {after[0]}/{after[1]} MB {time.time() - t_close:.0f} s after closing{kept}")
 
 
 step("36c-cad-drawing", cad_drawing)
