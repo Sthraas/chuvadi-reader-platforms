@@ -691,11 +691,11 @@ def t3_1():
                 t = axdump("settings-" + sec.lower())
                 texts += t
                 if sec == "About":
-                    rc3, o3 = press("Licences", contains=True)
+                    rc3, o3 = press("Licences", contains=True, click=True)
                     time.sleep(1.5)
                     ev["licences"] = shot("light-licences") + f" ({o3[:70]})"
                     lic = axdump("licences")
-                    rc4, o4 = press(".NET runtime", contains=True)
+                    rc4, o4 = press(".NET runtime", contains=True, click=True)
                     time.sleep(1.5)
                     ev["licences-dotnet"] = shot("light-licences-dotnet") + f" ({o4[:70]})"
                     dot = axdump("licences-dotnet")

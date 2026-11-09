@@ -33,7 +33,7 @@ from the job log only and it has no T2 numbers), **42676250705** (M-18 with WebK
 | T5.3 heavy vector | ❌ | | | never draws (M-20); many pages: first page 1.6 s (0.9 s on c6d7705) |
 | T5.5 low memory | ✅ | | | now opens under pressure |
 | T5.4, T5.7, T5.9 | ✅ | | | |
-| T1.10 Licences | ⏳ | | | re-running on 26 with mouse clicks |
+| T1.10 Licences | ⏳ | | | run 42689473198: every Settings section clicked with the mouse is fine on 26; the Licences button was still pressed through Accessibility and hit M-18 — harness now clicks it, next build |
 
 **Page rendering — no hang seen.** All 40 timed launches on each runner drew their first frame; launch-with-PDF showed
 the page 2/2; Open panel → page 10/10 on every runner. Open panel → first page (median / worst): macOS 26 **586 / 829 ms**
