@@ -971,42 +971,63 @@ def t4_9():
 
 @case("T4.6 passwords")
 def t4_6():
+    """Session A: right password straight away. Session B (AES-256 only): wrong, then right.
+    Before each submit the harness presses "show" so the typed value is readable in the AX tree,
+    then re-focuses the field and presses Return, so a failure can't be a lost keystroke."""
     ev = {}
+
+    def submit(tag, f, pw):
+        r = {"focused": focus_field("Password to open")}
+        drive("key", "cmd+a")
+        drive("type", pw)
+        time.sleep(0.4)
+        press("show")
+        time.sleep(0.6)
+        t = axdump(f"pw-{tag}-typed-" + f)
+        r["typed_values"] = [l.strip()[:160] for l in t.splitlines() if "AXTextField" in l][:3]
+        r["typed_ok"] = f'value="{pw}"' in t
+        focus_field("Password to open")
+        drive("key", "return")
+        time.sleep(4)
+        rt = axdump(f"pw-{tag}-" + f)
+        r["messages"] = [l.strip()[:200] for l in rt.splitlines() if re.search(r"wrong|incorrect|doesn|password", l, re.I)][:4]
+        r["shows_page"] = "marker-1" in rt or "Page 1 of five" in rt or "of 5" in rt
+        r["ui_error"] = ui_error()
+        r["shot"] = shot(f"pw-{tag}-" + f.replace(".", "_"))
+        return r
+
     for f in ["aes256.pdf", "aes128.pdf", "rc4.pdf", "owner-only.pdf"]:
         reset_state({"theme": "light"})
         launch(settle=3)
         ok, _ = open_doc(f"{FX}/{f}", settle=4)
         txt = axdump("pw-" + f)
-        e = {"tab": ok, "shot": shot("pw-" + f.replace(".", "_")),
-             "messages": [l.strip()[:200] for l in txt.splitlines() if re.search(r"password|encrypted|locked|unlock", l, re.I)][:6]}
         field = "AXSecureTextField" in txt
-        if field and f != "owner-only.pdf":
-            e["focused"] = focus_field("Password to open")
-            drive("type", "wrong")
-            drive("key", "return")
-            time.sleep(2.5)
-            wt = axdump("pw-wrong-" + f)
-            e["wrong"] = [l.strip()[:200] for l in wt.splitlines() if re.search(r"wrong|incorrect|didn|doesn|not match|try again", l, re.I)][:4]
-            e["wrong_ui_error"] = ui_error()
-            e["wrong_shot"] = shot("pw-wrong-" + f.replace(".", "_"))
-            if e["wrong_ui_error"]:
-                quit_app()
-                launch(settle=3)
-                open_doc(f"{FX}/{f}", settle=4)
-            focus_field("Password to open")
-            drive("key", "cmd+a")
-            drive("type", "user1")
-            drive("key", "return")
-            time.sleep(4)
-            rt = axdump("pw-right-" + f)
-            e["right_shows_page"] = "marker-1" in rt or "Page 1 of five" in rt
-            e["right_ui_error"] = ui_error()
-            e["right_shot"] = shot("pw-right-" + f.replace(".", "_"))
-        e["prompt"] = bool(field)
+        e = {"tab": ok, "prompt": field, "shot": shot("pw-" + f.replace(".", "_"))}
+        if f == "owner-only.pdf":
+            e["shows_page"] = "marker-1" in txt or "Page 1 of five" in txt
+        elif field:
+            e["right_first"] = submit("right", f, "user1")
         ev[f] = e
         quit_app()
-    bad = [k for k, v in ev.items() if k != "owner-only.pdf" and (not v.get("right_shows_page") or v.get("right_ui_error") or v.get("wrong_ui_error"))]
-    record("T4.6 passwords", "pass" if not bad else "fail", f"no working prompt for: {bad}" if bad else "prompt, wrong and right password", **ev)
+
+    reset_state({"theme": "light"})
+    launch(settle=3)
+    open_doc(f"{FX}/aes256.pdf", settle=4)
+    ev["aes256 wrong then right"] = {"wrong": submit("wrong", "aes256.pdf", "wrong"),
+                                     "right": submit("right2", "aes256.pdf", "user1")}
+    quit_app()
+
+    bad = []
+    for k in ("aes256.pdf", "aes128.pdf", "rc4.pdf"):
+        r = ev[k].get("right_first") or {}
+        if not ev[k].get("prompt") or not r.get("shows_page") or r.get("ui_error"):
+            bad.append(k)
+    seq = ev["aes256 wrong then right"]
+    if seq["wrong"].get("ui_error") or seq["right"].get("ui_error") or not seq["right"].get("shows_page"):
+        bad.append("aes256 wrong-then-right")
+    if not ev["owner-only.pdf"].get("shows_page"):
+        bad.append("owner-only.pdf")
+    record("T4.6 passwords", "pass" if not bad else "fail", f"failed: {bad}" if bad else "prompt, wrong and right password", **ev)
 
 
 # ───────────────────────────── T5 robustness ─────────────────────────────
