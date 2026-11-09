@@ -12,6 +12,9 @@
 //   * Arrange: long-press a page (or a Shelf page) to drag it; a quick swipe scrolls instead. While
 //     Arrange shows, a blocking touchmove listener is registered *before* any press, so the browser
 //     waits for it and an armed press can stop the pan (Chrome ignores one added mid-gesture — step 34).
+//   * 44 px tap areas everywhere (D-37): a tap that lands on nothing clickable, within 22 px of a small
+//     control (cards, dialogs, menus drawn at desktop size), goes to the nearest one. mobile.css gives
+//     the main screens' controls real 44 px areas; this covers the rest without changing any look.
 //   * phone Arrange: the Shelf rests as a peek; tap it or swipe up to open, swipe down to close; a page
 //     long-pressed out of the open Shelf drops it back to the peek so the desks are reachable.
 
@@ -38,6 +41,7 @@ export function initTouch(dotnetRef) {
     document.addEventListener('pointerup', onUp, true);
     document.addEventListener('pointercancel', onCancel, true);
     document.addEventListener('contextmenu', onContextMenu, true);
+    document.addEventListener('click', onClickNear, true);
     document.addEventListener('touchstart', onTouchStart, { capture: true, passive: true });
     document.addEventListener('touchmove', onTouchMove, { capture: true, passive: true });
     document.addEventListener('touchend', onTouchEnd, { capture: true, passive: true });
@@ -54,6 +58,7 @@ export function disposeTouch() {
     document.removeEventListener('pointerup', onUp, true);
     document.removeEventListener('pointercancel', onCancel, true);
     document.removeEventListener('contextmenu', onContextMenu, true);
+    document.removeEventListener('click', onClickNear, true);
     document.removeEventListener('touchstart', onTouchStart, true);
     document.removeEventListener('touchmove', onTouchMove, true);
     document.removeEventListener('touchend', onTouchEnd, true);
@@ -219,6 +224,53 @@ function onCancel(e) {
 function onContextMenu(e) {
     // Android shows a context menu / text selection on long-press; not on a page being dragged.
     if (press) e.preventDefault();
+}
+
+// ── 44 px tap areas (D-37) ───────────────────────────────────────────────────
+const TARGET = 44;
+const CONTROLS = 'button:not(:disabled), a[href], summary, [role="button"], select:not(:disabled), textarea:not(:disabled), '
+    + 'input:not([type="hidden"]):not([type="range"]):not(:disabled)';
+
+/** True when the tap already landed on something that takes it: a control, or anything drawn as
+ *  clickable (cursor: pointer — Blazor @onclick regions such as rows and scrims are styled that way). */
+function takesTap(el) {
+    if (!el || el.nodeType !== 1) return false;
+    if (el.closest(CONTROLS + ', label, [contenteditable], [tabindex]:not([tabindex="-1"])')) return true;
+    return getComputedStyle(el).cursor === 'pointer';
+}
+
+/** The control a touch at (x, y) is meant for when it misses every control: the nearest one whose area,
+ *  grown to 44 × 44 px around it, holds the point, and which is on top where it's drawn (not under a
+ *  sheet or a scrim). Null when the point is on a control already or no control is that close. */
+export function nearTarget(x, y) {
+    const hit = document.elementFromPoint(x, y);
+    if (!hit || takesTap(hit)) return null;
+    let best = null, bestD = Infinity;
+    for (const c of document.querySelectorAll(CONTROLS)) {
+        const r = c.getBoundingClientRect();
+        if (!r.width || !r.height) continue;
+        const gx = Math.max(0, (TARGET - r.width) / 2), gy = Math.max(0, (TARGET - r.height) / 2);
+        if (x < r.left - gx || x > r.right + gx || y < r.top - gy || y > r.bottom + gy) continue;
+        const dx = Math.max(r.left - x, 0, x - r.right), dy = Math.max(r.top - y, 0, y - r.bottom);
+        const d = Math.hypot(dx, dy);
+        if (d >= bestD) continue;
+        const top = document.elementFromPoint(Math.min(Math.max(x, r.left + 1), r.right - 1), Math.min(Math.max(y, r.top + 1), r.bottom - 1));
+        if (!top || !(top === c || c.contains(top) || top.contains(c))) continue;   // covered there
+        best = c; bestD = d;
+    }
+    return best;
+}
+
+function onClickNear(e) {
+    if (!e.isTrusted) return;   // our own c.click() below
+    const c = nearTarget(e.clientX, e.clientY);
+    if (!c) return;
+    e.preventDefault(); e.stopPropagation();
+    const tag = c.tagName;
+    const typing = tag === 'TEXTAREA' || (tag === 'INPUT' && !/^(checkbox|radio|button|submit|reset|color|file|image)$/i.test(c.type));
+    if (typing) { c.focus(); return; }
+    if (tag === 'SELECT') { c.focus(); try { c.showPicker(); } catch { /* older WebView: focused */ } return; }
+    c.click();
 }
 
 function call(method, arg) {

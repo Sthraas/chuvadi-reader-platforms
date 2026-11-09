@@ -26,6 +26,11 @@ outstanding one.
   `swatches` → `palette`, and LiPicons 1.1.0 has no `palette` key, so anything asking for `swatches`
   draws nothing. Worth a look by whoever owns Icon.razor.
 
+### Small note, not a hook: "change…" folder buttons (Export, Press cards)
+`Reader.razor` lines 200 and 267 draw "change…" as inline-styled 16 px buttons right above the next
+control, so on touch their area is shared with it. If they took a class (Bench's Scatter uses
+`class="link"`), mobile.css could space them for touch. Nothing needed now.
+
 ## Landed: H-14 and H-16 (eighth combined patch, 63f37b1, 839d39d), exactly as written
 The record of both follows.
 

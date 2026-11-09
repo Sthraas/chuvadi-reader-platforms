@@ -131,6 +131,29 @@ present; titles are often empty or junk) unless Arun wants the metadata title.
 
 ---
 
+## MU-11 44 px tap areas on every touch control (D-37; coordinator 9 Nov 04:42) — done, how it works
+Requirement: every touch control gets at least a 44 px tap area, the Shelf's too; visible sizes stay as
+drawn; desktop unchanged. Two mechanisms, both touch-only:
+1. **mobile.css** (main screens: top bar, phone bars and sheets, desks, Shelf, Library, Settings, Home): an
+   invisible `::after` around the control, or a transparent border / padding where the control clips its own
+   overflow (inputs, the Library name). Where neighbours sat closer than 44 px, the spacing between them
+   opens up (Shelf rows, pager gap, Library tag rows, Settings list); the controls keep their size.
+2. **mobile.js `nearTarget`** (everything else: Foundation's cards and dialogs drawn at desktop density): a
+   tap that lands on nothing clickable goes to the nearest enabled control whose 44 × 44 area around it holds
+   the point, if that control is on top there. A tap on anything clickable (a control, or anything drawn with
+   `cursor: pointer`, such as a row or a scrim) is left alone. Dialog groups packed tighter than 44 px get
+   touch spacing in mobile.css (Watermark swatches and B / I, Header & footer selects, Interleave).
+- **For:** covers every control, including ones added later, with no look change and no edit to a
+  Foundation file; one function, easy to turn off.
+- **Against:** (2) is a heuristic — a near-miss goes to the nearest control, which is what a 44 px area
+  means, but it relies on clickable non-controls being styled `cursor: pointer` (they are today);
+  range sliders take only real hits (they're made 44 px tall in dialogs instead).
+- Two visible changes to note: Settings segmented options are at least 44 px wide (On / Off were 36 / 38),
+  and the tablet pager is 12 px wider (gap 10 px). The docked Shelf's file row puts its four icons on a line
+  of their own (they don't fit 44 px apart beside the name line).
+- Checked by `tools/mobile-ui/targets.py` (every enabled visible control, 4 sizes, 11 screens, 15 cards and
+  panels) and a real tap in checks.py.
+
 ## For the Android chat (via the coordinator)
 1. **Bug (Android host): `wwwroot/index.html` does not link `ChuvadiReader.Android.styles.css`.** All the
    Ui's scoped component CSS (Reader.razor.css, Bench.razor.css, cards, viewers…) is missing on Android.

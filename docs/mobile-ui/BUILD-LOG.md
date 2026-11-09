@@ -383,3 +383,23 @@ Evidence:
   - Desktop before/after (Foundation vs this branch + H-17): clock only on Read, Mark, Arrange, Home
     and the open desk menu.
   - Touch gestures and checks pass at 800×1280, 1280×800, 412×915, 915×412; 0 console errors.
+
+## 9 Nov, 04:42: D-37 for every touch control (coordinator)
+- Coordinator: every touch control gets at least a 44 px tap area, the Shelf's too; visible size as drawn.
+- mobile.css: Shelf (icon buttons 44 px boxes; file-row icons 44 px apart, on their own line when docked;
+  tools, slider, add, filter fields and buttons), Library on the tablet (name, checkbox drawn at 15 px with a
+  44 px target, tag rows, view buttons, search), phone Library fixes (the name and tag areas were clipped by
+  their own overflow), Settings (segments, toggles, list), Home (mini buttons, links), dialog sliders and
+  dialog spacing (Watermark, Header & footer, Interleave).
+- mobile.js `nearTarget`: a tap on nothing clickable goes to the nearest control within its 44 px area
+  (OPTIONS MU-11, pros and cons).
+- `tools/mobile-ui/targets.py`: the audit; checks.py: a real tap 5 px outside Watermark's "B" toggles it.
+- Results:
+  - Audit at 1280×800, 800×1280, 412×915, 915×412 on Read, Mark, Protect, Arrange, Shelf, desk menu,
+    Document menu, View sheet, Home, Library, Settings, and Print, Properties, Export, Watermark, Header &
+    footer, Interleave, Press: nothing under 44 px apart from (a) the sheet handle, whose 44 px area sits
+    mostly above it (a tap there closes the sheet anyway), (b) rows scrolled half under a bar, and (c) the
+    "change…" folder buttons in the Export / Press cards (inline-styled, 16 px, close to the next button:
+    note to Foundation).
+  - 305 tests; desktop clock-only (Read, Mark, Arrange, Home, desk menu); 53 touch checks pass; 0 console
+    errors.

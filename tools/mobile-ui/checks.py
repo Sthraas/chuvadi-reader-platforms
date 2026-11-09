@@ -89,6 +89,21 @@ async def main():
             ok = bool(r) and r["overflow"] <= 0 and r["page"] >= r["desk"] - 40 and r["left"] >= 8
             report("Redact opens at fit width", ok, r)
             await pg.context.close()
+        # 4. 44 px tap areas (D-37): a tap 20 px below the centre of a small control drawn at desktop size
+        #    (Watermark's 29 px "B", so 5 px outside it) lands on nothing; mobile.js gives it to the control.
+        pg = await fresh()
+        await pg.locator(".ph-nav-b:nth-child(3), .lb-mode:nth-of-type(3)").first.click(); await pg.wait_for_timeout(1500)
+        await pg.locator(".desk-more").first.click(); await pg.wait_for_timeout(500)
+        await pg.locator(".desk-menu button", has_text="Watermark").first.click(); await pg.wait_for_timeout(900)
+        bold = pg.locator(".modal .seg button", has_text="B").first
+        bb = await bold.bounding_box()
+        before = await bold.get_attribute("class") or ""
+        await pg.touchscreen.tap(bb["x"] + bb["width"] / 2, bb["y"] + bb["height"] / 2 + 20)
+        await pg.wait_for_timeout(600)
+        after = await bold.get_attribute("class") or ""
+        report("a tap just outside a small control reaches it (44 px area)", ("on" in before.split()) != ("on" in after.split()),
+               f"B class '{before}' → '{after}'")
+        await pg.context.close()
         await b.close()
     sys.exit(1 if fails else 0)
 
