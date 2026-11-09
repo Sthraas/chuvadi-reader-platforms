@@ -581,3 +581,19 @@ generated PDFs (`tools/linux/make-heavy-pdfs.py`, test-only; no real drawing use
   earlier work); the page answers ≤ 0.14 s. Memory after 5 sheets: app 600–700 MB, web 246 MB, and it stays high
   after the tab closes (B-27's growth, smaller). Once in four runs a ~2.2 s pause held either a sheet or the
   page's answer — consistent with a full garbage collection on that heap; not yet proven.
+
+### 46. Foundation's fifteenth combined patch (bcd1ab1, 10 Nov) — and a correction to §45
+Merged without conflicts; Reader 223/223, host kit 75/75, Linux 44/44, Web Ui 39/39, Mobile Ui 16/16; full UI pass
+121/121.
+
+**Correction:** §45's "render backlog" finding was wrong. Step 36a timed the landed page from the last key, but
+WebKitGTK plays each PageDown as a smooth-scroll step, one after another: after 150 fast PageDowns the view keeps
+moving for 12–14 s and only then reaches page ~150. Traced on both the fourteenth- and fifteenth-patch builds: all
+400 pages of `big.pdf` were already drawn; the page counter climbed ~10 pages a second after the keys stopped. The
+pages weren't late, the scroll was. (Foundation's queue change — pages that left the view are cancelled, the
+nearest waiting page goes next — is still right for genuinely heavy pages.) 36a now waits for the view to settle
+and fails if the landed page isn't drawn within 2 s of that: on both builds it is drawn within the 1 s it takes to
+count as settled.
+
+The real Linux finding is the scroll itself: held PageDown keeps scrolling for ~12 s after release. Reported with
+options (it's WebKit's smooth scrolling, a host setting).
