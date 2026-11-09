@@ -11,6 +11,7 @@ guard args.count >= 3 else { print("usage: keys <bundle-id> <key|ax-walk|ax-pres
 if args[2] == "ax-press", args.count == 4 {
     guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: args[1]).first else { print("not running"); exit(1) }
     let root = AXUIElementCreateApplication(app.processIdentifier)
+    AXUIElementSetMessagingTimeout(root, 5) // web content answers slowly; the default gives up before it does
     AXUIElementSetAttributeValue(root, "AXManualAccessibility" as CFString, kCFBooleanTrue)
     AXUIElementSetAttributeValue(root, "AXEnhancedUserInterface" as CFString, kCFBooleanTrue)
     usleep(1_500_000)
@@ -25,11 +26,13 @@ if args[2] == "ax-press", args.count == 4 {
         if found != nil || depth > 60 || seen > 30000 { return }
         seen += 1
         let role = str(e, kAXRoleAttribute) ?? ""
-        let names = [str(e, kAXTitleAttribute), str(e, kAXDescriptionAttribute), str(e, kAXValueAttribute)].compactMap { $0 }
-        if role == "AXButton" && names.contains(where: { $0.trimmingCharacters(in: .whitespaces) == label }) { found = e; return }
+        let names = [str(e, kAXTitleAttribute), str(e, kAXDescriptionAttribute), str(e, kAXHelpAttribute), str(e, kAXValueAttribute)].compactMap { $0 }
+        if role != "AXStaticText" && names.contains(where: { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == label.lowercased() }) {
+            found = e; print("ax-press target role=\(role)"); return
+        }
         var kids: CFTypeRef?
         if AXUIElementCopyAttributeValue(e, kAXChildrenAttribute as CFString, &kids) == .success, let list = kids as? [AXUIElement] {
-            for k in list { walk(k, depth + 1) }
+            for k in list where str(k, kAXRoleAttribute) != "AXMenuBar" { walk(k, depth + 1) }
         }
     }
     walk(root, 0)

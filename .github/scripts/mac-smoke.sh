@@ -181,7 +181,8 @@ s=$(grep -E "CHUVADI step 2 click: route=" "$LOG" | tail -1)
 grep -q "CHUVADI webcontent-ended" "$LOG" && pass "D-154 the content process's end is noticed" || fail "D-154 the content process's end went unnoticed"
 s=$(grep -E "CHUVADI step 5 wait: route=" "$LOG" | tail -1)
 [[ "$s" == *"route=/settings"* && "$s" == *"errorbar=none"* ]] && pass "D-154 the Ui comes back on the same screen" || fail "D-154 after the content process ended: ${s:-no report}"
-[[ "$s" == *"notice=1"* ]] && pass "D-154 a plain message says it was reopened" || fail "D-154 no message after reopening: ${s:-no report}"
+m=$(grep -E "CHUVADI step 3 native: route=" "$LOG" | tail -1)   # the message is a toast; it fades after a few seconds
+[[ "$m" == *"notice=1"* ]] && pass "D-154 a plain message says it was reopened" || fail "D-154 no message after reopening: ${m:-no report}"
 grep -h "content process ended" "$LOGDIR"/*.log 2>/dev/null | head -1 | grep -q . && pass "D-154 chuvadi.log records it" || fail "D-154 not in chuvadi.log"
 grep -h "content process ended" "$LOGDIR"/*.log 2>/dev/null | head -2
 ended=$(grep -c "CHUVADI webcontent-ended" "$LOG" || true)
