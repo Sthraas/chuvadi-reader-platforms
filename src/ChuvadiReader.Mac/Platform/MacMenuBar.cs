@@ -184,10 +184,13 @@ internal static class MacMenuBar
                 builder.RemoveMenu(UIMenuIdentifier.Preferences.GetConstant()!);
             }
 
-            // As its own inline section inside About's menu: a separate sibling menu needs an identifier of its own,
-            // and one sharing "None" with the Document menu was silently dropped by the builder.
+            // Its own inline section. Inserting a sibling after About, or adding to About's children, was silently
+            // dropped by the builder (runs 42670230303, 42676892800).
             var settingsSection = UIMenu.Create(string.Empty, null, UIMenuIdentifier.None, UIMenuOptions.DisplayInline, new UIMenuElement[] { settings });
-            builder.ReplaceChildrenOfMenu(UIMenuIdentifier.About.GetConstant()!, children => children.Append(settingsSection).ToArray());
+            // Edits aimed at About itself were ignored on Catalyst; the Application menu resolves, so the section goes
+            // into its children right after the About section (first child).
+            builder.ReplaceChildrenOfMenu(UIMenuIdentifier.Application.GetConstant()!, children =>
+                children.Take(1).Append(settingsSection).Concat(children.Skip(1)).ToArray());
             MacSmoke.Log($"menu-settings inserted (system Preferences menu {(hadPreferences ? "removed" : "absent")})");
             if (MacSmoke.Enabled && builder.GetMenu(UIMenuIdentifier.Application.GetConstant()!) is { } appMenu)
             {
