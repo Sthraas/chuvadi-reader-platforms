@@ -219,6 +219,17 @@ B-18 goes to the Reader chat's desktop revamp (it changes Windows too).
 | B-27 | Library list (coordinator) | — |
 Re-verify B-24/B-25 once Foundation's patch with this diff is merged into `platform/linux`.
 
+**9 Nov evening, Linux chat — head for re-verification: `platform/linux` c373a3d** (Foundation's twelfth patch,
+022b7c0 + c91a581: chuvadi-pdf 3.32.0, AT-03, W-01, W-02, P-08).
+- **B-26 (D-147):** re-verify — raw values as the file holds them, unchanged.
+- **B-08b Cancel:** re-verify (the library's Cancel, since 1016987).
+- **B-24 is NOT fixed on c373a3d:** Foundation's patch doesn't yet carry the Linux chat's diff (the
+  page-thread probe is still in `Reader.razor`), so `t_b24.py` will still reproduce it. Re-verify after
+  Foundation applies `PROPOSAL-shared-fixes-9nov.md`.
+- **Owner-password printing (D-139):** on c373a3d the Print card unlocks with the owner password, but printing
+  fails ("This PDF is encrypted and needs a password to open"): the card doesn't get the tab's password. Fix S3 is
+  in the same proposal; the Linux UI step 31b tests it (passes with the fix, 118/118).
+
 ## B-24 — A stalled read gives a blank Reader, no Cancel, and blocks later opens (S2, shared Ui/Core) — e468d1a
 **Steps.** `mkfifo /tmp/fifo/slow.pdf` (a source that never delivers data — the real-world case is a hung SMB/NFS/sshfs mount or an unplugged USB drive); `open /tmp/fifo/slow.pdf`; after 5 s open `five-pages.pdf`.
 **Expected.** "Opening…" at once; after 10 s the `SlowOpenNote` with Cancel; Cancel closes the tab; the second file opens regardless (B-08b / B-10).
