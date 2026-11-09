@@ -371,5 +371,7 @@ Options considered:
 | D-145 | Next PR and Layout | Open the next PR now without Layout (chuvadi-pdf 3.32.0, AT-03 Android Release crash fix + trimmed-launch CI, W-01 title-bar drag fix, W-02 WebView2 file-drop fix, D-143 notices, Mobile UI H-17..H-19). Layout: A — wait for a published Layout.Pdf release and SHA256SUMS for the docs/markup/layout releases (Foundation found Layout.Pdf has no release and the monorepo releases publish no checksums), rather than checking against tags ourselves |
 | — | Mobile UI | Document ▾ in Arrange stays touch-only (Windows layout is the Reader chat's call); three touch-only size changes approved (Settings On/Off ≥44 px, tablet pager +12 px, docked Shelf icons on their own line) |
 
+| D-146 | Android AT-07 / P-08: tabs and recents labelled with the app's private cache path | (a) a shared IPathLabels seam: desktops keep the real path and tooltip, Android shows the file name and its source. (b) file name only everywhere loses Windows' tooltip and leaves Android's Library paths wrong; (c) readable private paths still mean nothing to TalkBack. The AT-03 trimming fix must cover this default too |
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).
