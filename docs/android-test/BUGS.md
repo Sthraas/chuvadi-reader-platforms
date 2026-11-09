@@ -9,7 +9,7 @@ run [42518447149](https://github.com/Sthraas/chuvadi-reader-platforms/actions/ru
 
 ---
 
-## AT-03 · S1 · Foundation (+ Android CI) · open — The Release app crashes at every launch (trimmed constructor)
+## AT-03 · S1 · Foundation (+ Android CI) · open, decided (a) by the coordinator 9 Nov 05:55, sent to Foundation — The Release app crashes at every launch (trimmed constructor)
 **Steps:** install the Release `.apk` from the build above (the same build as the Play `.aab`) on any emulator; tap the icon,
 or Open with a PDF.
 **Expected:** the app starts.
@@ -46,7 +46,7 @@ case, **plus** the Android workflow running the Release `.apk` on at least one e
 check the Mac Catalyst Release build for the same crash.** Until (a) lands, this chat tests a Release build with (c) applied in
 the test composition only, marked as such, so startup and design results reflect the shipping configuration.
 
-## AT-01 · S2 · Android + Foundation · open — Third-party notices leave out AndroidX, Material Components and Kotlin, which ship in the app
+## AT-01 · S2 · Android + Foundation · waiting on Arun (rule 3; coordinator 9 Nov) — Third-party notices leave out AndroidX, Material Components and Kotlin, which ship in the app
 **Steps:** build Release; list `obj/Release/net10.0-android/android-arm64/linked/*.dll` and the dex (`audit/assemblies.txt`,
 `audit/apk-contents.txt`); open About › Licences.
 **Expected:** every third-party component that ships has its notice (Apache-2.0 §4(d) requires it), and the Play data-safety
@@ -68,14 +68,14 @@ data-safety basis line ("…and Google's AndroidX/Material and JetBrains' Kotlin
 **For the coordinator (rule 3):** these are Google and JetBrains code that MAUI pulls in, not Microsoft's. I read them as
 "ships with MAUI" (allowed); please confirm.
 
-## AT-02 · S4 · Android · open — Unused MAUI Essentials components are declared in the shipped manifest
+## AT-02 · S4 · Android · open (routed to the Android chat 9 Nov) — Unused MAUI Essentials components are declared in the shipped manifest
 **Evidence:** `audit/manifest-xmltree.txt`: `WebAuthenticatorIntermediateActivity`, `IntermediateActivity`,
 `microsoft.maui.essentials.fileProvider`, and three broadcast receivers (Essentials Connectivity, Battery, Energy Saver). All
 `exported=false`, so not reachable from other apps; the app uses none of them (it has its own `SharedFileProvider`).
 **Expected:** only what the app uses (smaller attack surface; nothing in a Play review that looks like connectivity monitoring).
 **Fix (proposal):** `tools:node="remove"` entries in the host's `AndroidManifest.xml`. Low risk; verify Share and Open still work.
 
-## AT-04 · S3 · Mobile UI · open — Desk header on touch still shows the desktop action row (12f, 12i; D-114)
+## AT-04 · S3 · Mobile UI · open (routed 9 Nov) — Desk header on touch still shows the desktop action row (12f, 12i; D-114)
 **Steps:** phone or tablet, open a PDF, Arrange.
 **Expected (12f / 12i, D-114):** desk header = name, page count, `···`; the desk actions live in the `···` menu on touch.
 **Actual:** header shows the colour swatch, name, a "BM" chip, page count, ← → arrows, duplicate, `···` and delete — the desktop
@@ -84,12 +84,12 @@ row. The arrows/duplicate/delete are ~20 dp targets and the swatch 16 dp (see AT
 Foundation 839d39d's message says H-16 (desk actions in the menu on touch) landed, so either it covers only the desk toolbar or it
 isn't keyed on the touch form factor here.
 
-## AT-05 · S3 · Mobile UI · open — Tablet portrait top bar has no `Document ▾` menu (12f)
+## AT-05 · S3 · Mobile UI · open (routed 9 Nov) — Tablet portrait top bar has no `Document ▾` menu (12f)
 **Expected (12f):** tabs · pager · `Document ▾` · search, as in landscape.
 **Actual:** tablet portrait shows tabs · pager · search; `Document ▾` is gone, so Properties / Export / Compress / Merge / Split
 have no entry point from the top bar in portrait. **Evidence:** `screenshots/r1/12f-vs-app.png`.
 
-## AT-06 · S3 · Mobile UI · open — Touch targets under 44 dp (handout: 48 dp on tablet and phone)
+## AT-06 · S3 · Mobile UI · open (routed 9 Nov) — Touch targets under 44 dp (handout: 48 dp on tablet and phone)
 Measured in the page (CSS px = dp), every visible control, all screens, R1 API 36 (`design/*.layout.json`):
 | Form | Control | Size (dp) |
 |---|---|---|
@@ -105,13 +105,13 @@ Measured in the page (CSS px = dp), every visible control, all screens, R1 API 3
 **Expected:** ≥ 44 dp everywhere (Android's own minimum is 48 dp; the handout asks 48 on tablet rails and phone bars). A larger
 hit area (padding / `::after` inset) keeps the drawn size.
 
-## AT-07 · S4 · Foundation · open — Tabs and Home's recent cards/rows label themselves with the internal working path
+## AT-07 · S4 · Android · open (routed to the Android chat 9 Nov) — Tabs and Home's recent cards/rows label themselves with the internal working path
 The tablet tab's `title`, and the accessible name/`title` of every Home "Pick up where you left off" card (`.rcard`) and Recent
 row (`.rrow`) on phone and tablet, is the working copy path, e.g. `/data/user/0/in.chuvadi.reader/cache/work/open/1429e6d5d0cd4…`
 (`design/*-home.layout.json`). TalkBack reads that path aloud. Android shows `title` on long-press/hover with a mouse. **Expected:** the document's name
 (or the original location the person chose), never the app's private cache path.
 
-## AT-08 · S3 · Android · open — Status and navigation bar areas stay cream in the Night, Palm and Indigo themes
+## AT-08 · S3 · Android · open (routed to the Android chat 9 Nov) — Status and navigation bar areas stay cream in the Night, Palm and Indigo themes
 **Steps:** phone, Settings › theme Night paper (or Palm leaf / Indigo ink); look at the top (clock, signal) and the bottom
 (gesture bar).
 **Expected:** the system-bar areas take the theme's paper colour (as the first-paint background in `index.html` already does per
@@ -122,7 +122,7 @@ below a dark bottom bar; Palm and Indigo show a mismatched band.
 **Fix (proposal):** `SystemBars` follows the theme (theme-changed signal → window background / `isAppearanceLightStatusBars`),
 or the WebView draws under the bars and pads with `env(safe-area-inset-*)`.
 
-## AT-09 · S3 · Foundation (shared Ui) · open — Find reports the match but doesn't bring it into view
+## AT-09 · S3 · Mobile UI · open (routed 9 Nov) — Find reports the match but doesn't bring it into view
 **Steps:** tablet (API 36), open `doc-12p.pdf` (12 pages; the word "zephyrine" appears once, near the foot of page 3), Find,
 type `zephyrine`.
 **Expected:** 1/1, and the view moves so the highlighted match is on screen (page 3, foot).
