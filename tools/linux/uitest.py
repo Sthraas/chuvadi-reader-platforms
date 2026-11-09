@@ -955,6 +955,139 @@ def viewer_errors_follow_wt10():
 
 step("34f-viewer-errors-follow-wt10", viewer_errors_follow_wt10)
 
+
+# ── rendering off the page's thread (D-152, AT-13) ─────────────────────────
+HEAVY = os.path.join(FIX, "heavy")
+subprocess.run([sys.executable, "-I", os.path.join(HERE, "make-heavy-pdfs.py"), HEAVY], check=True, stdout=subprocess.DEVNULL)
+
+
+def ping():
+    """Seconds for the page to answer a trivial script: the page's thread is free."""
+    t0 = time.time()
+    app.js("return 1")
+    return time.time() - t0
+
+
+def rendered(page_index):
+    return app.js(f"var w=document.querySelector('.rpage-wrap[data-page=\"{page_index}\"]'); return !!w && !!w.querySelector('svg')")
+
+
+def current_page():
+    return int(app.js("var b=document.querySelector('.tb-pg-box'); return b ? b.value : 0") or 0)
+
+
+def memory_mb():
+    """Resident memory of the app and of its WebKit processes, in MB."""
+    procs = {}
+    for pid in filter(str.isdigit, os.listdir("/proc")):
+        try:
+            stat = open(f"/proc/{pid}/stat").read().rsplit(")", 1)[1].split()
+            procs[int(pid)] = int(stat[1])
+        except OSError:
+            pass
+    tree, todo = set(), [app.proc.pid]
+    while todo:
+        p = todo.pop()
+        tree.add(p)
+        todo += [c for c, parent in procs.items() if parent == p and c not in tree]
+    def rss(pid):
+        try:
+            return int(next(l for l in open(f"/proc/{pid}/status") if l.startswith("VmRSS")).split()[1]) // 1024
+        except (OSError, StopIteration):
+            return 0
+    return rss(app.proc.pid), sum(rss(p) for p in tree if p != app.proc.pid)
+
+
+def open_tab(path):
+    name = os.path.basename(path)
+    app.send("open " + path, timeout=10)
+    app.wait(lambda: app.js(f"var t=document.querySelector('.rtab.active'); return !!t && t.innerText.includes('{name}')"), 20, name + "'s tab in front")
+
+
+def close_active_tab():
+    app.js("var x=document.querySelector('.rtab.active .rtab-x'); if (x) x.click(); return 1")
+    time.sleep(1)
+
+
+def paging_fast():
+    """Page through a 400-page PDF as fast as keys repeat (PageDown): the page stays responsive, and the page
+    the person lands on is drawn."""
+    open_tab(os.path.join(HEAVY, "big.pdf"))
+    app.wait(lambda: rendered(0), 20, "page 1 drawn")
+    focus_main()
+    pings = []
+    for burst in range(6):  # real key presses: PageDown, 25 at a time, 10 ms apart
+        subprocess.run(["xdotool", "key", "--repeat", "25", "--delay", "10", "Next"], env=app.env, capture_output=True)
+        pings.append(ping())
+    worst = max(pings)
+    if worst > 1.0:
+        raise AssertionError(f"the page took {worst:.2f} s to answer while paging (each burst 25 pages)")
+    t0 = time.time()
+    landed = app.wait(lambda: current_page() > 100 and rendered(current_page() - 1) and current_page(), 20, "the landed-on page drawn")
+    drawn_in = time.time() - t0
+    app.js("document.querySelector('.tb-pg-box').value='400'; document.querySelector('.tb-pg-box').dispatchEvent(new Event('change')); return 1")
+    app.wait(lambda: current_page() == 400 and rendered(399), 20, "page 400 drawn")
+    close_active_tab()
+    return (f"6 bursts of 25 PageDowns: page answered within {worst:.2f} s each; landed on page {landed}, drawn {drawn_in:.1f} s "
+            "after the last click; jumped to page 400, drawn")
+
+
+step("36a-paging-fast-big-pdf", paging_fast)
+
+
+def close_mid_render():
+    """Close a CAD drawing's tab the moment it opens, while sheet 1 is usually still drawing: nothing hangs or
+    errors, and the next file opens and draws at once. (Core's RenderOffUiThreadTests hold a render open with a
+    hook for a deterministic mid-render close; a generated page can't be made reliably slow.)"""
+    before = memory_mb()
+    open_tab(os.path.join(HEAVY, "cad.pdf"))
+    mid = not rendered(0)  # usually: sheet 1 takes ~0.3 s (deterministic mid-render closes: RenderOffUiThreadTests)
+    close_active_tab()
+    t0 = time.time()
+    open_tab(os.path.join(FIX, "five-pages.pdf"))
+    app.wait(lambda: rendered(0), 15, "the next file's page 1 drawn")
+    next_in = time.time() - t0
+    worst = max(ping() for _ in range(5))
+    time.sleep(8)  # the cancelled render finishes its sheet, then the document closes
+    after = memory_mb()
+    close_active_tab()
+    if next_in > 2.0:
+        raise AssertionError(f"the next file took {next_in:.1f} s to draw: it waited for the abandoned render")
+    if worst > 1.0:
+        raise AssertionError(f"the page took {worst:.2f} s to answer after closing mid-render")
+    return (f"closed {'mid-render' if mid else 'just after sheet 1 was drawn'}; next file drawn in {next_in:.1f} s; "
+            f"page answers in ≤ {worst:.2f} s; memory app/web {before[0]}/{before[1]} MB → {after[0]}/{after[1]} MB")
+
+
+step("36b-close-tab-mid-render", close_mid_render)
+
+
+def cad_drawing():
+    """A 5-sheet A1 vector drawing (~120,000 strokes a sheet; B-27's kind of file): the page answers while
+    sheets draw, every sheet draws, and memory after paging through is reported."""
+    t0 = time.time()
+    open_tab(os.path.join(HEAVY, "cad.pdf"))
+    worst = max(ping() for _ in range(3))
+    app.wait(lambda: rendered(0), 60, "sheet 1 drawn")
+    first = time.time() - t0
+    times = []
+    for n in range(2, 6):
+        t1 = time.time()
+        app.js(f"var b=document.querySelector('.tb-pg-box'); b.value='{n}'; b.dispatchEvent(new Event('change')); return 1")
+        worst = max(worst, ping())
+        app.wait(lambda: rendered(n - 1), 60, f"sheet {n} drawn")
+        times.append(time.time() - t1)
+    app.shot("36c-cad-drawing")
+    mem = memory_mb()
+    close_active_tab()
+    if worst > 1.0:
+        raise AssertionError(f"the page took {worst:.2f} s to answer while a sheet was drawing")
+    return (f"sheet 1 drawn in {first:.1f} s; sheets 2-5 in {', '.join(f'{t:.1f}' for t in times)} s; page answered in "
+            f"≤ {worst:.2f} s throughout; memory after 5 sheets app/web {mem[0]}/{mem[1]} MB")
+
+
+step("36c-cad-drawing", cad_drawing)
+
 # The desktop's window-button layout, followed exactly (any subset, any order, either end) — the
 # setting GNOME (button-layout) and KDE hand to GTK, written to GTK's settings file for a fresh launch.
 LAYOUTS = [
