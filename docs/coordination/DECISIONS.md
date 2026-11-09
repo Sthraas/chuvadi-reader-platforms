@@ -377,5 +377,17 @@ Options considered:
 | — | Library list additions | Sheets: built-in date format 14 and other locale-dependent dates use month-first in en-IN; B-27: the 7.9 MB CAD PDF takes 3–4 s to open and memory grows to 1.6 GB over 5 pages (profile in docs/linux-test, numbers only) |
 | — | Android Test | API 35 = update-screen test only, API 36 = Reader checks (c); "same file opened twice" to be compared with Windows' shared router |
 
+## D-148 — Mac Test priorities and M-20 to M-22 (9 Nov 2026, coordinator)
+M-17 and M-18 (S1) are fixed first, then M-19. M-22: add a printer-only local-network usage description plus a line in the privacy notice (Mac Test's recommendation; asking with generic wording, or hiding network printers, are both worse). M-21: Esc leaves Immersive on every platform; if Windows doesn't do it either, it's a shared Foundation bug. M-20 (heavy vector page) needs a Windows comparison and joins B-27 on Arun's list.
+
+## D-149 — Android Test routing (9 Nov 2026, coordinator)
+AT-10 (Find box loses typed characters) and AT-13 (heavy image page sometimes never paints) go to Foundation as shared Ui; AT-13 moves to the library list if the cause is the renderer. AT-11 (tabs lost on the phone after a background kill) goes to Android first, as host process-death restore, and to Foundation only if a Ui session-restore hook is needed.
+
+## D-150 — Tablet Save pin: option C (9 Nov 2026, coordinator)
+Both Save buttons are pinned together at the foot of the Mark rail, on touch only; desktop is untouched. A (remove the pin) hides both buttons on a landscape tablet, where there is no Ctrl+S. B (current pin) still hides plain Save. C costs a band of about two buttons' height and is easy to remove later.
+
+## D-151 — H-20: TOOLS heading on every rail, with an accessible mode label (9 Nov 2026, coordinator)
+Every tools rail shows the heading TOOLS, as D-134 says. The rail component takes a separate accessible label, so screen readers still announce READ, MARK, PROTECT and so on; otherwise the change would make accessibility worse.
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).
