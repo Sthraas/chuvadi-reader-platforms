@@ -863,11 +863,18 @@ def t4_7():
     rc, ev["save-as-pdf"] = press("Save as PDF", contains=True, role="AXMenuItem")
     time.sleep(3)
     ev["save-sheet"] = screen("print-save-sheet")
+    open("/tmp/chvd-print-marker", "w").write("x")
+    time.sleep(1)
+    drive("type", "chvd-printed")
     rc, ev["name"] = drive("focusset", NAME, "chvd-printed.pdf")
     time.sleep(0.8)
-    drive("key", "return")
+    rc, ev["save-press"] = press("Save", role="AXButton", index=-1)
     time.sleep(6)
+    ev["after-save"] = screen("print-after-save")
+    _, ev["new_pdfs"] = sh(f"find {HOME} /private/tmp -newer /tmp/chvd-print-marker -name '*.pdf' -type f 2>/dev/null | grep -v '/Library/' | head", timeout=120)
     _, found = sh(f"ls -1 {FX}/chvd-printed*.pdf {HOME}/Documents/chvd-printed*.pdf {HOME}/Desktop/chvd-printed*.pdf 2>/dev/null")
+    if not found.strip() and ev["new_pdfs"].strip():
+        found = ev["new_pdfs"]
     ev["saved"] = found
     good = False
     if found.strip():
