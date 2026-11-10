@@ -77,12 +77,22 @@ jobs:
           # Pinned (AT-19): what is tested is what ships; move it deliberately. Same as Android Test's workflow.
           dotnet-version: '10.0.403'
 
+      # setup-dotnet only adds 10.0.403 beside the runner's own newer SDK, and dotnet picks the newest unless a
+      # global.json says otherwise (run 42903642195 still resolved runtime 10.0.15). The composed checkout gets one
+      # (CI only; a global.json in the repo is Foundation's to add).
+      - name: Hold the build to SDK 10.0.403
+        working-directory: reader
+        run: |
+          echo '{ "sdk": { "version": "10.0.403", "rollForward": "disable" } }' > global.json
+          dotnet --version
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
 
       - name: Install the MAUI Android workload
+        working-directory: reader   # under the pinned SDK, so the workload matches the SDK that builds
         run: dotnet workload install maui-android
 
       # The Reader's root nuget.config points at the dev-only ./localpackages; CI restores from

@@ -815,3 +815,8 @@ same screen; no crash), smoke pass. With round 6 (API 36 phone and tablet, all c
 - Sandbox: Android Debug and Release `-warnaserror` 0 warnings, both carry the two notices; Release manifest 14/14;
   Core 305 (+3 skipped), Hosting 91, MobileUi 16, WebUi 41 pass. On-device save verification: Android Test's save suite
   (SV-1 to SV-6) in round 10; my rounds don't drive the save picker.
+- **Run 42903642195** (phone and tablet API 36, full, c2b316a): all green — gestures 10/10 and 9/9, platform 29/29 and
+  27/27, Release launch pass on both; manifest 14/14; notices taken from the resolved packs. But the runner still resolved
+  runtime **10.0.15**: `setup-dotnet` adds 10.0.403 beside the runner's newer SDK and dotnet picks the newest without a
+  global.json. The workflow now writes a CI-only `global.json` (10.0.403, rollForward disable) into the composed checkout
+  and installs the workload under it. (A repo `global.json` is still Foundation's.)
