@@ -211,6 +211,21 @@ and render path is JIT-compiled on every cold start.
 **Recommendation:** let me build (a) and (b) as test-only variants in one run and report both numbers and sizes; then decide.
 Startup trimming / work deferral in Foundation (B-29) already applies; this is about JIT on the open/render path.
 
+## AT-15 · S2 · Foundation (shared Ui, markup layer) · open — Mark › Text: a finger tap on the page makes no text box (phone and tablet)
+**Steps:** Release (f88f9ef composition), API 36, open a PDF, Mark, choose Text (button shows as on), tap the page — quick tap, then
+a slow tap (finger held 400 ms) elsewhere on the page.
+**Expected:** a text box appears where the finger touched (`MkUpCore`: "tiny drag = a click → default-sized box"), with the caret in it.
+**Actual:** nothing: the header stays "0 text · 0 shapes · 0 images", no editor appears, focus goes to the desk (`DIV.rdesk`).
+Same on phone and tablet, quick and slow taps. **Evidence:** R4f (run 42744098247) › results-*-api36 › function2/ (02, 03 screenshots,
+results.jsonl F-04a/F-04b); `screenshots/r4/at15-mark-text-tap.png`.
+**What the page receives** (pointer log from the page, quick tap): `pointerdown` on `.mk-layer.textmode` (touch-action none) →
+`touchstart` on the layer → **`pointerup` on `.rdesk`** (touch-action pan-y) → `touchend` / `click` on the layer. The layer's
+`@onpointerup="MkUp"` never sees the pointer going up, so the draft is never committed. Also `MkDown` awaits `CacheLayerRect` before
+it sets `_mkMode`, so even an `up` on the layer can arrive while the mode is still `None`.
+**Fix (proposal):** on `pointerdown` in the markup layer, `setPointerCapture(e.pointerId)` (a few lines in the existing markup JS) so
+`move`/`up` come back to the layer; set `_mkMode`/draft synchronously before the awaited rect read (or read the rect first on tool
+selection). Likely the same for shapes, freehand and the Protect redaction box — the next run checks each.
+
 ## Questions for the coordinator (not filed as bugs)
 - **Q-1 Same file opened again → new tab** — answered by the coordinator (9 Nov 07:12): Windows is the reference. Checked the shared
   code and filed the difference as **AT-12** (Android).
