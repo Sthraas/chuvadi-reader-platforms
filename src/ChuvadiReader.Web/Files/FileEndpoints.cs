@@ -15,8 +15,29 @@ public static class FileEndpoints
 
     public sealed record BeginUpload(string? Name, long Size);
 
+    /// <summary>The route a drawn page's image is fetched from (D-158): <c>/_chvd/pages/&lt;token&gt;.png</c>.</summary>
+    public const string PageImagesRoute = "/" + ChuvadiReader.Core.Reader.PageImages.PathPrefix + "{file}";
+
     public static IEndpointRouteBuilder MapPortalFiles(this IEndpointRouteBuilder app)
     {
+        // D-158: drawn pages by address. Same origin, signed-in only, and only to the person and sign-in that
+        // drew them. Unknown, freed, malformed or someone else's: the same 404. Never cached anywhere.
+        app.MapGet(PageImagesRoute, (string file, HttpContext http, ChuvadiReader.Core.Reader.PageImages images) =>
+        {
+            if (!SameOriginIfStated(http)
+                || ChuvadiReader.Web.Platform.PortalPageImageOwner.For(http.User) is not { } owner
+                || !ChuvadiReader.Core.Reader.PageImages.TryParseAddress(file, out var token)
+                || !images.TryGet(token, owner, out var png))
+            {
+                return Results.NotFound();
+            }
+
+            http.Response.Headers.CacheControl = "private, no-store";
+            http.Response.Headers["X-Content-Type-Options"] = "nosniff";
+            http.Response.Headers["Cross-Origin-Resource-Policy"] = "same-origin"; // no other site can embed it
+            return Results.Bytes(png, "image/png");
+        }).RequireAuthorization();
+
         var g = app.MapGroup(Prefix).RequireAuthorization();
 
         g.MapPost("/upload/{ticket}/files", (string ticket, BeginUpload body, HttpContext http, TransferRegistry reg) =>
@@ -122,6 +143,20 @@ public static class FileEndpoints
             ? configured.TrimEnd('/')
             : $"{http.Request.Scheme}://{http.Request.Host}";
         return string.Equals(origin, expected, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>For requests a browser makes by itself (an image): refused when the browser says it came
+    /// from another site (<c>Sec-Fetch-Site</c>, or a stated <c>Origin</c>). Image requests usually carry
+    /// neither from our own page, so their absence is allowed.</summary>
+    internal static bool SameOriginIfStated(HttpContext http)
+    {
+        var site = http.Request.Headers["Sec-Fetch-Site"].ToString();
+        if (site.Length > 0 && site is not ("same-origin" or "none"))
+        {
+            return false; // "same-site" (a sibling sub-domain) and "cross-site" both refused
+        }
+
+        return string.IsNullOrEmpty(http.Request.Headers.Origin.ToString()) || SameOrigin(http);
     }
 
     internal static string ContentTypeFor(string name) => Path.GetExtension(name).ToLowerInvariant() switch

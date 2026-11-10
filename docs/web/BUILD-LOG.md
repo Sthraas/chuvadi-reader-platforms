@@ -300,3 +300,15 @@ dotnet test tests/ChuvadiReader.Web.Tests -c Release   # 123 passed, 0 warnings
   - So MinGap still protects the server: closes by different people run in parallel processes at small cost, and one person can't trigger collections back to back.
 - **Capacity note (not a relief issue):** one such page costs about 1 GB in its worker while it's open. Five open at once filled this 8 GB test machine before anyone closed. On the 16 GB launch VM that's roughly a dozen people with very heavy pages at the same moment. Recorded for the staging run (TEST-PLAN L-9).
 - Checks: shared solution 0 warnings and its tests; Web 166/166; package check; `flows.py` 10/10 in all four engines; `office_limits.py` 6/6 in Chrome and WebKit.
+
+### 30. Page images by address on the portal (D-158) — 10 Nov, mid-morning
+- Merged `platform/foundation` @ `c7712d0` (twentieth patch: each relief pass waits for the finalizer thread; twenty-first: page images by address). Merged rather than rebased, so the Web portal UI merge stays intact.
+- **Endpoint** `GET /_chvd/pages/{file}` (in single and worker mode; the gateway relays it to the person's worker):
+  - signed-in only; the owner is the person's key plus their Sangam sign-in id (`sid`), worked out from the server's own sign-in on both sides (`PortalPageImageOwner`: the circuit's authentication state when drawing, the request's cookie when fetching), never from anything the browser sends;
+  - unknown, freed, malformed or someone else's address, and requests the browser marks as from another site (`Sec-Fetch-Site` cross-site or same-site, or a foreign `Origin`): the same 404;
+  - `Cache-Control: private, no-store`, `Cross-Origin-Resource-Policy: same-origin`, `X-Content-Type-Options: nosniff`; no CORS;
+  - page-image fetches don't count as activity for the session clock.
+- In gateway mode each person's images live in their own worker process, so another person's request can't reach them at all; the owner check is a second wall.
+- Tests: `PageImageEndpointTests` (5) and `tests/web-e2e/page_images.py` (a large-format page drawn from its address through the gateway; another person 404; after the tab closes, 404), 6/6 in four engines.
+- **For Web Test's security pass before it ships** (TEST-PLAN S-19).
+- **WT-17, WT-18, WT-19** are shared Core, not host; options sent to the coordinator (WT-17 changes what every platform shows; WT-18 needs the library to report the per-part limit as its limit exception; WT-19 needs a relief request from Excel and Word closes).

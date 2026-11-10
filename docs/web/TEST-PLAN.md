@@ -82,6 +82,7 @@ The Web projects aren't in `ChuvadiReader.Platforms.slnx` on purpose: that solut
 | S-12 | Working copies at rest (D-28) | Outside Development, start-up refused unless `DataRoot` is on tmpfs and swap is off, dm-crypt or zram; Data Protection keys never on disk | U `StorageCheckTests`; M (rehearsal: refusal on a disk data root) |
 | S-13 | Transport and headers | HTTPS redirect (307 to the public port), HSTS, CSP (in gateway mode too: a relayed Reader page carries the full policy, WT-01) (`script-src 'self'`, `frame-ancestors 'self'`), `nosniff`, frame and referrer policy, no `Server` header; TLS 1.2/1.3 only | U `Every_response_carries_the_security_headers`; M (rehearsal, `curl -vk`) |
 | S-13a | Sangam address (WT-15) | Outside Development, start-up is refused unless `Sangam:Authority` is https (discovery, keys and the token call with the client secret never go over plain http) | U `StorageCheckTests.Production_refuses_a_sangam_address_that_isnt_https` |
+| S-19 | Page images by address (D-158; **Web Test security pass before it ships**) | `/_chvd/pages/<32 hex>.png`: 200 only to the person **and** sign-in (Sangam `sid`) that drew it, computed from the server's own sign-in; another person, the same person's other sign-in, unknown, freed (page or tab closed), malformed or path-like addresses: the same 404; not signed in: refused; `Sec-Fetch-Site` cross-site or same-site, or a foreign `Origin`: 404; `Cache-Control: private, no-store`, `Cross-Origin-Resource-Policy: same-origin`, `nosniff`, no CORS; fetches don't count as activity | U `PageImageEndpointTests`; E `page_images.py` (gateway, 4 engines); Web Test: token guessing and timing, another user's and another session's cookie, after sign-out and expiry |
 | S-14 | Certificates | Let's Encrypt via our ACME client: order, renew in window, keep working certificate on failure, hot swap without restart | U `Acme*Tests`, `CertificateSourceTests`; **V-2** on staging |
 | S-15 | Error handling | Unexpected failures show `/error` (anonymous; never loops through sign-in); no stack traces outside Development | U `The_error_page_needs_no_sign_in…`; M |
 | S-16 | Logs | No document content, tokens, passwords or cookies in logs; worker log lines carry a key hash, not the person's id | M (`journalctl` review during staging) |
@@ -229,6 +230,10 @@ Found and fixed while running this plan:
 - Shared solution 0 warnings and its tests (Reader 233, Hosting 77, Mobile UI 16, Web UI 41); Web 166/166.
 - `flows.py` 10/10 in Chrome, Firefox, WebKit and Chromium; `office_limits.py` 6/6 in Chrome and WebKit.
 - L-9 heavy closes: 1 person 1021 → 224 MB; 4 people 3572 → 867 MB within 10 s.
+
+**10 Nov, mid-morning (Foundation `c7712d0` merged; D-158 endpoint):**
+- Shared solution 0 warnings and its tests (Reader 247, Hosting 81, Mobile UI 16, Web UI 41); Web 171/171.
+- `page_images.py` 6/6 and `flows.py` 10/10 in Chrome, Firefox, WebKit and Chromium, gateway mode.
 
 ## 8. Known gaps
 - The legal texts are drafts and say not to publish until counsel has reviewed them: V-7 blocks go-live until the DRAFT lines are gone.

@@ -368,6 +368,7 @@ public static class Program
         s.AddScoped<IAppStorage, SessionAppStorage>();
         s.AddScoped<IFilePicker, WebFilePicker>();
         s.AddScoped<IDroppedFiles, WebDroppedFiles>(); // D-89 A: files dropped on the portal window
+        s.AddScoped<IPageImageOwner, PortalPageImageOwner>(); // D-158: page images belong to this person and sign-in
         s.AddScoped<IFileWriteBack, WebFileWriteBack>();
         s.AddScoped<IPrintService, WebPrintService>();
         s.AddScoped<WebClipboard>();

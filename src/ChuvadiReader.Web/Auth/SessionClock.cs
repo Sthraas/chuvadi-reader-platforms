@@ -186,7 +186,7 @@ public static class ActivityTracking
     internal static bool CountsAsActivity(PathString path)
         => !(path.StartsWithSegments("/_blazor") || path.StartsWithSegments("/_framework") || path.StartsWithSegments("/_content")
              || path.StartsWithSegments("/css") || path.StartsWithSegments("/js") || path.StartsWithSegments("/favicon.ico")
-             || path.StartsWithSegments("/.well-known"));
+             || path.StartsWithSegments("/.well-known") || path.StartsWithSegments("/_chvd")); // page images are fetched by themselves
 
     /// <summary>The page reports input (throttled to once a minute). The request itself is the activity.</summary>
     public static IEndpointRouteBuilder MapActivity(this IEndpointRouteBuilder app)
