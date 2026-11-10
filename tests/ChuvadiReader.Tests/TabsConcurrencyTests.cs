@@ -1,5 +1,6 @@
 using ChuvadiReader.Core.Documents;
 using ChuvadiReader.Core.Reader;
+using ChuvadiReader.Core.Storage;
 using Xunit;
 
 namespace ChuvadiReader.Tests;
@@ -69,6 +70,78 @@ public sealed class TabsConcurrencyTests
                 .ToArray();
             await Task.WhenAll(opens).WaitAsync(TimeSpan.FromSeconds(60));
             Assert.Equal(8, tabs.Tabs.Count);
+            foreach (var t in tabs.Tabs)
+            {
+                t.Session?.Dispose();
+            }
+        }
+    }
+
+    /// <summary>A store that notices two saves at once and keeps what was saved last. Each save takes a moment,
+    /// as a file write does.</summary>
+    private sealed class WatchfulStorage : IAppStorage
+    {
+        private int _inside;
+        private readonly Dictionary<string, string> _values = new(StringComparer.Ordinal);
+
+        public int Overlaps;
+
+        public string? Last(string key)
+        {
+            lock (_values)
+            {
+                return _values.GetValueOrDefault(key);
+            }
+        }
+
+        public Task<string?> GetAsync(string key, CancellationToken ct = default)
+        {
+            lock (_values)
+            {
+                return Task.FromResult(_values.TryGetValue(key, out var v) ? v : null);
+            }
+        }
+
+        public async Task SetAsync(string key, string value, CancellationToken ct = default)
+        {
+            if (Interlocked.Increment(ref _inside) > 1)
+            {
+                Interlocked.Increment(ref Overlaps);
+            }
+
+            await Task.Delay(Random.Shared.Next(1, 6), ct);
+            lock (_values)
+            {
+                _values[key] = value;
+            }
+
+            Interlocked.Decrement(ref _inside);
+        }
+    }
+
+    /// <summary>Windows runner, 11 Nov: the test above failed once in 16 full runs. Each open saved the tab list on its
+    /// own thread, so saves overlapped (the tests' in-memory store is a plain dictionary), and in the app an older
+    /// list could be written after a newer one, leaving a tab out of the next start. Saves now go one at a time,
+    /// each with the list as it is when its turn comes.</summary>
+    [Fact]
+    public async Task Overlapping_opens_save_one_at_a_time_and_the_last_save_holds_every_tab()
+    {
+        for (var round = 0; round < 3; round++)
+        {
+            var storage = new WatchfulStorage();
+            var tabs = new TabsService(new ChuvadiPdfReader(), storage);
+            var opens = Enumerable.Range(0, 8)
+                .Select(i => Task.Run(() => tabs.OpenAsync(TestPdf.TextPage($"Save {round} file {i}"), $"s{i}.pdf", DocumentFormat.Pdf)))
+                .ToArray();
+            await Task.WhenAll(opens).WaitAsync(TimeSpan.FromSeconds(60));
+
+            Assert.Equal(0, storage.Overlaps);
+            var saved = storage.Last("tabs")!;
+            for (var i = 0; i < 8; i++)
+            {
+                Assert.Contains($"s{i}.pdf", saved);
+            }
+
             foreach (var t in tabs.Tabs)
             {
                 t.Session?.Dispose();
