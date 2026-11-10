@@ -660,3 +660,19 @@ before, 2.1 GB with 5 sheets, 616 MB 90 s after closing. The relief runs (2 pass
 80 s after closing the .NET heap still holds 681–807 MB that one more aggressive collection clears to 3–5 MB (app
 then 330–363 MB, within 100 MB of the start). So the closed drawing's memory is still held, or made, after both
 passes. Reported to Foundation; 36c's memory becomes the assertion once that's found.
+
+### 52. Foundation's twentieth and twenty-first combined patches (c7712d0, 10 Nov); page images by address on Linux
+Merged without conflicts. Reader 247/247, host kit 81/81, Linux 46/46, Web Ui 41/41, Mobile Ui 16/16.
+- **Page images (D-158):** the Linux host wraps its asset provider in `PageImageFileProvider` (in process, through
+  the app:// scheme; no server). Two Linux fixes found by the new UI step 36d: page images are never cached
+  (`private, no-store`; everything else may be), and an unknown, freed or other owner's token is "not found" (the
+  scheme's fallback to the host page had answered 200). 36d: a drawn A1 sheet comes from `_chvd/pages/<token>.png`,
+  its page markup is 964 characters (was ~77 MB inline), the address serves a PNG that decodes (4967 px wide), and
+  an unknown token gives 404. (WebKitGTK's `fetch` reports no content type for any app:// asset, scripts and
+  styles included, so 36d checks the PNG bytes and decodes it in an image element.)
+- **36c memory is an assertion again:** 259–333 MB before, 860 MB–1.2 GB with 5 sheets drawn (was ~2 GB), and back
+  to 247–293 MB at once after closing (within 100 MB of the start), with the glibc trim after each relief pass.
+- Full UI pass 122/122 on the second run. **The first run failed 36c (and 36d after it):** a fresh open of the
+  drawing kept the previous zoom (115 %), never fitted the view, showed sheet 1 as a portrait placeholder and never
+  drew it in 30 s — as if the document's page sizes never arrived. Not reproduced by steps 01–19 + 36 or 20–34 + 36,
+  nor by the second full run; the same symptom as x64 CI on 8dcf4d8. Reported to Foundation with the screenshot.
