@@ -31,7 +31,8 @@ async def main():
         c0 = await pg.evaluate(COUNTER)
         await pg.keyboard.press("ArrowRight"); await pg.wait_for_timeout(1200)
         c1 = await pg.evaluate(COUNTER)
-        report("→ moves the page and the counter follows", c1 != c0 and c1[:1] == "2", f"{c0} → {c1}")
+        num = lambda c: int((c.split("/")[0].strip() or "0"))   # the preview keeps a tab's page between runs
+        report("→ moves the page and the counter follows", num(c1) == num(c0) + 1, f"{c0} → {c1}")
 
         # 1b. The first fit of a new document, measured before its pages render (slow device), must
         #     not use the placeholder (595 px wide, 3/4 of a rendered page): H-9.
@@ -176,6 +177,35 @@ async def main():
             report("tablet Mark rail: TOOLS shown, MARK announced, both Saves in view while it scrolls", ok, r)
             await pg.locator(".lb-mode:nth-of-type(1)").first.click(); await pg.wait_for_timeout(800)   # back to Read
             await pg.context.close()
+        # 9. D-163: a tap at the foot of a desk page tile only selects it (the hover action row there took taps
+        #    while invisible and duplicated the page); the desk menu offers the actions for the selection (H-22).
+        pg = await fresh()
+        await pg.locator(".ph-nav-b:nth-child(3), .lb-mode:nth-of-type(3)").first.click(); await pg.wait_for_timeout(1500)
+        async def menu(text):
+            await pg.locator(".desk-more").first.click(); await pg.wait_for_timeout(500)
+            item = pg.locator(".desk-menu button", has_text=text)
+            if await item.count() == 0:
+                await pg.locator(".desk-more").first.click(); await pg.wait_for_timeout(300)
+                return False
+            await item.first.click(); await pg.wait_for_timeout(900)
+            return True
+        pages = "document.querySelector('.desk').querySelectorAll('.bpage').length"
+        if await pg.evaluate(pages) == 0:
+            await menu("Blank page")
+        n0 = await pg.evaluate(pages)
+        await pg.evaluate("document.querySelector('.desk .bpage').scrollIntoView({block: 'center'})"); await pg.wait_for_timeout(300)
+        t = await pg.locator(".desk .bpage").first.bounding_box()
+        await pg.touchscreen.tap(t["x"] + t["width"] / 2, t["y"] + t["height"] - 28); await pg.wait_for_timeout(900)
+        n1 = await pg.evaluate(pages)
+        selected = await pg.evaluate("document.querySelector('.desk').querySelectorAll('.bpage.sel').length")
+        offered = await menu("Duplicate selected")
+        n2 = await pg.evaluate(pages)
+        report("a tap at a page tile's foot only selects; the desk menu duplicates the selection",
+               n1 == n0 and selected >= 1 and offered and n2 == n1 + selected, f"pages {n0} → {n1} → {n2}, selected {selected}, offered {offered}")
+        if n2 > n1:
+            await menu("Delete selected")   # leave the desk as it was (the copies are the selection now)
+        await pg.context.close()
+
         # 8. AT-06 round 5: the controls Android Test measures have 44 px boxes of their own (TalkBack and the
         #    Accessibility Scanner measure the box, not an invisible ::after), with the drawn size unchanged.
         small = []

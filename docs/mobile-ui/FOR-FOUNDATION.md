@@ -1,33 +1,39 @@
 # Mobile app UI → Foundation: hooks and hand-off (updated 10 Nov)
 
-## Outstanding for Foundation: H-21 (`proposal/mobile-ui-hooks-8.patch`)
-H-20 landed as the twenty-second combined patch (c9d876a), exactly as written; hooks-7 is in `proposal/landed/`.
-`mobile-ui-hooks-8.patch` = H-21 alone; it applies cleanly to Foundation 846706e.
+## Outstanding for Foundation: H-22 (`proposal/mobile-ui-hooks-9.patch`)
+`mobile-ui-hooks-9.patch` = H-22 alone; it applies cleanly to Foundation 741930b / foundation-pr 15033c8
+(the same tree). H-21 is withdrawn (below).
 
-### H-21: after Find, the view and the page box stay on the match's page (AT-09 round 5; all platforms)
-(`Ui/wwwroot/js/reader.js`, +49 / −4)
-- AT-09 round 5 (tablet, API 36): Find says 1/1, but the view rests on the foot of page 2 and the top of
-  page 3, the match off screen, the page box on 2. H-19 scrolls to the match; on a slow device the pages
-  above it finish drawing during the smooth scroll. The scroll handler then records the half-way view as
-  the anchor and reports its page (2), and the nineteenth patch's re-anchoring holds the view there when
-  the next page height changes, which also cancels the smooth scroll.
-- Reproduced in the preview with a 6× slower CPU and page heights changing during the move: the page box
-  said 4 and the view was not on the match (Foundation's reader.js); both right with H-21.
-- The change:
-  - A jump (`scrollToPage`, `scrollToMatch`) marks itself in progress until the desk's `scrollend` arrives
-    at the target (or 3 s pass). Meanwhile the scroll handler doesn't record the anchor or report a page,
-    and a height change puts the view back on the jump's target without reporting.
-  - `scrollToMatch` sets the anchor to its own target (the match's page and the place in it), not the
-    page's top.
-  - The target keeps the match's page the page in view: its top at the view's top when the match is then
-    on screen, otherwise just far enough down to show the match (40 px clear). The page box keeps the
-    match's page number.
-- **For:** fixes the tablet case and the same race for every page jump on a slow device; the nineteenth
-  patch's behaviour is unchanged outside a jump.
-- **Against:** during a jump's smooth scroll (up to its end, at most 3 s) the page box doesn't follow the
-  scroll; it already shows the destination.
-- Windows: Find lands with the match's page at the top when that shows the match (H-19 put the match a
-  third of the way down). Static screens are pixel-identical.
+### H-22: a page tile's actions in the desk ··· menu on touch, for the selected pages (D-163)
+(`Ui/Pages/Bench.razor`, +11 / −0)
+- On desktop a desk page tile shows a row of 18 px actions on hover (Peek, Duplicate, Rotate, Split, Crop,
+  Margins). Touch has no hover: the row stayed invisible and still took taps (a tap at a tile's foot
+  duplicated the page). mobile.css now doesn't render the row on tablet and phone (the stopgap, option A).
+- H-22 puts the actions in the touch desk menu (already `TouchDesks`-only), after Lift, when the desk has a
+  selection:
+  - Duplicate selected (N) → `BenchSvc.DuplicateSelected`; Rotate selected (N) → `BenchSvc.RotateSelected`
+    (clockwise), the methods Ctrl D and R already use.
+  - With exactly one page selected: Split desk at this page (`SplitHere`), Crop this page / Crop: edit or
+    clear (`OpenCrop`, disabled on a blank page, where it does nothing today), Add margins / Margins: edit
+    or clear (`OpenMargins`).
+  - Delete selected (N) stays last of the group, as now.
+- Desktop: untouched (the items are inside the existing `@if (TouchDesks)` block).
+- **For:** every tile action is reachable on touch again, labelled, 44 px rows; no new logic.
+- **Against:** two taps (select, then menu) instead of one; Peek isn't included — it's a hover preview
+  (bench.js `mouseover`), and "Open in Reader" at the top of the same menu shows the page full size.
+- Note: the row also carried the small "cropped / margins set" dot; on touch that state now shows as the
+  menu label ("Crop: edit or clear").
+
+## Withdrawn: H-21 (AT-09 round 5) — covered by Foundation's twenty-third patch
+Patch 23 (741930b / 15033c8) has H-21's two effective parts in its own form: Find anchors the match itself,
+and the view stays on the match's page where the match allows. With patch 23 alone, this branch's slow-device
+Find check (6× slower CPU, page heights changing during the move) passes 9 of 9 at 800×1280, 1280×800 and
+412×915: match on screen, page box 3. Nothing of `mobile-ui-hooks-8` is needed; it's kept as
+`proposal/landed/mobile-ui-hooks-8.superseded.patch` for the record.
+- Not in patch 23, and not needed by any test here: H-21's guard that stops the scroll handler recording or
+  reporting the half-way page while a jump's smooth scroll is still moving (it matters only if that scroll
+  outlasts the 1.4 s quiet time). Worth returning to only if Android Test still sees the page box on the
+  half-way page.
 
 ## Landed: H-20 (twenty-second combined patch, c9d876a); H-17, H-18, H-19 (twelfth, part 3, bfffab6)
 Approved by the coordinator for Foundation (9 Nov 06:40). Desktop: static screens pixel-identical (clock

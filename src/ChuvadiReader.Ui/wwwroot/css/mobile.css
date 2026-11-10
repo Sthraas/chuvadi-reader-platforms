@@ -739,3 +739,9 @@ html[data-shell="phone"] .hf-toggle, html[data-shell="tablet"] .hf-toggle { marg
 html[data-shell="phone"] .shelf-interleave, html[data-shell="tablet"] .shelf-interleave { gap: 17px; }
 /* Sliders in dialogs: the same track, 44 px tall to grab (same layout). */
 html[data-shell="phone"] .modal input[type="range"], html[data-shell="tablet"] .modal input[type="range"] { height: 44px; margin-block: -14px; }
+
+/* D-163: a desk page tile's action row (Peek, Duplicate, Rotate, Split, Crop, Margins; 18 px, shown on hover)
+   is invisible on touch but still took taps: a tap at a tile's foot duplicated the page. Not rendered on
+   touch; the actions are in the desk's ··· menu for the selected pages (H-22). */
+html[data-shell="phone"] .bpage-acts,
+html[data-shell="tablet"] .bpage-acts { display: none; }

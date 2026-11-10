@@ -482,3 +482,19 @@ Evidence:
   taps: a tap at the foot of a tile duplicates the page (seen at 412×915 and 1280×800).
 - Results: 386 tests (247 + 16 + 82 + 41); 70 touch checks pass at 4 sizes; desktop before/after
   identical apart from the clock; 0 console errors.
+
+## 10 Nov, 16:40: Foundation 15033c8 merged; D-163; H-21 withdrawn
+- Merged platform/foundation 741930b (patch 23), then platform/foundation-pr 15033c8. The PR branch has its
+  own history (squashed) and the same tree as 741930b less 34 doc / workflow files, so it needed
+  `--allow-unrelated-histories`; the only conflicts were in this branch's own files (the PR branch holds an
+  older copy of mobile.css, mobile.js and the preview host), resolved to this branch's. 15033c8 is now an
+  ancestor of the head, and every shared file equals 15033c8's.
+- H-21: covered by patch 23 (see FOR-FOUNDATION); hooks-8 retired.
+- **D-163**: stopgap in mobile.css — the page tiles' hover action row isn't rendered on touch (it took taps
+  while invisible). **H-22** (`mobile-ui-hooks-9.patch`, Bench.razor +11): the actions in the touch desk
+  menu for the selected pages.
+- checks.py: a tap at a tile's foot only selects; the desk menu duplicates the selection. The → check no
+  longer assumes the run starts on page 1 (the preview keeps a tab's page).
+- Results: 390 tests (247 + 16 + 86 + 41) on the patched tree; 74 touch checks pass at 4 sizes, two runs back
+  to back; desktop before/after identical apart from the clock (Read, Mark, Arrange, Home, desk menu); 0
+  console errors.
