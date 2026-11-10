@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <!--
+    DEV-ONLY preview host for the Web portal UI chat. Never shipped, never packaged.
+    Runs the real ChuvadiReader.Ui on Blazor Server (Kestrel, .NET only) with a chosen platform
+    (PREVIEW_PLATFORM=web|windows|macos|linux) so the portal components can be seen, screenshot-tested
+    against the design handout, and compared with the desktop before/after hooks.
+    Sign-in and storage are fakes. The production Web host belongs to the Web chat (platform/web).
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <IsPackable>false</IsPackable>
+    <IsPublishable>false</IsPublishable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ChuvadiReader.Hosting\ChuvadiReader.Hosting.csproj" />
+    <ProjectReference Include="..\..\src\ChuvadiReader.Ui\ChuvadiReader.Ui.csproj" />
+  </ItemGroup>
+</Project>

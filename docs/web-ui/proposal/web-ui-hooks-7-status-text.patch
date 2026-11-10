@@ -1,0 +1,13 @@
+diff --git a/src/ChuvadiReader.Ui/Layout/MainLayout.razor b/src/ChuvadiReader.Ui/Layout/MainLayout.razor
+index 9bd0ecd..f10ad41 100644
+--- a/src/ChuvadiReader.Ui/Layout/MainLayout.razor
++++ b/src/ChuvadiReader.Ui/Layout/MainLayout.razor
+@@ -194,7 +194,7 @@
+     </div>
+ 
+     <footer class="statusbar">
+-        <span class="sb-item"><span class="status-dot@(Platform.Capabilities.ServerSide ? " server" : null)"></span>@(Platform.Capabilities.ServerSide ? "processed on the server · encrypted at rest · only you can see it" : "offline · on this device")</span>
++        <span class="sb-item"><span class="status-dot@(Platform.Capabilities.ServerSide ? " server" : null)"></span>@(Platform.Capabilities.ServerSide ? "processed on the server · kept in memory only · only you can see it" : "offline · on this device")</span>
+         <span class="sb-div"></span>
+         @if (IsPortal)
+         {

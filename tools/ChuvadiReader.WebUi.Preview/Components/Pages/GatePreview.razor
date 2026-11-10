@@ -1,0 +1,5 @@
+@page "/_preview/gate"
+@layout BareLayout
+<div style="width:100vw;height:100vh;background:var(--chvd-surface-mid)"></div>
+<SangamGate Open="_open" OnContinue="() => _open = false" OnDismiss="() => _open = false" />
+@code { private bool _open = true; }

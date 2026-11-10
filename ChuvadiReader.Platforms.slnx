@@ -16,5 +16,6 @@
     <Project Path="tests/ChuvadiReader.WebUi.Tests/ChuvadiReader.WebUi.Tests.csproj" />
     <!-- Dev preview host (testing only, never shipped); built here so it keeps compiling. -->
     <Project Path="tests/ChuvadiReader.MobileUi.Preview/ChuvadiReader.MobileUi.Preview.csproj" />
+    <Project Path="tools/ChuvadiReader.WebUi.Preview/ChuvadiReader.WebUi.Preview.csproj" />
   </Folder>
 </Solution>
