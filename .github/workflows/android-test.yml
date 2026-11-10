@@ -105,11 +105,13 @@ jobs:
       - name: Publish Release (.aab + .apk), timed, warnings counted
         working-directory: reader
         run: |
-          set -o pipefail
           start=$(date +%s)
-          dotnet publish src/ChuvadiReader.Android/ChuvadiReader.Android.csproj -c Release -f net10.0-android --no-restore -p:AndroidSdkDirectory=$ANDROID_HOME -bl:../release.binlog 2>&1 | tee ../publish-release.txt
-          echo "release publish seconds: $(( $(date +%s) - start ))" | tee -a ../publish-release.txt
-          grep -E "[0-9]+ Warning\(s\)|[0-9]+ Error\(s\)" ../publish-release.txt | tail -2
+          rc=0
+          dotnet publish src/ChuvadiReader.Android/ChuvadiReader.Android.csproj -c Release -f net10.0-android --no-restore -p:AndroidSdkDirectory=$ANDROID_HOME -bl:../release.binlog > ../publish-release.txt 2>&1 || rc=$?
+          tail -5 ../publish-release.txt
+          echo "release publish seconds: $(( $(date +%s) - start )); exit $rc" | tee -a ../publish-release.txt
+          echo "warning lines: $(grep -c -E ': warning ' ../publish-release.txt || true)" | tee -a ../publish-release.txt
+          exit $rc
       - name: Debug x64 .apk (fallback for page-level checks only)
         working-directory: reader
         run: dotnet build src/ChuvadiReader.Android/ChuvadiReader.Android.csproj -c Debug -f net10.0-android -p:RuntimeIdentifier=android-x64 -p:EmbedAssembliesIntoApk=true -p:RestoreConfigFile=ci/nuget.config -p:AndroidSdkDirectory=$ANDROID_HOME > ../build-debug.txt 2>&1; tail -3 ../build-debug.txt
