@@ -27,6 +27,24 @@ WAYS = {
     "aftermid":  "the drawing opened and closed mid-render; then open again",
 }
 fails = 0
+if os.environ.get("REPEAT"):
+    # Linux's recipe (90895ef): in ONE app, a small PDF at a fixed zoom, then the drawing, again and again.
+    R = int(os.environ["REPEAT"]); a = App(APP, EV + "/stall-repeat", display=":79"); h.bind(a); a.start_display()
+    try:
+        a.launch(); time.sleep(3)
+        for k in range(R):
+            a.send("open " + FIVE, timeout=15); time.sleep(2.5); zoom("in", 2); time.sleep(0.5); zf = zvar()
+            t0 = time.time(); a.send("open " + F, timeout=20); msg, ok = watch(t0); fails += not ok
+            fit = None; t1 = time.time()
+            while time.time() - t1 < 10:
+                fit = zvar()
+                if fit and abs(float(fit) - 1.152) > 0.01 and fit != zf: break
+                time.sleep(0.2)
+            fitted = bool(fit) and abs(float(fit) - 1.152) > 0.01; fails += ok and not fitted
+            print(f"REPEAT open {k+1}: small PDF at view {zf}; drawing {msg}; fitted: {fitted} (view {fit}, box {box0()})", flush=True)
+            close(); close()
+    finally: a.stop()
+    print(f"REPEAT total: {fails} problems in {R} opens", flush=True); WAYS = {}
 for way in WAYS:
     for k in range(N):
         a = App(APP, EV + f"/stall-{way}-{k}", display=f":{80 + len(WAYS) * 0 + list(WAYS).index(way) * 10 + k}"); h.bind(a); a.start_display()

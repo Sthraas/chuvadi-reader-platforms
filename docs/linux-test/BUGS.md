@@ -33,13 +33,15 @@ Every bug gets fixed; I re-verify on the fixing commit and mark it here.
 | B-21 | S3 | Linux | Show in folder: 5 s D-Bus timeout → `xdg-open` fallback → two file-manager windows | **verified fixed f3d5978** — cold Nautilus: one window; `xdg-open` fallback never called (logging stub) |
 | B-22 | S4 | shared Ui/Core | No designed keyboard-focus style: each engine draws its own (GTK blue on Linux) | **verified fixed e468d1a** (Foundation 8th patch) — focus ring 2 px solid in the theme accent (#8a3a1c in light) |
 | B-23 | S4 | shared Ui/Core | Tab order starts with one "Send page N to a desk" button per page | **verified fixed e468d1a** (Foundation 8th patch) — Tab starts on the current page's strip (rotate, send, snapshot, bookmark), not one button per page |
-| B-24 | S2 | **shared Ui/Core** | A stalled read (hung network share) shows a blank Reader with no "Opening…" or Cancel, and blocks every later open | **verified fixed 7595ef3** (13th patch) — stalled `.pdf`/`.xlsx`/`.docx`: "Opening…" at 0.3–0.9 s, Cancel at 10 s, Cancel closes the tab, later opens never blocked · re-verified 64c9c16 · 8dcf4d8 · d918161 · bf60da9 |
-| B-25 | S4 | **shared Ui/Core** | Excel viewer errors still use the old one-line wording (no WT-10 sentence + Details) | **verified fixed 7595ef3** — Excel "This file couldn't be read as an Excel workbook.", Word "…as a Word document.", damaged PDF "This PDF is damaged…", each with Details · re-verified 64c9c16 · 8dcf4d8 · d918161 · bf60da9 |
-| B-26 | S3 | **shared Ui/Core** | Excel number formats not applied: `"₹"#,##0.00` shows `1234.5`, `0.00%` shows `0.125` (values unaltered) — Sheets 2.0.2 now has `Cell.GetDisplayText` | **deferred by decision (D-147)** — raw stored value is the decided behaviour for now (Arun's data-integrity rule); option A (formatted display text, exact value on hover) is a later improvement, with Arun |
-| B-27 | S3 (perf) | **library + shared Ui/Core** | Large vector CAD PDF (5 × A1, ~1.44 M path ops): ~3–4 s to open + ~1 s to draw page 1; app memory 1.6 GB after viewing 5 pages | open (library) — bf60da9: sheet 1 5.8–6.4 s, sheets 2–5 3.6–5.7 s; page answers ≤ 0.09 s. Poppler ~1 s a sheet (`PaintStrokeOp`) |
+| B-24 | S2 | **shared Ui/Core** | A stalled read (hung network share) shows a blank Reader with no "Opening…" or Cancel, and blocks every later open | **verified fixed 7595ef3** (13th patch) — stalled `.pdf`/`.xlsx`/`.docx`: "Opening…" at 0.3–0.9 s, Cancel at 10 s, Cancel closes the tab, later opens never blocked · re-verified 64c9c16 · 8dcf4d8 · d918161 · bf60da9 · 90895ef |
+| B-25 | S4 | **shared Ui/Core** | Excel viewer errors still use the old one-line wording (no WT-10 sentence + Details) | **verified fixed 7595ef3** — Excel "This file couldn't be read as an Excel workbook.", Word "…as a Word document.", damaged PDF "This PDF is damaged…", each with Details · re-verified 64c9c16 · 8dcf4d8 · d918161 · bf60da9 · 90895ef |
+| B-26 | S3 | **shared Ui/Core** | Excel number formats not applied: `"₹"#,##0.00` shows `1234.5`, `0.00%` shows `0.125` (values unaltered) — Sheets 2.0.2 now has `Cell.GetDisplayText` | **superseded by D-161, verified 90895ef** — cells now show their number format as the file holds it (₹1,234.50, 12.50%, dates); the stored value is on hover, in the value bar and in copy. Exception: time-only cells (B-31) |
+| B-27 | S3 (perf) | **library + shared Ui/Core** | Large vector CAD PDF (5 × A1, ~1.44 M path ops): ~3–4 s to open + ~1 s to draw page 1; app memory 1.6 GB after viewing 5 pages | open (library) — 90895ef: sheet 1 6.3 s, sheets 2–5 4.0–6.0 s; page answers ≤ 0.18 s |
 | B-28 | S2 | Linux (UI test) | UI tests 36a–36c count the 24×24 loading icon as a drawn page, so their sheet times (0.1–0.2 s) and 36c memory don't measure the real drawing | **verified fixed 8dcf4d8** (4de79ed) — `rendered()` counts only a page-sized svg; Linux's 36c sheet times (4.9–5.6 s) now match mine on the real file |
-| B-29 | S3 | **shared Ui/Core** (render queue) | Closing the CAD tab mid-render: the next file sometimes waits 3.7–4.6 s for its first page (2 of 6 closes) | **verified fixed 8dcf4d8, re-verified d918161 and bf60da9** — 6 of 6 mid-render closes: next file drawn in 0.25–0.28 s |
-| B-30 | S2 (perf) | **shared Ui/Core + Foundation** | Memory isn't given back after closing the CAD drawing: 1.43–1.77 GB stays for 60 s+, and 680 MB of managed heap is still live after a full collection | **verified fixed bf60da9** — app 247–250 MB before, 862–985 MB with 5 sheets (was ~1.9 GB), **267–270 MB 2 s after closing** and steady for 60 s. Remaining, recorded: WebKit's web process 220 → ~585 MB and stays |
+| B-29 | S3 | **shared Ui/Core** (render queue) | Closing the CAD tab mid-render: the next file sometimes waits 3.7–4.6 s for its first page (2 of 6 closes) | **verified fixed 8dcf4d8; re-verified d918161, bf60da9, 90895ef** — 6 of 6 mid-render closes: next file drawn in 0.27–0.30 s |
+| B-30 | S2 (perf) | **shared Ui/Core + Foundation** | Memory isn't given back after closing the CAD drawing: 1.43–1.77 GB stays for 60 s+, and 680 MB of managed heap is still live after a full collection | **verified fixed bf60da9, re-verified 90895ef** — app 251 MB before, 936 MB with 5 sheets, 267 MB 2 s after closing. Recorded: WebKit 222 → ~586 MB and stays |
+| B-31 | S2 | **library** (Chuvadi.Sheets, SH-L1) | Excel time-only cells (stored 0 to 1, e.g. 6:00 PM) show `########`, and the stored value on hover, in the value bar and in copy is wrong (0.75 reads as -0.25). On bf60da9 they showed `1899-12-30 18:00` | **open** — 90895ef |
+| B-32 | S2 | **library + shared Ui/Core** | A PDF page's `/Rotate` (90, 180, 270) is ignored on screen: the page shows unrotated. Same on bf60da9 | **open** — 90895ef |
 | K-01 | — | Linux | GNOME close-only layout showed all three buttons (known, 7 Nov) | **verified fixed f7d0034, re-verified f3d5978** (6 layouts) |
 
 Routing (coordinator, 8 Nov): **Linux** → the Linux chat. **shared Ui/Core** → Foundation's combined patch, as exact diffs from the Linux chat or Foundation. **library** → the coordinator compiles them for Arun (library coordinator).
@@ -567,3 +569,81 @@ CI was still running when this was written.
 - **CropBox (D-160):** a PDF whose CropBox is smaller than its MediaBox should show, print and export the cropped page.
 - **36c / 36d:** 338 MB before → 954 MB with 5 sheets drawn → 273 MB after closing; page images by address unchanged.
 - A quick regression.
+
+
+---
+## Linux Test — 11 Nov, short re-check on `platform/linux` 90895ef (Foundation's patches 22–24)
+Built from source; CI run 42862764236 is green. Real-CAD results are numbers only. New tools: `tools/t_formats.py`,
+`t_crop.py`, `make_crop.py`, and `REPEAT=` in `t_stall.py`. New fixture: `fixtures/crop.pdf` (synthetic).
+
+**Fresh-open stall ✅ fixed.**
+- *Linux's recipe, real CAD file.* In one app: a small PDF zoomed to 136 %, then the drawing, 10 times, in two
+  separate apps. 20 of 20: sheet 1 drew in 4.6–7.0 s and the view fitted (30 %).
+- *Fresh app per try, four ways* (command line, early open, after a zoomed tab, after a mid-render close): 16 of 16
+  drew in 5.2–7.7 s.
+- *The 115 % starting state* I caught on bf60da9 (4 of 32 tries) didn't appear once in these 36 opens: every sheet
+  was already fitted when it drew.
+
+**Excel number formats (D-161).** `exact.xlsx`, against the formats in its own `styles.xml`:
+
+| Cell | Stored | Format in the file | Shown | Verdict |
+|---|---|---|---|---|
+| B23 | 1234.5 | `"₹"#,##0.00` | ₹1,234.50 | ✅ |
+| B24 | 0.125 | `0.00%` (id 10) | 12.50% | ✅ |
+| B22 | 45000 | id 14 (short date) | 03-15-23 | ⚠️ the fixed code; Excel shows the system's short date (15-03-2023 on en-IN). Known, SH-L2 |
+| B21 | 12345678901234567890 | General | 1.23457E+19 | ✅ as Excel |
+| B26 | 3.14159265358979 | General | 3.141592654 | ✅ as Excel |
+| B20, B25 | 0.1, -7 | General | 0.1, -7 | ✅ |
+| A1–A9 | text | — | unchanged | ✅ double spaces, leading and trailing spaces, case, spelling, Tamil, tab, `00123` and the line break all exact |
+
+- The stored value is the cell's hover text, and clicking B23 shows `B23 1234.5` in the value bar. ✅
+- Foundation's `formats.xlsx` (53 cases), run under C, en-IN and en-US: currency, percent, separators (en-IN groups
+  `12,34,567`), fractions, scientific, sections, `[Red]`/`[Blue]`/`[Color10]` colours, text formats and `dd/mm/yyyy`
+  dates all match Excel.
+- The differences are the ones Foundation lists as library items SH-L2 to SH-L6 (built-in ids 5–8, 14, 22 and
+  41–44 don't follow the system culture; locale tags; DBNum; Buddhist and Hijri calendars).
+
+## B-31 — Excel time-only cells show ######## and a wrong stored value (S2, library SH-L1)
+**Steps.** Open `tests/ChuvadiReader.Tests/Fixtures/Office/formats.xlsx` (rows "h:mm AM/PM 18", "h:mm:ss 21",
+"system time F400", "ss.000"), or any sheet with a time and no date.
+**Result.** The cell holding 0.75 with format `h:mm AM/PM` shows `########`. Its hover text and value bar say
+**-0.25**. 0.5104166 reads as -0.4895834…, and 0.0000123 as -0.9999877.
+**Expected.** `6:00 PM`, stored 0.75.
+**Why it matters.** Shift times, appointment times and durations are common in real sheets. This breaks "show what
+the file holds" twice: the display is unreadable, and the value offered as the file's is not the file's.
+**Compared with bf60da9.** There the same cell showed `1899-12-30 18:00`: wrong date, but the time was readable.
+**Cause.** Known to Foundation as SH-L1: Chuvadi.Sheets 2.0.4 reads a time-only value one day early. Its test is
+skipped, not failing.
+
+**CropBox (D-160) ✅ on screen and in print.** `fixtures/crop.pdf` has four A4 pages with markers inside the crop
+corners and a green block outside it.
+
+| Page | File | Shown | Verdict |
+|---|---|---|---|
+| 1 | CropBox [50 200 450 700] | 400 × 500; red and blue markers in their corners; 0 green pixels | ✅ |
+| 2 | Same + `/Rotate 90` | 400 × 500, cropped right, but **not rotated** | crop ✅, rotation ✗ (B-32) |
+| 3 | No CropBox | 595 × 842, green block visible | ✅ |
+| 4 | CropBox larger than MediaBox | 595 × 842 (the MediaBox) | ✅ |
+| Foundation's `inherited-cropbox.pdf` | CropBox on the /Pages node | 400 × 500 | ✅ |
+
+- *Print.* The file goes to CUPS byte-identical; the printed pages 1–2 carry only the inside text, and pages 3–4
+  carry both.
+- *Text outside the crop* is still in the page's text layer. Acrobat behaves the same; I'm only noting it.
+- *Export as image* on a cropped page: not checked this round.
+
+## B-32 — A page's /Rotate is ignored on screen (S2, library + shared Ui/Core)
+**Steps.** Open a PDF whose page has `/Rotate 90` (or 180, 270). I made one with `qpdf --rotate=+90:1` from a
+portrait A4 page with a red square bottom-left and a blue one top-right.
+**Result.** The page shows portrait and upright, red still bottom-left, for 90, 180 and 270. Poppler shows it
+landscape and turned.
+**Expected.** The page turned as the file says. Scanned documents and landscape reports commonly rely on `/Rotate`.
+**Scope.** The same on bf60da9, so it isn't new on this head. Checked on vector pages; I haven't checked heavy
+(raster) sheets.
+
+**Page images (36d) ✅.** All 5 real-CAD sheets hash the same as on d918161 and bf60da9, and zooming keeps the image.
+
+**36c ✅.** Memory, app / WebKit, in MB: 251 / 222 before, 936 / 596 with 5 sheets, 267 / 586 from 2 s to 60 s
+after closing. Sheet 1 took 6.3 s. **Close mid-render ✅** 6 of 6, next file in 0.27–0.30 s.
+
+**Quick regression ✅.** B-24 + B-08b Cancel (`.pdf`, `.xlsx`, `.docx`); B-25; owner-password printing; single
+instance (1 window, 4 tabs); drops; print byte-identical; no files left in `/tmp`.

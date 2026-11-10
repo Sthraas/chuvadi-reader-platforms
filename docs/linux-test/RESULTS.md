@@ -365,7 +365,7 @@ No files are left in `/tmp`.
   - The library items B-08a, B-09a (library side) and B-11a.
 - The real-machine checks above still need a real desktop: GPU, GNOME Wayland/KDE, a real printer, Files/Dolphin, and fractional scaling.
 
-## Sign-off — Linux bf60da9 (10 Nov): ready for Arun
+## Sign-off — Linux bf60da9 (10 Nov) — superseded by 90895ef below
 
 **Build and CI.** Built from source. [CI run 42756482625](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/42756482625)
 is green on x64 and arm64. This replaces the d918161 sign-off above.
@@ -420,9 +420,35 @@ No files are left in `/tmp`.
   - The library items B-08a, B-09a (library side) and B-11a.
 - The real-machine checks still need a real desktop.
 
-## Arun's check — Linux bf60da9
+## Sign-off — Linux 90895ef (11 Nov): ready for Arun, with two things to know
 
-**Get the package.** GitHub → `Sthraas/chuvadi-reader-platforms` → Actions → run **Linux** on `bf60da9` ([run 42756482625](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/42756482625), green) → Artifacts → **linux-x64** (ARM machine: `linux-arm64`). Unzip it and use **`deb/chuvadi-reader_1.0.0~preview_amd64.deb`** — the self-contained one (37.8 MB, needs no .NET; artifacts kept until 8 Feb 2027). SHA-256 `4bb65be7870e2f164257ae9db76a2f40aa5af42ed021a0e19916e83404e2c0b3`. (`deb-framework-dependent/` is the smaller variant that pulls in Microsoft's .NET runtime package.) Or with the CLI: `gh run download 42756482625 -R Sthraas/chuvadi-reader-platforms -n linux-x64`.
+**Build and CI.** Built from source. [CI run 42862764236](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/42862764236)
+is green. This replaces the bf60da9 sign-off above.
+
+| Check | Result |
+|---|---|
+| Fresh-open stall ✅ | Fixed. Real CAD file: 20 of 20 opens after a small PDF at a fixed zoom, and 16 of 16 fresh starts, drew sheet 1 (4.6–7.7 s) and fitted the view |
+| Excel number formats (D-161) | `exact.xlsx`: ₹1,234.50 ✅, 12.50% ✅, date shown as 03-15-23 ⚠️ (Excel shows the system's short date; SH-L2). Text cells are exact. The stored value is on hover and in the value bar. **Time-only cells fail (B-31)** |
+| CropBox (D-160) ✅ | Cropped pages show and print cropped; an uncropped page and an oversized CropBox show the MediaBox. Export as image not checked |
+| Page images (36d) ✅ | All 5 real-CAD sheets pixel-identical to bf60da9 |
+| 36c memory ✅ | App 251 → 936 → 267 MB (before, 5 sheets, after closing) |
+| Close mid-render ✅ | Next file in 0.27–0.30 s, 6 of 6 |
+| Quick regression ✅ | B-24 + B-08b, B-25, owner-password printing, single instance, drops, print |
+
+**The two things to know**
+1. **B-31, Excel time-only cells.** A cell holding a time with no date (say 6:00 PM) shows `########`, and the
+   stored value offered on hover and in copy is wrong (-0.25 for 0.75). It's a known Chuvadi.Sheets item (SH-L1),
+   and it looks worse on this head than on bf60da9.
+2. **B-32, page rotation.** A PDF page's `/Rotate` is ignored on screen. It's not new on this head.
+
+**Ready.** Linux at 90895ef is ready for Arun's check, with B-31 and B-32 known. Neither is Linux-specific.
+- Open, not blocking: B-27 (draw speed, library), WebKit's memory after closing, the library items B-08a, B-09a
+  (library side) and B-11a, and SH-L2 to SH-L6.
+- The real-machine checks still need a real desktop.
+
+## Arun's check — Linux 90895ef
+
+**Get the package.** GitHub → `Sthraas/chuvadi-reader-platforms` → Actions → run **Linux** on `90895ef` ([run 42862764236](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/42862764236), green) → Artifacts → **linux-x64** (ARM machine: `linux-arm64`). Unzip it and use **`deb/chuvadi-reader_1.0.0~preview_amd64.deb`** — the self-contained one (37.8 MB, needs no .NET; artifacts kept until 8 Feb 2027). SHA-256 `c187b4810fa1adf917ec0c33f01c10e50ae1db590f51cc6a129410b77e4a47eb`. (`deb-framework-dependent/` is the smaller variant that pulls in Microsoft's .NET runtime package.) Or with the CLI: `gh run download 42862764236 -R Sthraas/chuvadi-reader-platforms -n linux-x64`.
 
 **Install** (Ubuntu 24.04 or 26.04, desktop):
 ```
@@ -436,11 +462,11 @@ It appears in the app grid as **Chuvadi Reader**; it also installs and loads its
 1. **Start from the app grid**, cold and again warm — note how long until Home shows (here: ~1.0 s warm on 2 CPUs without a GPU).
 2. **Open a PDF by double-clicking it in Files**, then select **three files** → right-click → Open With → Chuvadi: each becomes its own tab in the one window.
 3. **Drag two files from Files onto the window** — two tabs.
-4. **The KDMC CAD drawing**: open it, page through all 5 sheets (try typing a sheet number, and jumping ahead then back), zoom in and out, close it. Note the time each sheet takes to draw, and the memory in System Monitor before opening, with 5 sheets, and just after closing. Here, on 2 CPUs with no GPU: sheet 1 takes ~6 s and each new sheet 4–6 s (B-27, known); the app goes from ~250 MB to ~0.9–1 GB with 5 sheets and back to ~270 MB on closing. Your real-hardware numbers are the useful ones. The window should stay responsive while it draws, and every sheet should draw and stay sharp. **One thing to watch for:** if a freshly opened drawing ever sits at 115 % with sheet 1 as a tall blank page and never draws, note exactly what you did just before. It's a rare stall we haven't been able to reproduce.
+4. **The KDMC CAD drawing**: open it, page through all 5 sheets (try typing a sheet number, and jumping ahead then back), zoom in and out, close it. Note the time each sheet takes to draw, and the memory in System Monitor before opening, with 5 sheets, and just after closing. Here, on 2 CPUs with no GPU: sheet 1 takes ~6 s and each new sheet 4–6 s (B-27, known); the app goes from ~250 MB to ~0.9–1 GB with 5 sheets and back to ~270 MB on closing. Your real-hardware numbers are the useful ones. The window should stay responsive while it draws, and every sheet should draw and stay sharp. The rare fresh-open stall (a drawing stuck at 115 % with a tall blank page) is fixed on this head; if you ever see it, note what you did just before.
 5. **Print to your real printer**: a mixed portrait/landscape file, 2 copies; check it's crisp (vector), and that a file whose permissions forbid printing is refused — then works when opened with its owner password.
 6. **A password-protected PDF**: wrong password, then the right one.
 7. **Mark → annotate → Save as**, and **Protect → Find & redact** a word → Save redacted copy — then search the saved copy for the word (it must be gone).
-8. **Word and Excel files** of your own — the data should read exactly as in the file (spaces, spelling, case untouched); Excel numbers show their stored value (D-147).
+8. **Word and Excel files** of your own — text should read exactly as in the file (spaces, spelling, case untouched). Excel numbers now show in the file's own format (currency, percent, dates; D-161); hover a cell or click it to see the stored value. Two known gaps: a time with no date shows `########` with a wrong stored value (B-31), and built-in short dates show as mm-dd-yy, not your system's format.
 9. **Document ▾ → Show in folder** opens Files with the file selected; **Snapshot → Copy** then paste into another app.
 10. **Settings**: switch the five themes and the interface size; change GNOME's window-button layout (Tweaks → Window Titlebars) and see the buttons follow; maximise and restore (corners square when maximised, rounded otherwise).
 
