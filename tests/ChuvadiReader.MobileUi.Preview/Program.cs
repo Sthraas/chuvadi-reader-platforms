@@ -44,6 +44,19 @@ if (web)
 }
 
 var app = builder.Build();
+// D-158: drawn page images by address. The preview is one person on one machine (owner "local"); the portal's
+// own endpoint checks the signed-in user's session instead and answers 404 to anyone else.
+app.MapGet("/" + ChuvadiReader.Core.Reader.PageImages.PathPrefix + "{file}", (string file, HttpContext http,
+    ChuvadiReader.Core.Reader.PageImages images, ChuvadiReader.Platform.IPageImageOwner owner) =>
+{
+    if (!ChuvadiReader.Core.Reader.PageImages.TryParseAddress(file, out var token) || !images.TryGet(token, owner.Current, out var png))
+    {
+        return Results.NotFound();
+    }
+
+    http.Response.Headers.CacheControl = "private, no-store";
+    return Results.Bytes(png, "image/png");
+});
 app.MapGet("/__preview/window-log", () => Results.Ok(new { drags = windowLog.Drags, maximizes = windowLog.Maximizes }));
 if (linux)
 {
