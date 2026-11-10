@@ -1,5 +1,5 @@
 diff --git a/src/ChuvadiReader.Core/Documents/XlsxViewService.cs b/src/ChuvadiReader.Core/Documents/XlsxViewService.cs
-index 7e3183d..1abf911 100644
+index 7e3183d..ddcfe0c 100644
 --- a/src/ChuvadiReader.Core/Documents/XlsxViewService.cs
 +++ b/src/ChuvadiReader.Core/Documents/XlsxViewService.cs
 @@ -29,7 +29,7 @@ public sealed record SheetCell(
@@ -33,7 +33,7 @@ index 7e3183d..1abf911 100644
          string align = st is { } s && s.HAlign != HorizontalAlign.General
              ? s.HAlign.ToString()
              : (isNum ? "Right" : "Left");
-@@ -125,13 +131,18 @@ public sealed class XlsxViewService
+@@ -125,13 +131,16 @@ public sealed class XlsxViewService
              st is { } fs && !string.IsNullOrWhiteSpace(fs.FontName) ? fs.FontName : null,
              st is { } ss && ss.FontSize > 0 ? ss.FontSize : null,
              st?.WrapText ?? false,
@@ -42,14 +42,16 @@ index 7e3183d..1abf911 100644
 +            text == stored ? null : stored);
      }
  
-     // Displays the cell's value as-is. Interpreting the workbook's number-format code
-     // (percent, thousands, decimals, date masks, etc.) is the library's job and must NOT
-     // be re-implemented here — when Chuvadi.Sheets exposes a formatted display string per
-     // cell, map that instead. Until then the raw value is shown plainly.
+-    // Displays the cell's value as-is. Interpreting the workbook's number-format code
+-    // (percent, thousands, decimals, date masks, etc.) is the library's job and must NOT
+-    // be re-implemented here — when Chuvadi.Sheets exposes a formatted display string per
+-    // cell, map that instead. Until then the raw value is shown plainly.
 +    /// <summary>A style with a number format other than General (a code, or a built-in id above 0).</summary>
 +    private static bool HasNumberFormat(CellStyle? st)
 +        => st is { } s && (s.NumberFormat is { Length: > 0 } code ? !code.Equals("General", StringComparison.OrdinalIgnoreCase) : s.NumberFormatId is > 0);
 +
++    // The value as the file holds it: General cells in the grid, and Stored for hover. Interpreting a
++    // number-format code is the library's job (Cell.DisplayText) and must NOT be re-implemented here.
      private static string FormatValue(object? v) => v switch
      {
          null => "",
