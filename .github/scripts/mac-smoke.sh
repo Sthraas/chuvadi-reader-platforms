@@ -226,7 +226,7 @@ s=$(grep -E "CHUVADI step 3 pick: route=" "$LOG" | tail -1)
 [[ "$s" == *'immersiveTip="Immersive (⌃⌘F)"'* ]] && pass "M-09 the View rail labels Immersive ⌃⌘F" || fail "M-09 View rail label: ${s:-no report}"
 s=$(grep -E "CHUVADI step 9 wait: route=" "$LOG" | tail -1)
 [[ "$s" == *"dotnet=text"* ]] && pass "M-14 an unreadable file shows .NET's message as text" || fail "M-14 unreadable file: ${s:-no report}"
-act() { grep -E "CHUVADI step $1 [a-z]+: route=" "$LOG" | tail -1 | sed -E 's/.* active=//'; }
+act() { grep -E "CHUVADI step $1 [a-z]+: route=" "$LOG" | tail -1 | sed -E 's/.* active=//; s/ sent=.*//'; }
 a9=$(act 9); a10=$(act 10); a11=$(act 11); a12=$(act 12)
 first=$(grep -E "CHUVADI tabs [0-9]+: " "$LOG" | tail -1 | sed -E 's/.*CHUVADI tabs [0-9]+: //; s/, .*//')
 echo "active: before=$a9 ⌃Tab=$a10 ⌃⇧Tab=$a11 ⌘1=$a12 (first tab $first)"
