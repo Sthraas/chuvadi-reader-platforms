@@ -573,3 +573,10 @@ Run 42727139667 (c3ff2da): 47/47.
   `docs/mac/foundation/TabsService-overlapping-opens.patch`. Not applied to platform/mac (shared code).
 - **Page-image hook (D-158):** `ChuvadiWebView` overrides MAUI's `CreateFileProvider` with `PageImageFileProvider`, as
   PAGE-IMAGES.md asks. Smoke opens an A0 page (above the large-format threshold) and fetches its `_chvd/pages/…png`.
+
+### 2026-11-11 (02:45) — rebased onto foundation-pr 742a5da (patch 25, parts 1–4)
+Mac Test signed off 3bc7f68 (itself a clean rebase onto dd59362, patch 24; run 42839767989, 55/55). 742a5da carries
+the TabsService lock from `docs/mac/foundation/TabsService-overlapping-opens.patch` (now landed; the file stays as the
+record) and Docs 2.1.0. New smoke phase: four files handed over at launch and six more at once while running — all ten
+become tabs, one process, no error bar, nothing logged as an error. The tab-key phase hands its two files over together
+again.

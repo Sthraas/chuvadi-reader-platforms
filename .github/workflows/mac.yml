@@ -219,6 +219,7 @@ jobs:
             smoke-appearance.log
             smoke-keys.log
             smoke-tabkeys.log
+            smoke-many.log
             *.ips
             chuvadi-logs-steps/
             chuvadi-logs-recovery/
