@@ -773,11 +773,13 @@ internal static class MemoryRelief
 
             Interlocked.Exchange(ref _lastTicks, Environment.TickCount64);
             GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, blocking: true, compacting: true);
+            MemoryReliefNotice.Raise();
             if (FollowUp > TimeSpan.Zero)
             {
                 await Task.Delay(FollowUp).ConfigureAwait(false);
                 GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true); // the pool drops buffers idle for a minute
                 GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, blocking: true, compacting: true);
+                MemoryReliefNotice.Raise();
             }
         });
     }
@@ -787,5 +789,28 @@ internal static class MemoryRelief
     {
         Interlocked.Exchange(ref _lastTicks, long.MinValue / 2);
         MinGap = TimeSpan.FromSeconds(30);
+    }
+}
+
+/// <summary>
+/// Raised on a worker thread after each memory relief pass, when the .NET heap has given its memory back. Memory
+/// outside the heap is the host's: on Linux, freed native memory (WebKitGTK and GLib in the app's process) stays
+/// with the C library until <c>malloc_trim(0)</c>. A host that wants that back calls it here (nineteenth patch).
+/// Keep handlers short; they run off the Ui thread.
+/// </summary>
+public static class MemoryReliefNotice
+{
+    public static event Action? Relieved;
+
+    internal static void Raise()
+    {
+        try
+        {
+            Relieved?.Invoke();
+        }
+        catch
+        {
+            // a host's handler never breaks the relief
+        }
     }
 }
