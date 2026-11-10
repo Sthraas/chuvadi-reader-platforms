@@ -244,7 +244,9 @@ act() { grep -E "CHUVADI step $1 [a-z]+: route=" "$LOG" | tail -1 | sed -E 's/.*
 a9=$(act 9); a10=$(act 10); a11=$(act 11); a12=$(act 12)
 first=$(grep -E "CHUVADI tabs [0-9]+: " "$LOG" | tail -1 | sed -E 's/.*CHUVADI tabs [0-9]+: //; s/, .*//')
 echo "active: before=$a9 ⌃Tab=$a10 ⌃⇧Tab=$a11 ⌘1=$a12 (first tab $first)"
-[ -n "$a10" ] && [ "$a10" != "$a9" ] && pass "M-08 real ⌃Tab moves to another tab" || fail "M-08 ⌃Tab left the tab at $a10"
+ko=$(grep -E "CHUVADI step 9 [a-z]+: route=" "$LOG" | tail -1 | sed -E 's/.* order="([^"]*)".*/\1/')
+ke=$(python3 -c 'import sys; o=sys.argv[1].split("|"); a=sys.argv[2]; print(o[(o.index(a)+1)%len(o)] if a in o else "?")' "$ko" "$a9")
+[ -n "$a10" ] && [ "$a10" = "$ke" ] && pass "M-08 with the page focused, real ⌃Tab moves exactly one tab" || fail "M-08 ⌃Tab: $a9 → $a10 (expected $ke)"
 [ -n "$a11" ] && [ "$a11" = "$a9" ] && pass "M-08 real ⌃⇧Tab moves back" || fail "M-08 ⌃⇧Tab: $a11 (expected $a9)"
 [ -n "$a12" ] && [ "$a12" = "$first" ] && pass "M-23 real ⌘1 goes to the first tab" || fail "M-23 ⌘1: $a12 (expected $first)"
 chmod 644 "$DOCS/locked.pdf"
@@ -256,8 +258,12 @@ sleep 2
 # ⌃Tab, ⌃⇧Tab and ⌘1 — judged by the tab strip on the page, as a person (and Mac Test's screenshots) see it ---------
 for k in t1 t2; do cp "$DOCS/five-pages.pdf" "$DOCS/$k.pdf"; done
 rm -f "$LOG"
+# One file at launch, the second a moment later: two at once hit a shared race (TabsService.DropOtherCaches,
+# patch sent to Foundation — docs/mac/foundation/TabsService-overlapping-opens.patch), kept apart from M-08 here.
 open -n --env CHUVADI_SMOKE=1 --env "CHUVADI_SMOKE_STEPS=wait;wait;unfocus;native:ctrl-tab;native:ctrl-shift-tab;native:cmd-1" \
-  --stdout "$LOG" --stderr "$LOG" -a "$APP" "$DOCS/t1.pdf" "$DOCS/t2.pdf"
+  --stdout "$LOG" --stderr "$LOG" -a "$APP" "$DOCS/t1.pdf"
+wait_for 'CHUVADI tabs [0-9]+: .*t1\.pdf' 90 || true
+open -a "$APP" "$DOCS/t2.pdf"
 native_watch 180 &
 NW=$!
 wait_for 'CHUVADI steps done' 180 || fail "M-08 tab-key steps did not finish"
@@ -268,7 +274,11 @@ first=$(grep -E "CHUVADI step 6 [a-z]+: route=" "$LOG" | tail -1 | sed -E 's/.* 
 s3=$(strip 3); s4=$(strip 4); s5=$(strip 5); s6=$(strip 6)
 echo "tab strip: before=$s3 ⌃Tab=$s4 ⌃⇧Tab=$s5 ⌘1=$s6 (first $first)"
 grep -q "CHUVADI step 3 unfocus: resigned=True" "$LOG" && echo "(the WebView had given up the keyboard before the keys)"
-[ -n "$s4" ] && [ "$s4" != "-" ] && [ "$s4" != "$s3" ] && pass "M-08 without a first responder, real ⌃Tab changes the tab on screen" || fail "M-08 ⌃Tab: strip $s3 → $s4"
+# The tab after the active one in the strip's own order (wrapping): ⌃Tab must land exactly there, not two along.
+order=$(grep -E "CHUVADI step 3 [a-z]+: route=" "$LOG" | tail -1 | sed -E 's/.* order="([^"]*)".*/\1/')
+expect=$(python3 -c 'import sys; o=sys.argv[1].split("|"); a=sys.argv[2].strip(chr(34)); print(chr(34)+o[(o.index(a)+1)%len(o)]+chr(34) if a in o else "?")' "$order" "$s3")
+echo "strip order: $order — after $s3 comes $expect"
+[ -n "$s4" ] && [ "$s4" = "$expect" ] && pass "M-08 without a first responder, real ⌃Tab moves exactly one tab on screen" || fail "M-08 ⌃Tab: strip $s3 → $s4 (expected $expect)"
 [ -n "$s5" ] && [ "$s5" = "$s3" ] && pass "M-08 real ⌃⇧Tab changes it back on screen" || fail "M-08 ⌃⇧Tab: strip $s5 (expected $s3)"
 [ -n "$s6" ] && [ "$s6" = "$first" ] && pass "M-23 real ⌘1 shows the first tab on screen" || fail "M-23 ⌘1: strip $s6 (expected $first)"
 cp "$LOG" "$PWD/smoke-tabkeys.log"

@@ -63,6 +63,17 @@ internal static class MacPageKeys
 {
     public const string Selector = "chvdPageKey:";
 
+    /// <summary>⌃Tab and ⌃⇧Tab as key commands with priority over UIKit's own focus moves.</summary>
+    public static IEnumerable<UIKeyCommand> TabCommands()
+    {
+        foreach (var flags in new[] { UIKeyModifierFlags.Control, UIKeyModifierFlags.Control | UIKeyModifierFlags.Shift })
+        {
+            var c = UIKeyCommand.Create(new NSString("\t"), flags, new ObjCRuntime.Selector(Selector));
+            c.WantsPriorityOverSystemBehavior = true;
+            yield return c;
+        }
+    }
+
     public static bool Available => ChuvadiReader.Mac.MainPage.WebKitView is not null;
 
     public static void Handle(UIKeyCommand command)
