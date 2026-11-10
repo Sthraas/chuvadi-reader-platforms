@@ -204,6 +204,7 @@ internal static class MacSmoke
             {
                 // A raster page (D-158, large-format) takes seconds to draw: report the page again later.
                 Later(9.0, async () => Log("ui-late " + await UiTextAsync(Current(view))));
+                Later(30.0, async () => Log("ui-later " + await UiTextAsync(Current(view))));
             }
 
             Later(1.5, () =>

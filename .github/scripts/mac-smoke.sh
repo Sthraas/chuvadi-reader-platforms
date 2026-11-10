@@ -124,8 +124,9 @@ for f in $PICKS; do
     fail "M-16 Open panel $f: ${line:-no Ui report}"
   fi
 done
-wait_for 'CHUVADI ui-late .*large-a0' 30 || true
-li=$(grep "CHUVADI ui-late " "$LOG" | grep "large-a0" | tail -1)
+wait_for 'CHUVADI ui-later .*active=large-a0' 50 || true   # an A0 raster takes a while on the VM
+li=$(grep -E "CHUVADI ui-later? " "$LOG" | grep "active=large-a0" | grep "pageimg=200" | tail -1)
+[ -n "$li" ] || li=$(grep -E "CHUVADI ui-later " "$LOG" | grep "active=large-a0" | tail -1)
 [[ "$li" == *"pageimg=200/image/png"* ]] && pass "D-158 a raster page's image is served from memory by address (page-image hook)" \
   || fail "D-158 page image: ${li:-no Ui report}"
 hl=$(grep "CHUVADI ui " "$LOG" | sed -n "4p")
