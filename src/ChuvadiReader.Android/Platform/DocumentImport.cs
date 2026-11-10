@@ -51,6 +51,7 @@ public sealed class DocumentImport
 
         // Copy off the UI thread; the grant stays valid while the activity holds the intent.
         // A file that can't be opened is said so on screen (and in the log): never a silent no-op.
+        StartupTimeline.Mark("import-start");
         _ = Task.Run(() =>
         {
             string? local;
@@ -73,10 +74,13 @@ public sealed class DocumentImport
                 return;
             }
 
+            StartupTimeline.Mark("import-done");
             global::Android.Util.Log.Info("Chuvadi", $"Opened from another app: {Path.GetFileName(local)}");
             MainThread.BeginInvokeOnMainThread(() =>
             {
-                if (_incoming.Receive([local]) == 0)
+                var received = _incoming.Receive([local]);
+                StartupTimeline.Mark("handed");
+                if (received == 0)
                 {
                     global::Android.Util.Log.Warn("Chuvadi", $"Open from another app: not an openable type: {Path.GetFileName(local)}");
                     Tell("Chuvadi couldn't open that file.");

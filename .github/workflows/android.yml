@@ -19,17 +19,18 @@ on:
         required: true
         default: all
       suite:
-        description: "full (smoke, then gestures + platform, or the WebView gate) or smoke (install, start, Ui, rotation, no crash)"
+        description: "full (smoke, then gestures + platform, or the WebView gate), smoke (install, start, Ui, rotation, no crash), or timeline (AT-14: cold Open with, stage by stage, as shipped and with Chuvadi-only full AOT)"
         required: true
         default: full
         type: choice
-        options: [full, smoke]
+        options: [full, smoke, timeline]
 
 env:
-  # platform/foundation: through the twenty-second combined patch (D-158 page images by address, H-20).
-  FOUNDATION_REF: 846706e9f50bc7a64d4e7cb53caf29e2b8a18616
-  # platform/mobile-ui: Foundation f88f9ef merged, H-20 regenerated.
-  MOBILEUI_REF: c5c0b7ecf5fc9c5acf3fd330844208207d369a57
+  # platform/foundation-pr (PR #13): twenty-third combined patch (AT-15, page-box drift, AT-09, AT-13, TOOLS headings).
+  FOUNDATION_REF: 15033c8466f8b5f796c2e4f6375df8113319213d
+  # platform/mobile-ui: none this round — its head (2b29227, H-21, AT-06) conflicts with 15033c8 in 7 shared files
+  # (reader.js, mobile.css, mobile.js, Reader.razor, …); Mobile UI is to merge Foundation 15033c8 first.
+  MOBILEUI_REF: none
   DOTNET_NOLOGO: '1'
   DOTNET_CLI_TELEMETRY_OPTOUT: '1'
 
@@ -125,6 +126,21 @@ jobs:
           find reader/src/ChuvadiReader.Android/bin/Debug -name '*-Signed.apk' -exec cp {} out/chuvadi-reader-debug-x64.apk \;
           ls -la out
 
+      # AT-14 test variant (never shipped): the same Release with Chuvadi's own assemblies fully AOT-compiled
+      # (ChuvadiAot.targets), built only for the timeline suite, after the shipped packages are collected.
+      - name: Publish Release variant, Chuvadi-only full AOT (timeline only)
+        if: inputs.suite == 'timeline'
+        working-directory: reader
+        run: |
+          rm -rf src/ChuvadiReader.Android/obj/Release src/ChuvadiReader.Android/bin/Release
+          start=$(date +%s)
+          dotnet publish src/ChuvadiReader.Android/ChuvadiReader.Android.csproj -c Release -f net10.0-android --no-restore \
+            -p:AndroidSdkDirectory=$ANDROID_HOME -p:ChuvadiFullAot=true
+          echo "variant build: $(( $(date +%s) - start )) s"
+          find src/ChuvadiReader.Android/bin/Release -name '*-Signed.apk' -exec cp {} ../out/chuvadi-reader-release-chuvadi-aot.apk \;
+          find src/ChuvadiReader.Android/bin/Release -name '*-Signed.aab' -exec cp {} ../out/chuvadi-reader-release-chuvadi-aot.aab \;
+          ls -la ../out
+
       - uses: actions/upload-artifact@v4
         with:
           name: android-packages
@@ -175,7 +191,7 @@ jobs:
             echo 'hw.keyboard=no' >> ~/.android/avd/test.avd/config.ini
             grep hw.keyboard ~/.android/avd/test.avd/config.ini
           # Debug for the checks (WebView DevTools), then the Release .apk people get: install, start, no crash.
-          script: SUITE=${{ inputs.suite }} bash docs/android/ci/emulator-tests.sh out/chuvadi-reader-debug-x64.apk results/${{ matrix.device }}-api${{ matrix.api }} out/chuvadi-reader-release.apk
+          script: SUITE=${{ inputs.suite }} bash docs/android/ci/emulator-tests.sh out/chuvadi-reader-debug-x64.apk results/${{ matrix.device }}-api${{ matrix.api }} out/chuvadi-reader-release.apk out/chuvadi-reader-release-chuvadi-aot.apk
 
       - uses: actions/upload-artifact@v4
         if: always()

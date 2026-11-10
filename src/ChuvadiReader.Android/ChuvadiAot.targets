@@ -1,0 +1,41 @@
+<Project>
+  <!--
+    AT-14 test variant, OFF unless built with -p:ChuvadiFullAot=true (Release only).
+    MAUI's profiled AOT compiles each assembly only for the methods in MAUI's and .NET's startup profiles
+    ("profile-only"), so Chuvadi's open / parse / render path is JIT-compiled on every cold start. This
+    re-runs the SDK's own Mono AOT compiler, right after the SDK's pass and with the same settings, for
+    Chuvadi's assemblies only (Chuvadi.*, ChuvadiReader.*) without the profile restriction, so their
+    images are complete; MAUI and the BCL keep the profiled images. Same compiler, nothing added.
+  -->
+  <Target Name="_ChuvadiFullAot" AfterTargets="_AndroidAotCompilation"
+          Condition=" '$(ChuvadiFullAot)' == 'true' and '$(AotAssemblies)' == 'true' and '@(_MonoAOTAssemblies)' != '' ">
+    <ItemGroup>
+      <_ChvdAot Include="@(_MonoAOTAssemblies)"
+                Condition=" $([System.String]::Copy('%(Filename)').StartsWith('Chuvadi')) and $([System.String]::Copy('%(_MonoAOTAssemblies.AotArguments)').Contains(',profile-only')) " />
+      <_ChvdAot Update="@(_ChvdAot)"
+                AotArguments="$([System.String]::Copy('%(AotArguments)').Substring(0, $([System.String]::Copy('%(AotArguments)').IndexOf(',profile-only'))))" />
+    </ItemGroup>
+    <Message Importance="high" Text="Chuvadi full AOT (AT-14 variant): @(_ChvdAot->'%(Filename)', ', ')" />
+    <!-- The compiler skips an assembly whose image is newer than it: remove the profiled images first. -->
+    <Delete Files="@(_ChvdAot->'$(IntermediateOutputPath)aot\%(Filename)%(Extension).so')" />
+    <MonoAOTCompiler
+        Triple="$(_Triple)"
+        ToolPrefix="$(_ToolPrefix)"
+        MsymPath="$(_MsymPath)"
+        Assemblies="@(_ChvdAot)"
+        CompilerBinaryPath="$(_MonoAOTCompilerPath)"
+        DisableParallelAot="$(_DisableParallelAot)"
+        IntermediateOutputPath="$(IntermediateOutputPath)"
+        LibraryFormat="So"
+        Mode="$(AndroidAotMode)"
+        OutputDir="$(IntermediateOutputPath)aot\"
+        OutputType="Library"
+        UseAotDataFile="false"
+        UseLLVM="$(EnableLLVM)"
+        LLVMPath="$(_LLVMPath)"
+        LdName="$(_LdName)"
+        LdFlags="$(_LdFlags)"
+        WorkingDirectory="$(MSBuildProjectDirectory)"
+        AotArguments="$(AndroidAotAdditionalArguments)" />
+  </Target>
+</Project>

@@ -84,4 +84,6 @@
       <AndroidAsset Include="$(_ChuvadiAndroidNotices)" Link="notices/dotnet-android.txt" />
     </ItemGroup>
   </Target>
+  <!-- AT-14 test variant: full AOT for Chuvadi's own assemblies (-p:ChuvadiFullAot=true); off by default. -->
+  <Import Project="ChuvadiAot.targets" />
 </Project>

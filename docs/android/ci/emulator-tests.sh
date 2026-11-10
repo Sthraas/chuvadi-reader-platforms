@@ -11,12 +11,29 @@
 #     smoke-test.sh on the Release .apk — the trimmed build people get also installs, starts,
 #     renders, rotates and doesn't crash (coordinator, 9 Nov; AT-03 was a Release-only crash)
 #
-#   [SUITE=smoke] emulator-tests.sh <debug-apk> <results-dir> [<release-apk>]
+#   SUITE=timeline (AT-14): instead of the checks, cold_open_timeline.py — 10 cold Open with runs of the
+#     Release as shipped, then of the Chuvadi-only full AOT variant, stage by stage
+#
+#   [SUITE=smoke|timeline] emulator-tests.sh <debug-apk> <results-dir> [<release-apk>] [<variant-apk>]
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 APK="$1"
 OUT="$2"
 RELEASE_APK="${3:-}"
+VARIANT_APK="${4:-}"
+
+if [ "${SUITE:-full}" = timeline ]; then
+    python3 "$HERE/make-test-pdf.py" "$OUT/cold-12p.pdf" 12 >/dev/null
+    python3 "$HERE/cold_open_timeline.py" "$RELEASE_APK" shipped "$OUT/cold-12p.pdf" "$OUT/timeline" 10
+    a=$?
+    b=0
+    if [ -f "$VARIANT_APK" ]; then
+        python3 "$HERE/cold_open_timeline.py" "$VARIANT_APK" chuvadi-aot "$OUT/cold-12p.pdf" "$OUT/timeline" 10
+        b=$?
+    fi
+    [ $a -eq 0 ] && [ $b -eq 0 ]
+    exit
+fi
 PKG="in.chuvadi.reader"
 
 bash "$HERE/smoke-test.sh" "$APK" "$OUT/smoke"

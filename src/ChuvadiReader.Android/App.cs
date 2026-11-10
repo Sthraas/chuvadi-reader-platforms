@@ -40,6 +40,7 @@ public sealed class MainPage : ContentPage
             Selector = "#app",
             ComponentType = typeof(ChuvadiReader.Ui.App),
         });
+        web.BlazorWebViewInitializing += (_, _) => Platform.StartupTimeline.Mark("webview");
         web.BlazorWebViewInitialized += OnInitialized;
 
         // BlazorWebView registers its own Back callback (WebView history) when its handler connects;
@@ -55,6 +56,8 @@ public sealed class MainPage : ContentPage
         // it instead of the WebView's default white (round 4: a white frame on relaunch).
         e.WebView.SetBackgroundColor(global::Android.Graphics.Color.Transparent);
         Platform.SessionRoute.Track(e.WebView);
+        Platform.StartupTimeline.Mark("webview-ready");
+        Platform.StartupTimeline.Watch(e.WebView);
 
         // By now BlazorWebView has registered its Back callback: put the Ui's first chance in front.
         MainThread.BeginInvokeOnMainThread(

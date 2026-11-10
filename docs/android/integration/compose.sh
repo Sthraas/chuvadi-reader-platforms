@@ -15,10 +15,15 @@ MOBILEUI_REF="$2"
 ANDROID="$(cd "$3" && pwd)"
 G=(git -C "$READER" -c user.name=compose -c user.email=compose@localhost)
 
-echo "Merge platform/mobile-ui $MOBILEUI_REF into Foundation $("${G[@]}" rev-parse --short HEAD)"
-"${G[@]}" cat-file -e "$MOBILEUI_REF^{commit}" 2>/dev/null || "${G[@]}" fetch -q origin "$MOBILEUI_REF"
-"${G[@]}" merge --no-commit --no-ff "$MOBILEUI_REF" >/dev/null \
-    || { echo "platform/mobile-ui does not merge cleanly into Foundation"; "${G[@]}" diff --name-only --diff-filter=U; exit 1; }
+# MOBILEUI_REF=none: Foundation alone (when Mobile UI hasn't merged Foundation's latest yet).
+if [ "$MOBILEUI_REF" = none ]; then
+    echo "Foundation $("${G[@]}" rev-parse --short HEAD) alone (no Mobile UI merge)"
+else
+    echo "Merge platform/mobile-ui $MOBILEUI_REF into Foundation $("${G[@]}" rev-parse --short HEAD)"
+    "${G[@]}" cat-file -e "$MOBILEUI_REF^{commit}" 2>/dev/null || "${G[@]}" fetch -q origin "$MOBILEUI_REF"
+    "${G[@]}" merge --no-commit --no-ff "$MOBILEUI_REF" >/dev/null \
+        || { echo "platform/mobile-ui does not merge cleanly into Foundation"; "${G[@]}" diff --name-only --diff-filter=U; exit 1; }
+fi
 
 # 4. Android's own pending proposals for Foundation's combined patch (docs/android/proposal/*.patch),
 #    so the emulators test them; skipped once Foundation has applied them.

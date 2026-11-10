@@ -40,6 +40,8 @@ public sealed class MainActivity : MauiAppCompatActivity
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
+        StartupTimeline.Mark("activity");
+        StartupTimeline.EnableIf(Intent);
         // Recreated after Android ended the app in the background: come back on the same screen (AT-11).
         SessionRoute.Restore(savedInstanceState);
         base.OnCreate(savedInstanceState);

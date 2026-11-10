@@ -715,3 +715,24 @@ same screen; no crash), smoke pass. With round 6 (API 36 phone and tablet, all c
   26/27: "keyboard → next page" — the shared PDF was on page 4 of 4 before the key (the page drift from f88f9ef, with
   Foundation; not the keyboard).
 - Handed to Android Test: head **68a00b1** for AT-12 (and D-158 page images).
+
+### 59. Foundation PR #13 head 15033c8; AT-14 timeline and Chuvadi-only full AOT — coordinator, 10 Nov 15:28 IST
+- Composition: Foundation `15033c8` (platform/foundation-pr: AT-15, page-box drift, AT-09, AT-13, TOOLS headings)
+  **alone**. Mobile UI's head `2b29227` (H-21, AT-06) does not merge into it: 7 shared files conflict (reader.js 5 hunks
+  — `init(…, newDocument)`, the pen split, `scrollToMatch` — mobile.css 8, mobile.js 4, Reader.razor 1, Foundation's
+  build log, Hosting.Tests.csproj, the preview's services); c5c0b7e doesn't either. Shared files aren't mine to resolve:
+  Mobile UI merges 15033c8, then I compose with it. `compose.sh` takes `none` for Foundation alone.
+- Sandbox: Android Debug and Release `-warnaserror` 0 warnings; Release manifest 14/14; Core 247, Hosting 86, MobileUi 16,
+  WebUi 41 pass.
+- **AT-14, where the cold Open with time goes:** `Platform/StartupTimeline.cs`. The host stamps its stages (process,
+  runtime, maui, activity, import-start/done, handed, webview, webview-ready) and, when the launch carries
+  `--ez chuvadi.timing true`, watches the page every 25 ms (EvaluateJavascript, so it works on Release) for html
+  (DOMContentLoaded), ui (Blazor's first UI), opening (Reader pages present) and painted (page 1's SVG), writing all of
+  them to logcat tag `ChuvadiTiming` in ms since the process started. Off and silent without the extra.
+  `ci/cold_open_timeline.py`: 10 cold runs (clear data, stop, drop caches, Open with as the shell user), per-stage
+  median / worst; workflow suite `timeline`.
+- **AT-14, Chuvadi-only full AOT (test variant, off by default):** `ChuvadiAot.targets`, `-p:ChuvadiFullAot=true`. Right
+  after the SDK's profiled AOT pass it re-runs the SDK's own Mono AOT compiler, same settings, for Chuvadi.* and
+  ChuvadiReader.* only, without "profile-only" (MAUI and the BCL keep their profiled images). Sandbox, all four ABIs:
+  .apk 43.55 → 51.21 MB (+7.7 MB, +18 %; full AOT of everything was +21 MB, +49 %), .aab 43.00 → 50.69 MB; Chuvadi's
+  x86_64 AOT images 0.67 → 11.3 MB (ChuvadiReader.Core 45 KB → 1.26 MB); build 184 s.
