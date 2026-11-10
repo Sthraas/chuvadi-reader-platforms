@@ -60,6 +60,17 @@ def form_doc(path):
     c.save()
 
 
+def form_filled_doc(path):
+    c = canvas.Canvas(path, pagesize=A4)
+    c.setFont("Helvetica", 12)
+    c.drawString(56, 780, "Patient name:")
+    c.acroForm.textfield(name="patient", value="Ravi", x=160, y=770, width=250, height=22, borderStyle="inset")
+    c.drawString(56, 700, "Ward:")
+    c.acroForm.choice(name="ward", x=160, y=690, width=150, height=22, options=["Cardiac", "Oncology", "ICU"], value="Cardiac")
+    c.showPage()
+    c.save()
+
+
 def encrypt(src, dst, user="", owner="owner-secret", perms=None):
     r = PdfReader(src)
     w = PdfWriter(clone_from=r)
@@ -101,6 +112,7 @@ text_doc(p("doc-12p.pdf"), 12)
 text_doc(p("mixed-landscape.pdf"), 4, title="Wide report", size=landscape(A4), seed=2)
 text_doc(p("big-600p.pdf"), 600, title="Large register", seed=3)
 form_doc(p("form.pdf"))
+form_filled_doc(p("form-filled.pdf"))
 encrypt(p("doc-12p.pdf"), p("enc-user.pdf"), user="chuvadi")
 no_print = P.all() & ~P.PRINT & ~P.PRINT_TO_REPRESENTATION
 encrypt(p("doc-12p.pdf"), p("enc-noprint-owner.pdf"), user="", perms=no_print)

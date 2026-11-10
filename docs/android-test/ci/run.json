@@ -1,7 +1,7 @@
 {
-  "round": "8b",
+  "round": "8c (script rehearsal for round 9)",
   "emulators": "phone-36,tablet-36",
-  "suites": "drift,function,function2",
+  "suites": "saves,drift",
   "foundation_ref": "741930baeffb3ea5329ffff2f8cdacec731d4106",
   "mobileui_ref": "2b29227b193750746eb921308529ec106fa4debb",
   "android_ref": "7c8e2d8b333311d3af1c6f40086fea2b62e753c7"
