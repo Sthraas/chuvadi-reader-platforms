@@ -467,5 +467,8 @@ The account's weekly usage limit was reached ("Resets Nov 16 at 12:30 PM"). All 
 ## D-176 — Part 5 goes as two PRs; PR #15 merged by Arun
 11 Nov 2026. Foundation asked whether B-32 (/Rotate ignored on screen) and two small fixes go ahead of the Excel work. A: two PRs (rotated pages fixed sooner, PDF and Excel changes reviewed apart; one more merge for Arun). B: one PR (one merge; /Rotate waits for the largest piece). **Decision: A**, as D-173. Also: Arun merged his Windows PR #15 (3.32.0 un-grey) himself; Reader main dd7138a, all five checks green on main.
 
+## D-177 — Part 5 is one large PR (Arun; replaces D-176's option A)
+11 Nov 2026. Arun: "let's have one large PR". B-32 (/Rotate on screen), the two small fixes, the Word note margins and the whole Excel work (audit fixes, D-171, D-172, H-23 + Web UI value-bar diff, text encoding) go in a single PR, as separate commits, on current main.
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).
