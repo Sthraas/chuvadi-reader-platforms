@@ -207,3 +207,27 @@ Files from `tests/web-test/make_large_xlsx.py`.
 | **Cancel**: cancel-4x1m.xlsx (89 MB, 4 × 139 MB parts, within limits) | "Stop" shown at 12.3 s; opening ended **187 ms** after the click; no grid; the person carries on ✅ |
 
 To re-run on the f88f9ef head (Sheets 2.0.4); the raw part-limit text becomes a bug if it is still there.
+
+## Re-verification on `platform/web` @ **d183ea8** (10 Nov, 07:30–08:40 IST)
+Foundation **f88f9ef** + Web portal UI **ce805d1**: chuvadi-pdf 3.32.0, Sheets **2.0.4**, pages off the Ui thread, memory relief.
+
+- **Build from clean:** shared solution 0 warnings — Reader **233**, Hosting **77**, Mobile UI **16**, Web UI **41**; Web + Web.Tests 0 warnings, Web **166/166**; `check-package.sh` PASS; no third-party assemblies; Sheets 2.0.4 SHA-256 matches `PACKAGES-SHEETS-2.0.4.md`.
+- **WT-03, WT-04, WT-06** ✅ 3 engines (WT-05 unchanged since its verification). Regression in the same run ✅: WT-02 (Chromium, Firefox), WT-08, WT-09, WT-10, Q-3, 3 engines.
+- **LIB-1** ✅ still (unsigned `/P` files open; no-print honoured).
+- **WT-17** ❌ still open — formats not applied (`fid.xlsx`, `fid-lo.xlsx`: 17/23, the six formatted numbers wrong as before). Word fidelity unchanged ✅ (`fid.docx` 14/14 exact).
+- **Regression:** `flows.py` **10/10** × Chrome, Firefox, WebKit; the Web chat's `office_limits.py` **6/6** × Chrome, WebKit.
+
+### Large Excel uploads, limits and Cancel (Sheets 2.0.4, Firefox and Chromium)
+| File | Firefox | Chromium |
+|---|---|---|
+| big-100k.xlsx | grid 2,798 ms | grid 2,913 ms |
+| rows-1048576.xlsx (max rows) | grid 4,305 ms | grid 3,498 ms |
+| rows-1048577.xlsx | refused 2.0 s "too large to open…" ✅ | refused 2.1 s ✅ |
+| entries-20001.xlsx | refused 0.4 s "too large…" ✅ | refused 0.3 s ✅ |
+| ratio-600.xlsx (300 MB part) | refused 0.3 s — "damaged or isn't an Excel workbook" → **WT-18** | same |
+| zip-bomb.xlsx (2 GB part) | refused 0.3 s — same wording → WT-18 | same |
+| **Cancel** cancel-4x1m.xlsx (89 MB, within limits) | Stop at 12.8 s (upload time on this sandbox), opening ended **181 ms** after the click ✅ | Stop at 0.9 s, ended **40 ms** after ✅ |
+After Cancel the person carries on; the next large sheet opens in the same worker. Raw library text from 002bf02 is gone ✅.
+
+### Memory given back after close → WT-19
+PDF heavy close ✅ (1,468 → 359 MB within 2 s). Excel close and cancelled Excel open ✗ (memory kept; details in BUGS WT-19).

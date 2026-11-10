@@ -8,10 +8,10 @@ Severity: **High** = wrong result, security weakness, or a screen that doesn't w
 |---|---|---|---|---|---|
 | WT-01 | High | Security | In gateway mode the Reader page loses its Content-Security-Policy (only `frame-ancestors 'self'` reaches the browser) | Web | **Verified fixed** in 1b32ad8 and **d180f2e** (9 Nov 03:30) — full policy on the gateway Reader page |
 | WT-02 | High | Function | Print "Current" prints the **next** page; Measure card shows the next page number | Existing file → Arun | **Verified fixed** in 1b32ad8 and **d180f2e** — Current prints p1/p5 correctly (Chromium, Firefox); Measure card "page 5" on p5 (3 engines) |
-| WT-03 | High | Design | Phone width shows squeezed desktop rails, not the phone shell; per-page strip and Arrange shelf clipped | Web (rebase) + Web portal UI (re-check) | **Verified fixed** in 1b32ad8 and **d180f2e** — phone shell (bottom bar Read/Mark/Arrange/Protect, full-width page, no sideways scroll), 3 engines |
-| WT-04 | Medium | Wording | Status bar still says "encrypted at rest" (D-98) | Web portal UI → Foundation patch → Web | **Verified fixed** in 1b32ad8 and **d180f2e** — "kept in memory only", 3 engines |
-| WT-05 | Medium | Wording | 12a pitch still says "encrypted at rest" | Coordinator decision, then Web portal UI | **Verified fixed** in 1b32ad8 — 12a "kept in memory only", 3 engines (D-103); unchanged in d180f2e |
-| WT-06 | Medium | Design | Account menu has no "Terms of use · Privacy" footer (D-97) | Web portal UI → Foundation patch → Web | **Verified fixed** in 1b32ad8 and **d180f2e** — "Terms of use · Privacy" footer, 3 engines |
+| WT-03 | High | Design | Phone width shows squeezed desktop rails, not the phone shell; per-page strip and Arrange shelf clipped | Web (rebase) + Web portal UI (re-check) | **Verified fixed** (last on **d183ea8**, 10 Nov) — phone shell, 3 engines |
+| WT-04 | Medium | Wording | Status bar still says "encrypted at rest" (D-98) | Web portal UI → Foundation patch → Web | **Verified fixed** (last on **d183ea8**) — "kept in memory only", 3 engines |
+| WT-05 | Medium | Wording | 12a pitch still says "encrypted at rest" | Coordinator decision, then Web portal UI | **Verified fixed** in 1b32ad8 (D-103); unchanged since |
+| WT-06 | Medium | Design | Account menu has no "Terms of use · Privacy" footer (D-97) | Web portal UI → Foundation patch → Web | **Verified fixed** (last on **d183ea8**) — Terms · Privacy footer, 3 engines |
 | WT-07 | Low | Security | The circuit (`/_blazor`) accepts a foreign `Origin` | Web | **Verified fixed** in 1b32ad8 and **d180f2e** — foreign Origin → 403, own → 200 |
 | WT-08 | Low | Security | File names keep Unicode bidi controls (U+202E), so a name can display reversed | Web | **Verified fixed** in 1b32ad8 and **d180f2e** — U+202E removed, 3 engines |
 | WT-09 | Low | UX | The no-print reason is only a hover tooltip on a disabled button (invisible on touch) | Existing file → Arun | **Verified fixed** in 1b32ad8 and **d180f2e** — reason in the card body, 3 engines |
@@ -22,7 +22,9 @@ Severity: **High** = wrong result, security weakness, or a screen that doesn't w
 | WT-14 | Low | Test tooling | `sangam_signin.py` sign-out step races in WebKit (1 in 5 runs) | Web | **Verified fixed** in d180f2e and **c38bd80** — WebKit 13/13 × 8 runs in total; Chrome, Firefox 13/13 |
 | WT-15 | Medium | Security | Production starts with an `http://` Sangam address | Web | **Verified fixed** in d180f2e and **c38bd80** — Production + `http://` Sangam refuses to start; https starts |
 | WT-16 | Low | UX | "Split to folder" on the portal arrives as one download per page | Web (D-129: one .zip via Chuvadi.Zip) | **Verified fixed** in **c38bd80** — Split to folder → one `text-13.zip` (Chuvadi.Zip 1.0.0), zip intact, 13 entries, each the right page; Chromium, Firefox, WebKit; a one-file save stays a plain PDF |
-| WT-17 | High | Fidelity | Excel grid ignores each cell's number format (shows 0.125 for 12.50%, 1234.5 for ₹1,234.50, 7 for 007, ISO dates) — Sheets 2.0.2's `NumberFormatter` is not called | Existing file (Core `XlsxViewService`) → Foundation combined patch → Arun | Open |
+| WT-17 | High | Fidelity | Excel grid ignores each cell's number format (shows 0.125 for 12.50%, 1234.5 for ₹1,234.50, 7 for 007, ISO dates) — Sheets 2.0.2's `NumberFormatter` is not called | Existing file (Core `XlsxViewService`) → Foundation combined patch → Arun | **Still open on d183ea8** (Sheets 2.0.4) — grid shows 0.125 / 1234.5 / 7 / ISO dates; `XlsxViewService.FormatValue` unchanged, `NumberFormatter` still not called. The Web build log's §28 heading names WT-17 but no change was made |
+| WT-18 | Low | Wording | An Excel file over the per-part size limit (or a zip bomb) is called "damaged or isn't an Excel workbook" instead of "too large" | Existing file (Core `XlsxViewService` message mapping) → Foundation patch | Open |
+| WT-19 | Medium | Capacity | Closing an Excel file, or cancelling its open, gives no memory back: the worker keeps 0.5–1.3 GB (memory relief covers PDFs only) | Existing file (Core) → Foundation patch | Open |
 
 Library items (Arun's libraries; not app bugs, recorded so they aren't lost): **LIB-1**, **LIB-2** at the end — on the coordinator's list for Arun's library coordinator (20:40).
 
@@ -138,6 +140,21 @@ On the portal "Split to folder" of a 13-page PDF hands the browser 13 separate d
 | 1E-07 | `0.00E+00` | 1.00E-07 | 1E-07 |
 
 Text cells, General numbers and cached formula results are exact (below). **Cause:** `ChuvadiReader.Core/Documents/XlsxViewService.cs` builds each cell's text with its own `FormatValue` (ISO dates, `CurrentCulture` numbers — so it also depends on the server's culture) and never reads the cell's number format; Sheets 2.0.2 ships `NumberFormatter.GetDisplayText` (SHEETS-FMT) for exactly this, unused (`grep` finds no caller). The layout requirements put "displayed cell text via the NumberFormatter" first for xlsx: a grid showing 0.125 for 12.50% can be misread. Underlying data is not changed — this is display. **Fix route:** existing Core file → listed change in Foundation's combined patch → Arun (PR #11); changes Windows output (correctly). Evidence: `screenshots/v3-xlsx-grid-formats.png`.
+
+## WT-18 — Excel part-size refusal says "damaged" (Low, wording)
+**Build:** d183ea8 (Sheets 2.0.4). `ratio-600.xlsx` (a 300 MB sheet part) and `zip-bomb.xlsx` (2 GB part) → "This file is damaged or isn't an Excel workbook Chuvadi can read." The other limits (rows, zip entries) → "This Excel workbook is too large to open: it goes beyond what Chuvadi allows. It may be damaged." On 002bf02 (Sheets 2.0.2) the same two files showed the raw library text ("Decompressed size limit of 268435456 bytes exceeded…"); on c38bd80 the zip bomb said "…its contents unpack to more than 2,048 MB". **Expected:** the "too large to open" sentence for every size limit — the person should learn the file is too big, not that it is broken. **Fix:** map the part-size limit (`MaxPartBytes` / `MaxTotalUncompressedBytes` / `MaxCompressionRatio`) to the "too large" message in the shared Core; a test per limit.
+
+## WT-19 — Excel close / cancelled open keeps the memory (Medium, capacity)
+**Build:** d183ea8 (Foundation f88f9ef, "memory given back after a heavy close"). Per-person worker RSS (`tests/web-test/memory_relief.py`, Firefox, tab close confirmed):
+
+| Case | Idle | While open | 2–30 s after close |
+|---|---|---|---|
+| PDF with a 5000×5000 image (the Web chat's case) | 119 MB | 1,468 MB | **359 MB** ✅ |
+| rows-1048576.xlsx | 120 MB | 609 MB | 611 MB ✗ |
+| big-100k.xlsx | 119 MB | 366 MB | 368–370 MB ✗ |
+| cancel-4x1m.xlsx — **Stop opening** | 121 MB | 1,304 MB | 1,304–1,307 MB ✗ (cap is 1,536 MB) |
+
+**Cause:** `MemoryRelief.Request()` is called only from `ChuvadiPdfReader`'s close; Excel/Word closes and cancelled opens never ask. **Effect:** not a failure for the person — the next large open reuses the held memory (opened 1,048,576 rows after a cancel: peak 1,111 MB, same worker) — but the server can't use that memory for anyone else until the worker happens to collect or stops; with 40 people on 16 GB (runbook §2) a few cancelled big sheets eat the headroom. **Fix:** request relief on Excel/Word close and after a cancelled open (shared Core), with the same 30 s MinGap; re-measure here.
 
 ## Library items (Arun's libraries)
 - **LIB-1 chuvadi-pdf refuses `/P` written as an unsigned 32-bit number.** PDFs whose encryption dictionary has e.g. `/P 4294965240` (pypdf writes this) fail with "Invalid integer … must be a valid 32-bit signed integer". qpdf, poppler and pdf.js open them (reading the bits). Ask: accept 0…4294967295 and reinterpret as signed. Not worked around in the app (rule 2). **10 Nov: fixed in chuvadi-pdf 3.32.0** (`platform/web` 002bf02) — pypdf files with `/P 4294965240` and `/P 4294967292` open (the latter after its password), and the no-print bits are honoured (print card refuses).
