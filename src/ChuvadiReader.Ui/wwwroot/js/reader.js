@@ -32,6 +32,12 @@ let wheelHandler = null;
 let deskPointer = null;
 let panning = null;
 let penSplit = null;
+// A pen has touched the desk in this run (AT-15); kept across documents.
+let penSeen = false;
+// The view was scrolled (by the person, not by a jump) since the anchor was last taken.
+let anchorStale = false;
+let lastInputAt = -1e9;   // the last wheel, touch, pointer or key on the desk
+let inputHandler = null;
 let marq = null;
 let marqEl = null;
 let loupeEl = null;
@@ -78,7 +84,7 @@ function reportVisiblePage() {
     if (best >= 0) invoke('OnPageVisible', best + 1);
 }
 
-export function init(deskEl, dotnetRef) {
+export function init(deskEl, dotnetRef, newDocument) {
     dotnet = dotnetRef;
     teardownObservers();
     ratios = {};
@@ -109,11 +115,14 @@ export function init(deskEl, dotnetRef) {
 
     deskEl.querySelectorAll('[data-page]').forEach(el => { lazy.observe(el); spy.observe(el); });
 
-    // Keep the anchored page in view when page heights change.
+    // Keep the anchored page in view when page heights change. Another document starts with none: the last one's
+    // page would pull the new one to it (Android round 5: a shared PDF opened on page 1 and was on 4 of 4 with no input).
     if (anchorObs) anchorObs.disconnect();
-    anchor = anchor && deskEl.querySelector('.rpage-wrap[data-page="' + anchor.page + '"]') ? anchor : null;
+    anchor = !newDocument && anchor && deskEl.querySelector('.rpage-wrap[data-page="' + anchor.page + '"]') ? anchor : null;
     anchorObs = new ResizeObserver(() => {
-        if (performance.now() < ownZoomUntil) { recordAnchor(); return; }
+        // The view was scrolled since the anchor was taken (it is taken 200 ms after scrolling stops): the anchor is
+        // where the view was, so a page landing now must not pull the view back there. Take it afresh instead.
+        if (performance.now() < ownZoomUntil || anchorStale) { recordAnchor(); return; }
         reanchor();
     });
     deskEl.querySelectorAll('.rpage-wrap').forEach(el => anchorObs.observe(el));
@@ -123,6 +132,9 @@ export function init(deskEl, dotnetRef) {
     if (scrollTarget && scrollHandler) scrollTarget.removeEventListener('scroll', scrollHandler);
     scrollTarget = deskEl;
     scrollHandler = () => {
+        // Scrolling the person is doing (wheel, finger, keys, scrollbar) — not a jump's own (its anchor is its
+        // target), and not the browser moving the view because the pages changed size.
+        if (performance.now() >= suppressUntil && performance.now() - lastInputAt < 400) anchorStale = true;
         if (scrollTimer) return;
         scrollTimer = setTimeout(() => {
             scrollTimer = 0;
@@ -133,6 +145,11 @@ export function init(deskEl, dotnetRef) {
         }, 200);
     };
     deskEl.addEventListener('scroll', scrollHandler, { passive: true });
+    if (!inputHandler) inputHandler = () => { lastInputAt = performance.now(); };
+    for (const type of ['wheel', 'touchmove', 'pointerdown', 'pointermove', 'keydown']) {
+        deskEl.removeEventListener(type, inputHandler, true);
+        deskEl.addEventListener(type, inputHandler, { passive: true, capture: true });
+    }
 
     // Reader keyboard shortcuts (registered once; re-bound to the current ref).
     if (keyHandler) document.removeEventListener('keydown', keyHandler);
@@ -370,9 +387,12 @@ function setupViewTools(deskEl) {
     // Tablets with a pen (<html data-input~="pen">, design 12e, D-42): the pen draws on the Mark
     // layer, a finger pans. A finger on a Mark layer never reaches its (Blazor) stroke handler and
     // pans the desk instead. data-input is absent on Windows, so nothing changes there.
+    // AT-15: a host says "pen" when the system supports one (Android always does), not when one is
+    // there, so the split starts only after a pen has touched the desk. Until then a finger marks.
     if (penSplit) deskRef.removeEventListener('pointerdown', penSplit, true);
     penSplit = (e) => {
-        if (e.pointerType !== 'touch') return;
+        if (e.pointerType === 'pen') { penSeen = true; return; }
+        if (e.pointerType !== 'touch' || !penSeen) return;
         if (!/(^|\s)pen(\s|$)/.test(document.documentElement.getAttribute('data-input') || '')) return;
         const layer = e.target && e.target.closest ? e.target.closest('.mk-layer') : null;
         if (!layer) return;
@@ -566,11 +586,14 @@ function naturalSize(page) {
 // placeholder (.rpage-load) is sized in points (595 × 842), 3/4 of a rendered page (96/72 px per pt),
 // so measuring it fitted pages 4/3 too large on a slow device (Android emulator: Fit page 456 px on a
 // 411 px screen). Wait briefly for a rendered page and measure that; fall back to the placeholder.
-export async function measureFit(deskEl, mode) {
+// drawnOnly: measure a drawn page or nothing (0) — a placeholder isn't the page's size; the Reader fits again when a
+// page lands (Linux fresh-open stall: a heavy first sheet on a cold app took longer than the 2 s wait).
+export async function measureFit(deskEl, mode, drawnOnly) {
     for (let i = 0; i < 40 && deskEl && !deskEl.querySelector('.rpage svg'); i++) {
         await new Promise(r => setTimeout(r, 50));
     }
     const rendered = deskEl && deskEl.querySelector('.rpage svg');
+    if (!rendered && drawnOnly) return 0;
     const page = rendered ? rendered.closest('.rpage') : deskEl && deskEl.querySelector('.rpage');
     if (!page) return 0;
     const { natW, natH } = naturalSize(page);
@@ -759,6 +782,7 @@ export function scrollToPage(deskEl, index) {
     if (!el) return;
     suppressUntil = performance.now() + 1400;
     anchor = { page: index, frac: 0 }; // stays the target while heights change under the jump
+    anchorStale = false;
     // Scroll the desk itself — NOT scrollIntoView, which also scrolls every
     // scrollable ancestor and would drag the toolbar/page up with it.
     const top = deskEl.scrollTop + (el.getBoundingClientRect().top - deskEl.getBoundingClientRect().top);
@@ -776,10 +800,23 @@ export async function scrollToMatch(deskEl, index) {
         if (hl) {
             suppressUntil = performance.now() + 1400;
             const d = deskEl.getBoundingClientRect(), h = hl.getBoundingClientRect();
-            const top = deskEl.scrollTop + (h.top - d.top) - Math.max(0, (deskEl.clientHeight - h.height) / 3);
+            const hTop = deskEl.scrollTop + (h.top - d.top), view = deskEl.clientHeight;
+            let top = hTop - Math.max(0, (view - h.height) / 3);
             const left = deskEl.scrollWidth > deskEl.clientWidth
                 ? deskEl.scrollLeft + (h.left - d.left) - Math.max(0, (deskEl.clientWidth - h.width) / 2)
                 : deskEl.scrollLeft;
+            const w = deskEl.querySelector('.rpage-wrap[data-page="' + index + '"]');
+            // Snapping pages place themselves; otherwise (a zoomed or tall page) the view is the match's.
+            if (w && !/^(y|both|block)/.test(getComputedStyle(deskEl).scrollSnapType || '')) {
+                const r = w.getBoundingClientRect(), wTop = deskEl.scrollTop + (r.top - d.top), wEnd = wTop + r.height;
+                // Stay on the match's page where the match allows (AT-09: a match at a page's foot, a third of the
+                // way down, left the next page covering most of the view, and the page box said that page).
+                if (top + view > wEnd && wEnd - view <= hTop) top = Math.max(wTop, wEnd - view);
+                if (top < wTop && wTop + view >= hTop + h.height) top = wTop;
+                // The match, not its page's top, stays in view while page heights change (AT-09: a page drawn
+                // during the scroll put the view back on the page's top, the match below it off screen).
+                if (r.height) { anchor = { page: index, frac: Math.max(0, (top - wTop) / r.height) }; anchorStale = false; }
+            }
             deskEl.scrollTo({ top, left, behavior: 'smooth' });
             return;
         }
@@ -921,6 +958,7 @@ function teardownObservers() {
 // The page at the top of the view, and how far into it the view starts (0 = its top edge).
 function recordAnchor() {
     if (!scrollTarget) return;
+    anchorStale = false;
     const top = scrollTarget.getBoundingClientRect().top;
     for (const w of scrollTarget.querySelectorAll('.rpage-wrap')) {
         const r = w.getBoundingClientRect();
