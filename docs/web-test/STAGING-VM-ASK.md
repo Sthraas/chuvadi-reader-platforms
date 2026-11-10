@@ -1,4 +1,6 @@
-# Staging VM — what the Web Test runs need (one ask for Arun)
+# Phase 2 server — what the Web Test runs need
+
+> **11 Nov 2026:** Arun set phases; there is no separate staging VM for now. These runs move to **Phase 2 on the production server**. Read "staging VM / staging domain / staging Sangam" below as the production server, its domain and its Sangam before go-live; §4 (how the 40 load users sign in, and a short-lived load VM to drive the browsers) still needs Arun's choice then.
 
 For: the 40-person load and V-1 to V-7 (`docs/web/TEST-PLAN.md` §5b). Built from the deployment runbook (`docs/web/DEPLOYMENT-RUNBOOK.md`) so staging matches production; nothing here is test-only except where marked. Written 10 Nov 2026.
 

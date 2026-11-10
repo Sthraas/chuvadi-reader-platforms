@@ -75,3 +75,14 @@ Test tooling (Playwright and its browsers, Python, reportlab/pypdf/qpdf/poppler 
 | jump_ms | type 10 + Enter → page 10 drawn and in view |
 | next_ms | next-page button → page 11 drawn |
 Runs: 1, 10, 20 people here (40 needs the VM's memory: 40 × ~165 MB workers plus 40 browser contexts exceed this sandbox's 8 GB); cold worker start single-person ×5; JIT vs ReadyToRun publish; large documents (500-page text, 91 MB 40-page scan).
+
+## Phases (Arun, 10 Nov 2026)
+Phase 1 development · Phase 2 on the production server · Phase 3 fixes from production testing. No separate staging VM for now.
+
+| Item | Phase |
+|---|---|
+| Everything in §1–§3 that runs in this sandbox (build, flows, security, Sangam with a local Sangam, design, speed up to 20 people) | **Phase 1** — status in `PHASE-1-SIGNOFF.md` |
+| **40-person load**, memory per person on 16 GB / 8 vCPU | **Phase 2** |
+| **V-1** 2-hour soak · **V-2** Let's Encrypt + forced renewal · **V-3** large documents with 20 others · **V-4** hostile corpus on the server · **V-5** log review · **V-6** restart with banner under load · **V-7** no DRAFT lines | **Phase 2** |
+| Back-channel sign-out over https with a trusted certificate | **Phase 2** |
+| **M-1 to M-4** real devices, **G-12** two-organisation person, real desktop drag, clipboard (`MANUAL-SCRIPT.md`) | **Phase 2** (they need a reachable https address and Sangam) |
