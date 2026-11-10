@@ -28,7 +28,7 @@ case "$FF" in *-base)
   (cd "$ROOT" && git ls-files -co --exclude-standard -z | xargs -0 -I{} sh -c 'if [ -e "$1" ]; then cp --parents "$1" "$0"; fi' "$SCRATCH" {})
   # Outstanding hooks only: proposal/mobile-ui-hooks-N.patch (highest N, the full outstanding set, as
   # Android's compose.sh takes it). Landed sets move to proposal/landed/.
-  p=$(ls "$ROOT"/docs/mobile-ui/proposal/mobile-ui-hooks-*.patch 2>/dev/null | sort -V | tail -1)
+  p=$(ls "$ROOT"/docs/mobile-ui/proposal/mobile-ui-hooks-*.patch 2>/dev/null | sort -V | tail -1 || true)
   if [ -n "$p" ]; then (cd "$SCRATCH" && git apply "$p"); else echo "hooks: none outstanding"; fi
   export CHVD_FF="$FF"
   ;;

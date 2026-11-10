@@ -124,8 +124,9 @@ async def main():
                f"item {has}, card {shown}, {pg.url.rsplit('/', 1)[-1]}")
         await pg.context.close()
 
-        # 6. Find brings the match itself into view, not only its page's top (H-19, AT-09): zoomed in, the
-        #    fixture's one "zephyrine" sits near the foot of page 3, more than a screen below the page's top.
+        # 6. Find brings the match itself into view, not only its page's top (H-19, AT-09), and the page box says
+        #    the match's page (H-21): zoomed in, the fixture's one "zephyrine" sits near the foot of page 3,
+        #    more than a screen below the page's top.
         pg = await fresh()
         if phone:
             await pg.locator(".ph-nav-b:nth-child(1)").click(); await pg.wait_for_timeout(800)
@@ -133,7 +134,17 @@ async def main():
             await pg.keyboard.press("Control+Equal"); await pg.wait_for_timeout(400)
         await pg.wait_for_timeout(800)
         await pg.keyboard.press("Control+f"); await pg.wait_for_timeout(700)
-        await pg.locator(".rfind-box").last.fill("zephyrine"); await pg.keyboard.press("Enter"); await pg.wait_for_timeout(2500)
+        await pg.locator(".rfind-box").last.fill("zephyrine")
+        # As on a slow tablet (AT-09 round 5): a slow CPU, and pages finishing their drawing (heights changing)
+        # all through the move — the half-way page used to become the place kept and the page reported.
+        cdp = await pg.context.new_cdp_session(pg)
+        await cdp.send("Emulation.setCPUThrottlingRate", {"rate": 6})
+        await pg.keyboard.press("Enter")
+        await pg.evaluate('''() => { let n = 0; const t = setInterval(() => {
+            document.querySelectorAll('.rdesk .rpage-wrap').forEach((w, i) => { if (i !== 2) w.style.paddingBottom = ((n % 2) * 6) + 'px'; });
+            if (++n > 40) clearInterval(t); }, 90); }''')
+        await pg.wait_for_timeout(6000)
+        await cdp.send("Emulation.setCPUThrottlingRate", {"rate": 1})
         r = await pg.evaluate('''() => { const d = document.querySelector('.rdesk'), h = document.querySelector('.rfind-hl.cur');
             if (!h) return null; const a = d.getBoundingClientRect(), c = h.getBoundingClientRect();
             return { count: document.querySelector('.rfind-count')?.textContent, top: Math.round(c.top), bottom: Math.round(c.bottom),
@@ -165,6 +176,21 @@ async def main():
             report("tablet Mark rail: TOOLS shown, MARK announced, both Saves in view while it scrolls", ok, r)
             await pg.locator(".lb-mode:nth-of-type(1)").first.click(); await pg.wait_for_timeout(800)   # back to Read
             await pg.context.close()
+        # 8. AT-06 round 5: the controls Android Test measures have 44 px boxes of their own (TalkBack and the
+        #    Accessibility Scanner measure the box, not an invisible ::after), with the drawn size unchanged.
+        small = []
+        for path in ("/", "/library", "/reader"):
+            ctx = await b.new_context(viewport={"width": W, "height": H}, has_touch=True, is_mobile=True)
+            pg = await ctx.new_page(); await pg.goto(url + path); await pg.wait_for_timeout(2500)
+            if path == "/reader" and phone:
+                await pg.locator('.ph-bar button[aria-label="More"]').click(); await pg.wait_for_timeout(600)
+            small += await pg.evaluate('''(path) => [...document.querySelectorAll(
+                '.ph-av, .ph-pager, .ph-handle, .libp-go, .libp-filter .tagchip, .libp-views .vbtn, .librow .tag-add, ' +
+                '.tb-brand, .tb-pg-btn, .tb-pg-box, .tb-doc, .tb-cmd')]
+                .map(e => [e, e.getBoundingClientRect()]).filter(([e, r]) => r.width && r.height && (r.width < 44 || r.height < 43.5))
+                .map(([e, r]) => path + ' ' + e.className.split(' ')[0] + ' ' + Math.round(r.width) + 'x' + Math.round(r.height))''', path)
+            await ctx.close()
+        report("AT-06 controls have 44 px boxes", not small, small[:8])
         await b.close()
     sys.exit(1 if fails else 0)
 

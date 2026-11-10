@@ -1,25 +1,35 @@
 # Mobile app UI → Foundation: hooks and hand-off (updated 10 Nov)
 
-## Outstanding for Foundation: H-20 (`proposal/mobile-ui-hooks-7.patch`)
-H-17, H-18 and H-19 landed in the twelfth combined patch, part 3 (bfffab6), exactly as written.
-H-20 applies cleanly to Foundation f88f9ef (regenerated against it on 10 Nov).
+## Outstanding for Foundation: H-21 (`proposal/mobile-ui-hooks-8.patch`)
+H-20 landed as the twenty-second combined patch (c9d876a), exactly as written; hooks-7 is in `proposal/landed/`.
+`mobile-ui-hooks-8.patch` = H-21 alone; it applies cleanly to Foundation 846706e.
 
-### H-20: every tools rail is headed "TOOLS"; screen readers keep the mode name (D-134, D-151; all platforms)
-(`Ui/Components/Rails/SideRail.razor`, `Ui/Pages/Reader.razor`, `Ui/Pages/Bench.razor`,
-`Ui/Pages/Redact.razor`, +9 / −6)
-- `SideRail` gains `[Parameter] string? Label`: the rail's `aria-label` is `Label ?? Heading`. Rails without
-  a Label behave exactly as today.
-- The five tools rails show `Heading="TOOLS"` and keep their mode name as `Label`: READ, MARK, PROTECT
-  (Reader and Redact), ARRANGE. The view-only rail already said TOOLS and is unchanged.
-- So a screen reader hears exactly what it hears today (the mode name); only the visible text changes.
-- Desktop: only the rail heading text differs (before/after at 1440×900: a 40 × 6 px area at the heading,
-  plus the clock; no console errors).
-- **For:** D-134 on every platform at once; accessibility unchanged (D-151).
-- **Against:** none found; `Label` is optional, so other callers don't change.
-- D-135 (Save at the foot of the Mark rail): already true on every platform. On the tablet both Saves are
-  pinned at the foot while the rail scrolls (D-150, mobile.css only, touch only).
+### H-21: after Find, the view and the page box stay on the match's page (AT-09 round 5; all platforms)
+(`Ui/wwwroot/js/reader.js`, +49 / −4)
+- AT-09 round 5 (tablet, API 36): Find says 1/1, but the view rests on the foot of page 2 and the top of
+  page 3, the match off screen, the page box on 2. H-19 scrolls to the match; on a slow device the pages
+  above it finish drawing during the smooth scroll. The scroll handler then records the half-way view as
+  the anchor and reports its page (2), and the nineteenth patch's re-anchoring holds the view there when
+  the next page height changes, which also cancels the smooth scroll.
+- Reproduced in the preview with a 6× slower CPU and page heights changing during the move: the page box
+  said 4 and the view was not on the match (Foundation's reader.js); both right with H-21.
+- The change:
+  - A jump (`scrollToPage`, `scrollToMatch`) marks itself in progress until the desk's `scrollend` arrives
+    at the target (or 3 s pass). Meanwhile the scroll handler doesn't record the anchor or report a page,
+    and a height change puts the view back on the jump's target without reporting.
+  - `scrollToMatch` sets the anchor to its own target (the match's page and the place in it), not the
+    page's top.
+  - The target keeps the match's page the page in view: its top at the view's top when the match is then
+    on screen, otherwise just far enough down to show the match (40 px clear). The page box keeps the
+    match's page number.
+- **For:** fixes the tablet case and the same race for every page jump on a slow device; the nineteenth
+  patch's behaviour is unchanged outside a jump.
+- **Against:** during a jump's smooth scroll (up to its end, at most 3 s) the page box doesn't follow the
+  scroll; it already shows the destination.
+- Windows: Find lands with the match's page at the top when that shows the match (H-19 put the match a
+  third of the way down). Static screens are pixel-identical.
 
-## Landed: H-17, H-18, H-19 (twelfth combined patch, part 3, bfffab6)
+## Landed: H-20 (twenty-second combined patch, c9d876a); H-17, H-18, H-19 (twelfth, part 3, bfffab6)
 Approved by the coordinator for Foundation (9 Nov 06:40). Desktop: static screens pixel-identical (clock
 only); H-19 changes only where Find scrolls to.
 The Android Test chat's look bugs, routed to this chat on 9 Nov 05:55. `mobile-ui-hooks-6.patch` =

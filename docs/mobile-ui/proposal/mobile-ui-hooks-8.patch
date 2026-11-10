@@ -1,0 +1,130 @@
+diff --git a/src/ChuvadiReader.Ui/wwwroot/js/reader.js b/src/ChuvadiReader.Ui/wwwroot/js/reader.js
+index 2b63ac0..cc650bd 100644
+--- a/src/ChuvadiReader.Ui/wwwroot/js/reader.js
++++ b/src/ChuvadiReader.Ui/wwwroot/js/reader.js
+@@ -44,6 +44,24 @@ let zoomNotifyTimer = 0;
+ // of the view and how far into it the view starts. A jump sets it to the page asked for.
+ let anchor = null;
+ let anchorObs = null;
++// A jump's smooth scroll is still on its way (Android Test AT-09): until it ends, the anchor is the jump's
++// target and nothing records the half-way view as the place to keep or the page to report — on a slow device
++// pages finish drawing during the move, and the half-way page (2, with the match on 3) used to win.
++let jumping = false;
++let jumpTimer = 0;
++function startJump() {
++    jumping = true;
++    if (jumpTimer) clearTimeout(jumpTimer);
++    jumpTimer = setTimeout(endJump, 3000);   // in case 'scrollend' never comes (no scroll was needed)
++}
++function endJump(e) {
++    if (!jumping) return;
++    // A 'scrollend' from a scroll the jump replaced (Find: page first, then the match) isn't the end yet.
++    if (e && anchorDelta() > 2) return;
++    jumping = false;
++    if (jumpTimer) { clearTimeout(jumpTimer); jumpTimer = 0; }
++    recordAnchor();
++}
+ let ownZoomUntil = 0;       // a gesture zoom places the view itself; the anchor is re-read after it
+ let reportTimer = 0;
+ let chromeClickHandler = null;
+@@ -113,7 +131,7 @@ export function init(deskEl, dotnetRef) {
+     if (anchorObs) anchorObs.disconnect();
+     anchor = anchor && deskEl.querySelector('.rpage-wrap[data-page="' + anchor.page + '"]') ? anchor : null;
+     anchorObs = new ResizeObserver(() => {
+-        if (performance.now() < ownZoomUntil) { recordAnchor(); return; }
++        if (performance.now() < ownZoomUntil && !jumping) { recordAnchor(); return; }
+         reanchor();
+     });
+     deskEl.querySelectorAll('.rpage-wrap').forEach(el => anchorObs.observe(el));
+@@ -121,6 +139,7 @@ export function init(deskEl, dotnetRef) {
+     // Report scroll position (throttled) so the active tab's ScrollTop stays current in
+     // memory — this makes returning from the dashboard restore the exact position.
+     if (scrollTarget && scrollHandler) scrollTarget.removeEventListener('scroll', scrollHandler);
++    if (scrollTarget) scrollTarget.removeEventListener('scrollend', endJump);
+     scrollTarget = deskEl;
+     scrollHandler = () => {
+         if (scrollTimer) return;
+@@ -129,9 +148,10 @@ export function init(deskEl, dotnetRef) {
+             invoke('OnScroll', scrollTarget ? scrollTarget.scrollTop : 0);
+             // A zoomed-in page is taller than the view, so scrolling within it crosses no visibility
+             // threshold; re-check the page here too.
+-            if (performance.now() >= suppressUntil) { recordAnchor(); reportVisiblePage(); }
++            if (performance.now() >= suppressUntil && !jumping) { recordAnchor(); reportVisiblePage(); }
+         }, 200);
+     };
++    deskEl.addEventListener('scrollend', endJump, { passive: true });
+     deskEl.addEventListener('scroll', scrollHandler, { passive: true });
+ 
+     // Reader keyboard shortcuts (registered once; re-bound to the current ref).
+@@ -762,12 +782,13 @@ export function scrollToPage(deskEl, index) {
+     // Scroll the desk itself — NOT scrollIntoView, which also scrolls every
+     // scrollable ancestor and would drag the toolbar/page up with it.
+     const top = deskEl.scrollTop + (el.getBoundingClientRect().top - deskEl.getBoundingClientRect().top);
++    startJump();
+     deskEl.scrollTo({ top, behavior: 'smooth' });
+ }
+ 
+ // Find: bring the current match itself into view, not only the top of its page — on a zoomed or tall
+ // page the match can sit a screen or more below it (Android Test AT-09). The highlight renders with the
+-// page, so after bringing the page in, wait for it (up to 1.5 s), then put it a third of the way down.
++// page, so after bringing the page in, wait for it (up to 1.5 s), then scroll so it's on screen.
+ export async function scrollToMatch(deskEl, index) {
+     if (!deskEl) return;
+     scrollToPage(deskEl, index);
+@@ -776,10 +797,21 @@ export async function scrollToMatch(deskEl, index) {
+         if (hl) {
+             suppressUntil = performance.now() + 1400;
+             const d = deskEl.getBoundingClientRect(), h = hl.getBoundingClientRect();
+-            const top = deskEl.scrollTop + (h.top - d.top) - Math.max(0, (deskEl.clientHeight - h.height) / 3);
++            const w = deskEl.querySelector('.rpage-wrap[data-page="' + index + '"]');
++            const r = w ? w.getBoundingClientRect() : h;
++            // Keep the match's page the page in view (the page box says its number): the page's top at the
++            // view's top when the match is then on screen, else just far enough down to show the match.
++            const pad = 40, at = y => deskEl.scrollTop + (y - d.top);
++            const pageTop = at(r.top);
++            const lo = at(h.bottom) + pad - deskEl.clientHeight, hi = at(h.top) - pad;
++            const top = Math.min(Math.max(pageTop, lo), Math.max(lo, hi));
+             const left = deskEl.scrollWidth > deskEl.clientWidth
+                 ? deskEl.scrollLeft + (h.left - d.left) - Math.max(0, (deskEl.clientWidth - h.width) / 2)
+                 : deskEl.scrollLeft;
++            // The jump's target, as a place in the match's page: if page heights change on the way, the
++            // view is put back here (at the match), not at the page's top.
++            if (w) anchor = { page: index, frac: r.height ? (top - pageTop) / r.height : 0 };
++            startJump();
+             deskEl.scrollTo({ top, left, behavior: 'smooth' });
+             return;
+         }
+@@ -812,6 +844,7 @@ export function dispose() {
+     disableImageDrops();
+     teardownObservers();
+     if (scrollTarget && scrollHandler) scrollTarget.removeEventListener('scroll', scrollHandler);
++    if (scrollTarget) scrollTarget.removeEventListener('scrollend', endJump);
+     scrollTarget = null; scrollHandler = null;
+     if (scrollTimer) { clearTimeout(scrollTimer); scrollTimer = 0; }
+     if (keyHandler) { document.removeEventListener('keydown', keyHandler); keyHandler = null; }
+@@ -933,6 +966,17 @@ function recordAnchor() {
+ 
+ // Page heights changed: put the anchored page back where it was in the view, then report the page in view once
+ // the jump's quiet time is over (after a jump the page box kept showing 1 while page 2 was in view).
++// How far the view's top is from the anchored place (px), or 0 when there's nothing to compare.
++function anchorDelta() {
++    if (!scrollTarget || !anchor) return 0;
++    const w = scrollTarget.querySelector('.rpage-wrap[data-page="' + anchor.page + '"]');
++    if (!w) return 0;
++    const d = scrollTarget.getBoundingClientRect(), r = w.getBoundingClientRect();
++    const max = scrollTarget.scrollHeight - scrollTarget.clientHeight;   // a target past the end can't be reached
++    const want = Math.min(max, scrollTarget.scrollTop + (r.top + anchor.frac * r.height) - d.top);
++    return Math.abs(want - scrollTarget.scrollTop);
++}
++
+ function reanchor() {
+     if (!scrollTarget || !anchor) return;
+     const w = scrollTarget.querySelector('.rpage-wrap[data-page="' + anchor.page + '"]');
+@@ -940,6 +984,7 @@ function reanchor() {
+     const d = scrollTarget.getBoundingClientRect(), r = w.getBoundingClientRect();
+     const delta = (r.top + anchor.frac * r.height) - d.top;
+     if (Math.abs(delta) > 1) scrollTarget.scrollTop += delta;
++    if (jumping) return;   // the jump set the page to report; the view is only kept on target
+     if (reportTimer) clearTimeout(reportTimer);
+     reportTimer = setTimeout(() => { reportTimer = 0; reportVisiblePage(); }, Math.max(0, suppressUntil - performance.now()) + 60);
+ }

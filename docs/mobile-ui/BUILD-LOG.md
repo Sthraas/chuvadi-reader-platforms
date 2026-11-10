@@ -460,3 +460,25 @@ Evidence:
   - Desktop before/after at 1440×900: Read, Mark, Arrange and the desk menu differ only in the rail heading
     (40 × 6 px, READ / MARK / ARRANGE → TOOLS) and the clock; Home clock only; aria-labels unchanged
     (READ, MARK, ARRANGE, PROTECT); 0 console errors.
+
+## 10 Nov, 09:13: Android Test round 5 — AT-06 and AT-09 (tablet)
+- Merged Foundation 846706e (H-20 landed as the twenty-second patch). preview.sh: with no outstanding hooks
+  patch, `ls` failing under `pipefail` stopped the script silently; fixed.
+- **AT-06**: Android Test measures each control's own box (as TalkBack and the Accessibility Scanner do);
+  the earlier invisible `::after` areas don't show there. The listed controls now have 44 px boxes of their
+  own, drawn exactly as before: transparent bands with the background clipped inside, outlines as inset
+  lines, negative margins so nothing moves. Phone avatar, pager chip, sheet handle, Library search button,
+  filter chips, view buttons, tag add; tablet brand, page arrows, Document, search, desk ··· .
+  - Before/after screenshots of Home, Library, Read, the sheets and the tablet top bar: same layout
+    (container positions identical); differences only in antialiasing of the outlines (a 1 px outline as an
+    inset line, held at 1 px on 1× screens) and the "5m / 7m" times.
+  - checks.py: the AT-06 list measures ≥ 44 px on every size (fails on the old CSS: tb-brand 83×22 …).
+- **AT-09 (tablet)** → **H-21** (reader.js, `mobile-ui-hooks-8.patch`): a jump keeps its target through
+  page-height changes and the page box keeps the match's page. checks.py's Find check now runs with a 6×
+  slower CPU and page heights changing during the move; it fails on Foundation's reader.js (page box 4,
+  view off the match) and passes with H-21 on every size.
+- New finding (not changed, question to the coordinator): on touch the desk page tiles' action row
+  (Peek, Duplicate, Rotate, Split here, Crop, Margins; 18 px) is invisible (shown on hover) but still takes
+  taps: a tap at the foot of a tile duplicates the page (seen at 412×915 and 1280×800).
+- Results: 386 tests (247 + 16 + 82 + 41); 70 touch checks pass at 4 sizes; desktop before/after
+  identical apart from the clock; 0 console errors.

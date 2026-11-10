@@ -99,22 +99,24 @@ html[data-shell="tablet"] .tb-cmd { width: 40px; height: 40px; padding: 0; justi
 html[data-shell="tablet"] .tb-cmd svg { width: 19px; height: 19px; }
 /* Touch targets (AT-06): the top bar keeps its look; invisible ::after areas, and a transparent
    border on the page box, bring each control to about 44 px without moving anything. */
-html[data-shell="tablet"] .tb-brand,
-html[data-shell="tablet"] .tb-pg-btn,
-html[data-shell="tablet"] .tb-doc,
-html[data-shell="tablet"] .tb-cmd { position: relative; }
-html[data-shell="tablet"] .tb-brand::after { content: ""; position: absolute; inset: -11px -4px; }
-html[data-shell="tablet"] .tb-pg-btn::after { content: ""; position: absolute; inset: -4px -5px -4px -8px; }
-html[data-shell="tablet"] .tb-pg-btn:last-child::after { inset: -4px -8px -4px -5px; }
-html[data-shell="tablet"] .tb-doc::after,
-html[data-shell="tablet"] .tb-cmd::after { content: ""; position: absolute; inset: -2px; }
+/* AT-06 round 5: each control's own box is 44 px (what TalkBack and the Accessibility Scanner measure); a
+   transparent band (background clipped inside it) keeps the drawn size, negative margins keep the layout. */
+html[data-shell="tablet"] .tb-brand { padding-block: 11px; margin-block: -11px; }
+html[data-shell="tablet"] .tb-pg-btn {
+    width: 44px; height: 44px; margin: -4px; border: 4px solid transparent; background-clip: padding-box; border-radius: 9px;
+}
+html[data-shell="tablet"] .tb-doc { height: 44px; margin-block: -2px; border-block: 2px solid transparent; background-clip: padding-box; border-radius: 7px / 9px; }
+html[data-shell="tablet"] .tb-cmd { width: 44px; height: 44px; margin: -2px; border: 2px solid transparent; background-clip: padding-box; border-radius: 8px; }
 html[data-shell="tablet"] .tb-pg-box {
     width: 44px; height: 44px; margin: -8px -5px; border-width: 8px 5px; border-color: transparent; border-radius: 11px / 14px;
-    background-clip: padding-box; box-shadow: inset 0 0 0 var(--chvd-stroke) var(--chvd-border);
+    background-clip: padding-box; box-shadow: inset 0 0 0 var(--mu-line) var(--chvd-border);
 }
 html[data-shell="tablet"] .tb-pg-box:focus { outline: none; box-shadow: inset 0 0 0 1.5px var(--chvd-binding); }
-html[data-shell="tablet"] .desk-more { position: relative; }
-html[data-shell="tablet"] .desk-more::after { content: ""; position: absolute; inset: -15px -9px; z-index: 1; }
+html[data-shell="tablet"] .desk-more {
+    position: relative; box-sizing: border-box; width: 44px; height: 44px; margin: -14px -8px; border-width: 14px 8px;
+    border-color: transparent; background-clip: padding-box; border-radius: 13px / 19px;
+    box-shadow: inset 0 0 0 var(--mu-line) var(--chvd-border-soft);   /* the drawn 28 × 16 outline */
+}
 html[data-shell="phone"] .desk-name,
 html[data-shell="tablet"] .desk-name { padding-block: 11px; margin-block: -8px; }   /* 44 px to tap, same layout */
 
@@ -147,9 +149,9 @@ html[data-shell="tablet"] .shelf-zoom { padding-top: 10px; padding-bottom: 8px; 
 html[data-shell="phone"] .shelf-filter,
 html[data-shell="tablet"] .shelf-filter { gap: 17px; padding-top: 10px; }
 html[data-shell="phone"] .sf-input,
-html[data-shell="tablet"] .sf-input { border: 9px solid transparent; border-inline-width: 0; padding-block: 6px; margin-block: -9px; border-radius: 6px / 15px; background-clip: padding-box; box-shadow: inset 0 0 0 var(--chvd-stroke) var(--chvd-border); }
+html[data-shell="tablet"] .sf-input { border: 9px solid transparent; border-inline-width: 0; padding-block: 6px; margin-block: -9px; border-radius: 6px / 15px; background-clip: padding-box; box-shadow: inset 0 0 0 var(--mu-line) var(--chvd-border); }
 html[data-shell="phone"] .sf-input:focus,
-html[data-shell="tablet"] .sf-input:focus { box-shadow: inset 0 0 0 var(--chvd-stroke) var(--chvd-binding); }
+html[data-shell="tablet"] .sf-input:focus { box-shadow: inset 0 0 0 var(--mu-line) var(--chvd-binding); }
 html[data-shell="phone"] .sf-go,
 html[data-shell="phone"] .sf-clear,
 html[data-shell="tablet"] .sf-go,
@@ -309,8 +311,19 @@ html[data-shell="phone"] {
     background: var(--chvd-surface-mid); border: var(--chvd-stroke) solid var(--chvd-border-soft); border-radius: 9px;
     font-family: var(--chvd-mono); font-size: 12px; color: var(--chvd-ink); cursor: pointer; white-space: nowrap;
 }
-.ph-pager { position: relative; }
-.ph-pager::after { content: ""; position: absolute; inset: -5px 0; }   /* 44 px target (AT-06) */
+/* Outlines drawn as inset lines (AT-06's 44 px boxes) use the border's width. A border thinner than a device
+   pixel is drawn one device pixel wide; a shadow isn't, so on a 1× screen the line is held at 1 px too. */
+html[data-shell="phone"], html[data-shell="tablet"] { --mu-line: var(--chvd-stroke); }
+@media (max-resolution: 1.49dppx) {
+    html[data-shell="phone"], html[data-shell="tablet"] { --mu-line: max(1px, var(--chvd-stroke)); }
+}
+/* AT-06 round 5: the control's own box is 44 px (what TalkBack and the Accessibility Scanner measure), the
+   drawn chip stays 36: a 4 px transparent band above and below, the outline drawn inside it. */
+.ph-pager {
+    position: relative; height: 44px; margin-block: -4px; border-width: 4px 0; border-color: transparent;
+    background-clip: padding-box; box-shadow: inset 0 0 0 var(--mu-line) var(--chvd-border-soft);
+    border-radius: 9px / 13px; padding-inline: 7px;
+}
 .ph-pager-act:disabled { opacity: .45; cursor: default; }
 .ph-pager-in { width: 64px; text-align: center; user-select: text; -webkit-user-select: text; }
 .ph-pager-in:focus { outline: 1.5px solid var(--chvd-binding); outline-offset: 0; }
@@ -372,10 +385,9 @@ html[data-shell="phone"] {
     animation: ph-rise var(--chvd-base) var(--chvd-ease);
 }
 .ph-handle { align-self: center; display: flex; align-items: center; justify-content: center; width: 64px; height: 20px; margin: -4px 0 -6px; border: none; background: transparent; cursor: pointer; }
-.ph-handle { position: relative; }
-.ph-handle { flex: none; }
-/* 44 px target (AT-06): mostly above the handle, where a tap closes the sheet anyway (scrim). */
-.ph-handle::after { content: ""; position: absolute; inset: -22px 0 -4px; }
+/* AT-06: a 44 px box in the same layout, mostly above the bar (a tap there closes the sheet anyway); the bar
+   stays where it was drawn. */
+.ph-handle { position: relative; flex: none; height: 44px; margin: -24px 0 -10px; align-items: flex-end; padding-bottom: 12px; box-sizing: border-box; }
 .ph-handle span { width: 36px; height: 4px; border-radius: 2px; background: var(--chvd-border); }
 .ph-sheet-hd { display: flex; justify-content: space-between; align-items: baseline; }
 .ph-sheet-t { font-family: var(--chvd-serif-display); font-size: 21px; color: var(--chvd-ink); }
@@ -513,11 +525,12 @@ html[data-shell="phone"] .desk-add { min-height: 88px; }
    ════════════════════════════════════════════════════════════════════════════ */
 .ph-lab { font-family: var(--chvd-sans-display); font-size: 12px; line-height: 1; white-space: nowrap; }
 .ph-av {
-    flex: none; width: 32px; height: 32px; margin: 6px 12px 6px 6px; border: none; border-radius: 16px; cursor: pointer; position: relative;
+    flex: none; width: 44px; height: 44px; margin: 0 6px 0 0; border: 6px solid transparent; background-clip: padding-box;
+    border-radius: 50%; cursor: pointer; position: relative;   /* AT-06: 44 px box, the 32 px circle drawn as before */
     display: flex; align-items: center; justify-content: center;
     background: var(--chvd-binding); color: var(--chvd-on-accent); font: 500 12px var(--chvd-mono);
+    background-clip: padding-box;   /* after the shorthand, which resets it */
 }
-.ph-av::after { content: ""; position: absolute; inset: -6px; }   /* 44 px target (AT-06) */
 .ph-search {
     display: flex; align-items: center; gap: 10px; width: calc(100% - 36px); height: 46px; margin: 14px 18px 0;
     padding: 0 14px; box-sizing: border-box; border-radius: 12px; cursor: pointer; text-align: left;
@@ -590,26 +603,48 @@ html[data-shell="phone"] .librow .lib-path { display: none; }
    overflow) bring each hit area to 44 px on touch (D-37). */
 html[data-shell="phone"] .librow .tag-add,
 html[data-shell="phone"] .librow .tagx,
-html[data-shell="phone"] .libp-filter .tagchip,
-html[data-shell="phone"] .libp-views .vbtn,
-html[data-shell="phone"] .libp-go,
 html[data-shell="tablet"] .librow .tag-add,
-html[data-shell="tablet"] .librow .tagx,
-html[data-shell="tablet"] .libp-filter .tagchip,
-html[data-shell="tablet"] .libp-views .vbtn,
-html[data-shell="tablet"] .libp-go { position: relative; }
-html[data-shell="phone"] .librow .tag-add::after,
-html[data-shell="tablet"] .librow .tag-add::after { content: ""; position: absolute; inset: -13px; }
+html[data-shell="tablet"] .librow .tagx { position: relative; }
+/* AT-06 round 5: the controls' own boxes are 44 px; what's drawn stays the same size (transparent bands
+   with the background clipped inside, outlines drawn as inset lines, the dashed ring as a ::before). */
+html[data-shell="phone"] .librow .tag-add,
+html[data-shell="tablet"] .librow .tag-add { width: 44px; height: 44px; margin: -12px; border: none; }
+html[data-shell="phone"] .librow .tag-add::before,
+html[data-shell="tablet"] .librow .tag-add::before {
+    content: ""; position: absolute; inset: 12px; border: var(--chvd-stroke) dashed var(--chvd-border); border-radius: 50%;
+}
 html[data-shell="phone"] .librow .tagx::after,
 html[data-shell="tablet"] .librow .tagx::after { content: ""; position: absolute; inset: -15px -10px; }
-html[data-shell="phone"] .libp-filter .tagchip::after { content: ""; position: absolute; inset: -7px 0; }
-html[data-shell="tablet"] .libp-filter .tagchip::after { content: ""; position: absolute; inset: -11px 0; }
+html[data-shell="phone"] .libp-filter .tagchip:not(.dashed) {
+    min-height: 44px; margin-block: -6px; border-width: 6px 0; border-color: transparent; padding-inline: 11px;
+    background-clip: padding-box; box-shadow: inset 0 0 0 var(--mu-line) var(--chvd-border); border-radius: 20px / 26px;
+}
+html[data-shell="tablet"] .libp-filter .tagchip:not(.dashed) {
+    margin-block: -10px; border-width: 10px 0; border-color: transparent; padding: 5px 11px;
+    background-clip: padding-box; box-shadow: inset 0 0 0 var(--mu-line) var(--chvd-border); border-radius: 20px / 30px;
+}
+html[data-shell="phone"] .libp-filter .tagchip.on:not(.dashed),
+html[data-shell="tablet"] .libp-filter .tagchip.on:not(.dashed) { box-shadow: inset 0 0 0 var(--mu-line) var(--chvd-binding); }
+html[data-shell="phone"] .libp-filter .tagchip.dashed,
+html[data-shell="tablet"] .libp-filter .tagchip.dashed { position: relative; }
+html[data-shell="phone"] .libp-filter .tagchip.dashed::after { content: ""; position: absolute; inset: -7px 0; }
+html[data-shell="tablet"] .libp-filter .tagchip.dashed::after { content: ""; position: absolute; inset: -11px 0; }
 html[data-shell="tablet"] .libp-filter { row-gap: 20px; padding-bottom: 18px; }
 html[data-shell="phone"] .libtable { padding-top: 6px; }   /* room for the first name's 44 px area inside the scroller */
-html[data-shell="phone"] .libp-views .vbtn::after { content: ""; position: absolute; inset: -5px 0; }
-html[data-shell="tablet"] .libp-views .vbtn::after { content: ""; position: absolute; inset: -10px 0; }
-html[data-shell="phone"] .libp-go::after,
-html[data-shell="tablet"] .libp-go::after { content: ""; position: absolute; inset: -9px -4px; }
+html[data-shell="phone"] .libp-views .vbtn {
+    min-height: 44px; margin-block: -4px; border-width: 4px 0; border-color: transparent; padding-inline: 12px;
+    background-clip: padding-box; box-shadow: inset 0 0 0 var(--mu-line) var(--chvd-border-soft); border-radius: 7px / 11px;
+}
+html[data-shell="tablet"] .libp-views .vbtn {
+    margin-block: -9px; border-width: 9px 0; border-color: transparent; padding: 6px 12px;
+    background-clip: padding-box; box-shadow: inset 0 0 0 var(--mu-line) var(--chvd-border-soft); border-radius: 7px / 16px;
+}
+html[data-shell="phone"] .libp-views .vbtn.on,
+html[data-shell="tablet"] .libp-views .vbtn.on { box-shadow: inset 0 0 0 var(--mu-line) var(--chvd-binding); }
+html[data-shell="phone"] .libp-go,
+html[data-shell="tablet"] .libp-go {
+    margin-block: -9px; border-block: 9px solid transparent; background-clip: padding-box; border-radius: 6px / 15px;
+}
 /* The name button clips its overflow, so it grows by padding (44 px) inside the same layout; the tags line
    under it on the phone lets taps through to it, except on its buttons. */
 html[data-shell="phone"] .librow > .lib-name { box-sizing: border-box; min-height: 44px; margin-block: -6px; }
