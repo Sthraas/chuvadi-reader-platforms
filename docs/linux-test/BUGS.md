@@ -37,7 +37,7 @@ Every bug gets fixed; I re-verify on the fixing commit and mark it here.
 | B-25 | S4 | **shared Ui/Core** | Excel viewer errors still use the old one-line wording (no WT-10 sentence + Details) | **verified fixed 7595ef3** — Excel "This file couldn't be read as an Excel workbook.", Word "…as a Word document.", damaged PDF "This PDF is damaged…", each with Details · re-verified 64c9c16 |
 | B-26 | S3 | **shared Ui/Core** | Excel number formats not applied: `"₹"#,##0.00` shows `1234.5`, `0.00%` shows `0.125` (values unaltered) — Sheets 2.0.2 now has `Cell.GetDisplayText` | **deferred by decision (D-147)** — raw stored value is the decided behaviour for now (Arun's data-integrity rule); option A (formatted display text, exact value on hover) is a later improvement, with Arun |
 | B-27 | S3 (perf) | **library + shared Ui/Core** | Large vector CAD PDF (5 × A1, ~1.44 M path ops): ~3–4 s to open + ~1 s to draw page 1; app memory 1.6 GB after viewing 5 pages | open — 64c9c16 (render off the Ui thread): the page stays responsive, but sheet 1 takes 6.0–8.4 s and each new sheet 10.5–13.5 s; Linux's generated stand-in takes 53–55 s for sheet 1 (Poppler 0.9 s). Hot path: `PageRasterizer.PaintStrokeOp` |
-| B-28 | S2 | Linux (UI test) | UI tests 36a–36c count the 24×24 loading icon as a drawn page, so their sheet times (0.1–0.2 s) and 36c memory don't measure the real drawing | **open** — 64c9c16 |
+| B-28 | S2 | Linux (UI test) | UI tests 36a–36c count the 24×24 loading icon as a drawn page, so their sheet times (0.1–0.2 s) and 36c memory don't measure the real drawing | **fixed 4de79ed** (in 8dcf4d8) — re-verify |
 | B-29 | S3 | **shared Ui/Core** (render queue) | Closing the CAD tab mid-render: the next file sometimes waits 3.7–4.6 s for its first page (2 of 6 closes) | **open** — 64c9c16 |
 | B-30 | S2 (perf) | **shared Ui/Core + Foundation** | Memory isn't given back after closing the CAD drawing: 1.43–1.77 GB stays for 60 s+, and 680 MB of managed heap is still live after a full collection | **open** — 64c9c16 |
 | K-01 | — | Linux | GNOME close-only layout showed all three buttons (known, 7 Nov) | **verified fixed f7d0034, re-verified f3d5978** (6 layouts) |
@@ -370,3 +370,18 @@ Linux's 4f67a4c ("memory back after vector sheets too") and Foundation's 3759b6f
 - **Where the time goes.** The stacks taken during sheet 2 show the time is spent painting strokes:
   `ChuvadiPdfSession.DrainAsync → RenderInGate → RenderPageAsRasterSvg → PageRasterizer.Guard → RasterizeUpright →
   RasterizeInternal → PaintDisplayList → PaintStrokeOp`. This is a job for the library's rasteriser. It is not a hang.
+
+
+---
+**10 Nov, Linux chat — the single head: `platform/linux` 8dcf4d8** (Foundation's patches 17 and 18, fc6286a;
+B-28 fixed). Please re-verify B-28, B-29, B-30, 36c's memory on the real CAD PDF, and a quick regression.
+- **B-28:** a page counts as drawn only with its page-sized svg. 36c's stand-in is now 10,000 strokes a sheet, sized
+  to the real file's memory (the 120,000-stroke one took ~49 s a sheet). Local and ARM64 CI: every sheet draws in
+  3–6 s; memory 344–371 MB before → 2.1–2.5 GB with 5 sheets drawn → 394–817 MB after closing (ARM64 back near the
+  start at ~65 s; locally not). 36c records memory; it isn't asserted yet.
+- **Known on this head:** x64 CI failed 36c once — sheet 1 of a fresh open never drew in 30 s (screenshot in the
+  `linux-x64` artifact). Likely the redraw race in `PROPOSAL-render-findings-10nov.md` (1); not yet proven.
+- **For B-30, use the test-only `gc` verb** after closing: on the stand-in the .NET heap was still 678 MB 80 s after
+  closing, and 5 MB after one aggressive collection — nothing holds the document, but the relief runs too early.
+  Your real-CAD numbers will tell Foundation whether that's the same there.
+- **Also found:** moving to a page while the view fits the first drawing can land two sheets on (finding 2).
