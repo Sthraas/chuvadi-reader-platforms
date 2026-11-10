@@ -195,7 +195,7 @@ compare Foundation's B-24 "a stalled read never freezes the Reader") rather than
 Release once AT-03 lands. **Evidence:** R4 › results-phone-api36 › robust/; R4b › results-tablet-api36 › robust/ (screenshots,
 results.jsonl with PSS and `top`).
 
-## AT-14 · S3 · Foundation (open sequencing) · profiled R7/R7b: the time is a ~3 s wait for the ready signal, not JIT or the library — decision needed — Cold "Open with" takes 3.9 s (phone) / 6.0 s (tablet) to paint page 1 on Release
+## AT-14 · S3 · Foundation (open sequencing) · **decided D-164 (10 Nov): (A) + (C) to Foundation, (B) folded into (A), (D) build settings stay as shipped (no AOT change)** — this chat measures the result the same way — Cold "Open with" takes 3.9 s (phone) / 6.0 s (tablet) to paint page 1 on Release
 **Evidence:** R4e (run 42741617577), table in RESULTS §2: from the launch to page 1 painted, median 3,920 ms phone and 6,028 ms
 tablet over 12 cold runs, while the activity's first frame is ~1.2–1.5 s. The Release uses MAUI's default **profiled AOT**: the
 startup profile covers MAUI and the BCL, but Chuvadi's assemblies get 4–14 KB AOT images each (B-08), i.e. the PDF open, parse

@@ -69,6 +69,9 @@ fi
 if [[ $SUITES == *,licence,* ]]; then
   python3 "$HERE/licence.py" "$OUT/licence" "$PKGS/assemblies.txt" || rc=1
 fi
+if [[ $SUITES == *,drift,* ]]; then
+  python3 "$HERE/drift.py" "$OUT/drift" "$OUT/fixtures" || rc=1
+fi
 if [[ $SUITES == *,at13,* ]]; then
   python3 "$HERE/at13.py" "$OUT/at13" "$OUT/fixtures" 5 || rc=1
 fi
