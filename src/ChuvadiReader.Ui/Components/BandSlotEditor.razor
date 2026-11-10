@@ -12,8 +12,7 @@
     </select>
     @if (Kind == "custom")
     {
-        <input class="bandslot-custom" placeholder="custom text" value="@Value"
-               @oninput="OnCustomInput" />
+        <input class="bandslot-custom" placeholder="custom text" @bind:get="Value" @bind:set="OnCustomValue" @bind:event="oninput" />
     }
 </div>
 
@@ -50,6 +49,5 @@
         await ValueChanged.InvokeAsync(v);
     }
 
-    private async Task OnCustomInput(ChangeEventArgs e)
-        => await ValueChanged.InvokeAsync(e.Value?.ToString() ?? "");
+    private Task OnCustomValue(string value) => ValueChanged.InvokeAsync(value ?? "");
 }

@@ -145,8 +145,7 @@
                     </div>
 
                     <div class="rd-find-search">
-                        <input class="rd-find-box" placeholder="Find text…" value="@_query"
-                               @oninput="e => _query = e.Value?.ToString() ?? string.Empty"
+                        <input class="rd-find-box" placeholder="Find text…" @bind="_query" @bind:event="oninput"
                                @onfocus="OnFindFocus" @onkeydown="OnFindKey" />
                         <button class="rd-btn" @onclick="RunSearch" disabled="@_searching">@(_searching ? "…" : "Find")</button>
                     </div>
@@ -264,7 +263,7 @@
     private double _zoom = 1.0;
 
     private readonly Dictionary<int, List<NormBox>> _redactions = new();
-    private readonly HashSet<int> _rendering = new();
+    private readonly HashSet<(IPdfSession Session, int Page)> _rendering = new(); // in flight; forgotten when done (AT-13)
 
     private string _color = "#000000";
     private static readonly (string Name, string Hex)[] _colorPresets =
@@ -467,7 +466,7 @@
     private void EnsureRendered(int n)
     {
         var session = _session;
-        if (session is null || session.TryGetRenderedSvg(n, out _) || !_rendering.Add(n)) return;
+        if (session is null || session.TryGetRenderedSvg(n, out _) || !_rendering.Add((session, n))) return;
         _ = RenderOneAsync(session, n);
     }
 
@@ -475,7 +474,7 @@
     {
         try { await session.RenderPageSvgAsync(n); }
         catch { }
-        finally { await InvokeAsync(StateHasChanged); }
+        finally { _rendering.Remove((session, n)); await InvokeAsync(StateHasChanged); }
     }
 
     // ── Navigation / zoom ───────────────────────────────────────────────────

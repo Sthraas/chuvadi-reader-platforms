@@ -16,6 +16,7 @@
 @inject BenchService Bench
 @inject UserProfileService Profile
 @inject ChuvadiReader.Platform.IPlatformInfo Platform
+@inject ChuvadiReader.Platform.IPathLabels PathLabels
 
 @*
     D-10 shell. One thin 40 px top bar (wordmark · tabs · ‹ n / N › · Document ▾ · Ctrl K ·
@@ -79,7 +80,7 @@
                 {
                     var isActive = t.Id == Tabs.Active?.Id && OnDocView;
                     <div class="rtab @(isActive ? "active" : null) fmt-@t.Format.ToString().ToLowerInvariant()" @key="t.Id"
-                         data-tab-id="@t.Id" @onclick="() => SwitchTab(t.Id)" title="@t.Path"
+                         data-tab-id="@t.Id" @onclick="() => SwitchTab(t.Id)" title="@PathLabels.Describe(t.Path)"
                          @onmousedown:stopPropagation="true" @ondblclick:stopPropagation="true"
                          @onmouseup="(e) => OnTabMouseUp(e, t.Id)">
                         <span class="rtab-ic"><Icon Name="@t.Format.IconName()" Size="12" /></span>
@@ -111,64 +112,70 @@
             }
         </div>
 
-        <div class="tb-mid" @onmousedown:stopPropagation="true" @ondblclick:stopPropagation="true">
-            @if (Shell.HasCounter && OnDocView)
-            {
-                <div class="tb-pager" title="@CounterTitle">
-                    <button class="tb-pg-btn" @onclick="() => Shell.GoToAsync(Shell.CounterCurrent - Shell.CounterStep)" disabled="@(Shell.CounterCurrent <= 1)" aria-label="Previous @Shell.CounterUnit"><Icon Name="chevron-left" Size="14" /></button>
-                    <input class="tb-pg-box" value="@Shell.CounterCurrent" @onchange="OnPagerChange" @onkeydown="OnPagerKey" inputmode="numeric" aria-label="@Shell.CounterUnit number" />
-                    <span class="tb-pg-total">@CounterPrefix/ @Shell.CounterTotal</span>
-                    <button class="tb-pg-btn" @onclick="() => Shell.GoToAsync(Shell.CounterCurrent + Shell.CounterStep)" disabled="@(Shell.CounterCurrent >= Shell.CounterTotal)" aria-label="Next @Shell.CounterUnit"><Icon Name="chevron-right" Size="14" /></button>
-                </div>
-            }
+        @* W-01: the bar's empty space moves the window (and a double press maximises); only the controls
+           keep the press. .tb-ctl draws no box (display: contents), so the layout is unchanged. *@
+        <div class="tb-mid">
+            <span class="tb-ctl" @onmousedown:stopPropagation="true" @ondblclick:stopPropagation="true">
+                @if (Shell.HasCounter && OnDocView)
+                {
+                    <div class="tb-pager" title="@CounterTitle">
+                        <button class="tb-pg-btn" @onclick="() => Shell.GoToAsync(Shell.CounterCurrent - Shell.CounterStep)" disabled="@(Shell.CounterCurrent <= 1)" aria-label="Previous @Shell.CounterUnit"><Icon Name="chevron-left" Size="14" /></button>
+                        <input class="tb-pg-box" value="@Shell.CounterCurrent" @onchange="OnPagerChange" @onkeydown="OnPagerKey" inputmode="numeric" aria-label="@Shell.CounterUnit number" />
+                        <span class="tb-pg-total">@CounterPrefix/ @Shell.CounterTotal</span>
+                        <button class="tb-pg-btn" @onclick="() => Shell.GoToAsync(Shell.CounterCurrent + Shell.CounterStep)" disabled="@(Shell.CounterCurrent >= Shell.CounterTotal)" aria-label="Next @Shell.CounterUnit"><Icon Name="chevron-right" Size="14" /></button>
+                    </div>
+                }
+            </span>
         </div>
 
-        <div class="tb-right" @onmousedown:stopPropagation="true" @ondblclick:stopPropagation="true">
-            @if (Shell.DocumentMenu.Count > 0 && OnDocView)
-            {
-                <span class="tb-doc-wrap">
-                    <button class="tb-doc @(_docMenuOpen ? "on" : null)" @onclick="() => _docMenuOpen = !_docMenuOpen" title="Document actions">Document<Icon Name="chevron-down" Size="12" /></button>
-                    @if (_docMenuOpen)
-                    {
-                        <div class="pop-scrim" @onclick="() => _docMenuOpen = false"></div>
-                        <div class="pop tb-docmenu">
-                            @foreach (var c in Shell.DocumentMenu)
-                            {
-                                @if (c.Id.StartsWith("sep", StringComparison.Ordinal))
+        <div class="tb-right">
+            <span class="tb-ctl" @onmousedown:stopPropagation="true" @ondblclick:stopPropagation="true">
+                @if (Shell.DocumentMenu.Count > 0 && OnDocView)
+                {
+                    <span class="tb-doc-wrap">
+                        <button class="tb-doc @(_docMenuOpen ? "on" : null)" @onclick="() => _docMenuOpen = !_docMenuOpen" title="Document actions">Document<Icon Name="chevron-down" Size="12" /></button>
+                        @if (_docMenuOpen)
+                        {
+                            <div class="pop-scrim" @onclick="() => _docMenuOpen = false"></div>
+                            <div class="pop tb-docmenu">
+                                @foreach (var c in Shell.DocumentMenu)
                                 {
-                                    <div class="pop-sep"></div>
+                                    @if (c.Id.StartsWith("sep", StringComparison.Ordinal))
+                                    {
+                                        <div class="pop-sep"></div>
+                                    }
+                                    else
+                                    {
+                                        <button class="pop-item" disabled="@(!c.IsEnabled)" title="@(c.DisabledReason ?? c.Label)" @onclick="() => RunDocCommand(c)">
+                                            <Icon Name="@c.Icon" Size="15" /><span class="pop-l">@c.Label</span><span class="pop-k">@(c.Keys is null ? null : Platform.Keys.Format(c.Keys))</span>
+                                        </button>
+                                    }
                                 }
-                                else
-                                {
-                                    <button class="pop-item" disabled="@(!c.IsEnabled)" title="@(c.DisabledReason ?? c.Label)" @onclick="() => RunDocCommand(c)">
-                                        <Icon Name="@c.Icon" Size="15" /><span class="pop-l">@c.Label</span><span class="pop-k">@(c.Keys is null ? null : Platform.Keys.Format(c.Keys))</span>
-                                    </button>
-                                }
-                            }
-                        </div>
-                    }
-                </span>
-            }
-            <button class="tb-cmd" @onclick="OpenCommandBar" title="Find or do anything (@Platform.Keys.Format("Ctrl K"))">
-                <Icon Name="search" Size="13" /><span class="tb-cmd-t">Find or do anything…</span><span class="kbd">@Platform.Keys.Format("Ctrl K")</span>
-            </button>
-            <button class="tb-icon" @onclick="ToggleTheme" title="@(Theme.Current.IsDark() ? "Switch to Cream paper" : "Switch to Night paper")" aria-label="Toggle light and dark"><Icon Name="@(Theme.Current.IsDark() ? "shift-day" : "shift-night")" Size="16" /></button>
-            @if (Platform.Chrome.ButtonLayout is { } layoutR)
-            {
-                <WindowButtons Side="ChuvadiReader.Platform.WindowButtons.Right" Items="layoutR.Right" />
-            }
-            else if (Platform.Chrome.Buttons == ChuvadiReader.Platform.WindowButtons.Right)
-            {
-                <div class="traffic">
-                    <button class="tl tl-min" @onclick="() => Win.Minimize()" aria-label="Minimize"><Icon Name="minus" Size="10" /></button>
-                    <button class="tl tl-max" @onclick="() => Win.ToggleMaximize()" aria-label="@(Win.IsMaximized ? "Restore" : "Maximize")"><Icon Name="@(Win.IsMaximized ? "restore" : "square")" Size="9" /></button>
-                    <button class="tl tl-close" @onclick="() => Win.Close()" aria-label="Close"><Icon Name="x" Size="10" /></button>
-                </div>
-            }
-            @if (Platform.Chrome.AccountMenu)
-            {
-                <ChuvadiReader.Ui.Components.Platform.Portal.AccountMenu />
-            }
+                            </div>
+                        }
+                    </span>
+                }
+                <button class="tb-cmd" @onclick="OpenCommandBar" title="Find or do anything (@Platform.Keys.Format("Ctrl K"))">
+                    <Icon Name="search" Size="13" /><span class="tb-cmd-t">Find or do anything…</span><span class="kbd">@Platform.Keys.Format("Ctrl K")</span>
+                </button>
+                <button class="tb-icon" @onclick="ToggleTheme" title="@(Theme.Current.IsDark() ? "Switch to Cream paper" : "Switch to Night paper")" aria-label="Toggle light and dark"><Icon Name="@(Theme.Current.IsDark() ? "shift-day" : "shift-night")" Size="16" /></button>
+                @if (Platform.Chrome.ButtonLayout is { } layoutR)
+                {
+                    <WindowButtons Side="ChuvadiReader.Platform.WindowButtons.Right" Items="layoutR.Right" />
+                }
+                else if (Platform.Chrome.Buttons == ChuvadiReader.Platform.WindowButtons.Right)
+                {
+                    <div class="traffic">
+                        <button class="tl tl-min" @onclick="() => Win.Minimize()" aria-label="Minimize"><Icon Name="minus" Size="10" /></button>
+                        <button class="tl tl-max" @onclick="() => Win.ToggleMaximize()" aria-label="@(Win.IsMaximized ? "Restore" : "Maximize")"><Icon Name="@(Win.IsMaximized ? "restore" : "square")" Size="9" /></button>
+                        <button class="tl tl-close" @onclick="() => Win.Close()" aria-label="Close"><Icon Name="x" Size="10" /></button>
+                    </div>
+                }
+                @if (Platform.Chrome.AccountMenu)
+                {
+                    <ChuvadiReader.Ui.Components.Platform.Portal.AccountMenu />
+                }
+            </span>
         </div>
     </header>
 
@@ -667,6 +674,14 @@
     // ── lifecycle / theme / window ────────────────────────────────────────
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // The shell's own commands, for hosts with a native menu bar (IAppCommands; macOS). Only raises
+        // Shell.Changed when they actually differ, so this can't re-render in a loop. Other hosts have no
+        // menu bar to fill, so they skip it: no extra render at startup, nothing changes there.
+        if (Platform.Chrome.NativeMenuBar)
+        {
+            Shell.SetGlobalCommands(GlobalCommands().ToList());
+        }
+
         if (!firstRender)
         {
             return;

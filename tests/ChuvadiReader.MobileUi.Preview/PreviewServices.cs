@@ -208,3 +208,32 @@ public sealed class PreviewDroppedFiles(ChuvadiReader.Hosting.IncomingFiles inco
         return failures;
     }
 }
+
+/// <summary>TESTING ONLY (W-01): counts the window calls the top bar makes, so a browser test can check where a
+/// press moves the window. GET /__preview/window-log returns the counts.</summary>
+public sealed class PreviewWindowControls : ChuvadiReader.Core.Window.IWindowControls
+{
+    public int Drags;
+    public int Maximizes;
+
+    public bool IsMaximized { get; private set; }
+
+    public event Action? StateChanged;
+
+    public void Minimize()
+    {
+    }
+
+    public void ToggleMaximize()
+    {
+        Interlocked.Increment(ref Maximizes);
+        IsMaximized = !IsMaximized;
+        StateChanged?.Invoke();
+    }
+
+    public void Close()
+    {
+    }
+
+    public void BeginDrag() => Interlocked.Increment(ref Drags);
+}

@@ -34,6 +34,12 @@ public interface IPdfSession : IDisposable
     /// <summary>Render a page to selectable-text inline SVG, caching the result.</summary>
     Task<string> RenderPageSvgAsync(int pageNumber, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// The page the person is looking at (0-based), or null. Queued renders run nearest this page first, so the page
+    /// you land on after fast paging is drawn next (Linux, fifteenth patch). Without one they run in the order asked.
+    /// </summary>
+    void SetFocusPage(int? pageNumber) { }
+
     /// <summary>Drop the rendered-page cache (keeps the document open). Used for
     /// background tabs so many open PDFs don't pin a lot of memory.</summary>
     void DropRenderCache();

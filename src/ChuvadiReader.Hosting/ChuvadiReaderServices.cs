@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using ChuvadiReader.Core.Documents;
 using ChuvadiReader.Core.Licensing;
 using ChuvadiReader.Core.Lifecycle;
@@ -29,82 +30,101 @@ public static class ChuvadiReaderServices
     /// main c7b9e44), plus safe defaults for each platform seam. Call it first, then register the
     /// host's own implementations: a later registration of the same interface wins.
     /// </summary>
+    /// <summary>
+    /// Registers every Core service exactly as the Windows host does today (App.xaml.cs, chuvadi-reader
+    /// main c7b9e44), plus safe defaults for each platform seam. Call it first, then register the
+    /// host's own implementations: a later registration of the same interface wins.
+    /// </summary>
+    /// <remarks>
+    /// AT-03, structural (D-146): every registration is a typed <c>Core&lt;TService, TImpl&gt;</c> or
+    /// <c>Seam&lt;TService, TImpl&gt;</c> call. The compiler checks that the implementation implements the
+    /// service, and the trimmer sees each implementation as a generic argument annotated to keep its public
+    /// constructors, so a trimmed app (Android Release, Mac Catalyst, any AOT host) can always build it. There is
+    /// no table of <see cref="Type"/> values: the trim analyser can't follow Type values through an array, which
+    /// is how AT-03 slipped past it. A new seam default is one more <c>Seam</c> line, with nothing else to remember.
+    /// </remarks>
     public static IServiceCollection AddChuvadiReader(this IServiceCollection services, AppStateLifetime lifetime)
     {
-        // Non-generic descriptors on purpose: no generic instantiations to JIT at startup.
         var life = lifetime == AppStateLifetime.Process ? ServiceLifetime.Singleton : ServiceLifetime.Scoped;
 
-        // Same set as the Windows host registered on chuvadi-reader main c7b9e44 (App.xaml.cs).
-        foreach (var (service, impl) in CoreServices)
-        {
-            services.Add(new ServiceDescriptor(service, impl, life));
-        }
+        // Same set and order as the Windows host registered on chuvadi-reader main c7b9e44 (App.xaml.cs).
+        Core<SaveFolderService, SaveFolderService>(services, life);
+        Core<CategoryService, CategoryService>(services, life);
+        Core<ThemeService, ThemeService>(services, life);
+        Core<UserProfileService, UserProfileService>(services, life);
+        Core<RecentFilesService, RecentFilesService>(services, life);
+        Core<PinnedService, PinnedService>(services, life);
+        Core<WatchedFolderService, WatchedFolderService>(services, life);
+        Core<LibraryService, LibraryService>(services, life);
+        Core<TagService, TagService>(services, life);
+        Core<FolderSearchService, FolderSearchService>(services, life);
+        Core<DocumentPropertiesService, DocumentPropertiesService>(services, life);
+        Core<ExportService, ExportService>(services, life);
+        Core<RedactService, RedactService>(services, life);
+        Core<StampService, StampService>(services, life);
+        Core<DocxViewService, DocxViewService>(services, life);
+        Core<XlsxViewService, XlsxViewService>(services, life);
+        Core<FlattenService, FlattenService>(services, life);
+        Core<RecoveryService, RecoveryService>(services, life);
+        Core<PressService, PressService>(services, life);
+        Core<IPdfReader, ChuvadiPdfReader>(services, life);
+        Core<TabsService, TabsService>(services, life);
+        Core<PdfToolsService, PdfToolsService>(services, life);
+        Core<BenchComposer, BenchComposer>(services, life);
+        Core<BenchService, BenchService>(services, life);
+        Core<SessionService, SessionService>(services, life);
+        Core<OpenDocumentService, OpenDocumentService>(services, life);
+        Core<BenchDropService, BenchDropService>(services, life);
+        Core<RedactRequestService, RedactRequestService>(services, life);
+        Core<ShellService, ShellService>(services, life);
+        Core<PreferencesService, PreferencesService>(services, life);
+        Core<TextViewService, TextViewService>(services, life);
+        Core<MeasureService, MeasureService>(services, life);
+        Core<SignatureCheckService, SignatureCheckService>(services, life);
+        Core<PasswordService, PasswordService>(services, life);
+        Core<CertificateSignService, CertificateSignService>(services, life);
+        Core<IEntitlements, DefaultEntitlements>(services, life);
+        Core<IAppReadySignal, AppReadySignal>(services, life);
+        Core<IAppCommands, ShellAppCommands>(services, life);
+        Core<IncomingFiles, IncomingFiles>(services, life);
 
         // Platform seams: harmless defaults. Each host replaces the ones it supports.
-        foreach (var (service, impl) in SeamDefaults)
-        {
-            services.TryAdd(new ServiceDescriptor(service, impl, life));
-        }
+        Seam<IUiScale, NoopUiScale>(services, life);
+        Seam<IExternalLinks, NoExternalLinks>(services, life);
+        Seam<IWindowControls, NoopWindowControls>(services, life);
+        Seam<IPrintService, NoopPrintService>(services, life);
+        Seam<IAppInstance, NoAppInstance>(services, life);
+        Seam<IHostNotices, NoHostNotices>(services, life);
+        Seam<IDroppedFiles, NoDroppedFiles>(services, life);
+        Seam<IFileWriteBack, NoFileWriteBack>(services, life);
+        Seam<IAppPaths, Desktop.DesktopAppPaths>(services, life);
+        Seam<IAccount, LocalAccount>(services, life);
+        Seam<IAppLifecycle, NoAppLifecycle>(services, life);
+        Seam<IFileManager, NoFileManager>(services, life);
+        Seam<IPathLabels, PlainPathLabels>(services, life);
+        Seam<IPageImageOwner, LocalPageImageOwner>(services, life);
+
+        // D-158: one page-image store per process, whatever the lifetime of the rest (the portal's endpoint reads it).
+        Shared<PageImages>(services);
 
         return services;
     }
 
-    private static readonly (Type Service, Type Impl)[] CoreServices =
-    {
-        (typeof(SaveFolderService), typeof(SaveFolderService)),
-        (typeof(CategoryService), typeof(CategoryService)),
-        (typeof(ThemeService), typeof(ThemeService)),
-        (typeof(UserProfileService), typeof(UserProfileService)),
-        (typeof(RecentFilesService), typeof(RecentFilesService)),
-        (typeof(PinnedService), typeof(PinnedService)),
-        (typeof(WatchedFolderService), typeof(WatchedFolderService)),
-        (typeof(LibraryService), typeof(LibraryService)),
-        (typeof(TagService), typeof(TagService)),
-        (typeof(FolderSearchService), typeof(FolderSearchService)),
-        (typeof(DocumentPropertiesService), typeof(DocumentPropertiesService)),
-        (typeof(ExportService), typeof(ExportService)),
-        (typeof(RedactService), typeof(RedactService)),
-        (typeof(StampService), typeof(StampService)),
-        (typeof(DocxViewService), typeof(DocxViewService)),
-        (typeof(XlsxViewService), typeof(XlsxViewService)),
-        (typeof(FlattenService), typeof(FlattenService)),
-        (typeof(RecoveryService), typeof(RecoveryService)),
-        (typeof(PressService), typeof(PressService)),
-        (typeof(IPdfReader), typeof(ChuvadiPdfReader)),
-        (typeof(TabsService), typeof(TabsService)),
-        (typeof(PdfToolsService), typeof(PdfToolsService)),
-        (typeof(BenchComposer), typeof(BenchComposer)),
-        (typeof(BenchService), typeof(BenchService)),
-        (typeof(SessionService), typeof(SessionService)),
-        (typeof(OpenDocumentService), typeof(OpenDocumentService)),
-        (typeof(BenchDropService), typeof(BenchDropService)),
-        (typeof(RedactRequestService), typeof(RedactRequestService)),
-        (typeof(ShellService), typeof(ShellService)),
-        (typeof(PreferencesService), typeof(PreferencesService)),
-        (typeof(TextViewService), typeof(TextViewService)),
-        (typeof(MeasureService), typeof(MeasureService)),
-        (typeof(SignatureCheckService), typeof(SignatureCheckService)),
-        (typeof(PasswordService), typeof(PasswordService)),
-        (typeof(CertificateSignService), typeof(CertificateSignService)),
-        (typeof(IEntitlements), typeof(DefaultEntitlements)),
-        (typeof(IAppReadySignal), typeof(AppReadySignal)),
-        (typeof(IAppCommands), typeof(ShellAppCommands)),
-        (typeof(IncomingFiles), typeof(IncomingFiles)),
-    };
+    // Generic methods over reference types share one compiled body, so this adds no per-service JIT work at startup.
+    private static void Core<TService, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TImpl>(
+        IServiceCollection services, ServiceLifetime life)
+        where TService : class
+        where TImpl : class, TService =>
+        services.Add(new ServiceDescriptor(typeof(TService), typeof(TImpl), life));
 
-    private static readonly (Type Service, Type Impl)[] SeamDefaults =
-    {
-        (typeof(IUiScale), typeof(NoopUiScale)),
-        (typeof(IExternalLinks), typeof(NoExternalLinks)),
-        (typeof(IWindowControls), typeof(NoopWindowControls)),
-        (typeof(IPrintService), typeof(NoopPrintService)),
-        (typeof(IAppInstance), typeof(NoAppInstance)),
-        (typeof(IHostNotices), typeof(NoHostNotices)),
-        (typeof(IDroppedFiles), typeof(NoDroppedFiles)),
-        (typeof(IFileWriteBack), typeof(NoFileWriteBack)),
-        (typeof(IAppPaths), typeof(Desktop.DesktopAppPaths)),
-        (typeof(IAccount), typeof(LocalAccount)),
-        (typeof(IAppLifecycle), typeof(NoAppLifecycle)),
-        (typeof(IFileManager), typeof(NoFileManager)),
-    };
+    /// <summary>One instance per process, whatever <see cref="AppStateLifetime"/> says (D-158: the page-image store).</summary>
+    private static void Shared<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TImpl>(IServiceCollection services)
+        where TImpl : class =>
+        services.TryAdd(new ServiceDescriptor(typeof(TImpl), typeof(TImpl), ServiceLifetime.Singleton));
+
+    private static void Seam<TService, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TImpl>(
+        IServiceCollection services, ServiceLifetime life)
+        where TService : class
+        where TImpl : class, TService =>
+        services.TryAdd(new ServiceDescriptor(typeof(TService), typeof(TImpl), life));
 }

@@ -5,13 +5,14 @@
 @inject LibraryService Lib
 @inject IFilePicker Picker
 @inject ChuvadiReader.Platform.IPlatformInfo Platform
+@inject ChuvadiReader.Platform.IPathLabels PathLabels
 
 <SettingsSection Title="@SectionTitle" Sub="Where Chuvadi looks for documents.">
     @if (Platform.Capabilities.WatchFolders)
     {
     <SettingsCard Title="Library folder">
         <SettingRow Label="Folder" Hint="The same folder new files are saved to" Stack="true">
-            <ValueChip Text="@SaveFolders.BaseFolder" Wrap="true" />
+            <ValueChip Text="@PathLabels.Describe(SaveFolders.BaseFolder)" Wrap="true" />
             <RowButton IconName="folder" OnClick="ChangeLibraryFolder">Change folder…</RowButton>
             <RowButton IconName="refresh" OnClick="Rescan" Disabled="Lib.IsScanning">@(Lib.IsScanning ? "Scanning…" : "Scan again")</RowButton>
         </SettingRow>
@@ -25,7 +26,7 @@
 
     <SettingsCard Title="Watched folders">
         <SettingRow Label="Watched folder" Hint="@($"{Watched.DocumentCount} documents found · scanned {Relative(Watched.LastScanned)}")" Stack="true">
-            <ValueChip Text="@(Watched.FolderPath ?? "—")" Wrap="true" />
+            <ValueChip Text="@(PathLabels.Describe(Watched.FolderPath) is { Length: > 0 } watched ? watched : "—")" Wrap="true" />
             <RowButton IconName="folder" OnClick="ChangeWatched">Change…</RowButton>
         </SettingRow>
         <SettingRow Soon="true" SoonText="Coming soon — one watched folder for now">

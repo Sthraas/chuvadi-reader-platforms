@@ -40,7 +40,8 @@ else if (Platform.Chrome.Buttons == Side)
     <div class="traffic traffic-left" @onmousedown:stopPropagation="true" @ondblclick:stopPropagation="true">
         <button class="tl tl-close" @onclick="() => Win.Close()" aria-label="Close"><Icon Name="x" Size="10" /></button>
         <button class="tl tl-min" @onclick="() => Win.Minimize()" aria-label="Minimize"><Icon Name="minus" Size="10" /></button>
-        <button class="tl tl-max" @onclick="() => Win.ToggleMaximize()" aria-label="@(Win.IsMaximized ? "Exit full screen" : "Zoom")"><Icon Name="@(Win.IsMaximized ? "restore" : "square")" Size="9" /></button>
+        @* macOS: the green light is Zoom in both states (zoom is not full screen; the native glyph doesn't change). *@
+        <button class="tl tl-max" @onclick="() => Win.ToggleMaximize()" aria-label="Zoom"><Icon Name="square" Size="9" /></button>
     </div>
 }
 

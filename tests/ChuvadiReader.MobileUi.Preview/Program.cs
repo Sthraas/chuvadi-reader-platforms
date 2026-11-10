@@ -29,6 +29,8 @@ var web = Environment.GetEnvironmentVariable("CHVD_FF") == "web";
 var linux = Environment.GetEnvironmentVariable("CHVD_FF") == "linux";
 var platform = new PreviewPlatform(ff, web, linux);
 builder.Services.AddSingleton<IPlatformInfo>(platform);
+var windowLog = new PreviewWindowControls(); // W-01: records the top bar's window calls
+builder.Services.AddSingleton<ChuvadiReader.Core.Window.IWindowControls>(windowLog);
 if (ff != FormFactor.Desktop)
 {
     // Stands in for Android's bundled .NET runtime notices (IHostNotices).
@@ -42,6 +44,20 @@ if (web)
 }
 
 var app = builder.Build();
+// D-158: drawn page images by address. The preview is one person on one machine (owner "local"); the portal's
+// own endpoint checks the signed-in user's session instead and answers 404 to anyone else.
+app.MapGet("/" + ChuvadiReader.Core.Reader.PageImages.PathPrefix + "{file}", (string file, HttpContext http,
+    ChuvadiReader.Core.Reader.PageImages images, ChuvadiReader.Platform.IPageImageOwner owner) =>
+{
+    if (!ChuvadiReader.Core.Reader.PageImages.TryParseAddress(file, out var token) || !images.TryGet(token, owner.Current, out var png))
+    {
+        return Results.NotFound();
+    }
+
+    http.Response.Headers.CacheControl = "private, no-store";
+    return Results.Bytes(png, "image/png");
+});
+app.MapGet("/__preview/window-log", () => Results.Ok(new { drags = windowLog.Drags, maximizes = windowLog.Maximizes }));
 if (linux)
 {
     app.MapPost("/__preview/button-layout", (string gtk) =>
@@ -86,6 +102,12 @@ var a = Fixtures.Document("discharge-summary.pdf", 13);
 var b = Fixtures.Document("lab-report.pdf", 4);
 await tabs.OpenAsync(b, Path.GetFileName(b), DocumentFormat.Pdf);
 var first = await tabs.OpenAsync(a, Path.GetFileName(a), DocumentFormat.Pdf);
+// CHVD_OPEN=path;path: also open these real files (memory and render checks with heavy test PDFs); the last is active.
+foreach (var extra in (Environment.GetEnvironmentVariable("CHVD_OPEN") ?? "").Split(';', StringSplitOptions.RemoveEmptyEntries))
+{
+    first = await tabs.OpenAsync(extra, Path.GetFileName(extra), DocumentFormat.Pdf);
+}
+
 shell.SetMode(DocMode.Read, first.Id);
 
 app.Run();

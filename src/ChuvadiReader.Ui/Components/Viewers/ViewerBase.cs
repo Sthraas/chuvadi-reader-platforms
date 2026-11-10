@@ -135,11 +135,13 @@ public abstract class ViewerBase : ComponentBase, IAsyncDisposable
     protected Task ReportStatusAsync(string status) =>
         OnStatus.HasDelegate ? OnStatus.InvokeAsync(status) : Task.CompletedTask;
 
-    /// <summary>Friendly message for a load failure.</summary>
-    protected static string Describe(Exception ex, string kind) => ex switch
+    /// <summary>A load failure as WT-10 words it (B-25): a plain sentence, and the system's own text as the detail
+    /// shown under a collapsed Details. <paramref name="what"/> is "a Word document", "an Excel workbook", ….</summary>
+    protected static (string Text, string? Detail) Describe(Exception ex, string what) => ex switch
     {
-        DocumentViewException dve => dve.Message,
-        _ => $"Couldn't open this {kind}: {ex.Message}",
+        DocumentViewException dve => (dve.Message, dve.InnerException?.Message),
+        IOException or UnauthorizedAccessException => (Core.Reader.TabsService.CantRead, ex.Message),
+        _ => ($"This file is damaged or isn't {what} Chuvadi can read.", ex.Message),
     };
 
     protected virtual ValueTask DisposeCoreAsync() => ValueTask.CompletedTask;

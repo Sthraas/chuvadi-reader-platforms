@@ -14,7 +14,7 @@
     }
     else if (_error is not null)
     {
-        <ViewerMessage IconName="warning" Error="true" Text="@_error" />
+        <ViewerMessage IconName="warning" Error="true" Text="@_error" Detail="@_errorDetail" />
     }
     else if (_view is null)
     {
@@ -59,6 +59,7 @@
     private List<Item> _items = new();
     private List<ViewerOutlineEntry> _outline = new();
     private string? _error;
+    private string? _errorDetail;
     private string? _loaded;
     private string? _password;      // in memory for this tab only
     private bool _locked, _busy;
@@ -98,7 +99,7 @@
     {
         var v = ++_version;
         _view = null;
-        _error = null;
+        _error = null; _errorDetail = null;
         _items = new();
         _outline = new();
         if (string.IsNullOrEmpty(Path)) { _locked = false; return; }
@@ -149,7 +150,7 @@
             else
             {
                 _locked = false;
-                _error = Describe(ex, "document");
+                (_error, _errorDetail) = Describe(ex, "a Word document");
             }
         }
         finally

@@ -59,6 +59,41 @@ public sealed class NoFileWriteBack : IFileWriteBack
         Task.FromResult(WriteBackResult.NotNeeded);
 }
 
+/// <summary>
+/// How a file or folder path is shown to the person: tooltips, accessible names (TalkBack reads them),
+/// and the Library and watched-folder paths. Desktop paths are the real files, so they show as they
+/// are; on Android every document is a working copy in the app's private cache, so the host shows
+/// the document's own name and where it came from instead (AT-07).
+/// </summary>
+public interface IPathLabels
+{
+    /// <summary>The person-facing label for a path; empty for a null or empty path.</summary>
+    string Describe(string? path);
+}
+
+/// <summary>Default: the path itself (Windows, macOS, Linux, Web).</summary>
+public sealed class PlainPathLabels : IPathLabels
+{
+    public string Describe(string? path) => path ?? string.Empty;
+}
+
+/// <summary>
+/// D-158: whose drawn page images these are. A page image is served only to its owner. In the app hosts there is one
+/// person and one process, so the default is a constant. The portal registers its own (per connection): the
+/// signed-in user and their session, the same value its page-image endpoint checks on every request.
+/// </summary>
+public interface IPageImageOwner
+{
+    /// <summary>The owner of images drawn now. Never null.</summary>
+    string Current { get; }
+}
+
+/// <summary>Default for the app hosts (Windows, macOS, Linux, Android): one person per process.</summary>
+public sealed class LocalPageImageOwner : IPageImageOwner
+{
+    public string Current => "local";
+}
+
 /// <summary>Folders the app uses. Replaces direct use of Environment.SpecialFolder in Core and Ui.</summary>
 public interface IAppPaths
 {

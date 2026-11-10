@@ -2,13 +2,14 @@
 @inject SaveFolderService SaveFolders
 @inject IFilePicker Picker
 @inject ChuvadiReader.Platform.IPlatformInfo Platform
+@inject ChuvadiReader.Platform.IPathLabels PathLabels
 
 <SettingsSection Title="@SectionTitle" Sub="Where new files go, and what they are called.">
     @if (Platform.Capabilities.PickFolders)
     {
     <SettingsCard Title="Where files are saved">
         <SettingRow Label="Save folder" Hint="Bind, Lift, Scatter and other saves default here" Stack="true">
-            <ValueChip Text="@SaveFolders.BaseFolder" Wrap="true" />
+            <ValueChip Text="@PathLabels.Describe(SaveFolders.BaseFolder)" Wrap="true" />
             <RowButton IconName="folder" OnClick="ChangeFolder">Change folder…</RowButton>
             <RowButton OnClick="ResetFolder" Title="@SaveFolders.DefaultFolder">Reset to default</RowButton>
         </SettingRow>
