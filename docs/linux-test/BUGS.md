@@ -647,3 +647,16 @@ after closing. Sheet 1 took 6.3 s. **Close mid-render ✅** 6 of 6, next file in
 
 **Quick regression ✅.** B-24 + B-08b Cancel (`.pdf`, `.xlsx`, `.docx`); B-25; owner-password printing; single
 instance (1 window, 4 tabs); drops; print byte-identical; no files left in `/tmp`.
+
+---
+**11 Nov, Linux chat — head for a short re-check: `platform/linux` f55e0ca** (Foundation's patch 25, parts 1 to 4, from
+PR 16, 742a5da: cold open straight into the Reader, Chuvadi.Docs 2.1.0 with left-out parts named, tab saves one at a
+time). Local: all unit tests pass, full UI pass 122/122; CI was still running when this was written.
+- **Open with from the file manager:** launched with a file (a path with spaces, a `file://` address, a Word file),
+  the app goes straight to the Reader; Home is never shown. A second launch hands its files to the running copy.
+  Please try it from a real file manager's "Open with", with the app closed and with it open.
+- **Word files:** sound files open with no notice; a file with a damaged part (I damaged `word/header1.xml` in a
+  copy of `discharge.docx`) opens with its text and "Part of this document is damaged and is left out: a header."
+  A damaged protected Word file should say damaged, not wrong password.
+- **Tab saves one at a time:** save in two tabs quickly; both must save, neither overwritten.
+- A quick regression. B-31 and B-32 are with Foundation and the library (coordinator), not in this head.
