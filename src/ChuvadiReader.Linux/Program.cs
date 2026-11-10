@@ -103,7 +103,8 @@ public static class Program
             // A published app has its assets in wwwroot; a development build serves them from the
             // static-web-assets manifest beside the app, which WebViewManager reads itself.
             IFileProvider files = Directory.Exists(wwwroot) ? new PhysicalFileProvider(wwwroot) : new NullFileProvider();
-            var manager = new LinuxWebViewManager(services, files);
+            // Drawn page images are served from memory by address (D-158), in process, no server.
+            var manager = new LinuxWebViewManager(services, new PageImageFileProvider(files, services));
             GtkHost.Attach(manager);
             var incoming = services.GetRequiredService<IncomingFiles>();
             WireWindow(services, incoming, instance);

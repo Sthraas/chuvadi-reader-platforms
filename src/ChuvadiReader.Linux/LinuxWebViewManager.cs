@@ -1,3 +1,4 @@
+using ChuvadiReader.Core.Reader;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebView;
@@ -21,7 +22,7 @@ internal sealed class LinuxWebViewManager : WebViewManager
     }
 
     /// <summary>Main thread (from the native scheme handler). App assets are immutable for a
-    /// given build, so everything but the host page may be cached by the web view.</summary>
+    /// given build, so everything but the host page and drawn page images may be cached by the web view.</summary>
     public bool TryGetAsset(string uri, out int status, out string contentType, out byte[] body, out string? cacheControl)
     {
         status = 404;
@@ -34,9 +35,13 @@ internal sealed class LinuxWebViewManager : WebViewManager
             return false;
         }
 
-        if (!TryGetResponseContent(uri, allowFallbackOnHostPage: true, out status, out _, out var content, out var headers))
+        // A page image's address is only ever the image (D-158): unknown, freed or another owner's token is "not
+        // found", never the host page that other unknown addresses fall back to.
+        var isPageImage = new Uri(uri).AbsolutePath.TrimStart('/').StartsWith(PageImages.PathPrefix, StringComparison.Ordinal);
+        if (!TryGetResponseContent(uri, allowFallbackOnHostPage: !isPageImage, out status, out _, out var content, out var headers))
         {
-            return false;
+            status = 404;
+            return isPageImage; // answered "not found" here rather than left to the native fallback
         }
 
         using (content)
@@ -56,7 +61,8 @@ internal sealed class LinuxWebViewManager : WebViewManager
         contentType = headers.TryGetValue("Content-Type", out var ct) ? ct : "application/octet-stream";
         var path = new Uri(uri).AbsolutePath;
         var isHostPage = path == "/" || path.EndsWith(".html", StringComparison.OrdinalIgnoreCase);
-        cacheControl = isHostPage ? "no-cache" : "max-age=31536000, immutable";
+        // A drawn page image (D-158) is large and freed with its page: never kept in the web view's cache.
+        cacheControl = isPageImage ? "private, no-store" : isHostPage ? "no-cache" : "max-age=31536000, immutable";
         return true;
     }
 

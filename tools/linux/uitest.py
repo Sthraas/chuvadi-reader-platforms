@@ -1085,7 +1085,7 @@ step("36b-close-tab-mid-render", close_mid_render)
 def cad_drawing():
     """A 5-sheet A1 vector drawing (10,000 strokes a sheet; B-27's kind of file): the page answers while sheets
     draw, every sheet really draws (its page-sized drawing, not the loading icon: B-28), and once all five are
-    drawn, and the app's memory before, with 5 sheets drawn and up to 90 s after closing is recorded."""
+    drawn, closing it gives the memory back: within 100 MB of before it opened, within 90 s."""
     sheet_limit = 30  # measured on 2 vCPU, no GPU: 5.5-7 s a sheet (B-27, a library item); about four times that
     baseline = memory_mb()
     t0 = time.time()
@@ -1127,17 +1127,56 @@ def cad_drawing():
         after = memory_mb()
         if int(time.time() - t_close) % 10 == 0:
             trail.append(f"{int(time.time() - t_close)}s:{after[0]}")
-    # Measured, not yet asserted (BUILD-LOG §51): on f88f9ef the relief runs (two passes; the Linux host trims glibc
-    # after each), but 680-807 MB of the closed drawing's garbage is still held or made after both, and one more
-    # collection clears it (heap → 3-5 MB, app within 100 MB of the start). Becomes an assertion once that's found.
+    # Twentieth and twenty-first patches: each relief pass waits for the finalizer thread, and drawn sheets are
+    # served by address instead of as ~77 MB strings; the Linux host trims glibc after each pass.
     relief = (app.send("gc-count") or {}).get("reliefPasses", "?")
-    kept = "" if after[0] <= baseline[0] + 100 else f" — not back near the start (known; relief passes: {relief})"
+    if after[0] > baseline[0] + 100:
+        raise AssertionError(f"the app kept its memory after closing the drawing: {baseline[0]} MB before opening, "
+                             f"{mem[0]} MB with 5 sheets drawn, {after[0]} MB {time.time() - t_close:.0f} s after closing "
+                             f"({' '.join(trail)}; relief passes: {relief})")
+    kept = f"; relief passes: {relief}"
     return (f"sheet 1 drawn in {first:.1f} s; sheets 2-5 in {', '.join(f'{t:.1f}' for t in times)} s; page answered in "
             f"≤ {worst:.2f} s throughout; memory app/web: {baseline[0]}/{baseline[1]} MB before, {mem[0]}/{mem[1]} MB with "
             f"5 sheets drawn, {after[0]}/{after[1]} MB {time.time() - t_close:.0f} s after closing ({' '.join(trail)}){kept}")
 
 
 step("36c-cad-drawing", cad_drawing)
+
+
+def page_images_by_address():
+    """D-158: a drawn (raster) sheet is shown from _chvd/pages/<token>.png, served in process by the Linux host:
+    the image is there and decodes, it's a PNG and never cached, and an unknown token is simply not found."""
+    open_tab(os.path.join(HEAVY, "cad.pdf"))
+    # Reopened where it was left (36c ends on sheet 5): check the sheet in view.
+    time.sleep(1)
+    shown = app.wait(lambda: current_page() or None, 10, "the page box")
+    app.wait(lambda: rendered(shown - 1), 30, f"sheet {shown} drawn")
+    wrap = f"document.querySelector('.rpage-wrap[data-page=\"{shown - 1}\"]')"
+    href = app.js(f"var im={wrap}.querySelector('image'); return im ? (im.getAttribute('href') || '') : ''")
+    if not re.fullmatch(r"_chvd/pages/[0-9a-f]{32}\.png", href or ""):
+        close_active_tab()
+        raise AssertionError(f"sheet {shown} isn't drawn by address: image href {href!r}")
+    size = app.js(f"return {wrap}.innerHTML.length")
+    # WebKitGTK's fetch shows no content type for any app:// asset (scripts and styles too), so check the bytes are a
+    # PNG and that an image element decodes the address, as the page itself does.
+    probe = ("return fetch(ADDR).then(async r => { var b = new Uint8Array(await r.arrayBuffer()); "
+             "var w = !r.ok ? 0 : await new Promise(res => { var i = new Image(); i.onload = () => res(i.naturalWidth); "
+             "i.onerror = () => res(0); i.src = ADDR; }); "
+             "return [r.status, b.length >= 8 && b[0] === 137 && b[1] === 80 && b[2] === 78 && b[3] === 71 ? 'PNG' : 'not a PNG', "
+             "r.headers.get('cache-control'), w]; })")
+    got = app.js(probe.replace("ADDR", json.dumps(href)))
+    missing = app.js(probe.replace("ADDR", json.dumps("_chvd/pages/" + "0" * 32 + ".png")))
+    close_active_tab()
+    status, ctype, cache, width = got
+    if status != 200 or ctype != "PNG" or "no-store" not in (cache or "") or width < 100:
+        raise AssertionError(f"the page image came back as {got}")
+    if missing[0] != 404:
+        raise AssertionError(f"an unknown token gave {missing[0]}, not 404")
+    return (f"sheet {shown} shown from {href[:24]}…; page markup {size} characters; served {status} {ctype}, '{cache}', "
+            f"decodes to {width} px wide; unknown token 404")
+
+
+step("36d-page-images-by-address", page_images_by_address)
 
 # The desktop's window-button layout, followed exactly (any subset, any order, either end) — the
 # setting GNOME (button-layout) and KDE hand to GTK, written to GTK's settings file for a fresh launch.
