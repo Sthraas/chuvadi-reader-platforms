@@ -205,6 +205,23 @@ internal static class MacMenuBar
             }
         }
 
+        // M-08 / M-23: tab keys as Window menu items, as Safari has them. A menu key equivalent works whatever has
+        // the keyboard — app-level key commands did not fire while the window had no first responder (Mac Test,
+        // focus on the window's content group). The items hand the key to the page, where reader.js decides.
+        var pageKey = new Selector(MacPageKeys.Selector);
+        UIKeyCommand Tab(string title, string input, UIKeyModifierFlags flags) =>
+            UIKeyCommand.Create((NSString)title, null, pageKey, (NSString)input, flags, (NSString)(input + "|" + (int)flags));
+        var goTo = Enumerable.Range(1, 9)
+            .Select(n => (UIMenuElement)Tab($"Tab {n}", n.ToString(System.Globalization.CultureInfo.InvariantCulture), UIKeyModifierFlags.Command))
+            .ToArray();
+        var tabs = UIMenu.Create(string.Empty, null, UIMenuIdentifier.None, UIMenuOptions.DisplayInline, new UIMenuElement[]
+        {
+            Tab("Show Next Tab", "\t", UIKeyModifierFlags.Control),
+            Tab("Show Previous Tab", "\t", UIKeyModifierFlags.Control | UIKeyModifierFlags.Shift),
+            UIMenu.Create("Go to Tab", goTo),
+        });
+        builder.ReplaceChildrenOfMenu(UIMenuIdentifier.Window.GetConstant()!, children => new UIMenuElement[] { tabs }.Concat(children).ToArray());
+
         // Help keeps only macOS's own menu search field.
         builder.ReplaceChildrenOfMenu(UIMenuIdentifier.Help.GetConstant()!, _ => Array.Empty<UIMenuElement>());
     }

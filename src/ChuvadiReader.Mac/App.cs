@@ -21,6 +21,7 @@ public sealed class App : Application
             {
                 MacMenuBar.RequestRebuild("ui-ready");
                 WebKitPrewarm.Release();
+                MacPageKeys.Refocus(); // the page has the keyboard from the start (M-08 / M-23)
                 MacSmoke.Start(_services, ChuvadiReader.Mac.MainPage.WebKitView);
             });
 

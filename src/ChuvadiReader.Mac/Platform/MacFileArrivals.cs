@@ -40,5 +40,8 @@ internal static class MacFileArrivals
         {
             incoming.Receive(files);
         }
+
+        // M-08 / M-23: files arrive while another app (Finder) had the keyboard; hand it to the page.
+        UIKit.UIApplication.SharedApplication.BeginInvokeOnMainThread(MacPageKeys.Refocus);
     }
 }
