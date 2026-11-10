@@ -425,5 +425,17 @@ Web found that Excel's text for cells with no number format (General) shortens n
 ## D-163 — Page-tile actions on touch: desk menu (B), hidden row now (A as stopgap)
 10 Nov 2026. On phone and tablet the six page-tile buttons (Peek, Duplicate, Rotate, Split here, Crop, Margins) are invisible but still take taps, so a tap near a tile's foot duplicates a page. Options from Mobile UI: A hide the row on touch (stops accidents, actions unreachable); B put them in the desk ··· menu acting on the selected pages (labelled, 44px, small Bench diff, as H-17); C a new 44px action bar under the desk (new layout). **Decision: B, with A applied at once** until the Bench diff lands. Same features as desktop, no accidental actions, no new layout.
 
+## D-164 — AT-14 Android cold open: don't park the incoming file (A) and fix the tablet wait (C); no AOT change (D)
+10 Nov 2026. Android Test's timeline: the library opens and draws in about 0.25 s; the time goes in the shared code holding the incoming file until "ready" (Home painted first, theme/profile/storage loads in a chain), and on the tablet a 2 s gap before the first render request. Full AOT and Chuvadi-only AOT leave the median unchanged (+49 % / +9 % size). **Decision: (A) start the open as soon as Blazor is up and go straight to the Reader, with (B) parallel loads folded in rather than done as an interim step; (C) remove the tablet wait; (D) build settings as shipped.** Foundation builds, Android Test measures the same way. Helps Open-with on every platform.
+
+## D-165 — HTML files stay sanitised (Arun)
+10 Nov 2026. Arun: stays. Scripts, forms and embedded content removed; remote images blocked until "Load images".
+
+## D-166 — PR #13 merged on Arun's word
+10 Nov 2026. Reader main 35e3853 (patches 22–23).
+
+## D-167 — Phases (Arun)
+10 Nov 2026. Phase 1 = development; Phase 2 = on the production server; Phase 3 = fixes found in production testing.
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).
