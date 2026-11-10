@@ -519,3 +519,27 @@ a0c478d · reload logged 4a4b419 · M-11 a7c46be.
   run keeps checking it. If Mac Test still sees nothing, the next evidence is whether its ⌘O reaches the app at all.
 - First-launch hang (now 3 times, every launch in that run silent): the startup step now prints processes and
   launch logs when it happens (83c2ac8).
+
+### 2026-11-10 (06:30) — rebased onto Foundation fc6286a; M-09, M-14, M-15 checked; M-06 attributed
+Run 42727139667 (c3ff2da): 47/47.
+- **M-08/09/10:** the thirteenth patch is in this branch (`MacKeyLabels`: F11 → ⌃⌘F, ⌃Tab; WindowButtons "Zoom").
+  The Mac host registers `MacKeyLabels` after `AddChuvadiReader`, and every Ui place that shows a shortcut formats it
+  (RailButton, CommandBar, Settings › Shortcuts). On the runner the page's View rail button reads
+  `title="Immersive (⌃⌘F)"`. Nothing shared is missing; no diff for Foundation.
+- **M-15:** real ⌘O works first thing after launch and in the Reader — both reach File › Open a file…
+  (`menu-command file.open ran=True`), the panel runs, the file opens. Not reproduced.
+- **M-14 recipe for Mac Test:** make a PDF unreadable (`chmod 000 x.pdf`), open it, and open "Details" under "Can't
+  read this file": .NET's own message shows ("Access to the path '…' is denied."), not a resource key. Smoke checks it.
+- **M-06 — where the ~2.3 s goes** (warm, ms since process start, run 42717566474):
+  | Stage | Owner | ms |
+  |---|---|---|
+  | process start → `main` | host (runtime, dyld) | 0 → 201 |
+  | MAUI built, window, WebView ready, page load asked | host | → 796 |
+  | **WebKit starts the page's content process; navigation begins** | **Apple (WebKit)** | **→ 2158 (1.36 s)** |
+  | blazor.webview.js running | shared | → 2316 |
+  | .NET Blazor started, #app rendered | shared | → 2751 |
+  | first paint, ready | shared | → 3031 |
+  Library: nothing runs before the first render. The biggest block is WebKit launching its process — slow on these
+  GPU-less VMs; the prewarm cannot share it (each WKWebView gets its own content process). Host-side room is small
+  (~0.6 s of MAUI/runtime start, already AOT). Shared: ~0.7 s of Blazor start and first render. A real Mac
+  (REAL-MAC-CHECKS §11) is needed before more work on the WebKit part.
