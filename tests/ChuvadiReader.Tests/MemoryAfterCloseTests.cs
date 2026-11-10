@@ -23,6 +23,7 @@ public sealed class MemoryAfterCloseTests
     public MemoryAfterCloseTests()
     {
         // No waiting in tests: the relief runs at once, back to back, and its one-minute second pass is off.
+        // The tests that measure memory after a close put the settle back (MeasuredAsShipped).
         MemoryRelief.Settle = TimeSpan.Zero;
         MemoryRelief.FollowUp = TimeSpan.Zero;
         MemoryRelief.MinGap = TimeSpan.Zero;
@@ -55,6 +56,15 @@ public sealed class MemoryAfterCloseTests
 
         return TestPdf.WriteTemp(b.ToByteArray());
     }
+
+    /// <summary>
+    /// For a test that measures memory after a close: the relief settles as shipped before it collects. With no
+    /// settle, the relief's collections and this test's own ran back to back from the instant of the close, and on the
+    /// 4-core Windows runner they kept suspending a thread that still had the page on its stack for a moment (the
+    /// drawn page alive at the measure, the document already gone, the page gone 3 to 13 ms later; found with
+    /// platform/diag-b, 8 of 10 full-suite runs). The app always waits; so does the measurement.
+    /// </summary>
+    private static void MeasuredAsShipped() => MemoryRelief.Settle = MemoryRelief.ShippedSettle;
 
     private static (long Live, long Committed) Measure()
     {
@@ -97,6 +107,7 @@ public sealed class MemoryAfterCloseTests
         // WT-19, measured: 120,000 rows × 6 columns, written with Chuvadi.Sheets, read as the viewer reads it.
         var path = Path.Combine(Path.GetTempPath(), "chvd-heavy-" + Guid.NewGuid().ToString("N") + ".xlsx");
         WriteHeavyWorkbook(path);
+        MeasuredAsShipped();
         try
         {
             var before = Measure();
@@ -157,13 +168,14 @@ public sealed class MemoryAfterCloseTests
     {
         var path = HeavyLargeFormatPage();
         MemoryRelief.ResetForTests();
+        MeasuredAsShipped();
         var before = Measure();
 
         var drawnChars = await OpenDrawClose(path);
 
         // PR #13's first Windows run measured 72 MB still live, once: this method had carried on inline, on top of
         // OpenDrawClose's own frame, which still held the drawn page (gcroot: a stack slot of that frame). Leave
-        // the helper's frame before measuring.
+        // the helper's frame before measuring. (That alone was not enough on 4 cores: see MeasuredAsShipped.)
         await Task.Yield();
         await (MemoryRelief.Last ?? Task.CompletedTask).WaitAsync(TimeSpan.FromSeconds(30));
         await Task.Yield();
@@ -268,6 +280,7 @@ public sealed class MemoryAfterCloseTests
         // A vector CAD sheet keeps a small SVG but costs hundreds of MB to draw (Linux step 47: the relief never ran).
         var path = BlankA1Sheets(2);
         MemoryRelief.ResetForTests();
+        MeasuredAsShipped();
         var before = Measure();
         var last = MemoryRelief.Last;
 
