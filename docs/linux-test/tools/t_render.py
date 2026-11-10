@@ -3,6 +3,7 @@
 import helpers as h, threading
 from lt_base import *
 CAD, LABEL = sys.argv[1], sys.argv[2]; RUNS = int(sys.argv[3]) if len(sys.argv) > 3 else 1
+AFTER = [int(x) for x in os.environ.get("AFTER","2,10,30,60,90").split(",")]
 HEAVY = "/home/claude/heavy10"; GC = os.environ.get("GC") == "1"; FIVE = "/home/claude/lt/five-pages.pdf"
 
 def ping():
@@ -78,11 +79,27 @@ def t36c(path, tag):
     for n in range(4, 0, -1):  # page back: already-drawn sheets
         goto(n); dn, w = wait_drawn(n - 1); worst = max(worst, w)
     m5 = mem(); close_tab(); tc = time.time(); after = {}
-    for s in (2, 10, 30, 60, 90):
+    for s in AFTER:
         time.sleep(max(0, tc + s - time.time())); after[s] = mem()
     print(f"36c {tag}: sheet 1 {first:.2f} s, sheets 2-5 {', '.join(f'{t:.2f}' for t in times)} s; worst page answer {worst:.2f} s; "
           f"memory app/web MB: before {base[0]}/{base[1]}, sheet 1 {m1[0]}/{m1[1]}, 5 sheets {m5[0]}/{m5[1]}, after close "
           + ", ".join(f"+{s}s {v[0]}/{v[1]}" for s, v in after.items()) + (f"; gc verb: {a.send('gc', timeout=60)}" if GC else ""), flush=True)
+
+def inview():
+    return a.js("return [...document.querySelectorAll('.rpage-wrap')].filter(w=>{var b=w.getBoundingClientRect(); return b.bottom>60&&b.top<innerHeight-60}).map(w=>+w.dataset.page+1)")
+
+def t_jumps(path, run):
+    """Findings 1 and 2: jump to sheet 2 the moment sheet 1 lands (heights change then); jump 2 -> 5 at once so 2's
+    render is cancelled, then page back to 2, 3, 4."""
+    open_tab(path); wait_drawn(0); goto(2); time.sleep(1.5); v = inview(); box = page()
+    d, _ = wait_drawn(1, 60)
+    print(f"JUMP run {run}: page box 2 as sheet 1 lands -> box {box}, in view {v}; sheet 2 drawn {d:.1f} s", flush=True)
+    close_tab(); open_tab(path); wait_drawn(0); time.sleep(1.5)
+    goto(2); time.sleep(0.3); goto(5); d5, _ = wait_drawn(4, 60); back = []
+    for n in (2, 3, 4):
+        goto(n); dn, _ = wait_drawn(n - 1, 60); back.append(f"{n}: {dn:.1f} s")
+    print(f"CANCEL run {run}: 2 then 5 at once -> sheet 5 drawn {d5:.1f} s; paging back, cancelled sheets drawn: {', '.join(back)}", flush=True)
+    close_tab()
 
 for r in range(RUNS):
     a = App(APP, EV + f"/render-{LABEL}-{r}", display=":64"); h.bind(a); a.start_display()
@@ -90,6 +107,8 @@ for r in range(RUNS):
         a.launch(); time.sleep(4)
         if LABEL == "full":
             t36a(); t36b(HEAVY + "/cad.pdf", "stand-in"); t36b(CAD, "real CAD"); t36c(HEAVY + "/cad.pdf", "stand-in, after 36a/b"); t36c(CAD, "real CAD, after the rest")
+        elif LABEL == "jumps":
+            t_jumps(CAD, r + 1)
         elif LABEL == "close":
             t36b(CAD, f"real CAD, run {r+1}"); t36b(CAD, f"real CAD again, run {r+1}")
         else:

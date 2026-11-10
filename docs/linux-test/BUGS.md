@@ -33,13 +33,13 @@ Every bug gets fixed; I re-verify on the fixing commit and mark it here.
 | B-21 | S3 | Linux | Show in folder: 5 s D-Bus timeout → `xdg-open` fallback → two file-manager windows | **verified fixed f3d5978** — cold Nautilus: one window; `xdg-open` fallback never called (logging stub) |
 | B-22 | S4 | shared Ui/Core | No designed keyboard-focus style: each engine draws its own (GTK blue on Linux) | **verified fixed e468d1a** (Foundation 8th patch) — focus ring 2 px solid in the theme accent (#8a3a1c in light) |
 | B-23 | S4 | shared Ui/Core | Tab order starts with one "Send page N to a desk" button per page | **verified fixed e468d1a** (Foundation 8th patch) — Tab starts on the current page's strip (rotate, send, snapshot, bookmark), not one button per page |
-| B-24 | S2 | **shared Ui/Core** | A stalled read (hung network share) shows a blank Reader with no "Opening…" or Cancel, and blocks every later open | **verified fixed 7595ef3** (13th patch) — stalled `.pdf`/`.xlsx`/`.docx`: "Opening…" at 0.3–0.9 s, Cancel at 10 s, Cancel closes the tab, later opens never blocked · re-verified 64c9c16 · 8dcf4d8 |
-| B-25 | S4 | **shared Ui/Core** | Excel viewer errors still use the old one-line wording (no WT-10 sentence + Details) | **verified fixed 7595ef3** — Excel "This file couldn't be read as an Excel workbook.", Word "…as a Word document.", damaged PDF "This PDF is damaged…", each with Details · re-verified 64c9c16 · 8dcf4d8 |
+| B-24 | S2 | **shared Ui/Core** | A stalled read (hung network share) shows a blank Reader with no "Opening…" or Cancel, and blocks every later open | **verified fixed 7595ef3** (13th patch) — stalled `.pdf`/`.xlsx`/`.docx`: "Opening…" at 0.3–0.9 s, Cancel at 10 s, Cancel closes the tab, later opens never blocked · re-verified 64c9c16 · 8dcf4d8 · d918161 |
+| B-25 | S4 | **shared Ui/Core** | Excel viewer errors still use the old one-line wording (no WT-10 sentence + Details) | **verified fixed 7595ef3** — Excel "This file couldn't be read as an Excel workbook.", Word "…as a Word document.", damaged PDF "This PDF is damaged…", each with Details · re-verified 64c9c16 · 8dcf4d8 · d918161 |
 | B-26 | S3 | **shared Ui/Core** | Excel number formats not applied: `"₹"#,##0.00` shows `1234.5`, `0.00%` shows `0.125` (values unaltered) — Sheets 2.0.2 now has `Cell.GetDisplayText` | **deferred by decision (D-147)** — raw stored value is the decided behaviour for now (Arun's data-integrity rule); option A (formatted display text, exact value on hover) is a later improvement, with Arun |
-| B-27 | S3 (perf) | **library + shared Ui/Core** | Large vector CAD PDF (5 × A1, ~1.44 M path ops): ~3–4 s to open + ~1 s to draw page 1; app memory 1.6 GB after viewing 5 pages | open — 8dcf4d8: sheet 1 5.6–6.9 s, sheets 2–5 3.4–5.6 s (64c9c16: 10.5–13.5 s); page answers ≤ 0.39 s. Poppler ~1 s a sheet. Library rasteriser (`PaintStrokeOp`) |
+| B-27 | S3 (perf) | **library + shared Ui/Core** | Large vector CAD PDF (5 × A1, ~1.44 M path ops): ~3–4 s to open + ~1 s to draw page 1; app memory 1.6 GB after viewing 5 pages | open (library) — d918161: sheet 1 4.7–4.9 s, sheets 2–5 2.9–4.9 s; page answers ≤ 0.22 s. Poppler ~1 s a sheet (`PaintStrokeOp`) |
 | B-28 | S2 | Linux (UI test) | UI tests 36a–36c count the 24×24 loading icon as a drawn page, so their sheet times (0.1–0.2 s) and 36c memory don't measure the real drawing | **verified fixed 8dcf4d8** (4de79ed) — `rendered()` counts only a page-sized svg; Linux's 36c sheet times (4.9–5.6 s) now match mine on the real file |
-| B-29 | S3 | **shared Ui/Core** (render queue) | Closing the CAD tab mid-render: the next file sometimes waits 3.7–4.6 s for its first page (2 of 6 closes) | **verified fixed 8dcf4d8** (fc6286a) — 6 of 6 mid-render closes: next file drawn in 0.26–0.27 s; closing then reopening the same drawing: sheet 1 drawn every time (6 of 6) |
-| B-30 | S2 (perf) | **shared Ui/Core + Foundation** | Memory isn't given back after closing the CAD drawing: 1.43–1.77 GB stays for 60 s+, and 680 MB of managed heap is still live after a full collection | **fixed (the closed document is released) 8dcf4d8** — after closing, a full collection leaves 3–5 MB of heap (64c9c16: 680 MB). **Gap recorded, not blocking:** app 620–690 MB for the first 60 s after closing, 357–580 MB at 90 s (started at 250); WebKit 220 → ~600 MB and stays (Linux finding 3, with Foundation) |
+| B-29 | S3 | **shared Ui/Core** (render queue) | Closing the CAD tab mid-render: the next file sometimes waits 3.7–4.6 s for its first page (2 of 6 closes) | **verified fixed 8dcf4d8, re-verified d918161** — 6 of 6 mid-render closes: next file drawn in 0.26–0.28 s |
+| B-30 | S2 (perf) | **shared Ui/Core + Foundation** | Memory isn't given back after closing the CAD drawing: 1.43–1.77 GB stays for 60 s+, and 680 MB of managed heap is still live after a full collection | **released (8dcf4d8); memory gap still open on d918161, not blocking** — app 565–679 MB for the first minute after closing, 335–650 MB at 90–240 s (started at ~250); after both relief passes the .NET heap still holds 176–873 MB that one more collection clears to 4–6 MB; WebKit 220 → ~600 MB. With Foundation (Linux build log §51) |
 | K-01 | — | Linux | GNOME close-only layout showed all three buttons (known, 7 Nov) | **verified fixed f7d0034, re-verified f3d5978** (6 layouts) |
 
 Routing (coordinator, 8 Nov): **Linux** → the Linux chat. **shared Ui/Core** → Foundation's combined patch, as exact diffs from the Linux chat or Foundation. **library** → the coordinator compiles them for Arun (library coordinator).
@@ -443,3 +443,33 @@ memory, and a quick regression.
   passes ran, yet 80 s after closing the .NET heap still held 681–807 MB that one more aggressive collection clears
   (to 3–5 MB, app within 100 MB of the start). With Foundation. Use the `gc` verb (it now also reports `reliefPasses`)
   on the real CAD file: before and after it, 60–90 s after closing.
+
+---
+## Linux Test — 10 Nov, last pass on `platform/linux` d918161 (Foundation's nineteenth patch + glibc trim)
+These results are on my real CAD file. Nothing from the file is committed; `tools/t_render.py` modes are `jumps`, `solo` and `close`.
+
+**Linux findings 1 and 2 ✅** (`jumps`, 3 runs).
+- *Typing 2 as sheet 1 lands.* The page box reads 2 and sheet 2 is in view every time, drawn in 2.6–3.1 s.
+  On 8dcf4d8 the jump went two sheets on, and the skipped sheet never drew.
+- *2 then 5 at once, so sheet 2's render is cancelled.* Sheet 5 draws in 9.3–9.5 s. Then paging back to sheets 2, 3
+  and 4: each draws, in 0.0–8.6 s. None stays blank.
+
+**B-29 ✅.** 6 of 6 mid-render closes: the next file drew in 0.26–0.28 s.
+
+**B-30: gap still open (recorded, not blocking).** Five runs, memory as app / WebKit, in MB:
+
+| Point | Memory (app / WebKit, MB) |
+|---|---|
+| Before opening | 247–251 / 220 |
+| 5 sheets | 1,828–1,963 / 647–666 |
+| +2 to +60 s after closing | 564–679 / ~600 |
+| +90 s after closing | 335–649 |
+| +240 s after closing | 363 and 650 (two longer runs) |
+
+The relief ran twice in every run (`reliefPasses: 2`). Even so, the managed heap still held **176–873 MB**
+afterwards, and one aggressive collection clears it to 4–6 MB, leaving the app at 298–335 MB, within ~50–90 MB of
+its start. So the closed drawing's garbage outlives both relief passes; the Linux build log (§51) found the same.
+The trim works once the garbage is collected. WebKit keeps ~380 MB more than at the start.
+**Target "back within 100 MB of the start": not met yet.**
+
+**B-27.** Sheet 1 takes 4.7–4.9 s, and sheets 2–5 take 2.9–4.9 s each. The page answers in ≤ 0.22 s.
