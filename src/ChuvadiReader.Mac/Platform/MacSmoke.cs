@@ -299,7 +299,9 @@ internal static class MacSmoke
                 + (function () {   // M-08 / M-23: the tab strip as shown — the active tab and the first tab
                   var a = document.querySelector('.rtab.active'), f = document.querySelector('.rtab');
                   var t = function (e) { return e ? JSON.stringify(e.textContent.replace(/\s+/g, ' ').trim().slice(0, 40)) : '-'; };
-                  return ' strip=' + t(a) + ' strip1=' + t(f);
+                  var order = Array.prototype.map.call(document.querySelectorAll('.rtab'), function (e) {
+                    return e.textContent.replace(/\s+/g, ' ').trim().slice(0, 40); }).join('|');
+                  return ' strip=' + t(a) + ' strip1=' + t(f) + ' order=' + JSON.stringify(order);
                 })()
                 + (function () {   // M-09: the View rail's Immersive label as the page shows it
                   var b = document.querySelector('button[aria-label="Immersive"]');
