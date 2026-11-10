@@ -17,10 +17,12 @@ before then.
 ## A-02 How Android files reach the path-based Core — DECIDED (coordinator, 6 Nov)
 Working copy + write-back = Foundation F-1 option C. Built in the host:
 `DocumentLinks` (working path ↔ content/tree URI, persisted grants), `AndroidFilePicker` (SAF
-open / create / tree), `AndroidFileWriteBack` (`IFileWriteBack`). Save and folder pickers stay
-off (`AndroidFilePicker.SavePickersEnabled`) until the Ui calls `CommitAsync` after its writes —
-Foundation's Group A/B Ui hooks. Until then, **Save in place writes only the working copy** on
-Android; this stays on the blocker list.
+open / create / tree), `AndroidFileWriteBack` (`IFileWriteBack`). The Ui delivers every save through
+`WriteBack.DeliverOrThrowAsync` (Foundation's hooks, in since patch 11). **AT-18 (11 Nov):** the save and
+folder pickers had been left switched off behind `SavePickersEnabled` after those hooks landed, so no save
+to a new file worked; the switch is gone and the pickers are on. A picked folder is linked as a tree: its
+documents are copied in when it's picked (Library, watched folder), and what Chuvadi writes into it — the
+whole folder, or one file inside it — is sent back, replacing namesakes, leaving unchanged copies alone.
 
 ## A-03 Host styling — DECIDED (coordinator, 6 Nov)
 No host CSS keyed on Ui class names. Window buttons disappear through Foundation's

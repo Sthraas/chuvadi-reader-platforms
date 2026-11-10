@@ -11,18 +11,18 @@ namespace ChuvadiReader.Android.Platform;
 /// <list type="bullet">
 /// <item>Open: the chosen document is imported as a working copy and linked to its URI, with a
 /// persisted grant so Recent files reopen and Save can write back.</item>
-/// <item>Save as / folder: the person chooses the destination first; Core writes into a working
-/// path linked to that URI, and <c>IFileWriteBack.CommitAsync</c> sends it there.</item>
+/// <item>Save as (PDF, image, session): the person chooses the destination first; Core writes into a
+/// working path linked to that URI, and the Ui's <c>WriteBack.DeliverOrThrowAsync</c> sends it there
+/// (<see cref="AndroidFileWriteBack"/>).</item>
+/// <item>Folder: the chosen folder becomes a working folder linked to it. The documents already in it are
+/// copied in first (subfolders too), so a folder picked for the Library or as the watched folder shows
+/// what it holds; whatever Chuvadi writes into it is sent back the same way.</item>
 /// </list>
-/// Save and folder pickers stay switched off (<see cref="SavePickersEnabled"/>) until the Ui calls
-/// CommitAsync after its writes (Foundation's Ui hooks): before that a "saved" file would never reach
-/// the chosen place, which is worse than the picker visibly doing nothing.
+/// AT-18: the save and folder pickers had been left switched off since before the Ui delivered its
+/// saves; nothing that saves to a new file worked. They are on.
 /// </summary>
 public sealed class AndroidFilePicker : IFilePicker
 {
-    /// <summary>Switch on once the Ui's CommitAsync hooks are in (DECISIONS A-02 / Foundation F-1).</summary>
-    public static bool SavePickersEnabled { get; } = false;
-
     private readonly DocumentLinks _links;
 
     public AndroidFilePicker(DocumentLinks links) => _links = links;
@@ -53,11 +53,6 @@ public sealed class AndroidFilePicker : IFilePicker
 
     public async Task<string?> PickFolderAsync(CancellationToken ct = default)
     {
-        if (!SavePickersEnabled)
-        {
-            return null;
-        }
-
         var intent = new Intent(Intent.ActionOpenDocumentTree);
         intent.AddFlags(ActivityFlags.GrantReadUriPermission | ActivityFlags.GrantWriteUriPermission | ActivityFlags.GrantPersistableUriPermission);
         var (code, data) = await ActivityResults.StartAsync(intent).ConfigureAwait(false);
@@ -69,6 +64,7 @@ public sealed class AndroidFilePicker : IFilePicker
         var persisted = DocumentLinks.TryPersist(resolver, tree);
         var folder = _links.NewWorkingFolder("folder");
         _links.Add(folder, tree, isTree: true, persisted);
+        await Task.Run(() => _links.MirrorTree(resolver, tree, folder, DocumentTypes.Extensions, ct), ct).ConfigureAwait(false);
         return folder;
     }
 
@@ -115,11 +111,6 @@ public sealed class AndroidFilePicker : IFilePicker
 
     private async Task<string?> CreateAsync(string suggestedName, string mime, string extension)
     {
-        if (!SavePickersEnabled)
-        {
-            return null;
-        }
-
         var name = DocumentLinks.SafeFileName(string.IsNullOrWhiteSpace(suggestedName) ? "document" + extension : suggestedName);
         if (!name.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
         {

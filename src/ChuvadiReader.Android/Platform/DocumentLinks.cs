@@ -20,6 +20,7 @@ namespace ChuvadiReader.Android.Platform;
 public sealed class DocumentLinks
 {
     private const int CopyBufferBytes = 81920;
+    private readonly Dictionary<string, DateTime> _mirrored = new(StringComparer.Ordinal);
 
     private readonly string _file;
     private readonly string _workingRoot;
@@ -55,6 +56,102 @@ public sealed class DocumentLinks
             }
 
             return null;
+        }
+    }
+
+    /// <summary>
+    /// Copies the documents in a picked folder (and its subfolders) into its working folder, so what reads
+    /// the folder — the Library, the watched folder — sees what it holds. Only the given extensions; a
+    /// document that can't be read is skipped.
+    /// </summary>
+    public void MirrorTree(ContentResolver resolver, AUri tree, string folder, IReadOnlyCollection<string> extensions, CancellationToken ct)
+    {
+        var pending = new Stack<(string DocumentId, string Local)>();
+        pending.Push((DocumentsContract.GetTreeDocumentId(tree)!, folder));
+        string[] columns = [DocumentsContract.Document.ColumnDocumentId, DocumentsContract.Document.ColumnDisplayName, DocumentsContract.Document.ColumnMimeType];
+        while (pending.Count > 0)
+        {
+            ct.ThrowIfCancellationRequested();
+            var (id, local) = pending.Pop();
+            var children = DocumentsContract.BuildChildDocumentsUriUsingTree(tree, id);
+            if (children is null)
+            {
+                continue;
+            }
+
+            try
+            {
+                using var cursor = resolver.Query(children, columns, null, null, null);
+                while (cursor?.MoveToNext() == true)
+                {
+                    var childId = cursor.GetString(0);
+                    var name = SafeFileName(cursor.GetString(1) ?? string.Empty);
+                    if (string.IsNullOrEmpty(childId) || string.IsNullOrEmpty(name))
+                    {
+                        continue;
+                    }
+
+                    var target = Path.Combine(local, name);
+                    if (cursor.GetString(2) == DocumentsContract.Document.MimeTypeDir)
+                    {
+                        Directory.CreateDirectory(target);
+                        pending.Push((childId, target));
+                    }
+                    else if (extensions.Contains(Path.GetExtension(name), StringComparer.OrdinalIgnoreCase)
+                             && DocumentsContract.BuildDocumentUriUsingTree(tree, childId) is { } uri)
+                    {
+                        try
+                        {
+                            using var input = resolver.OpenInputStream(uri);
+                            if (input is null)
+                            {
+                                continue;
+                            }
+
+                            using (var output = File.Create(target))
+                            {
+                                input.CopyTo(output, CopyBufferBytes);
+                            }
+
+                            lock (_gate)
+                            {
+                                _mirrored[Path.GetFullPath(target)] = File.GetLastWriteTimeUtc(target);
+                            }
+                        }
+                        catch (Exception ex) when (ex is IOException or Java.Lang.SecurityException or Java.IO.FileNotFoundException)
+                        {
+                            TryDelete(target);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex) when (ex is Java.Lang.SecurityException or Java.Lang.IllegalArgumentException or Java.Lang.UnsupportedOperationException)
+            {
+                // A provider that won't list this folder: leave it out.
+            }
+        }
+    }
+
+    /// <summary>True for a copy brought in from a picked folder and not changed since: sending the folder back
+    /// leaves it alone instead of rewriting the person's file with the same bytes.</summary>
+    public bool IsUnchangedMirror(string localPath)
+    {
+        var full = Path.GetFullPath(localPath);
+        lock (_gate)
+        {
+            return _mirrored.TryGetValue(full, out var stamp) && File.GetLastWriteTimeUtc(full) == stamp;
+        }
+    }
+
+    private static void TryDelete(string path)
+    {
+        try
+        {
+            File.Delete(path);
+        }
+        catch (IOException)
+        {
+            // A partial copy left behind is never linked or listed as a document.
         }
     }
 

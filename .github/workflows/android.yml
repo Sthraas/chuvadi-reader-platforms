@@ -26,10 +26,10 @@ on:
         options: [full, smoke, timeline]
 
 env:
-  # platform/foundation-pr: patch 24 (Excel number formats, CropBox, fresh-open fix) on Reader main f8971af.
-  FOUNDATION_REF: dd59362b1d82bddd6da00303e1729f518e98eb01
-  # platform/mobile-ui: Foundation 15033c8 merged, D-163 stopgap (H-22 is in mobile-ui-hooks-9.patch, Foundation's to take).
-  MOBILEUI_REF: 3ecbc75bf626033379bb7d1f73b84accad27ac18
+  # platform/foundation-pr: patch 25 parts 1-4 (AT-17, AT-16, D-164 cold open, H-22, Docs 2.1.0) on Reader main 4b724b0.
+  FOUNDATION_REF: 742a5daef7084f4e41052bcfbfa0e714c93f38eb
+  # platform/mobile-ui: patch 24 merged, H-23 Excel value bar proposal (in mobile-ui-hooks-9, Foundation's to take).
+  MOBILEUI_REF: 5c66f1a4ae5f2c36e06e9830f89c18d72b569e91
   DOTNET_NOLOGO: '1'
   DOTNET_CLI_TELEMETRY_OPTOUT: '1'
 
@@ -74,7 +74,8 @@ jobs:
 
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          # Pinned (AT-19): what is tested is what ships; move it deliberately. Same as Android Test's workflow.
+          dotnet-version: '10.0.403'
 
       - uses: actions/setup-java@v4
         with:

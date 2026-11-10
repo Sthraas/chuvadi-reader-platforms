@@ -66,19 +66,29 @@
     host-supplied notices contract). Taken from the exact runtime packs this build resolves, so they
     always match what ships. Read back by Platform/RuntimeNotices.cs.
   -->
-  <Target Name="ChuvadiRuntimeNotices" BeforeTargets="PrepareForBuild">
+  <!--
+    .NET's and .NET for Android's own third-party notices ship in the app (About › Licences › ".NET runtime").
+    Taken from the runtime packs this build actually resolved (AT-19: composing the path from the SDK's version
+    properties broke when SDK 10.0.404 resolved a different pack), so the notices always match the runtime shipped.
+    Notices are the same for every CPU type: the first pack of each is used. Runs in the outer build, after
+    _ResolveAssemblies has gathered every CPU type's files and before the assets are packaged.
+  -->
+  <Target Name="ChuvadiRuntimeNotices" AfterTargets="_ResolveAssemblies" Condition=" '$(RuntimeIdentifier)' == '' or '$(RuntimeIdentifiers)' == '' ">
+    <!-- The packs that System.Private.CoreLib (the .NET runtime) and Mono.Android (.NET for Android) were resolved
+         from: their package id and version (Release items point at the trimmed copies, so not their folder). -->
     <PropertyGroup>
-      <!-- Notices are the same for every CPU type; take them from the first runtime pack this build uses. -->
-      <_ChuvadiNoticeRid Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</_ChuvadiNoticeRid>
-      <_ChuvadiNoticeRid Condition="'$(_ChuvadiNoticeRid)' == ''">$([System.String]::Copy('$(RuntimeIdentifiers)').Split(';')[0])</_ChuvadiNoticeRid>
-      <_ChuvadiApi>$([System.Version]::Parse('$(TargetPlatformVersion)').Major)</_ChuvadiApi>
-      <_ChuvadiDotNetNotices>$(NetCoreTargetingPackRoot)/Microsoft.NETCore.App.Runtime.Mono.$(_ChuvadiNoticeRid)/$(BundledNETCoreAppPackageVersion)/THIRD-PARTY-NOTICES.TXT</_ChuvadiDotNetNotices>
-      <_ChuvadiDotNetNotices Condition="!Exists('$(_ChuvadiDotNetNotices)')">$(NuGetPackageRoot)microsoft.netcore.app.runtime.mono.$(_ChuvadiNoticeRid)/$(BundledNETCoreAppPackageVersion)/THIRD-PARTY-NOTICES.TXT</_ChuvadiDotNetNotices>
-      <_ChuvadiAndroidNotices>$(NetCoreTargetingPackRoot)/Microsoft.Android.Runtime.$(_ChuvadiApi).android/$(AndroidNETSdkVersion)/THIRD-PARTY-NOTICES.TXT</_ChuvadiAndroidNotices>
-      <_ChuvadiAndroidNotices Condition="!Exists('$(_ChuvadiAndroidNotices)')">$(NuGetPackageRoot)microsoft.android.runtime.$(_ChuvadiApi).android/$(AndroidNETSdkVersion)/THIRD-PARTY-NOTICES.TXT</_ChuvadiAndroidNotices>
+      <_ChuvadiNetPack>@(ResolvedFileToPublish->WithMetadataValue('Filename','System.Private.CoreLib')->'%(NuGetPackageId)/%(NuGetPackageVersion)')</_ChuvadiNetPack>
+      <_ChuvadiAndroidPack>@(ResolvedFileToPublish->WithMetadataValue('Filename','Mono.Android')->'%(NuGetPackageId)/%(NuGetPackageVersion)')</_ChuvadiAndroidPack>
+      <_ChuvadiNetPack>$(_ChuvadiNetPack.Split(';')[0])</_ChuvadiNetPack>
+      <_ChuvadiAndroidPack>$(_ChuvadiAndroidPack.Split(';')[0])</_ChuvadiAndroidPack>
+      <_ChuvadiDotNetNotices>$(NetCoreTargetingPackRoot)/$(_ChuvadiNetPack)/THIRD-PARTY-NOTICES.TXT</_ChuvadiDotNetNotices>
+      <_ChuvadiDotNetNotices Condition="!Exists('$(_ChuvadiDotNetNotices)')">$(NuGetPackageRoot)$(_ChuvadiNetPack.ToLowerInvariant())/THIRD-PARTY-NOTICES.TXT</_ChuvadiDotNetNotices>
+      <_ChuvadiAndroidNotices>$(NetCoreTargetingPackRoot)/$(_ChuvadiAndroidPack)/THIRD-PARTY-NOTICES.TXT</_ChuvadiAndroidNotices>
+      <_ChuvadiAndroidNotices Condition="!Exists('$(_ChuvadiAndroidNotices)')">$(NuGetPackageRoot)$(_ChuvadiAndroidPack.ToLowerInvariant())/THIRD-PARTY-NOTICES.TXT</_ChuvadiAndroidNotices>
     </PropertyGroup>
-    <Error Condition="!Exists('$(_ChuvadiDotNetNotices)')" Text="The app must ship .NET's third-party notices; not found at $(_ChuvadiDotNetNotices)." />
-    <Error Condition="!Exists('$(_ChuvadiAndroidNotices)')" Text="The app must ship .NET for Android's third-party notices; not found at $(_ChuvadiAndroidNotices)." />
+    <Message Importance="high" Text="Runtime notices: $(_ChuvadiDotNetNotices); $(_ChuvadiAndroidNotices)" />
+    <Error Condition="'$(_ChuvadiNetPack)' == '/' or !Exists('$(_ChuvadiDotNetNotices)')" Text="The app must ship .NET's third-party notices; not found for the resolved runtime pack '$(_ChuvadiNetPack)' ($(_ChuvadiDotNetNotices))." />
+    <Error Condition="'$(_ChuvadiAndroidPack)' == '/' or !Exists('$(_ChuvadiAndroidNotices)')" Text="The app must ship .NET for Android's third-party notices; not found for the resolved pack '$(_ChuvadiAndroidPack)' ($(_ChuvadiAndroidNotices))." />
     <ItemGroup>
       <AndroidAsset Include="$(_ChuvadiDotNetNotices)" Link="notices/dotnet-runtime.txt" />
       <AndroidAsset Include="$(_ChuvadiAndroidNotices)" Link="notices/dotnet-android.txt" />

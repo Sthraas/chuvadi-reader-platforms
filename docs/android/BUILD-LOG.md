@@ -791,3 +791,27 @@ same screen; no crash), smoke pass. With round 6 (API 36 phone and tablet, all c
 - **Run 42841112122** (all four, full, 8f173c9): **all green** — API 35 WebView gate 4/4 on both; gestures 10/10 and 9/9;
   platform 29/29 (phone) and 27/27 (tablet), AT-07, AT-08, AT-11, AT-12 included; Release launch pass on all four.
   Head for Android Test round 9: 8f173c9.
+
+### 61. AT-18 save pickers on; AT-19 notices from the resolved packs; Foundation 742a5da + Mobile UI 5c66f1a — coordinator, 11 Nov 02:25 IST
+- Composition: Foundation `742a5da` (platform/foundation-pr: patch 25 parts 1-4 — AT-17, AT-16, D-164 cold open, H-22,
+  Docs 2.1.0) + Mobile UI `5c66f1a` — clean. H-22 is in Foundation (67823ad); `mobile-ui-hooks-9.patch` now carries H-22
+  and H-23 together, so it applies neither way; H-23 (Excel value bar on the phone) waits for Foundation.
+- **AT-18 (S1):** `AndroidFilePicker.SavePickersEnabled` (hard-coded false since before the Ui delivered its saves) is
+  gone: Save as new PDF, Save redacted copy, Bind / Combined / lift PDFs, signed and flattened copies, password copies,
+  Merge and Split, PNG snapshots and the Bench session open Android's "save to" picker, and each is delivered by
+  `WriteBack.DeliverOrThrowAsync` → `AndroidFileWriteBack` (Ui audit: every one of the 30 picker sites delivers).
+  Folder picker on too, done properly for its two kinds of use:
+  - writing (Export pages, Scatter, Split to a folder, Press): the whole working folder is sent back, **subfolders
+    included**, and a file whose namesake is already there **replaces it** (it used to make "name (1)");
+  - reading (Library folder, watched folder, Settings' save folder): the folder's documents (PDF, DOCX, XLSX, and
+    subfolders) are copied in when it's picked, so the Library shows what it holds; a later save **into** that folder
+    sends that one file back at its place (it used to be "not needed" and never arrive). Copies brought in and not
+    changed are never written back. Limit: the copy is of the folder as it was when picked (not live).
+- **AT-19:** the notices target took its path from `$(BundledNETCoreAppPackageVersion)`, which SDK 10.0.404 moved off the
+  pack the build resolves. It now runs after `_ResolveAssemblies` and takes the package id and version of the
+  System.Private.CoreLib and Mono.Android the build actually resolved, so the shipped notices always match the shipped
+  runtime. The workflow's SDK is pinned to 10.0.403 (Android Test's too). `global.json` for every workflow is
+  Foundation's (repo root).
+- Sandbox: Android Debug and Release `-warnaserror` 0 warnings, both carry the two notices; Release manifest 14/14;
+  Core 305 (+3 skipped), Hosting 91, MobileUi 16, WebUi 41 pass. On-device save verification: Android Test's save suite
+  (SV-1 to SV-6) in round 10; my rounds don't drive the save picker.

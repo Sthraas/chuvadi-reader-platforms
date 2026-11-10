@@ -6,12 +6,14 @@ namespace ChuvadiReader.Android.Platform;
 
 /// <summary>
 /// Sends a file Chuvadi has written at a working path back to the document or folder the person
-/// chose (Foundation's IFileWriteBack). Files: the URI is truncated and rewritten ("wt"). Folders
-/// (from the tree picker): every file in the working folder is created in, or replaces its namesake
-/// in, the chosen folder.
-///
-/// NOTE: the Ui calls <see cref="CommitAsync"/> only once Foundation's Ui hooks are approved
-/// (EDITS-FOR-APPROVAL). Until then nothing calls it — see docs/android/DECISIONS.md, A-02.
+/// chose (Foundation's IFileWriteBack; the Ui calls it through <c>WriteBack.DeliverOrThrowAsync</c> after
+/// every save). Three cases:
+/// <list type="bullet">
+/// <item>a file linked to a document (opened, or chosen with Save as): the URI is truncated and rewritten ("wt");</item>
+/// <item>a folder from the folder picker (Export pages, Scatter, Split to a folder, Press): every file under it,
+/// subfolders included, is created in the chosen folder or replaces its namesake there;</item>
+/// <item>a file inside such a folder (a save into the default save folder): that file alone, at its place in it.</item>
+/// </list>
 /// </summary>
 public sealed class AndroidFileWriteBack : IFileWriteBack
 {
@@ -28,12 +30,14 @@ public sealed class AndroidFileWriteBack : IFileWriteBack
 
     private WriteBackResult Commit(string localPath, CancellationToken ct)
     {
-        var link = _links.Find(localPath);
-        if (link is null)
+        var owner = _links.FindOwner(localPath);
+        if (owner is null)
         {
-            // Not a picked or opened document (e.g. an internal scratch file): nothing to send.
+            // Not a picked or opened document, nor inside a picked folder (an internal scratch file): nothing to send.
             return WriteBackResult.NotNeeded;
         }
+
+        var (linkedPath, link) = owner.Value;
 
         var resolver = global::Android.App.Application.Context.ContentResolver;
         var uri = AUri.Parse(link.Uri);
@@ -50,14 +54,25 @@ public sealed class AndroidFileWriteBack : IFileWriteBack
                 return new WriteBackResult(WriteBackOutcome.Done);
             }
 
-            var parent = DocumentsContract.BuildDocumentUriUsingTree(uri, DocumentsContract.GetTreeDocumentId(uri))
+            var root = DocumentsContract.BuildDocumentUriUsingTree(uri, DocumentsContract.GetTreeDocumentId(uri))
                 ?? throw new IOException("The chosen folder is no longer available.");
-            foreach (var file in Directory.EnumerateFiles(localPath))
+            var full = Path.GetFullPath(localPath);
+            var files = Directory.Exists(full)
+                ? Directory.EnumerateFiles(full, "*", SearchOption.AllDirectories)
+                : File.Exists(full) ? new[] { full } : Array.Empty<string>();
+            foreach (var file in files.Where(f => !_links.IsUnchangedMirror(f)))
             {
                 ct.ThrowIfCancellationRequested();
-                var name = Path.GetFileName(file);
-                var target = DocumentsContract.CreateDocument(resolver, parent, MimeFor(name), name)
-                    ?? throw new IOException($"Couldn't create {name} in the chosen folder.");
+                var parts = Path.GetRelativePath(linkedPath, file).Split(Path.DirectorySeparatorChar);
+                var parent = root;
+                foreach (var folder in parts[..^1])
+                {
+                    parent = Child(resolver, uri, parent, folder, DocumentsContract.Document.MimeTypeDir)
+                        ?? throw new IOException($"Couldn't make the folder {folder} in the chosen folder.");
+                }
+
+                var target = Child(resolver, uri, parent, parts[^1], MimeFor(parts[^1]))
+                    ?? throw new IOException($"Couldn't create {parts[^1]} in the chosen folder.");
                 WriteFile(resolver, target, file, ct);
             }
 
@@ -93,9 +108,34 @@ public sealed class AndroidFileWriteBack : IFileWriteBack
         output.Flush();
     }
 
+    /// <summary>The named child of a folder in a picked tree: the existing one (so a save replaces its namesake
+    /// rather than making "name (1)"), or a new one.</summary>
+    private static AUri? Child(global::Android.Content.ContentResolver resolver, AUri tree, AUri parent, string name, string mime)
+    {
+        var children = DocumentsContract.BuildChildDocumentsUriUsingTree(tree, DocumentsContract.GetDocumentId(parent));
+        if (children is not null)
+        {
+            using var cursor = resolver.Query(children,
+                [DocumentsContract.Document.ColumnDocumentId, DocumentsContract.Document.ColumnDisplayName, DocumentsContract.Document.ColumnMimeType],
+                null, null, null);
+            while (cursor?.MoveToNext() == true)
+            {
+                var isDir = cursor.GetString(2) == DocumentsContract.Document.MimeTypeDir;
+                if (cursor.GetString(1) == name && isDir == (mime == DocumentsContract.Document.MimeTypeDir))
+                {
+                    return DocumentsContract.BuildDocumentUriUsingTree(tree, cursor.GetString(0));
+                }
+            }
+        }
+
+        return DocumentsContract.CreateDocument(resolver, parent, mime, name);
+    }
+
     private static string MimeFor(string name) => Path.GetExtension(name).ToLowerInvariant() switch
     {
         ".pdf" => DocumentTypes.Pdf,
+        ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ".xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         ".png" => "image/png",
         ".jpg" or ".jpeg" => "image/jpeg",
         ".json" => "application/json",
