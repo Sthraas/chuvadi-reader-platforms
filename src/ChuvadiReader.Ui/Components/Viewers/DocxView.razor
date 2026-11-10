@@ -23,6 +23,10 @@
     else
     {
         <div class="dv-stage" @ref="_scroll">
+            @if (_view.LeftOut.Count > 0)
+            {
+                <div class="dv-leftout" role="note">Part of this document is damaged and is left out: @string.Join(", ", _view.LeftOut).</div>
+            }
             <article class="dv-sheet @(_view.Landscape ? "ls" : null)" @ref="_page" style="zoom:@Css(Scale)">
                 @if (_view.Header.Count > 0)
                 {
@@ -141,9 +145,11 @@
         catch (Exception ex)
         {
             if (v != _version) return;
-            if (pw is not null)
+            if (pw is not null && ex is not DocumentViewException)
             {
-                _locked = true; // a wrong password can surface as a read failure
+                // D-168: Docs 2.1.0 reports a wrong password as a password error (caught above) and a damaged
+                // protected file as a format error, so a file the service could name as damaged is shown as damaged.
+                _locked = true; // anything else with a password given can still be the password
                 _unlockError = $"Couldn't open it with that password: {ex.Message}";
                 _password = null;
             }

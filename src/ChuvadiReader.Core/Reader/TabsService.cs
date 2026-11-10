@@ -618,20 +618,33 @@ public sealed class TabsService
         }
     }
 
+    // Saves go one at a time, each with the tab list as it is when its turn comes. Overlapping opens each save from
+    // their own thread; side by side, an older list could be written after a newer one (a tab missing at the next
+    // start), and a store that isn't built for two writers at once is never given two (Windows runner, 11 Nov).
+    private readonly SemaphoreSlim _persistGate = new(1, 1);
+
     private async Task PersistAsync(CancellationToken ct)
     {
-        var dto = TabsSnapshot().Select(t => new TabDto
+        await _persistGate.WaitAsync(ct).ConfigureAwait(false);
+        try
         {
-            Path = t.Path,
-            FileName = t.FileName,
-            Format = t.Format,
-            Page = t.CurrentPage,
-            Scale = t.Scale,
-            ScrollTop = t.ScrollTop,
-        }).ToList();
+            var dto = TabsSnapshot().Select(t => new TabDto
+            {
+                Path = t.Path,
+                FileName = t.FileName,
+                Format = t.Format,
+                Page = t.CurrentPage,
+                Scale = t.Scale,
+                ScrollTop = t.ScrollTop,
+            }).ToList();
 
-        await _storage.SetAsync(TabsKey, JsonSerializer.Serialize(dto), ct).ConfigureAwait(false);
-        await _storage.SetAsync(ActiveKey, Active?.Path ?? string.Empty, ct).ConfigureAwait(false);
+            await _storage.SetAsync(TabsKey, JsonSerializer.Serialize(dto), ct).ConfigureAwait(false);
+            await _storage.SetAsync(ActiveKey, Active?.Path ?? string.Empty, ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            _persistGate.Release();
+        }
     }
 
     private sealed class TabDto
