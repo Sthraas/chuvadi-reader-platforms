@@ -399,6 +399,7 @@
                 <button class="rrecover-x" @onclick="() => _recoverBannerDismissed = true" title="Dismiss"><Icon Name="x" Size="13" /></button>
             </div>
         }
+        _deskGen = _loadGen;   // this render has the desk for this generation (see OnAfterRenderAsync)
         <div class="rdesk @LayoutClass @(CurScale > 1.001 ? "zoomed" : null) @(Tab?.ScrollLocked == true ? "locked" : null)"
              style="--rpage-zoom:@Zoom" tabindex="-1" @ref="_desk">
             @foreach (var n in _pages)
@@ -1130,7 +1131,7 @@
             }
             else if (_markup)
             {
-                <SideRail Kind="tools" Heading="MARK">
+                <SideRail Kind="tools" Heading="TOOLS" Label="MARK">
                     <RailButton Icon="text-box" Label="Text" Keys="T" Active='_mkTool == "text" && !_sigOpen' OnClick='() => PickMkTool("text")' />
                     <RailButton Icon="file-image" Label="Image" Keys="I" Active='_mkTool == "image" && !_sigOpen' OnClick="PickImageTool" />
                     <RailButton Icon="shape-rect" Label="Rectangle" Keys="B" Active='_mkTool == "rect" && !_sigOpen' OnClick='() => PickMkTool("rect")' />
@@ -1154,7 +1155,7 @@
             }
             else if (_protect)
             {
-                <SideRail Kind="tools" Heading="PROTECT">
+                <SideRail Kind="tools" Heading="TOOLS" Label="PROTECT">
                     <RailButton Icon="redact" Label="Redact box" Keys="R" OnClick="() => GoRedact(false)" />
                     <RailButton Icon="find-in-page" Label="Find & redact" OnClick="() => GoRedact(true)" />
                     <RailButton Icon="stamp" Label="Stamp" Active='_card == "stamp" && _stampFocus != "watermark"' OnClick='() => OpenStamp("stamp")' />
@@ -1169,7 +1170,7 @@
             }
             else
             {
-                <SideRail Kind="tools" Heading="READ">
+                <SideRail Kind="tools" Heading="TOOLS" Label="READ">
                     <RailButton Icon="page-single" Label="Pages & outline" Active="_pagesDrawer" OnClick="TogglePagesDrawer" />
                     <RailButton Icon="bookmark" Label="Add bookmark" Keys="Ctrl B" OnClick="AddBookmarkHere" />
                     <RailButton Icon="snapshot" Label="Snapshot" Keys="S" Active="_tool == ReaderTool.Snapshot" OnClick="() => SetTool(ReaderTool.Snapshot)" />
@@ -1503,7 +1504,10 @@
     private PressResult? _pressResult;
     private string? _pressStatus;
     private int _loadGen;       // bumped when the active document changes or finishes loading
+    // The next init is for another document: the page kept in view belongs to the last one (Android round 5 drift).
+    private bool _initNewDocument;
     private int _observedGen;   // last generation the JS observers were attached to
+    private int _deskGen;       // the generation the last render drew the desk for
 
     private bool _curl = true;
     private string _pageInput = "1";
@@ -1734,6 +1738,10 @@
         MoveImage, ResizeImage,
     }
     private MkMode _mkMode = MkMode.None;
+    // The press in flight (AT-15). A press reads the layer's rectangle from JS before it sets
+    // _mkMode, so on a slow device a quick finger tap's pointerup can arrive first and find no
+    // gesture. MkUp waits for the press, so a tap still places its text box.
+    private Task _mkPress = Task.CompletedTask;
 
     private readonly Dictionary<int, List<TextBox>> _texts = new();
     private readonly Dictionary<int, List<ShapeBox>> _shapes = new();
@@ -2398,7 +2406,9 @@
         catch { return false; }
     }
 
-    private async Task MkDown(PointerEventArgs e, int page)
+    private Task MkDown(PointerEventArgs e, int page) => _mkPress = MkDownPress(e, page);
+
+    private async Task MkDownPress(PointerEventArgs e, int page)
     {
         if (!_markup || e.Button != 0) return;
         EnsureMarkupDoc();
@@ -2548,8 +2558,15 @@
         }
     }
 
-    private void MkUp(PointerEventArgs e)
+    private async Task MkUp(PointerEventArgs e)
     {
+        if (!_mkPress.IsCompleted)
+        {
+            // The pointerup beat the press: finish the press, then apply this point as the
+            // gesture's last move (the moves before it were dropped).
+            await _mkPress;
+            MkMove(e);
+        }
         MkUpCore(e);
         MkEndGesture();
     }
@@ -2659,7 +2676,9 @@
         _mkStatus = null; _mkSavedPath = null;
     }
 
-    private async Task StartMove(PointerEventArgs e, int page, TextBox tb)
+    private Task StartMove(PointerEventArgs e, int page, TextBox tb) => _mkPress = StartMovePress(e, page, tb);
+
+    private async Task StartMovePress(PointerEventArgs e, int page, TextBox tb)
     {
         if (!await CacheLayerRect(page)) return;
         SelectText(page, tb);
@@ -2669,7 +2688,9 @@
         _mkMode = MkMode.MoveText;
     }
 
-    private async Task StartResize(PointerEventArgs e, int page, TextBox tb)
+    private Task StartResize(PointerEventArgs e, int page, TextBox tb) => _mkPress = StartResizePress(e, page, tb);
+
+    private async Task StartResizePress(PointerEventArgs e, int page, TextBox tb)
     {
         if (!await CacheLayerRect(page)) return;
         SelectText(page, tb);
@@ -2699,7 +2720,9 @@
         _mkStatus = null; _mkSavedPath = null;
     }
 
-    private async Task StartMoveShape(PointerEventArgs e, int page, ShapeBox sb)
+    private Task StartMoveShape(PointerEventArgs e, int page, ShapeBox sb) => _mkPress = StartMoveShapePress(e, page, sb);
+
+    private async Task StartMoveShapePress(PointerEventArgs e, int page, ShapeBox sb)
     {
         if (!await CacheLayerRect(page)) return;
         SelectShape(page, sb);
@@ -2710,7 +2733,9 @@
         _mkMode = MkMode.MoveShape;
     }
 
-    private async Task StartResizeShape(PointerEventArgs e, int page, ShapeBox sb)
+    private Task StartResizeShape(PointerEventArgs e, int page, ShapeBox sb) => _mkPress = StartResizeShapePress(e, page, sb);
+
+    private async Task StartResizeShapePress(PointerEventArgs e, int page, ShapeBox sb)
     {
         if (!await CacheLayerRect(page)) return;
         SelectShape(page, sb);
@@ -2720,7 +2745,9 @@
         _mkMode = MkMode.ResizeShape;
     }
 
-    private async Task StartLineEnd(PointerEventArgs e, int page, ShapeBox sb, bool isEnd)
+    private Task StartLineEnd(PointerEventArgs e, int page, ShapeBox sb, bool isEnd) => _mkPress = StartLineEndPress(e, page, sb, isEnd);
+
+    private async Task StartLineEndPress(PointerEventArgs e, int page, ShapeBox sb, bool isEnd)
     {
         if (!await CacheLayerRect(page)) return;
         SelectShape(page, sb);
@@ -2894,7 +2921,9 @@
             ib.Rotation = Math.Clamp(v, -180, 180);
     }
 
-    private async Task StartMoveImage(PointerEventArgs e, int page, ImageBox ib)
+    private Task StartMoveImage(PointerEventArgs e, int page, ImageBox ib) => _mkPress = StartMoveImagePress(e, page, ib);
+
+    private async Task StartMoveImagePress(PointerEventArgs e, int page, ImageBox ib)
     {
         if (!await CacheLayerRect(page)) return;
         SelectImage(page, ib);
@@ -2904,7 +2933,9 @@
         _mkMode = MkMode.MoveImage;
     }
 
-    private async Task StartResizeImage(PointerEventArgs e, int page, ImageBox ib)
+    private Task StartResizeImage(PointerEventArgs e, int page, ImageBox ib) => _mkPress = StartResizeImagePress(e, page, ib);
+
+    private async Task StartResizeImagePress(PointerEventArgs e, int page, ImageBox ib)
     {
         if (!await CacheLayerRect(page)) return;
         SelectImage(page, ib);
@@ -3329,6 +3360,7 @@
             CancelRenders();
             _pages = pageCount > 0 ? Enumerable.Range(0, pageCount).ToList() : new();
             _loadGen++;
+            _initNewDocument = true;
             _restoreScroll = pageCount > 0;
             _pageColorOpen = false;
             _renderFailed = false;
@@ -3397,11 +3429,24 @@
             }
         }
 
-        if (_observedGen != _loadGen)
+        // Linux fresh-open stall: a document that finishes loading between a render and its OnAfterRender was armed
+        // with the desk of the render before — the loading view had removed that desk — so init failed silently, no
+        // page was ever asked for and the fit measured nothing. The observers are armed only after a render that drew
+        // the desk for this generation, and again on the next render if arming failed.
+        if (_observedGen != _loadGen && _deskGen == _loadGen)
         {
+            var newDocument = _initNewDocument;
+            try
+            {
+                await _js.InvokeVoidAsync("init", _desk, _ref, newDocument);
+            }
+            catch (JSException)
+            {
+                return;   // not armed: the next render tries again
+            }
+
             _observedGen = _loadGen;
-            try { await _js.InvokeVoidAsync("init", _desk, _ref); }
-            catch { }
+            _initNewDocument = false;
 
             if (_tool != ReaderTool.None)
             {
@@ -3417,7 +3462,14 @@
                 _restoreScroll = false;
                 tab.TwoPage = false;
                 tab.Continuous = false;
-                await ApplyFit(Platform.FormFactor == ChuvadiReader.Platform.FormFactor.Phone ? ReaderFitMode.Width : ReaderFitMode.Page);
+                // From its first page: the desk is shared by every tab, so it still had the last document's
+                // scroll offset (Android round 5: a shared PDF shown on 2–4 of 4 with no input).
+                try { await _js.InvokeVoidAsync("setScrollTop", _desk, 0); }
+                catch { }
+                // A page that takes longer than the fit waits for (a heavy sheet on a cold app) is fitted when it lands.
+                _firstFit = Platform.FormFactor == ChuvadiReader.Platform.FormFactor.Phone ? ReaderFitMode.Width : ReaderFitMode.Page;
+                _firstFitTab = await ApplyFit(_firstFit, drawnOnly: true) ? null : tab.Id;
+                _firstFitScale = tab.Scale;
             }
             else if (_restoreScroll)
             {
@@ -3531,7 +3583,11 @@
             }
 
             cts.Dispose();
-            await InvokeAsync(StateHasChanged);
+            await InvokeAsync(async () =>
+            {
+                StateHasChanged();
+                await FirstFitWhenDrawnAsync(session);
+            });
         }
     }
 
@@ -3909,25 +3965,55 @@
         await ApplyFit(ReaderFitMode.Page);
     }
 
-    private async Task ApplyFit(ReaderFitMode mode)
+    /// <param name="drawnOnly">Measure a drawn page only (a placeholder's size isn't the page's); false when none is drawn yet.</param>
+    /// <returns>True when the fit was applied.</returns>
+    private async Task<bool> ApplyFit(ReaderFitMode mode, bool drawnOnly = false)
     {
         var tab = Tabs.Active;
         if (tab?.Session is null || _js is null)
         {
-            return;
+            return false;
         }
 
         try
         {
-            var s = await _js.InvokeAsync<double>("measureFit", _desk, mode == ReaderFitMode.Width ? "width" : "page");
+            var s = await _js.InvokeAsync<double>("measureFit", _desk, mode == ReaderFitMode.Width ? "width" : "page", drawnOnly);
             if (s > 0)
             {
                 tab.Scale = s;
                 tab.FitMode = mode;
                 StateHasChanged();
+                return true;
             }
         }
         catch { }
+
+        return false;
+    }
+
+    // The first fit of a document whose first page wasn't drawn in time: applied when one of its pages lands, unless
+    // the person zoomed or fitted it meanwhile.
+    private string? _firstFitTab;
+    private ReaderFitMode _firstFit;
+    private double _firstFitScale;   // the zoom it opened at: a different one means the person chose their own
+
+    private async Task FirstFitWhenDrawnAsync(IPdfSession session)
+    {
+        if (_firstFitTab is null || Tabs.Active is not { } tab || tab.Id != _firstFitTab || !ReferenceEquals(tab.Session, session))
+        {
+            return;
+        }
+
+        if (tab.Scale != _firstFitScale)
+        {
+            _firstFitTab = null;   // zoomed or fitted by hand meanwhile: theirs stands
+            return;
+        }
+
+        if (await ApplyFit(_firstFit, drawnOnly: true))
+        {
+            _firstFitTab = null;
+        }
     }
 
     private void ActualSize()

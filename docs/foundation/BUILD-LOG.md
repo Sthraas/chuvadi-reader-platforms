@@ -359,3 +359,62 @@ Reproduced in the desktop preview, which now opens real files (`CHVD_OPEN`, test
      - New `MemoryReliefNotice.Relieved` (Core, public static event) is raised after each relief pass, so the Linux host can call `malloc_trim(0)` there. That's the Linux chat's one line.
 - 366/366 tests (2 runs); 0 warnings in both solutions; trimmed probe 54/54; find-typing 3/3.
 
+### 45. Twentieth combined patch: the relief pass waits for the finalizer thread (D-158 part 1)
+- **Linux 36c on the nineteenth patch:** 80 s after closing, the heap still held 681–807 MB that one more aggressive collection cleared.
+- **Cause:** the shared byte pool lets go of idle buffers in a callback that runs on the finalizer thread *after* a full collection. The second pass collected again at once, so the buffers it trimmed became garbage just afterwards, and an idle app ran no further collection.
+  - Reproduced with a test-only console program: buffers grown 8 → 128 MB on four pool threads (744 MB pooled), idle 62 s.
+  - Today's pass left 248 MB live, which a later collection took down to 128 MB. With the wait, 128 MB right after the pass.
+  - The pool keeps ~128 MB per long-lived thread whatever we do. D-158 part 2 (page images by address) removes the huge strings that grow these buffers in the first place.
+- **Fix:** `MemoryRelief.Pass()`, used by both passes: two full collections, each followed by `GC.WaitForPendingFinalizers()`, then the aggressive one, then `MemoryReliefNotice`.
+- **Test:** `A_relief_pass_also_frees_what_finalizers_release_during_it`. A stand-in drops a 96 MB buffer from its finalizer; after one pass, the buffer is gone. Without the waits it fails or passes depending on the race (1 of 2 runs failed). With them, 3 of 3 pass.
+- 367/367 tests; 0 warnings in both solutions.
+
+### 46. Twenty-first combined patch: page images by address (D-158 part 2)
+See `docs/foundation/PAGE-IMAGES.md` for the design, the hooks per host and the proof.
+- **Core:**
+  - `PageImages` store;
+  - `ChuvadiPdfReader(PageImages, IPageImageOwner)`: raster pages are kept in the store and drawn from `_chvd/pages/<token>.png`. The parameterless reader still draws inline, for tools and the existing tests.
+- **Platform:** `IPageImageOwner` with `LocalPageImageOwner` (`"local"`).
+- **Hosting:**
+  - `PageImageFileProvider`;
+  - registrations `Seam<IPageImageOwner, LocalPageImageOwner>` and `Shared<PageImages>` (one per process, whatever the lifetime);
+  - a reference to `Microsoft.Extensions.FileProviders.Abstractions`, already in every WebView host.
+- **Windows:** `ChuvadiWebView`.
+- **Preview:** the endpoint, with the same rules as the portal's except sign-in.
+- Pixel-identical raster page (1× and 2×, twice); preview memory 2354 → 438 MB with the same pages shown.
+- 385/385 tests (2 runs); 0 warnings in both solutions; trimmed probe 56/56.
+
+### 47. Twenty-second combined patch: H-20 (Mobile UI, platform/mobile-ui c5c0b7e; D-134, D-151)
+- Mobile UI's `H20-tools-rail-heading.patch`, unchanged: `SideRail` gains `Label` (its `aria-label` is `Label ?? Heading`). The five tools rails show **TOOLS** and keep their mode name as the label (READ, MARK, PROTECT twice, ARRANGE), so a screen reader hears what it heard before. The view-only document's rail already said TOOLS.
+- Guard: `ToolsRailHeadingTests` (all six tools rails say TOOLS; the five mode names stay as labels; the rail's aria-label reads `Label ?? Heading`).
+- **Windows behaviour change (D-134):** the tools rail heading reads TOOLS instead of READ/MARK/PROTECT/ARRANGE. Desktop before/after: only the rail heading differs (≈ 40 × 6 px at 1×, at the rail's top), plus Home's clock artefact. Every other screen identical.
+- 386/386 tests; 0 warnings in both solutions.
+
+### 48. PR #13's first Windows run: a test measured its own stack (10 Nov)
+- **The failure:** `Closing_a_heavy_document_brings_memory_back_near_where_it_was` failed once on windows-latest with 72 MB still live after the close (limit 16 MB). The re-run passed. Not H-20's (rail markup only).
+- **Found by reproducing the pattern and taking a heap dump:** `gcroot` on the 72 MB page string led to a stack slot of the test helper's own async frame (`MoveNext` of the helper that drew the page). When the drawn page's task completes, the test method can carry on inline, on top of that frame, and measures memory while the frame still holds the page. Whether it runs inline depends on timing, which is why the failure was intermittent. Nothing in the app held it.
+- **Fixed in the test:** `await Task.Yield()` after the helper and after the relief, so the measurement runs on a fresh stack. No production change.
+- 386/386 tests; 0 warnings.
+
+
+### 49. Twenty-third combined patch: Android Test round 5 — Mark with a finger (AT-15), the page box after opening a document, Find (AT-09) (10 Nov)
+- **AT-15, found:** Android's host says `Pen` always (`AndroidHostServices.Input`: Touch | Pen | Keyboard), so `<html data-input>` has "pen" on every phone and tablet. The pen split (design 12e, D-42: the pen marks, a finger pans) then took every finger that started on the markup layer: it stopped the pointerdown and captured the pointer to the desk. That is exactly Android Test's log (pointerdown on `.mk-layer`, pointerup on `.rdesk`). **Fixed (reader.js):** the split starts only after a pen has touched the desk in this run; until then a finger marks. A host says "pen" when the system supports one, not when one is there.
+- **AT-15, second point (the awaited rectangle):** every markup press (`MkDown`, the move/resize starts for text, shapes, lines and images, and Redact's `MkDown`) is now a tracked task; `MkUp` waits for a press still in flight and applies the lift point as the last move. Not reproducible in the preview (Blazor Server sends one event at a time); kept because Android's WebView may not, and it does nothing when the press is done.
+- **Page box drift, found:** the desk is shared by every tab, so a document shown for the first time kept the last document's scroll offset; and since the nineteenth patch (f88f9ef) the last document's anchor page was carried into the next `init`, pulling the new one to that page as its heights changed — "page 1, then 4 of 4 two seconds later". **Fixed:** `init` takes `newDocument` (set when the active tab changes) and starts with no anchor; a document shown for the first time is put at its top before the fit.
+- **AT-09 on tablet, found:** with the page taller than the view, the Find scroll was undone by a page drawn during it (the anchor still pointed at the page's top), and a match at a page's foot placed a third of the way down left the next page covering most of the view, so the page box named that page. **Fixed (scrollToMatch):** the anchor is the match's place, and the view stays on the match's page where the match allows (it ends at the page's foot instead of showing the next page). Snapping pages are left to the snap.
+- **Proof:** `tools/PixelProof/touch-markup.js` (tablet preview; finger tap → text box, finger drag → rectangle, slow rectangle read, after a pen a finger pans): before 0/5, after 5/5, 4 runs. `tools/PixelProof/page-box.js` (tablet preview, Android Test's `doc-12p.pdf` and a 4-page PDF, one fresh preview per case): before 1/5 (opening after page 9, 3, 12: box 4, 3, 4; Find at fit width: match off screen), after 5/5.
+- **Guards:** `TouchMarkupTests` (the split waits for a pen; every press is tracked and `MkUp` waits), `PageBoxTests` (`init` drops the anchor for another document; the first show starts at the top; Find anchors the match and stays on its page). Both fail on 846706e.
+- **Windows behaviour changes:** a document shown for the first time opens at its top (it kept the last tab's scroll offset); Find on a zoomed or tall page keeps the view on the match's page and the match stays put while pages draw. The pen split never runs on Windows (no "pen"). Desktop before/after: every screen identical apart from Home's clock artefact.
+- **Linux:** the same three changes apply (shared Ui); Linux declares no pen, so only the first-show and Find changes are seen there.
+- AT-13 (renders off the UI thread, re-render after reopen): the render and memory tests 25 runs in a row, see the status.
+
+### 50. Twenty-fourth combined patch: show what the file holds — Excel number formats (D-161), the CropBox everywhere (D-160 revised), the audit, and the Linux fresh-open stall (10 Nov)
+- **Excel (D-161):** every cell shows Chuvadi.Sheets' display text (`Cell.GetDisplayText`) in the system culture (`NumberFormatOptions.Culture = CultureInfo.CurrentCulture`; en-IN gives 12,34,567 and ₹ 12,34,567.50), colour sections colour the text, a conditional format's number format, fill and font apply, and a `*` fill keeps an accounting symbol at the left edge. The stored value stays underneath, unchanged (`SheetCell.Value`: numbers in their shortest exact form, dates as the stored day count, TRUE/FALSE, text as written): copy all and Find use it, hovering a cell shows it, and clicking or tapping a cell shows it in a value bar above the grid. Numbers and dates align right, booleans centre. No formatting is done in the app. **The Web host must set the request's culture to the person's** (the server's own culture is not theirs).
+- **What the library can't show yet** is listed as SH-L1 to SH-L10 in `FILE-FIDELITY-AUDIT.md`; the two that matter most: time-only cells show `########` and lose their value (SH-L1), and built-in date 14 shows 03-15-23 on en-IN where Excel shows 15-03-2023 (SH-L2).
+- **CropBox (D-160 revised):** chuvadi-pdf 3.32.0 already draws the CropBox and nothing passes another box. But everything the Reader placed on a page still used the MediaBox, so on a cropped page it landed elsewhere. New `ShownBox` (CropBox within MediaBox, inherited ones too); redaction boxes, text, shape and image markups, page numbers, the bench's crop, margins, resize and N-up, measuring, redaction search boxes, the raster page's SVG size (it was stretched) and Properties' page size all use it. Files whose boxes are equal are unchanged, byte for byte paths included (`AtOrigin`). Library: headers/footers and watermarks still sit on the MediaBox (PDF-L1, PDF-L2).
+- **Audit:** `docs/foundation/FILE-FIDELITY-AUDIT.md` — 17 Excel, 8 PDF, 5 Word and 4 Markdown/text/HTML items, each with a fix or a library item, and three questions for Arun.
+- **Linux fresh-open stall (bf60da9), found by reproducing it** (`tools/PixelProof/fresh-open.js`, preview `POST /__preview/open`): when a document finished loading between a render and its `OnAfterRender`, the observers were armed with the previous render's desk element, which the loading view had already removed. `init` failed silently, so no page was ever asked for and the fit measured nothing — the portrait placeholder at the old zoom, for good. Before: 10 of 13 fresh opens never drew sheet 1. **Fixed:** armed only after a render that drew the desk for this generation, retried if arming fails; and a first page that takes longer than the fit's 2 s wait is fitted when it lands (unless the person zoomed meanwhile). After: 17 of 17 drawn and fitted.
+- **Found on the way (anchor, nineteenth patch):** the anchor is taken 200 ms after scrolling stops, so a page that changed size just after a wheel or finger scroll pulled the view back to where it had been. Now a resize after the person's own scrolling takes the anchor afresh. `page-anchor.js` case 4: before FAIL (page 10, wanted 12), after PASS; cases 1–3 unchanged.
+- **Tests:** `XlsxDisplayTests` (34, hand-written Excel en-IN results, and every stored value against the sheet's own XML), `OfficeViewTests` moved onto the stored value, `CropBoxTests` (11; 6 fail without the fix), `FreshOpenTests`. Three skipped tests name their library item (SH-L1, PDF-L1, PDF-L2). 438 pass, 3 skipped; 0 warnings in both solutions; trimmed probe 56 of 56; no startup cost (nothing runs before a workbook or cropped page is opened).
+- **Windows behaviour changes:** Excel cells show their formats and the value bar appears on click; on PDFs with a CropBox, redaction, markups, numbering, bench tools, measuring and Properties follow the page as shown; a document opened while another loads is always drawn and fitted; scrolling is never pulled back by a page landing. Desktop screens before/after: identical (Home's known 1× artefact apart).
+- **Linux:** all of the above apply. The fresh-open fix and the anchor change are the ones Linux Test should re-check (36c first run).

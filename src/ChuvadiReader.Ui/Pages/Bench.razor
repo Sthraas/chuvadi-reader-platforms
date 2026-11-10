@@ -1152,7 +1152,7 @@
     </div>
 
     <div class="mview-rails">
-        <SideRail Kind="tools" Heading="ARRANGE">
+        <SideRail Kind="tools" Heading="TOOLS" Label="ARRANGE">
             <RailButton Icon="shelf" Label="Shelf" Active="!_shelfHidden" OnClick="() => _shelfHidden = !_shelfHidden" />
             <RailButton Icon="folder" Label="@(ChuvadiReader.Ui.Components.Platform.PlatformText.FetchOrUpload(Platform, "Fetch file", "Upload file"))" Disabled="@(_busy || _fetching)" OnClick="FetchFile" />
             <RailButton Icon="plus" Label="Add desk" Disabled="@(_busy || !BenchSvc.CanAddDesk)" DisabledReason="@(BenchSvc.CanAddDesk ? null : "30-desk limit reached")" OnClick="AddDesk" />

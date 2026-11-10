@@ -221,7 +221,7 @@
     </div>
 
     <div class="mview-rails">
-        <SideRail Kind="tools" Heading="PROTECT">
+        <SideRail Kind="tools" Heading="TOOLS" Label="PROTECT">
             <RailButton Icon="redact" Label="Redact box" Keys="R" Active="!_findOpen" OnClick="() => _findOpen = false" />
             <RailButton Icon="find-in-page" Label="Find & redact" Active="_findOpen" Disabled="@(_session is null)" OnClick="ToggleFind" />
             <RailButton Icon="stamp" Label="Stamp" OnClick='() => BackToProtect("stamp")' />
@@ -511,7 +511,13 @@
         catch { return false; }
     }
 
-    private async Task MkDown(PointerEventArgs e, int page)
+    // The press in flight (AT-15): MkUp waits for it, so a quick tap's pointerup that arrives
+    // before the layer's rectangle is read still finishes the box.
+    private Task _press = Task.CompletedTask;
+
+    private Task MkDown(PointerEventArgs e, int page) => _press = MkDownPress(e, page);
+
+    private async Task MkDownPress(PointerEventArgs e, int page)
     {
         if (_session is null || e.Button != 0) return;
         if (!await CacheLayerRect(page)) return;
@@ -533,8 +539,9 @@
                              Math.Abs(cx - _startX), Math.Abs(cy - _startY));
     }
 
-    private void MkUp(PointerEventArgs e)
+    private async Task MkUp(PointerEventArgs e)
     {
+        if (!_press.IsCompleted) { await _press; MkMove(e); }
         if (_drawState == DrawState.Draw && _draft is { } rd && rd.W > 0.005 && rd.H > 0.005)
         {
             if (!_redactions.TryGetValue(_draftPage, out var list))

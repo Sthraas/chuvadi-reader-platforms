@@ -44,6 +44,19 @@ if (web)
 }
 
 var app = builder.Build();
+// D-158: drawn page images by address. The preview is one person on one machine (owner "local"); the portal's
+// own endpoint checks the signed-in user's session instead and answers 404 to anyone else.
+app.MapGet("/" + ChuvadiReader.Core.Reader.PageImages.PathPrefix + "{file}", (string file, HttpContext http,
+    ChuvadiReader.Core.Reader.PageImages images, ChuvadiReader.Platform.IPageImageOwner owner) =>
+{
+    if (!ChuvadiReader.Core.Reader.PageImages.TryParseAddress(file, out var token) || !images.TryGet(token, owner.Current, out var png))
+    {
+        return Results.NotFound();
+    }
+
+    http.Response.Headers.CacheControl = "private, no-store";
+    return Results.Bytes(png, "image/png");
+});
 app.MapGet("/__preview/window-log", () => Results.Ok(new { drags = windowLog.Drags, maximizes = windowLog.Maximizes }));
 if (linux)
 {
@@ -92,8 +105,16 @@ var first = await tabs.OpenAsync(a, Path.GetFileName(a), DocumentFormat.Pdf);
 // CHVD_OPEN=path;path: also open these real files (memory and render checks with heavy test PDFs); the last is active.
 foreach (var extra in (Environment.GetEnvironmentVariable("CHVD_OPEN") ?? "").Split(';', StringSplitOptions.RemoveEmptyEntries))
 {
-    first = await tabs.OpenAsync(extra, Path.GetFileName(extra), DocumentFormat.Pdf);
+    first = await tabs.OpenAsync(extra, Path.GetFileName(extra), DocumentFormatExtensions.FromPath(extra));
 }
+
+// POST /__preview/open?path=…: open a real file while the app runs, as a host's Open does (the Linux fresh-open check).
+app.MapPost("/__preview/open", async (string path) =>
+{
+    var tab = await tabs.OpenAsync(path, Path.GetFileName(path), DocumentFormatExtensions.FromPath(path));
+    shell.SetMode(DocMode.Read, tab.Id);
+    return Results.Ok(new { tab.Id });
+});
 
 shell.SetMode(DocMode.Read, first.Id);
 
