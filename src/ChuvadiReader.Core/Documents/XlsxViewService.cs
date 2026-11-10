@@ -6,8 +6,8 @@ namespace ChuvadiReader.Core.Documents;
 // ─────────────────────────────────────────────────────────────────────────────
 // Presentation-free render model for a spreadsheet. One WorkbookView holds the
 // sheets; each SheetView is a sparse list of populated cells plus geometry.
-// (v1: merged ranges are not exposed by the reader, so cells render unmerged;
-//  per-cell styles render only when the reader surfaces them.)
+// D-161: each cell shows its display text (the number format, in the system culture) and keeps
+// its stored value underneath.
 // ─────────────────────────────────────────────────────────────────────────────
 
 public sealed record WorkbookView(IReadOnlyList<SheetView> Sheets);
@@ -24,12 +24,26 @@ public sealed record SheetView(
     public int ColCount => LastCol - FirstCol + 1;
 }
 
+/// <summary>One cell. D-161: <see cref="Text"/> is what Excel shows for it — the stored value through the cell's number
+/// format (and a conditional format's), in the system culture, by Chuvadi.Sheets; <see cref="Value"/> is the value the file
+/// stores, unchanged (copy, export, search and the value shown on hover or selection use it).</summary>
 public sealed record SheetCell(
     int Row, int Col, string Text, string Align,
     bool Bold, bool Italic, bool Underline,
     string? Color, string? Fill, bool IsNumber,
     string? FontName = null, double? FontSizePt = null, bool Wrap = false,
-    string VAlign = "Bottom");
+    string VAlign = "Bottom")
+{
+    /// <summary>The stored value as text: numbers and dates as the number the file stores (dates and times are serial
+    /// numbers in Excel's date system), booleans TRUE/FALSE, text and errors as written.</summary>
+    public string Value { get; init; } = Text;
+
+    /// <summary>Where a "*x" format fills the cell with x (the index in <see cref="Text"/>), or null.</summary>
+    public int? FillIndex { get; init; }
+
+    /// <summary>The character a "*x" format repeats to fill the cell, or null.</summary>
+    public char? FillCharacter { get; init; }
+}
 
 /// <summary>Loads an .xlsx into a <see cref="WorkbookView"/> via <c>Chuvadi.Sheets</c>.</summary>
 public sealed class XlsxViewService
@@ -43,6 +57,10 @@ public sealed class XlsxViewService
         options.CancellationToken = cancellationToken;
         return options;
     }
+
+    /// <summary>D-161: the culture whose separators, grouping, date order and names Excel takes from the system (Excel
+    /// shows a file by the computer's settings). Null: the system's (<see cref="CultureInfo.CurrentCulture"/>).</summary>
+    public CultureInfo? Culture { get; init; }
 
     /// <param name="cancellationToken">Stops the read (B-08b): "Stop opening", a closed tab, or the viewer's time limit.</param>
     public WorkbookView Load(string path, string? password = null, CancellationToken cancellationToken = default)
@@ -69,6 +87,7 @@ public sealed class XlsxViewService
         }
 
         var sheets = new List<SheetView>(wb.Sheets.Count);
+        var format = new NumberFormatOptions { Culture = Culture ?? CultureInfo.CurrentCulture, Date1904 = wb.Date1904 };
 
         foreach (var s in wb.Sheets)
         {
@@ -82,13 +101,14 @@ public sealed class XlsxViewService
 
             int minR = int.MaxValue, maxR = 0, minC = int.MaxValue, maxC = 0;
             var cells = new List<SheetCell>(raw.Count);
+            var conditional = s.ConditionalFormats.Count == 0 ? null : s.EvaluateConditionalFormats(new ConditionalFormatOptions { Date1904 = wb.Date1904 });
             foreach (var c in raw)
             {
                 if (c.Row < minR) minR = c.Row;
                 if (c.Row > maxR) maxR = c.Row;
                 if (c.Column < minC) minC = c.Column;
                 if (c.Column > maxC) maxC = c.Column;
-                cells.Add(MapCell(c));
+                cells.Add(MapCell(c, wb, format, conditional?.Evaluate(c.Row, c.Column)));
             }
 
             var widths = new Dictionary<int, double>();
@@ -109,50 +129,60 @@ public sealed class XlsxViewService
         return new WorkbookView(sheets);
     }
 
-    private static SheetCell MapCell(Cell c)
+    internal static SheetCell MapCell(Cell c, Workbook wb, NumberFormatOptions format, ConditionalFormatResult? conditional)
     {
-        CellStyle? st = c.Style;
-        bool isNum = c.Value is double or float or int or long or decimal;
-        string text = FormatValue(c.Value);
+        CellStyle? own = c.Style;
+        // A conditional format changes the style Excel shows (fill, font, number format) while its rule holds.
+        CellStyle? st = conditional is { IsEmpty: false } && own is { } o ? conditional.ApplyTo(o) : own;
+        var value = c.Value;
+        bool isNum = value is double or float or int or long or decimal or DateTime or DateTimeOffset or DateOnly or TimeOnly or TimeSpan;
+
+        // D-161: the text is Chuvadi.Sheets' display text. A conditional number format goes through the same formatter.
+        string? conditionalCode = conditional is { IsEmpty: false } ? conditional.NumberFormat : null;
+        string text = conditionalCode is null ? c.GetDisplayText(format) : NumberFormatter.Format(value, conditionalCode, format);
+        string? code = conditionalCode ?? own?.NumberFormat
+            ?? (own?.NumberFormatId is int id ? wb.StyleTable.GetNumberFormatCode(id) : null);
+        FormattedValue? detail = code is null || value is null ? null : NumberFormatter.FormatDetailed(value, code, format);
+
         string align = st is { } s && s.HAlign != HorizontalAlign.General
             ? s.HAlign.ToString()
-            : (isNum ? "Right" : "Left");
+            : (isNum ? "Right" : value is bool ? "Center" : "Left");
+
+        // The colour a format code names ([Red], [Color10]) is the one Excel shows; a conditional format's own font colour wins.
+        string? fontColour = conditional is { IsEmpty: false } && own is { } before && st?.FontColor != before.FontColor
+            ? Hex(st?.FontColor)
+            : (detail?.Color is { } named ? "#" + named : Hex(st?.FontColor));
 
         return new SheetCell(
             c.Row, c.Column, text, align,
             st?.Bold ?? false, st?.Italic ?? false, st?.Underline ?? false,
-            Hex(st?.FontColor), Hex(st?.FillColor), isNum,
+            fontColour, Hex(st?.FillColor), isNum,
             st is { } fs && !string.IsNullOrWhiteSpace(fs.FontName) ? fs.FontName : null,
             st is { } ss && ss.FontSize > 0 ? ss.FontSize : null,
             st?.WrapText ?? false,
-            st is { } vs && vs.VAlign != VerticalAlign.Bottom ? vs.VAlign.ToString() : "Bottom");
+            st is { } vs && vs.VAlign != VerticalAlign.Bottom ? vs.VAlign.ToString() : "Bottom")
+        {
+            Value = StoredValue(value, wb.Date1904),
+            FillIndex = detail is { FillCharacter: not null } d ? d.FillIndex : null,
+            FillCharacter = detail?.FillCharacter,
+        };
     }
 
-    // Displays the cell's value as-is. Interpreting the workbook's number-format code
-    // (percent, thousands, decimals, date masks, etc.) is the library's job and must NOT
-    // be re-implemented here — when Chuvadi.Sheets exposes a formatted display string per
-    // cell, map that instead. Until then the raw value is shown plainly.
-    private static string FormatValue(object? v) => v switch
+    /// <summary>The value the file stores, as text, never formatted: a number in its shortest exact form ("R"), a date or
+    /// time as the serial number the file holds (Excel stores them as numbers), TRUE/FALSE, text and errors as written.</summary>
+    internal static string StoredValue(object? v, bool date1904) => v switch
     {
         null => "",
         string s => s,
         bool b => b ? "TRUE" : "FALSE",
-        DateTime dt => dt.TimeOfDay == TimeSpan.Zero ? dt.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
-                                                     : dt.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture),
-        double d => PlainNumber(d),
-        float f => PlainNumber(f),
-        decimal m => PlainNumber((double)m),
-        int i => i.ToString(CultureInfo.CurrentCulture),
-        long l => l.ToString(CultureInfo.CurrentCulture),
-        _ => v.ToString() ?? "",
+        double d => d.ToString("R", CultureInfo.InvariantCulture),
+        float f => ((double)f).ToString("R", CultureInfo.InvariantCulture),
+        decimal m => m.ToString(CultureInfo.InvariantCulture),
+        int i => i.ToString(CultureInfo.InvariantCulture),
+        long l => l.ToString(CultureInfo.InvariantCulture),
+        DateTime dt => NumberFormatter.ToSerial(dt, date1904).ToString("R", CultureInfo.InvariantCulture),
+        _ => Convert.ToString(v, CultureInfo.InvariantCulture) ?? "",
     };
-
-    // Plain rendering of a numeric value (whole numbers without a trailing ".0"); no
-    // number-format-code interpretation.
-    private static string PlainNumber(double d) =>
-        d == Math.Floor(d) && Math.Abs(d) < 1e15
-            ? ((long)d).ToString(CultureInfo.CurrentCulture)
-            : d.ToString(CultureInfo.CurrentCulture);
 
     private static string? Hex(string? hex)
     {

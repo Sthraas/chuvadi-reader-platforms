@@ -1,5 +1,6 @@
 using System.Globalization;
 using Chuvadi.Pdf.Documents;
+using ChuvadiReader.Core.Documents;
 
 namespace ChuvadiReader.Core.Reader;
 
@@ -327,14 +328,15 @@ public sealed class MeasureService
     };
 
     /// <summary>Maps displayed-page fractions to default user space: undo the display rotation
-    /// (same convention as RedactService.MapToPdf), then scale to the MediaBox and flip y.</summary>
+    /// (same convention as RedactService.MapToPdf), then scale to the shown box (D-160: the CropBox within the
+    /// MediaBox, what the page shows) and flip y.</summary>
     private readonly record struct PageGeometry(double X0, double Y0, double W, double H, int Rotation)
     {
         public static PageGeometry Of(PdfPage page, int viewRotation)
         {
-            var mb = page.MediaBox;
+            var shown = ShownBox.Of(page);
             int rot = (((page.Rotate + viewRotation) % 360) + 360) % 360;
-            return new PageGeometry(Math.Min(mb.X1, mb.X2), Math.Min(mb.Y1, mb.Y2), Math.Abs(mb.Width), Math.Abs(mb.Height), rot);
+            return new PageGeometry(shown.X0, shown.Y0, shown.W, shown.H, rot);
         }
 
         public double DisplayWidth => Rotation is 90 or 270 ? H : W;
