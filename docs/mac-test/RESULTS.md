@@ -1,6 +1,6 @@
 # Mac Test — results
 
-Subject: `platform/mac` **7a65178** → c6d7705 → 00a5975 → 83207af → **b790370** (current). Harness: `tests/mac/` + `.github/workflows/mac-test.yml` on `platform/mac-test`.
+Subject: `platform/mac` **7a65178** → c6d7705 → 00a5975 → 83207af → b790370 → **dd67166** (current). Harness: `tests/mac/` + `.github/workflows/mac-test.yml` on `platform/mac-test`.
 Runs (one each, read before the next — no retries):
 
 | Round | Run | What changed in the harness |
@@ -10,6 +10,27 @@ Runs (one each, read before the next — no retries):
 | 2 | 42490785792 | menu bar and `open -a` found broken (M-01, M-02) → drive through ⌘O / ⌘K instead; quit-crash capture |
 | 3 | 42494662734 | ⌘O found not to open a panel → the Open button; app stdout per launch; diagnostic exception build |
 | 4 | 42517758923 | panel path set through Accessibility (typing into the Go-to field was lossy) → documents open; timing sets skipped |
+
+## Re-test on platform/mac dd67166 (10 Nov) — current state
+
+Run **42718754219** (full suite, 10-run timing sets, all three runners).
+
+| Case | macOS 26 | macOS 15 | 15 Intel | Note / bug |
+|---|---|---|---|---|
+| T3.5 Esc leaves Immersive | ✅ | ✅ | ✅ | **M-21 fixed** |
+| T5.10 quit | ✅ | ✅ | ✅ | M-03 still fixed: 0 crash reports in 63 macOS 26 launches |
+| T1.10 Licences | ✅ | | | tabs incl. .NET runtime; Mono notices shown — **T1.10 passes** |
+| M-18 recovery | ✅ | ✅ | ✅ | as on b790370 |
+| T3.7 menus | ✅ | ✅ | ✅ | |
+| T4.0 ⌘O | ❌ | ❌ | ❌ | M-15 (in progress) |
+| T4.7 print vector | ✅ | ✅ | ✅ | |
+| T4.6 passwords | ⚠️ harness | ✅ | ✅ | on 26 the full suite's keystrokes still don't land after the print cases; the case now reports any leftover Secure Event Input holder (next run) |
+
+T2 on dd67166 (probe, ms, median of 10): cold first render 26 **7 989**, 15 **6 185**, Intel **8 981**; warm first
+render 2 958 / 2 517 / 3 009; Open panel → page **349** / 461 / 674. Windows same run: first render 1 689.
+**The macOS 26 rise I flagged on b790370 did not continue**: Open panel → page fell from 985 to 349 ms and cold from
+11.3 to 8.0 s on the same code path. That is runner noise, not a trend. What stays true across builds: cold starts on
+these VMs are 6–9 s and warm first render ~2.5–3 s against Windows' ~1.7 s (M-06).
 
 ## Re-test on platform/mac b790370 (10 Nov, D-154) — current state
 
