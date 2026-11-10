@@ -1,82 +1,26 @@
-# Platform programme CI (new file; the existing ci.yml is unchanged and still runs for main).
-# Runs on every platform branch. Platform chats add their host jobs below, using the template.
+# DIAGNOSTIC BRANCH ONLY (never merged): the full test project looped on the Windows runner with the settle fix.
 name: platforms
-
 on:
   push:
-    branches: ['platform/**']
-    paths-ignore: ['docs/**', '**/*.md']   # docs-only pushes run nothing (D-90 a, kept by D-93)
-  pull_request:
-    branches: ['platform/**']
-    paths-ignore: ['docs/**', '**/*.md']
-  workflow_dispatch:
-
-# A newer push to the same branch cancels the older run (D-90 d, kept by D-93).
-concurrency:
-  group: platforms-${{ github.ref }}
-  cancel-in-progress: true
-
+    branches: ['platform/diag-*']
 jobs:
-  # Shared code (Core, Ui, Platform contracts, host kit) on every runner the hosts will use.
-  shared:
-    strategy:
-      fail-fast: false
-      matrix:
-        runner: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, windows-latest]
-    uses: ./.github/workflows/platform-build.yml
-    with:
-      runner: ${{ matrix.runner }}
-      label: shared
-      build: ChuvadiReader.Platforms.slnx
-      test: ChuvadiReader.Platforms.slnx
-
-  # The Windows app must keep building exactly as on chuvadi-reader main.
-  windows-app:
-    uses: ./.github/workflows/platform-build.yml
-    with:
-      runner: windows-latest
-      label: windows-app
-      build: ChuvadiReader.slnx
-      test: tests/ChuvadiReader.Tests/ChuvadiReader.Tests.csproj
-
-  # Check only: chuvadi-pdf re-packed from the unchanged v3.32.0 tag yields the same package set as ci/packages.
-  pack-check:
-    uses: ./.github/workflows/platform-build.yml
-    with:
-      runner: ubuntu-latest
-      label: pack-check
-      build: ChuvadiReader.Platforms.slnx
-      pack-check: true
-
-  # AT-03: a trimmed Release app must be able to build every service the kit registers. The probe is
-  # published trimmed (TrimMode=partial: only trimmable assemblies, as Android SdkOnly and Mac Catalyst)
-  # and launched; it fails if any constructor was trimmed away. Hosts also launch their own Release builds
-  # (docs/foundation/TRIMMING.md).
-  trim-check:
-    name: trimmed Release launch (${{ matrix.rid }})
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - { runner: ubuntu-latest,    rid: linux-x64 }
-          - { runner: ubuntu-24.04-arm, rid: linux-arm64 }
-          - { runner: macos-latest,     rid: osx-arm64 }
+  diag:
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
-      - name: Local package feed
+      - name: Restore
         shell: bash
-        run: scripts/setup-feed.sh
-      - name: Publish trimmed
-        run: dotnet publish tools/TrimProbe/TrimProbe.csproj -c Release -r ${{ matrix.rid }} -o trimprobe -warnaserror
-      - name: Launch
-        run: ./trimprobe/TrimProbe
-
-  # ── Platform host jobs (added by each platform chat) ─────────────────────────────────────
-  # mac:      runner macos-latest,     build src/ChuvadiReader.Mac/…,     workloads maui-maccatalyst
-  # linux:    runner ubuntu-latest and ubuntu-24.04-arm, build src/ChuvadiReader.Linux/…
-  # android:  runner ubuntu-latest,    build src/ChuvadiReader.Android/…, workloads maui-android
-  # web:      runner ubuntu-latest,    build src/ChuvadiReader.Web/…
+        run: dotnet restore ChuvadiReader.slnx --configfile ci/nuget.config
+      - name: Build
+        shell: bash
+        run: dotnet build ChuvadiReader.slnx -c Release --no-restore
+      - name: Loop
+        shell: bash
+        run: |
+          for i in $(seq 1 16); do
+            dotnet test tests/ChuvadiReader.Tests/ChuvadiReader.Tests.csproj -c Release --no-build > out.txt 2>&1 || true
+            grep -E "Passed!|Failed!|live memory|memory kept|^  Failed " out.txt | cut -c1-160
+          done
