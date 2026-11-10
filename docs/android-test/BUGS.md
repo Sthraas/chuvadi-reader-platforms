@@ -242,6 +242,44 @@ The remaining recorder is the community `Mono.AotProfiler.Android` NuGet package
 matter. I'll measure any Foundation render change the same way (10 runs, phone and tablet).
 Startup trimming / work deferral in Foundation (B-29) already applies; this is about JIT on the open/render path.
 
+### AT-14 round 7 (run 42795565556) — where the cold Open-with time goes, and Chuvadi-only full AOT
+**Variants (10 cold Open with each, API 36, same runner per row):**
+| | Phone page 1 median / worst | Tablet page 1 median / worst | `.apk` | `.aab` | Chuvadi AOT images |
+|---|---|---|---|---|---|
+| Baseline (as shipped) | 5,028 / 11,878 | 9,031 / 15,997 | 42.97 MB | 42.58 MB | 1.3 MB |
+| **Chuvadi assemblies in full** on top of profiled AOT | 4,958 / **5,313** | 9,431 / **10,142** | 46.84 MB (+9 %) | 46.46 MB (+9 %) | 12.0 MB |
+| Full AOT | 4,886 / 5,586 | 9,316 / 10,478 | 64.15 MB (+49 %) | 63.76 MB (+50 %) | 22.9 MB |
+Medians are within noise of each other; precompiling only trims the **worst** case. JIT is not the bottleneck.
+
+**Timeline (trace build: Console markers → logcat, plus the page's own clocks; phone / tablet, median ms after the launch, 10 runs):**
+| Milestone | Phone | Tablet | Step cost (phone) |
+|---|---|---|---|
+| process started | 53 | 71 | |
+| `CreateMauiApp` starts (= .NET runtime + assemblies up) | 658 | 1,479 | **605** runtime start |
+| MAUI app built | 737 | 1,571 | 79 |
+| `MainActivity.OnCreate` / done | 797 / 881 | 1,648 / 1,752 | 144 |
+| WebView provider loaded | 952 | 1,845 | 71 |
+| WebView navigation starts | 1,121 | 2,044 | 169 |
+| host page loaded | 1,281 | 2,296 | 160 |
+| Android first frame (splash) | 1,445 | 2,477 | |
+| `blazor.webview.js` loaded | 1,689 | 2,872 | **408** script load |
+| DOMContentLoaded | 1,739 | 2,900 | |
+| Blazor app root rendered (in the DOM) | 2,012 | 3,207 | 273 |
+| library open of the PDF (start → end) | 2,146 → 2,269 | 3,380 → 3,530 | **123** parse |
+| **first paint of the WebView** | **3,602** | **5,356** | 1.3 s after the app root was in the DOM |
+| `TabsService.OpenAsync` (the tab opens) | **4,233** | **6,296** | **~2.0 s / 2.8 s after the PDF was already open** |
+| page boxes in the DOM | 4,314 | 6,434 | |
+| page 1 render (start → end) | 4,643 → 4,753 | **8,569** → 8,701 | **110** render; tablet waits **2.1 s** after the boxes |
+| page 1 SVG in the DOM → painted | 4,828 → **4,920** | 9,228 → **9,319** | |
+(The trace build also had the Chuvadi-full AOT: MSBuild's build nodes kept the edited targets. Fixed for R7b.)
+
+**Reading:** the library is fast (open 123 ms, render 110 ms). The cold first page is spent in (1) **~2–2.8 s of waiting between
+the PDF being opened and the tab opening** — the incoming file waits for the app's ready signal, which `MainLayout` raises only
+after a chain of sequential JS round-trips on first render (platform attributes, save folders, profile, theme, apply theme,
+storage, the `shell.js` module import); the WebView doesn't even paint until 3.6 s; (2) on the tablet, **2.1 s between the page
+boxes and the first render request**; (3) the .NET runtime start (0.6 s phone, 1.4 s tablet); (4) loading `blazor.webview.js` (0.4 s).
+R7b adds markers on each hydrate step, the ready signal, the release of the waiting file and the render request to pin (1) and (2).
+
 ## AT-15 · S2 · Foundation (routed 10 Nov, with the page drift) · **still open** R5 run 42746209649 (Foundation f88f9ef + Mobile UI c5c0b7e + Android 9ce073b, Release) — Mark › Text: a finger tap on the page makes no text box (phone and tablet)
 **Steps:** Release (f88f9ef composition), API 36, open a PDF, Mark, choose Text (button shows as on), tap the page — quick tap, then
 a slow tap (finger held 400 ms) elsewhere on the page.
