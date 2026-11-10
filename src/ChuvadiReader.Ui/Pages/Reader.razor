@@ -1130,7 +1130,7 @@
             }
             else if (_markup)
             {
-                <SideRail Kind="tools" Heading="MARK">
+                <SideRail Kind="tools" Heading="TOOLS" Label="MARK">
                     <RailButton Icon="text-box" Label="Text" Keys="T" Active='_mkTool == "text" && !_sigOpen' OnClick='() => PickMkTool("text")' />
                     <RailButton Icon="file-image" Label="Image" Keys="I" Active='_mkTool == "image" && !_sigOpen' OnClick="PickImageTool" />
                     <RailButton Icon="shape-rect" Label="Rectangle" Keys="B" Active='_mkTool == "rect" && !_sigOpen' OnClick='() => PickMkTool("rect")' />
@@ -1154,7 +1154,7 @@
             }
             else if (_protect)
             {
-                <SideRail Kind="tools" Heading="PROTECT">
+                <SideRail Kind="tools" Heading="TOOLS" Label="PROTECT">
                     <RailButton Icon="redact" Label="Redact box" Keys="R" OnClick="() => GoRedact(false)" />
                     <RailButton Icon="find-in-page" Label="Find & redact" OnClick="() => GoRedact(true)" />
                     <RailButton Icon="stamp" Label="Stamp" Active='_card == "stamp" && _stampFocus != "watermark"' OnClick='() => OpenStamp("stamp")' />
@@ -1169,7 +1169,7 @@
             }
             else
             {
-                <SideRail Kind="tools" Heading="READ">
+                <SideRail Kind="tools" Heading="TOOLS" Label="READ">
                     <RailButton Icon="page-single" Label="Pages & outline" Active="_pagesDrawer" OnClick="TogglePagesDrawer" />
                     <RailButton Icon="bookmark" Label="Add bookmark" Keys="Ctrl B" OnClick="AddBookmarkHere" />
                     <RailButton Icon="snapshot" Label="Snapshot" Keys="S" Active="_tool == ReaderTool.Snapshot" OnClick="() => SetTool(ReaderTool.Snapshot)" />
