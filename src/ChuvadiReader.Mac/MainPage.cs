@@ -86,7 +86,7 @@ public sealed class MainPage : ContentPage
 
     private BlazorWebView CreateWebView(string? startPath)
     {
-        var web = new BlazorWebView { HostPage = "wwwroot/index.html", BackgroundColor = BackgroundColor };
+        var web = new ChuvadiWebView(_services) { HostPage = "wwwroot/index.html", BackgroundColor = BackgroundColor };
         if (!string.IsNullOrEmpty(startPath) && startPath != "/")
         {
             web.StartPath = startPath;

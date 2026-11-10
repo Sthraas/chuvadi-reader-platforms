@@ -286,6 +286,16 @@ internal static class MacSmoke
                 + ' immersive=' + (document.body.classList.contains('chvd-immersive') ? 1 : 0)
                 + ' keys=[' + keys + ']'
                 + ' notice=' + (document.body && document.body.innerText.indexOf('stopped unexpectedly') >= 0 ? 1 : 0)
+                + (function () {   // D-158: a raster page's image is served by address from memory (page-image hook)
+                  var img = Array.prototype.find.call(document.querySelectorAll('image, img'), function (e) {
+                    return ((e.getAttribute('href') || e.getAttribute('xlink:href') || e.getAttribute('src') || '')).indexOf('_chvd/pages/') >= 0; });
+                  if (!img) { return ''; }
+                  var href = img.getAttribute('href') || img.getAttribute('xlink:href') || img.getAttribute('src');
+                  try {
+                    var x = new XMLHttpRequest(); x.open('GET', href, false); x.send();
+                    return ' pageimg=' + x.status + '/' + (x.getResponseHeader('content-type') || '?') + '/' + (x.responseText || '').length;
+                  } catch (err) { return ' pageimg=error:' + err.message; }
+                })()
                 + (function () {   // M-08 / M-23: the tab strip as shown — the active tab and the first tab
                   var a = document.querySelector('.rtab.active'), f = document.querySelector('.rtab');
                   var t = function (e) { return e ? JSON.stringify(e.textContent.replace(/\s+/g, ' ').trim().slice(0, 40)) : '-'; };
