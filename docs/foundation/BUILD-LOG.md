@@ -384,3 +384,9 @@ See `docs/foundation/PAGE-IMAGES.md` for the design, the hooks per host and the 
 - Pixel-identical raster page (1× and 2×, twice); preview memory 2354 → 438 MB with the same pages shown.
 - 385/385 tests (2 runs); 0 warnings in both solutions; trimmed probe 56/56.
 
+### 47. Twenty-second combined patch: H-20 (Mobile UI, platform/mobile-ui c5c0b7e; D-134, D-151)
+- Mobile UI's `H20-tools-rail-heading.patch`, unchanged: `SideRail` gains `Label` (its `aria-label` is `Label ?? Heading`). The five tools rails show **TOOLS** and keep their mode name as the label (READ, MARK, PROTECT twice, ARRANGE), so a screen reader hears what it heard before. The view-only document's rail already said TOOLS.
+- Guard: `ToolsRailHeadingTests` (all six tools rails say TOOLS; the five mode names stay as labels; the rail's aria-label reads `Label ?? Heading`).
+- **Windows behaviour change (D-134):** the tools rail heading reads TOOLS instead of READ/MARK/PROTECT/ARRANGE. Desktop before/after: only the rail heading differs (≈ 40 × 6 px at 1×, at the rail's top), plus Home's clock artefact. Every other screen identical.
+- 386/386 tests; 0 warnings in both solutions.
+

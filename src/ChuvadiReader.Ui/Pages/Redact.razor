@@ -221,7 +221,7 @@
     </div>
 
     <div class="mview-rails">
-        <SideRail Kind="tools" Heading="PROTECT">
+        <SideRail Kind="tools" Heading="TOOLS" Label="PROTECT">
             <RailButton Icon="redact" Label="Redact box" Keys="R" Active="!_findOpen" OnClick="() => _findOpen = false" />
             <RailButton Icon="find-in-page" Label="Find & redact" Active="_findOpen" Disabled="@(_session is null)" OnClick="ToggleFind" />
             <RailButton Icon="stamp" Label="Stamp" OnClick='() => BackToProtect("stamp")' />
