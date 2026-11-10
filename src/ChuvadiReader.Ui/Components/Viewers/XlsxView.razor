@@ -275,8 +275,13 @@
     {
         if (_wb is not null && !_valueBarOn)
         {
-            _valueBarOn = true;
-            await JsVoidAsync("gridValueBar", _scroll);   // D-161: click or tap a cell to see the value it stores
+            // D-161: click or tap a cell to see the value it stores. This can run for a render from before the
+            // grid was drawn (the workbook finished loading while that render was on its way to the browser,
+            // which is the usual case on the Web portal), so the flag is set only once the script says the
+            // listener is on; otherwise the next render asks again. A reload in between starts over.
+            var v = _version;
+            var on = await JsAsync<bool>("gridValueBar", _scroll);
+            if (v == _version && on) _valueBarOn = true;
         }
 
         if (_scrollToHit && _wb is not null)
