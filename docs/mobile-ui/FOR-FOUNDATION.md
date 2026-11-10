@@ -1,8 +1,9 @@
 # Mobile app UI → Foundation: hooks and hand-off (updated 10 Nov)
 
-## Outstanding for Foundation: H-22, H-23 (`proposal/mobile-ui-hooks-9.patch`)
-`mobile-ui-hooks-9.patch` = H-22 + H-23 (each also on its own in `proposal/`); it applies cleanly to
-foundation-pr dd59362 (patch 24). H-21 is withdrawn (below).
+## Outstanding for Foundation: H-23 (`proposal/mobile-ui-hooks-9.patch`)
+H-22 landed in the twenty-fifth combined patch (67823ad), exactly as written. `mobile-ui-hooks-9.patch` is now
+H-23 alone, regenerated against foundation-pr 742a5da (the same change; XlsxView's lines had moved). It is to go
+into Foundation's part 5 with the Web portal UI value-bar diff. H-21 is withdrawn (below).
 
 ### H-23: the Excel value bar's tap listener is added once the grid exists (D-161; found on the phone)
 (`Ui/Components/Viewers/XlsxView.razor`, +8 / −5)
@@ -21,7 +22,19 @@ foundation-pr dd59362 (patch 24). H-21 is withdrawn (below).
   show `-1,234,567.89`, `($1,235)`, `25.60%`, `03-15-23`; a tap shows `B7 = -1234567.891`, `B9 = -1234.5`,
   `B13 = 0.256`, `B16 = 45000` in the bar, on screen, no sideways page overflow.
 
-### H-22: a page tile's actions in the desk ··· menu on touch, for the selected pages (D-163)
+## Withdrawn: H-21 (AT-09 round 5) — covered by Foundation's twenty-third patch
+Patch 23 (741930b / 15033c8) has H-21's two effective parts in its own form: Find anchors the match itself,
+and the view stays on the match's page where the match allows. With patch 23 alone, this branch's slow-device
+Find check (6× slower CPU, page heights changing during the move) passes 9 of 9 at 800×1280, 1280×800 and
+412×915: match on screen, page box 3. Nothing of `mobile-ui-hooks-8` is needed; it's kept as
+`proposal/landed/mobile-ui-hooks-8.superseded.patch` for the record.
+- Not in patch 23, and not needed by any test here: H-21's guard that stops the scroll handler recording or
+  reporting the half-way page while a jump's smooth scroll is still moving (it matters only if that scroll
+  outlasts the 1.4 s quiet time). Worth returning to only if Android Test still sees the page box on the
+  half-way page.
+
+## Landed: H-22 (twenty-fifth combined patch, 67823ad)
+### H-22 (landed): a page tile's actions in the desk ··· menu on touch, for the selected pages (D-163)
 (`Ui/Pages/Bench.razor`, +11 / −0)
 - On desktop a desk page tile shows a row of 18 px actions on hover (Peek, Duplicate, Rotate, Split, Crop,
   Margins). Touch has no hover: the row stayed invisible and still took taps (a tap at a tile's foot
@@ -41,16 +54,6 @@ foundation-pr dd59362 (patch 24). H-21 is withdrawn (below).
 - Note: the row also carried the small "cropped / margins set" dot; on touch that state now shows as the
   menu label ("Crop: edit or clear").
 
-## Withdrawn: H-21 (AT-09 round 5) — covered by Foundation's twenty-third patch
-Patch 23 (741930b / 15033c8) has H-21's two effective parts in its own form: Find anchors the match itself,
-and the view stays on the match's page where the match allows. With patch 23 alone, this branch's slow-device
-Find check (6× slower CPU, page heights changing during the move) passes 9 of 9 at 800×1280, 1280×800 and
-412×915: match on screen, page box 3. Nothing of `mobile-ui-hooks-8` is needed; it's kept as
-`proposal/landed/mobile-ui-hooks-8.superseded.patch` for the record.
-- Not in patch 23, and not needed by any test here: H-21's guard that stops the scroll handler recording or
-  reporting the half-way page while a jump's smooth scroll is still moving (it matters only if that scroll
-  outlasts the 1.4 s quiet time). Worth returning to only if Android Test still sees the page box on the
-  half-way page.
 
 ## Landed: H-20 (twenty-second combined patch, c9d876a); H-17, H-18, H-19 (twelfth, part 3, bfffab6)
 Approved by the coordinator for Foundation (9 Nov 06:40). Desktop: static screens pixel-identical (clock

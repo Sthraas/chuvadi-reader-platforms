@@ -516,3 +516,20 @@ Evidence:
 - Results: 438 tests pass, 3 skipped by Foundation as library items (PDF-L1, PDF-L2, SH-L1): 292 + 16 + 89 + 41
   on the patched tree; 78 touch checks pass at 4 sizes; desktop before/after identical apart from the clock
   (Read, Mark, Arrange, Home, desk menu); 0 console errors.
+
+## 11 Nov, 02:35: Foundation 742a5da merged; H-22 landed; AT-06 leftovers
+- Merged platform/foundation-pr 742a5da (patch 25, parts 1-4): no conflicts. H-22 is in, exactly as written;
+  hooks-9 now carries H-23 only, regenerated against 742a5da.
+- **AT-06 leftovers** (Android Test R8): the controls that still had an invisible `::after` area instead of a
+  box of their own now have 44 px boxes, drawn as before — desk name field (phone 43.7, tablet 41.5–43),
+  Home `Open library` link, Home small buttons, Settings side list (tablet), size options, switches, Arrange
+  `Add a file` / `Fetch another PDF`, Shelf search button. Tablet Home recent rows are 44 px high (were 34;
+  the phone's are 50): a list row is its own control, so the row itself grows.
+  - Before/after screenshots: Settings (tablet and phone), Home (phone) and phone Arrange identical; tablet
+    Arrange differs by 59 px of antialiasing at the `Add a file` icon; tablet Home only in the clock.
+- New `tools/mobile-ui/boxes.py`: every visible, enabled control's own box on Home, Library, Settings, Read,
+  Mark, Arrange, Shelf, desk menu, Protect and the Document menu — as Android Test measures. 0 under 44 px at
+  412×915, 915×412, 800×1280 and 1280×800 (it found 21 before this change).
+- Results: 453 tests pass, 3 skipped by Foundation as library items: 305 + 16 + 91 + 41 on the patched tree; 78
+  touch checks pass and the box audit is clean at 4 sizes; desktop before/after identical apart from the clock
+  (the bar clock, and the time in Home's greeting line); 0 console errors.

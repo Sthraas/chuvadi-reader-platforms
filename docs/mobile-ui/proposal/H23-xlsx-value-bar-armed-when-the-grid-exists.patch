@@ -1,26 +1,26 @@
 diff --git a/src/ChuvadiReader.Ui/Components/Viewers/XlsxView.razor b/src/ChuvadiReader.Ui/Components/Viewers/XlsxView.razor
-index 4618d10..77a447c 100644
+index 4758bb7..11c54aa 100644
 --- a/src/ChuvadiReader.Ui/Components/Viewers/XlsxView.razor
 +++ b/src/ChuvadiReader.Ui/Components/Viewers/XlsxView.razor
-@@ -95,7 +95,7 @@
-     private string? _query;
-     private bool _scrollToHit;
-     private ElementReference _scroll;
+@@ -109,7 +109,7 @@
+         Release();
+         return ValueTask.CompletedTask;
+     }
 -    private bool _valueBarOn;      // the grid's click listener is on (the grid element lives while a workbook is shown)
 +    private string? _valueBarFor;  // the grid element the click listener is on (its ElementReference id)
  
      protected override async Task OnParametersSetAsync()
      {
-@@ -125,7 +125,7 @@
+@@ -139,7 +139,7 @@
      {
          var v = ++_version;
-         _wb = null;
+         Release();
 -        _valueBarOn = false;
 +        _valueBarFor = null;
          _error = null; _errorDetail = null;
          _index = new();
          _hits = new();
-@@ -259,10 +259,13 @@
+@@ -273,10 +273,13 @@
  
      protected override async Task OnAfterRenderAsync(bool firstRender)
      {
