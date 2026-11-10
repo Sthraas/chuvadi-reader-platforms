@@ -186,3 +186,8 @@ Corpus `tests/web-test/make_fidelity.py`: 14 text tokens built to catch normalis
 "As printed" (xlsx) is disabled — waits on Chuvadi.Layout (D-08), as expected.
 
 **Harness note:** with the Development header (`X-Dev-User`, injected by Playwright) Chromium and WebKit don't send the header on a download request, so the person's worker refuses the link (404). With a real Sangam cookie every engine downloads. Firefox carries the header. Not a portal bug; recorded so nobody re-reports it.
+
+## 10 Nov 2026
+- **LIB-1** ✅ on `platform/web` **002bf02** (chuvadi-pdf **3.32.0**, Firefox): AES-256 PDFs written by pypdf with an unsigned `/P` (4294965240, 4294967292) open; the user-password one after "open-me"; the no-print permission is read correctly from the unsigned value (Print card: "This file's permissions don't allow printing.").
+- Wrote `STAGING-VM-ASK.md` (V-1…V-7, 40-person load) and `MANUAL-SCRIPT.md` (M-1…M-4, G-12).
+- Waiting for the Web head with Web portal UI ce805d1 + Foundation f88f9ef for WT-17, WT-03…WT-06 and the regression (incl. large Excel uploads, limits, cancel).
