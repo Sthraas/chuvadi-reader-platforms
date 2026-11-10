@@ -155,6 +155,17 @@ As-built Release: 0 crashes, 3/3 first frames (phone, tablet).
 | AT-10 / AT-11 / F-15b ×10 / F-03b | **PASS** again |
 | F-06 forms, F-07 redacted copy saved, F-09 Save | not conclusive (tool: selection handles from my own long-press, phone Redact selector); re-run R8b |
 
+## Round 8b (run 42807280851; same refs as round 8)
+| Item | Result |
+|---|---|
+| Page-box check (`drift.py`) | cold open, second document, reopen, rotation: **PASS** phone and tablet. "Move to page 5" and "restart" steps were test-script errors; corrected for round 9 |
+| AT-16 tablet page box after Find | **FAIL again** (box 2, page 3 on screen) |
+| AT-17 text box caret | first tap: box without caret (**FAIL**); second tap on the box: caret, keyboard, typing correct (**PASS**), phone and tablet |
+| Shapes by finger; redaction box by finger (tablet) | **PASS** |
+| Printing, phone: vector | **PASS** (12 pages, 40,561 chars, 0 images) |
+| Print card → Android print dialog, tablet | **PASS**; the tablet's saved file still not checked (script) |
+| **Not verified yet** | Save / Save as with the saved file read back (markup, form value, redacted text gone), form filling by touch, Arrange drag and save. My script didn't complete these: on the phone the text-box property sheet covered the Save button; my test grant was read-only so in-place Save had nowhere to write; the form tap missed the field. No app fault shown or ruled out |
+
 ## Blocked in CI: Reader on Android 15 (API 35)
 The API 35 image ships WebView 124, so the app correctly shows only its update screen (D-105). Updating it in CI from the API 36
 image's WebView failed twice: that WebView needs the Trichrome static library, which my donor job couldn't locate on the API 36

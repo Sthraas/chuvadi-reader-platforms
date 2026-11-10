@@ -67,10 +67,25 @@ wait_doc("drift-doc")
 s = watch(8)
 R.check("DR-1 cold Open with: page box says 1, page 1 is on screen, and it stays", steady(s, 1), {"(box, on screen)": brief(s)})
 
-# 2. Go to page 5 (scroll the desk), box follows; then stays.
-cdp.js("(() => { const w = document.querySelectorAll('.rpage-wrap')[4]; w.scrollIntoView({block: 'center'}); })()")
+# 2. Go to page 5 the way a person does (tablet: Next page ×4; phone: four swipes); box follows and stays.
+import re, subprocess
+phone = cdp.js("document.documentElement.getAttribute('data-shell')") == "phone"
+def wv():
+    from lib import ui_dump
+    m = re.search(r'class="android.webkit.WebView"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', ui_dump())
+    return tuple(map(int, m.groups()))
+b = wv(); dpr = cdp.js("devicePixelRatio")
+for _ in range(4):
+    if phone:
+        d = cdp.js("(() => { const r = [...document.querySelectorAll('.rdesk')].find(e => e.getBoundingClientRect().width > 0).getBoundingClientRect(); return [r.left, r.top + r.height / 2, r.width]; })()")
+        y = int(b[1] + d[1] * dpr); x1 = int(b[0] + (d[0] + d[2] * 0.85) * dpr); x2 = int(b[0] + (d[0] + d[2] * 0.15) * dpr)
+        sh(f"input swipe {x1} {y} {x2} {y} 250")
+    else:
+        n = cdp.js("(() => { const e = document.querySelector('[aria-label^=\"Next page\"], [title^=\"Next page\"]'); if (!e) return null; const r = e.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; })()")
+        sh(f"input tap {int(b[0] + n[0] * dpr)} {int(b[1] + n[1] * dpr)}")
+    time.sleep(1.2)
 s = watch(5)
-R.check("DR-2 after moving to page 5: box says 5 and stays", steady(s, 5), {"(box, on screen)": brief(s)})
+R.check("DR-2 after moving on four pages: box says 5, page 5 is on screen, and it stays", steady(s, 5), {"(box, on screen)": brief(s)})
 
 # 3. Open a second document: box 1 for the new one.
 open_with(uri2)
@@ -96,6 +111,9 @@ sh(f"am force-stop {PKG}")
 sh(f"am start -W -n {component()}")
 cdp.close()
 cdp.connect(60)
+cdp.wait("!!(window.Blazor && Blazor.navigateTo)", 40)
+if not cdp.js("location.pathname.startsWith('/reader')"):
+    cdp.js("Blazor.navigateTo('/reader')")   # a plain launch opens on Home; the tabs are kept
 cdp.wait("document.querySelectorAll('.rpage svg').length > 0", 40)
 s = watch(8)
 R.check("DR-6 cold restart (session restored): box agrees with the page on screen and stays", steady(s), {"(box, on screen)": brief(s)})

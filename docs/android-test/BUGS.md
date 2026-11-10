@@ -345,8 +345,10 @@ every markup gesture on touch (text, shapes, freehand, probably the Protect reda
 **Expected:** the page box says 3 — page 3 fills the screen.
 **Actual:** the match is shown and page 3 fills the screen, but the page box says **2** ("2 / 12"). Phone says "3 / 12".
 **Evidence:** R8 run 42802779369 (Foundation 741930b + Mobile UI 2b29227 + Android 7c8e2d8, Release, API 36) › results-tablet-api36 › function/04-find.png (`screenshots/r8/r8-find-shape-redact.png`, second frame);
-results.jsonl F-03. A dedicated check (`ci/drift.py`: box vs the page under the middle of the screen after a cold open, a scroll,
-a second document, a reopen, a rotation and a restart) runs from round 8b.
+results.jsonl F-03. **Seen again in R8b (run 42807280851): 2 of 2 on tablet.** A dedicated check (`ci/drift.py`: box vs the page under the middle of the screen after a cold open, a scroll,
+a second document, a reopen, a rotation and a restart) ran in R8b: cold open, second document, reopen and rotation agree on phone and
+tablet (box = page on screen, steady for 6–8 s). Its "move to page 5" and "restart" steps were wrong in my script (it scrolled the page
+from script, and a plain launch opens on Home); corrected for round 9. So the only drift seen so far is the tablet one after Find.
 
 ## AT-17 · S2 · Foundation (shared Ui, markup) · open — Mark › Text: the new box doesn't take the caret; typing fires one-key shortcuts instead
 **Steps:** phone or tablet, open a PDF, Mark › Text, tap the page (a box appears — AT-15 fixed that), type `chuvadimark`.
@@ -354,7 +356,8 @@ a second document, a reopen, a rotation and a restart) runs from round 8b.
 **Actual:** an editor element exists but focus stays on the page area (`DIV.rdesk`); nothing is typed into the box, and the letters
 run the shell's one-key commands — the `i` in "chuvadimark" opened the system image picker ("Images in Downloads") over the app
 (seen in R4d, R4f and R8, phone). With a hardware keyboard that is exactly what a person would hit; on glass the keyboard
-doesn't open at all until the box is tapped again (to confirm next round: second tap → focus).
+doesn't open until the box is tapped again. **Confirmed R8b (run 42807280851), phone and tablet:** a second tap on the box puts the
+caret in it (`TEXTAREA.mk-ta`), the keyboard opens and "chuvadimark" is typed correctly (`screenshots/r8/r8b-textbox-form-redact.png`).
 **Evidence:** R8 run 42802779369 (Foundation 741930b + Mobile UI 2b29227 + Android 7c8e2d8, Release, API 36) › results-*-api36 › function2/ (02–04 screenshots; results.jsonl F-04a: `editors: 1`,
 `active: DIV.rdesk`); `screenshots/r8/r8-find-shape-redact.png` (first frame: the picker).
 **Fix (proposal):** focus the box's editor in the same pointer-up handler that creates it (JS side, inside the user gesture, so
