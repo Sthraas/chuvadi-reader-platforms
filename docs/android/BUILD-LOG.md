@@ -690,3 +690,8 @@ same screen; no crash), smoke pass. With round 6 (API 36 phone and tablet, all c
     with no input, was on page 4 of 4 two seconds later (p4-rotated, rotation check's base counter 4); so "keyboard →
     next page" had nowhere to go. Passed on 022b7c0 (run 42549242105); new between 022b7c0 and f88f9ef (render
     scheduling / "page in view stays put" changes).
+- **Run 42742138203** (phone and tablet API 36, full, 7b7450b): **all green** — gestures 10/10 and 9/9, platform 28/28 and
+  26/26, Release launch pass on both. **AT-11 pass on both**: killed (new pid), back on `/reader`, same tab
+  (`chuvadi-no-print.pdf`), same 5 tabs, same page. Share pass ([3, 4] tabs). The shared PDF again opened off page 1
+  (phone "2 / 4", tablet "3") — the f88f9ef page drift, intermittent; with Foundation.
+- Handed to Android Test: head **7b7450b** on f88f9ef + Mobile UI d34d542, for AT-02, AT-03, AT-07, AT-08, AT-10, AT-11, AT-13.
