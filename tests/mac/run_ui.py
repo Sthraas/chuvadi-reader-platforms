@@ -815,11 +815,13 @@ def t4_0():
     time.sleep(2.5)
     sc = screen("kbd-after-cmdo")
     _, wins = drive("windows")
-    panel = sum(1 for l in wins.splitlines() if l.startswith(NAME + "\t") and "layer=0" in l) > 1
+    # the Open panel is its own window ("Open a document", layer 8) — counting only layer-0 windows was my bug until 10 Nov
+    panel = any(l.startswith(NAME + "\t") and "Open a document" in l for l in wins.splitlines())
+    ev_focus = {"last_click": "an empty spot low in the page, then ⌘K and Esc, then ⌘O"}
     drive("key", "escape")
     record("T4.0 keyboard reaches the app at launch", "pass" if opened_without_click and panel else "fail",
            f"⌘K before any click opens the bar={opened_without_click}; after a click={opened_after_click}; ⌘O opens a panel={panel}",
-           shots=[s1, s2, sc], windows=wins)
+           shots=[s1, s2, sc], windows=wins, **ev_focus)
     quit_app()
 
 
@@ -1295,10 +1297,114 @@ def t5_5():
     quit_app()
 
 
+def ax_paths(text, pattern):
+    """Lines of an AX dump that match `pattern`, each with its role and the path of its ancestors (from indentation)."""
+    out, stack = [], []
+    for line in text.splitlines():
+        if not line.strip():
+            continue
+        ind = len(line) - len(line.lstrip(" "))
+        stack = [(i, l) for i, l in stack if i < ind]
+        if re.search(pattern, line):
+            path = " › ".join(re.sub(r"\s*@.*$", "", l.strip())[:60] for _, l in stack[-5:])
+            out.append({"element": re.sub(r"\s*@.*$", "", line.strip())[:160], "role": line.strip().split(" ")[0], "path": path})
+        stack.append((ind, line))
+    return out
+
+
+@case("M-08/M-09/M-10 shared patch")
+def m_shared():
+    reset_state({"theme": "light"})
+    launch(settle=4)
+    open_doc(f"{FX}/five-pages.pdf")
+    open_doc(f"{FX}/second.pdf")
+    ev = {}
+    t = axdump("shared-reader")
+    status = lambda tx: [l.strip()[:120] for l in tx.splitlines() if re.search(r"page \d+ of \d+", l)][:2]
+    ev["status_before"] = status(t)
+    drive("key", "ctrl+tab")
+    time.sleep(1.5)
+    t2 = axdump("shared-after-ctrl-tab")
+    ev["status_after_ctrl_tab"] = status(t2)
+    drive("key", "ctrl+shift+tab")
+    time.sleep(1.5)
+    ev["status_after_ctrl_shift_tab"] = status(axdump("shared-after-ctrl-shift-tab"))
+    ev["m08_ctrl_tab_switches"] = ev["status_before"] != ev["status_after_ctrl_tab"]
+    # M-09: every Immersive / F11 mention in the Reader (View rail included)
+    ev["m09_reader_immersive"] = ax_paths(t, r"Immersive|F11")
+    # hover the View rail's Immersive button so a tooltip, if any, is in the tree too
+    rc, o = find("Immersive", contains=True, timeout=2)
+    m = re.search(r"@(-?\d+),(-?\d+) (\d+)x(\d+)", o)
+    if m:
+        x, y, w, h = map(int, m.groups())
+        drive("move", x + w // 2, y + h // 2)
+        time.sleep(1.5)
+        ev["m09_hover"] = ax_paths(axdump("shared-immersive-hover"), r"Immersive|F11|⌃⌘F")
+        ev["m09_hover_shot"] = shot("shared-immersive-hover")
+    # M-10: traffic-light labels, before and after Zoom
+    lights = lambda tx: [l.strip()[:90] for l in tx.splitlines() if re.search(r'desc="(Close|Minimize|Zoom|Exit full screen|Enter full screen|Full screen)"', l)][:4]
+    ev["m10_lights_before"] = lights(t)
+    press("Zoom")
+    time.sleep(1.5)
+    ev["m10_lights_zoomed"] = lights(axdump("shared-zoomed"))
+    press("Zoom")
+    time.sleep(1)
+    # M-08 / M-09 in Settings › Shortcuts
+    press("Settings")
+    time.sleep(2)
+    press("Shortcuts", contains=True, index=-1, click=True)
+    time.sleep(1.5)
+    sc = axdump("shared-shortcuts")
+    ev["shortcuts_shot"] = shot("shared-shortcuts")
+    ev["shortcuts_lines"] = ax_paths(sc, r"Immersive|tab|Tab|F11|Ctrl|⌃")[:30]
+    ev["shortcuts_bad"] = [x for x in ev["shortcuts_lines"] if re.search(r"F11|⌘Tab|⌘ Tab|\bCtrl\b", x["element"])]
+    ev["m09_bad"] = [x for x in ev["m09_reader_immersive"] + ev.get("m09_hover", []) if "F11" in x["element"]]
+    ev["m10_ok"] = any('"Zoom"' in l for l in ev["m10_lights_zoomed"]) and not any("full screen" in l for l in ev["m10_lights_zoomed"])
+    ok = ev["m08_ctrl_tab_switches"] and not ev["shortcuts_bad"] and not ev["m09_bad"] and ev["m10_ok"]
+    record("M-08/M-09/M-10 shared patch", "pass" if ok else "fail",
+           f"⌃Tab switches={ev['m08_ctrl_tab_switches']}; F11 left={len(ev['m09_bad'])}; bad shortcut labels={len(ev['shortcuts_bad'])}; green light when zoomed={ev['m10_lights_zoomed']}", **ev)
+    quit_app()
+
+
+@case("M-14 .NET message in Details")
+def m14():
+    src = f"{FX}/noaccess.pdf"
+    shutil.copy(f"{FX}/five-pages.pdf", src)
+    os.chmod(src, 0)
+    reset_state({"theme": "light"})
+    launch(settle=4)
+    ok, _ = open_doc(src, settle=4)
+    t = axdump("m14-after-open")
+    ev = {"opened_tab": ok, "shot": shot("m14-after-open"),
+          "messages": [l.strip()[:220] for l in t.splitlines() if re.search(r"denied|permission|access|couldn|could not|read", l, re.I)][:6]}
+    rc, o = press("Details", contains=True)
+    ev["details_press"] = o[:120]
+    time.sleep(1.5)
+    d = axdump("m14-details")
+    ev["details_shot"] = shot("m14-details")
+    lines = [l.strip()[:300] for l in d.splitlines() if "AXStaticText" in l or "AXTextArea" in l]
+    new = [l for l in lines if l not in t]
+    ev["details_text"] = new[:12]
+    keys = [l for l in new if re.search(r'desc="[^"]*\b[A-Z][A-Za-z]+_[A-Za-z_]+\b', l)]
+    ev["resource_keys"] = keys
+    ev["real_message"] = any(re.search(r"denied|permission", l, re.I) for l in new)
+    os.chmod(src, 0o644)
+    record("M-14 .NET message in Details", "pass" if rc == 0 and ev["real_message"] and not keys else "fail",
+           f"Details pressed={rc == 0}; real .NET text={ev['real_message']}; resource keys={len(keys)}", **ev)
+    quit_app()
+
+
+
 def main():
     if A.suite == "pw":
         t4_6()
         m18()
+        return
+    if A.suite == "shared":
+        t4_0()
+        m_shared()
+        m14()
+        t3_5()
         return
     if A.suite == "print":
         t4_7()

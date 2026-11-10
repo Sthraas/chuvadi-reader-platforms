@@ -13,7 +13,7 @@ on:
         description: launches per timing set
         default: '10'
       only:
-        description: "all | windows (Windows startup probe only) | print / pw (that case only, all runners)"
+        description: "all | windows (Windows startup probe only) | print / pw / shared (those cases only, all runners)"
         default: all
   push:
     branches: [platform/mac-test]
@@ -229,7 +229,7 @@ jobs:
           defaults write org.cups.PrintingPrefs UseLastPrinter -bool false
           lpstat -t || true
       - name: Run T2–T5 (${{ matrix.suite }})
-        run: python3 harness/tests/mac/run_ui.py "$RUNNER_TEMP/macdrive" /tmp/fixtures "$PWD/evidence" --suite ${{ (inputs.only == 'print' || inputs.only == 'pw') && inputs.only || matrix.suite }} --runs "$RUNS"
+        run: python3 harness/tests/mac/run_ui.py "$RUNNER_TEMP/macdrive" /tmp/fixtures "$PWD/evidence" --suite ${{ (inputs.only == 'print' || inputs.only == 'pw' || inputs.only == 'shared') && inputs.only || matrix.suite }} --runs "$RUNS"
         timeout-minutes: 100
       - name: Logs
         if: always()
