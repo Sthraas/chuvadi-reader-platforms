@@ -104,6 +104,7 @@ public static class Program
             // Reached only through the gateway's socket; the gateway did TLS, sign-in and security headers.
             app.UseGatewayForwarding();
             app.UseAuthentication();
+            app.UsePageImageGuard();
             app.UseAuthorization();
             app.UseAntiforgery();
             app.MapStaticAssets().AllowAnonymous();
@@ -133,6 +134,7 @@ public static class Program
 
         app.UseCircuitOriginCheck();
         app.UseAuthentication();
+        app.UsePageImageGuard();
         app.UseActivityTracking();
         app.UseAuthorization();
         if (mode == PortalMode.Single)

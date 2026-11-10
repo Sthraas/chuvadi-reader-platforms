@@ -313,6 +313,19 @@ public class GatewayTests(GatewayFixture gateway) : IClassFixture<GatewayFixture
     }
 
     [Fact]
+    public async Task A_page_image_address_from_nobody_is_a_plain_404_at_the_gateway()
+    {
+        // WT-20: answered before any sign-in redirect and before any worker is started for it.
+        using var nobody = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { BaseAddress = gateway.Base };
+        using var r = await nobody.GetAsync("/_chvd/pages/0123456789abcdef0123456789abcdef.png");
+        Assert.Equal(HttpStatusCode.NotFound, r.StatusCode);
+        Assert.Null(r.Headers.Location);
+
+        using var someone = gateway.Client("gw-img");
+        Assert.Equal(HttpStatusCode.NotFound, (await someone.GetAsync("/_chvd/pages/0123456789abcdef0123456789abcdef.png")).StatusCode); // signed in, unknown: relayed, 404
+    }
+
+    [Fact]
     public async Task The_circuit_opens_only_from_the_portals_own_pages()
     {
         // WT-07: a foreign Origin (a sibling sub-domain counts as same-site for the cookie) is refused.

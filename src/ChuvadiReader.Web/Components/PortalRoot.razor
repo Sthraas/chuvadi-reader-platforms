@@ -10,6 +10,7 @@
 @inject OpenTabs Tabs
 @inject SessionSpace Space
 @inject BrowserBridge Browser
+@inject ChuvadiReader.Core.Reader.TabsService Documents
 @inject ILogger<PortalRoot> Log
 @inject Microsoft.Extensions.Options.IOptions<ChuvadiReader.Web.Hosting.PortalOptions> Options
 
@@ -50,6 +51,17 @@
     /// <summary>Called when this tab's sign-in ends elsewhere: files go now, the browser to the signed-out page.</summary>
     private async Task EndAsync()
     {
+        // WT-21: close this tab's documents first, so their page images and memory are freed now, not when
+        // the connection is cleaned up minutes later. (The cookie is already dead, so nothing could fetch them.)
+        try
+        {
+            await InvokeAsync(() => Documents.CloseAllAsync());
+        }
+        catch (Exception ex) when (ex is ObjectDisposedException or InvalidOperationException or IOException)
+        {
+            Log.LogDebug("Couldn't close the ended tab's documents: {Message}", ex.Message);
+        }
+
         Space.Delete();
         // Our own one-way call (not NavigationManager, whose awaited navigation can be cancelled in a
         // background tab and then fault the whole circuit). If the browser is gone, nothing is lost:

@@ -122,6 +122,14 @@ public sealed class SangamSignInTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.Redirect, page.StatusCode);
         Assert.StartsWith("/signin", page.Headers.Location!.PathAndQuery, StringComparison.Ordinal);
         Assert.Equal(HttpStatusCode.Unauthorized, (await c.GetAsync("/portal/download/x")).StatusCode);
+
+        // WT-20: a page-image address never goes to sign-in (its token would ride along in returnUrl): plain 404.
+        foreach (var address in new[] { "/_chvd/pages/0123456789abcdef0123456789abcdef.png", "/_chvd/pages/", "/_chvd/anything" })
+        {
+            using var image = await c.GetAsync(address);
+            Assert.Equal(HttpStatusCode.NotFound, image.StatusCode);
+            Assert.Null(image.Headers.Location);
+        }
         Assert.Equal(HttpStatusCode.OK, (await c.GetAsync("/signed-out")).StatusCode);
     }
 

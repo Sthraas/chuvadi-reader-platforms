@@ -72,8 +72,12 @@ public class PageImageEndpointTests(PortalFixture portal) : IClassFixture<Portal
     public async Task Not_signed_in_or_from_another_site_gets_nothing()
     {
         var (_, address) = Draw("img-carol");
+        // WT-20: 404 and nothing redirected, so the token is never copied into a returnUrl.
         using var anonymous = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { BaseAddress = portal.Base };
-        Assert.NotEqual(HttpStatusCode.OK, (await anonymous.GetAsync(address)).StatusCode);
+        using var refused = await anonymous.GetAsync(address);
+        Assert.Equal(HttpStatusCode.NotFound, refused.StatusCode);
+        Assert.Null(refused.Headers.Location);
+        Assert.Empty(await refused.Content.ReadAsByteArrayAsync());
 
         foreach (var (header, value) in new[]
                  {

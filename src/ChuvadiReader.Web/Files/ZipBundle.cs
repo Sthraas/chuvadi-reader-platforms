@@ -16,6 +16,14 @@ public static class ZipBundle
     public static async Task<string> WriteAsync(string folder, IReadOnlyList<string> files, string intoFolder, CancellationToken ct)
     {
         var path = Path.Combine(intoFolder, NameFor(files));
+        var entries = files.OrderBy(f => f, StringComparer.Ordinal).Select(f => (Path.GetRelativePath(folder, f).Replace('\\', '/'), f)).ToList();
+        await WriteEntriesAsync(path, entries, ct).ConfigureAwait(false);
+        return path;
+    }
+
+    /// <summary>Writes the given files, each under its entry name, to a new owner-only .zip at <paramref name="path"/>.</summary>
+    public static async Task WriteEntriesAsync(string path, IReadOnlyList<(string Entry, string File)> entries, CancellationToken ct)
+    {
         var create = new FileStreamOptions { Mode = FileMode.CreateNew, Access = FileAccess.Write, Share = FileShare.None };
         if (!OperatingSystem.IsWindows())
         {
@@ -23,16 +31,12 @@ public static class ZipBundle
         }
 
         await using var output = new FileStream(path, create);
-        await using (var zip = ZipWriter.Create(output))
+        await using var zip = ZipWriter.Create(output);
+        foreach (var (entry, file) in entries)
         {
-            foreach (var file in files.OrderBy(f => f, StringComparer.Ordinal))
-            {
-                ct.ThrowIfCancellationRequested();
-                var entry = Path.GetRelativePath(folder, file).Replace('\\', '/');
-                await zip.AddFileAsync(entry, file, null, ct).ConfigureAwait(false);
-            }
+            ct.ThrowIfCancellationRequested();
+            await zip.AddFileAsync(entry, file, null, ct).ConfigureAwait(false);
         }
-        return path;
     }
 
     /// <summary>The download's name: what the files' names share ("report-p1.pdf", "report-p2.pdf" →

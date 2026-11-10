@@ -2,7 +2,6 @@
    Offers to keep going (idle only), to download the open documents, and — when the Reader holds
    marks not yet saved into a file — to download the document with them. Host chrome, functional
    look from the Ui's own tokens and buttons; the Web portal UI chat may restyle it. *@
-@using System.IO.Compression
 @using ChuvadiReader.Core.Reader
 @using ChuvadiReader.Platform
 @using ChuvadiReader.Web.Auth
@@ -143,7 +142,7 @@
             {
                 target = Path.Combine(folder, "Chuvadi documents.zip");
                 var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                using var zip = new ZipArchive(File.Create(target), ZipArchiveMode.Create);
+                var entries = new List<(string Entry, string File)>();
                 foreach (var tab in files)
                 {
                     var name = SpaceLayout.SafeFileName(tab.FileName, "document.pdf");
@@ -154,8 +153,10 @@
                         name = $"{stem} ({n}){ext}";
                     }
 
-                    zip.CreateEntryFromFile(tab.Path, name, CompressionLevel.Fastest);
+                    entries.Add((name, tab.Path));
                 }
+
+                await ZipBundle.WriteEntriesAsync(target, entries, CancellationToken.None); // Chuvadi.Zip (D-129)
             }
 
             var result = await Outbox.DeliverAsync(target);

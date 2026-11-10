@@ -18,6 +18,26 @@ public static class FileEndpoints
     /// <summary>The route a drawn page's image is fetched from (D-158): <c>/_chvd/pages/&lt;token&gt;.png</c>.</summary>
     public const string PageImagesRoute = "/" + ChuvadiReader.Core.Reader.PageImages.PathPrefix + "{file}";
 
+    /// <summary>WT-20: a request for a page image from someone not signed in (signed out, expired, never
+    /// signed in) is answered 404 here, right after authentication, in every mode. It never reaches the
+    /// sign-in redirect, so an image's token is never copied into a returnUrl, an address or a history.</summary>
+    /// <summary>The folder page-image addresses live under: <c>/_chvd</c>.</summary>
+    public static readonly PathString PageImagesRoot = "/" + ChuvadiReader.Core.Reader.PageImages.PathPrefix.Split('/')[0];
+
+    public static IApplicationBuilder UsePageImageGuard(this IApplicationBuilder app)
+        => app.Use((http, next) =>
+        {
+            if (http.Request.Path.StartsWithSegments(PageImagesRoot)
+                && http.User.Identity?.IsAuthenticated != true)
+            {
+                http.Response.StatusCode = StatusCodes.Status404NotFound;
+                http.Response.Headers.CacheControl = "no-store";
+                return Task.CompletedTask;
+            }
+
+            return next(http);
+        });
+
     public static IEndpointRouteBuilder MapPortalFiles(this IEndpointRouteBuilder app)
     {
         // D-158: drawn pages by address. Same origin, signed-in only, and only to the person and sign-in that

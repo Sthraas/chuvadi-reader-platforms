@@ -11,6 +11,8 @@ import sys
 
 from playwright.sync_api import sync_playwright
 
+from pdfs import large_format_pdf
+
 base, out = sys.argv[1].rstrip("/"), sys.argv[2]
 engine = sys.argv[sys.argv.index("--browser") + 1] if "--browser" in sys.argv else "chrome"
 os.makedirs(out, exist_ok=True)
@@ -20,21 +22,6 @@ results = []
 def check(name, ok, detail=""):
     results.append(ok)
     print(("PASS" if ok else "FAIL") + ": " + name + (" — " + detail if detail else ""))
-
-
-def large_format_pdf(path):
-    content = b"".join(b"%d 0 m %d 1300 l " % (x, x) for x in range(0, 1300, 20)) + b"S"
-    objs = [b"<< /Type /Catalog /Pages 2 0 R >>", b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-            b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 1300 1300] /Contents 4 0 R >>",
-            b"<< /Length %d >>\nstream\n" % len(content) + content + b"\nendstream"]
-    data, offsets = b"%PDF-1.7\n", []
-    for n, o in enumerate(objs, 1):
-        offsets.append(len(data))
-        data += b"%d 0 obj\n" % n + o + b"\nendobj\n"
-    xref = len(data)
-    data += b"xref\n0 %d\n0000000000 65535 f \n" % (len(objs) + 1) + b"".join(b"%010d 00000 n \n" % o for o in offsets)
-    data += b"trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n" % (len(objs) + 1, xref)
-    open(path, "wb").write(data)
 
 
 pdf = os.path.join(out, "large-format.pdf")
@@ -74,6 +61,9 @@ with sync_playwright() as p:
         drawn = page.evaluate("() => { const i = [...document.querySelectorAll('.rpage svg image')].find(i => (i.getAttribute('href') || '').startsWith('_chvd/pages/')); return i ? i.getBBox().width > 100 : false; }")
         check("the image shows on the page", drawn)
         check("another signed-in person asking for that address gets 404", other.request.get(url).status == 404)
+        nobody = b.new_context()  # no sign-in at all (WT-20): 404, nothing redirected, the token in no address
+        r0 = nobody.request.get(url, max_redirects=0)
+        check("someone not signed in gets 404 with no redirect", r0.status == 404 and "location" not in r0.headers, "%d %s" % (r0.status, r0.headers.get("location", "")))
         check("the owner asking again directly gets it", owner.request.get(url).status == 200)
         page.click("button.rtab-x")
         page.wait_for_timeout(2000)

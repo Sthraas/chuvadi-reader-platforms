@@ -8,8 +8,10 @@ signed-out page. With --data-root, also checks that the person's files are gone.
 
 Usage: python3 expiry.py <portal base> <some.pdf> <out folder> [--data-root <Portal:DataRoot>] [--browser chrome|chromium|firefox|webkit]
 """
-import os, sys, time
+import os, sys, time, zipfile
 from playwright.sync_api import sync_playwright
+
+from pdfs import large_format_pdf
 
 
 def launch(p):
@@ -49,6 +51,17 @@ with sync_playwright() as p:
     page.wait_for_url("**/reader**", timeout=30000)
     page.wait_for_selector(".page svg, svg text", timeout=30000)
     check("a document is open", "/reader" in page.url)
+
+    # WT-21: a second document whose page is drawn as an image; its address must stop working when the session ends.
+    os.makedirs(out, exist_ok=True)
+    big = os.path.join(out, "large-format.pdf")
+    large_format_pdf(big)
+    with page.expect_file_chooser(timeout=15000) as fc:
+        page.click("nav.leftbar >> text=Upload")
+    fc.value.set_files(big)
+    page.wait_for_function("() => [...document.querySelectorAll('.rpage svg image')].some(i => (i.getAttribute('href') || '').startsWith('_chvd/pages/'))", timeout=60000)
+    image = base + "/" + page.evaluate("() => [...document.querySelectorAll('.rpage svg image')].map(i => i.getAttribute('href')).find(h => h.startsWith('_chvd/pages/'))")
+    check("the open page's image is served to its owner", ctx.request.get(image).status == 200)
     if data_root:
         check("the person's file is on the server", any(f.endswith(os.path.basename(pdf)) for f in files_under(data_root)))
 
@@ -67,11 +80,14 @@ with sync_playwright() as p:
     # The next warning offers the open document (the click is activity too, so it then goes away).
     page.wait_for_selector(".chvd-expiry", timeout=120000)
     with page.expect_download(timeout=30000) as dl:
-        page.click(".chvd-expiry >> text=Download the open document")
+        page.click(".chvd-expiry >> text=Download open documents")
     name = dl.value.suggested_filename
     saved = os.path.join(out, "expiry-" + name)
     dl.value.save_as(saved)
-    check("the warning hands over the open document", name == os.path.basename(pdf) and os.path.getsize(saved) == os.path.getsize(pdf), name)
+    with zipfile.ZipFile(saved) as z:  # test-only check that other tools open it; both documents, byte for byte
+        same = sorted(z.namelist()) == sorted([os.path.basename(pdf), os.path.basename(big)]) \
+            and z.read(os.path.basename(pdf)) == open(pdf, "rb").read() and z.read(os.path.basename(big)) == open(big, "rb").read()
+    check("the warning hands over both open documents as one zip", name == "Chuvadi documents.zip" and same, name)
 
     # Stay still again: the session ends and the tab goes to the signed-out page.
     t0 = time.time()
@@ -79,6 +95,8 @@ with sync_playwright() as p:
     page.wait_for_url("**/signed-out", timeout=120000)
     print("ended %.0f s after the second warning began" % (time.time() - t0))
     check("the session ends on the signed-out page", page.url.endswith("/signed-out"))
+    # Development sign-in signs the same person straight back in, so only freeing the image makes this a 404.
+    check("the ended session's page image is freed at once", ctx.request.get(image).status == 404)
     if data_root:
         page.wait_for_timeout(3000)
         left = [f for f in files_under(data_root) if f.endswith(".pdf")]
