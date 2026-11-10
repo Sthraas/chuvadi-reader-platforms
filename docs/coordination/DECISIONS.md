@@ -464,5 +464,8 @@ The account's weekly usage limit was reached ("Resets Nov 16 at 12:30 PM"). All 
 ## D-175 — PR #16 merged on Arun's word
 11 Nov 2026. Reader main 4b724b0 (patch 25 parts 1-4: AT-16, AT-17, D-164 cold open, H-22, Mac tab lock, RemoveOwner, Docs 2.1.0, memory tests settle as shipped - the intermittent Windows MemoryAfterClose failure was test timing, not a leak). Routed: AT-18 (S1, Android save pickers off) to Android; B-32 (/Rotate ignored on screen) and B-31 (Excel time-only cells) to Foundation / Sheets list; H-23 + Web UI value-bar diff to Foundation part 5.
 
+## D-176 — Part 5 goes as two PRs; PR #15 merged by Arun
+11 Nov 2026. Foundation asked whether B-32 (/Rotate ignored on screen) and two small fixes go ahead of the Excel work. A: two PRs (rotated pages fixed sooner, PDF and Excel changes reviewed apart; one more merge for Arun). B: one PR (one merge; /Rotate waits for the largest piece). **Decision: A**, as D-173. Also: Arun merged his Windows PR #15 (3.32.0 un-grey) himself; Reader main dd7138a, all five checks green on main.
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).
