@@ -458,5 +458,11 @@ Web found that Excel's text for cells with no number format (General) shortens n
 ## Note — usage limit, 10 Nov 2026 ~21:00 IST
 The account's weekly usage limit was reached ("Resets Nov 16 at 12:30 PM"). All 12 chats stopped mid-work. Left in flight: Linux merge 29a2386 (local, not pushed), Mobile UI and Web portal UI merging dd59362, Web Test re-testing WT-20/21 on 6be3c17, Mac workflow on 3bc7f68, Mac Test re-verifying M-08/M-23, Android Test round 9 on 8f173c9, Foundation patch 25 not started.
 
+## D-174 — Web: open tabs belong to the session, not the connection (WT-22)
+11 Nov 2026. Web Test: a page reload drops every open tab and the documents stay open in the worker, unreachable and not closed at session end. **Decision:** tabs belong to the signed-in session; after a reload the person gets their open documents back, and everything a session holds is closed when it ends. Web builds it (may propose a cheaper correct design with pros and cons first).
+
+## D-175 — PR #16 merged on Arun's word
+11 Nov 2026. Reader main 4b724b0 (patch 25 parts 1-4: AT-16, AT-17, D-164 cold open, H-22, Mac tab lock, RemoveOwner, Docs 2.1.0, memory tests settle as shipped - the intermittent Windows MemoryAfterClose failure was test timing, not a leak). Routed: AT-18 (S1, Android save pickers off) to Android; B-32 (/Rotate ignored on screen) and B-31 (Excel time-only cells) to Foundation / Sheets list; H-23 + Web UI value-bar diff to Foundation part 5.
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).
