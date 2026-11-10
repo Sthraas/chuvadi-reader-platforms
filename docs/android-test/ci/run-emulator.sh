@@ -66,6 +66,12 @@ fi
 if [[ $SUITES == *,function2,* ]]; then
   python3 "$HERE/function2.py" "$OUT/function2" "$OUT/fixtures" || rc=1
 fi
+if [[ $SUITES == *,licence,* ]]; then
+  python3 "$HERE/licence.py" "$OUT/licence" "$PKGS/assemblies.txt" || rc=1
+fi
+if [[ $SUITES == *,at13,* ]]; then
+  python3 "$HERE/at13.py" "$OUT/at13" "$OUT/fixtures" 5 || rc=1
+fi
 if [[ $SUITES == *,gate,* ]]; then
   python3 "$HERE/gate.py" "$OUT/gate" || rc=1
 fi

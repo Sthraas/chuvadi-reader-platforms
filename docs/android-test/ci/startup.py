@@ -128,7 +128,8 @@ am_start_w()
 page_time(UI_READY)
 
 results = {}
-cold = measure("cold", RUNS, cold_prep, lambda: am_start_w(), UI_READY)
+ONLY_OPEN = bool(os.environ.get("ONLY_OPEN"))
+cold = [] if ONLY_OPEN else measure("cold", RUNS, cold_prep, lambda: am_start_w(), UI_READY)
 
 
 def warm_prep():
@@ -141,7 +142,7 @@ def warm_prep():
     time.sleep(2)
 
 
-warm = measure("warm", RUNS, warm_prep, lambda: am_start_w(), UI_READY)
+warm = [] if ONLY_OPEN else measure("warm", RUNS, warm_prep, lambda: am_start_w(), UI_READY)
 sh("settings put global always_finish_activities 0")
 
 
@@ -153,7 +154,7 @@ def hot_prep():
     time.sleep(1.5)
 
 
-hot = measure("hot", RUNS, hot_prep, lambda: am_start_w(), "true")
+hot = [] if ONLY_OPEN else measure("hot", RUNS, hot_prep, lambda: am_start_w(), "true")
 
 uri = push_media(PDF, "startup-doc.pdf")
 
@@ -176,4 +177,5 @@ for t in table:
 mem = sh(f"dumpsys meminfo {PKG}")
 open(os.path.join(OUT, "meminfo.txt"), "w").write(mem)
 for t in table:
-    R.check(f"{t['kind']} {t['metric']} measured over {RUNS} runs", t["n"] >= min(10, RUNS), t)
+    if t["n"] or not ONLY_OPEN:
+        R.check(f"{t['kind']} {t['metric']} measured over {RUNS} runs", t["n"] >= min(10, RUNS), t)

@@ -53,6 +53,9 @@ jobs:
       emulators: ${{ steps.plan.outputs.emulators }}
       suites: ${{ steps.plan.outputs.suites }}
       api35: ${{ steps.plan.outputs.api35 }}
+      foundation_ref: ${{ steps.plan.outputs.foundation_ref }}
+      mobileui_ref: ${{ steps.plan.outputs.mobileui_ref }}
+      android_ref: ${{ steps.plan.outputs.android_ref }}
     steps:
       - uses: actions/checkout@v4
         with: { path: test }
@@ -137,6 +140,8 @@ jobs:
       - name: Keep build evidence
         if: always()
         run: mkdir -p audit && cp compose.txt restore.txt publish-release.txt publish-release-at03.txt build-debug.txt sdk.txt release.binlog audit/ 2>/dev/null; git -C reader log -1 --format='foundation %H' >> audit/refs.txt; echo "mobileui ${{ steps.plan.outputs.mobileui_ref }} android ${{ steps.plan.outputs.android_ref }}" >> audit/refs.txt
+      - name: Shipped assembly list beside the packages
+        run: cp audit/assemblies.txt out/ 2>/dev/null || true
       - uses: actions/upload-artifact@v4
         with: { name: android-packages, path: out/, if-no-files-found: error }
       - uses: actions/upload-artifact@v4
@@ -205,3 +210,83 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with: { name: 'results-${{ matrix.device }}-api${{ matrix.api }}', path: results/ }
+
+  aot-build:
+    name: AT-14 variants (baseline, recorded profile, full AOT) — test-only
+    needs: build
+    if: contains(needs.build.outputs.suites, 'aot')
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with: { path: test }
+      - uses: actions/checkout@v4
+        with: { ref: '${{ needs.build.outputs.android_ref }}', path: android }
+      - uses: actions/checkout@v4
+        with: { ref: '${{ needs.build.outputs.foundation_ref }}', path: reader, fetch-depth: 0 }
+      - name: Compose
+        run: |
+          set -o pipefail
+          sed -e 's#echo "$(basename "$PATCH") does not apply"; exit 1#echo "WARNING: $(basename "$PATCH") skipped"#' \
+              -e 's#echo "$(basename "$P") does not apply"; exit 1#echo "WARNING: $(basename "$P") skipped"#' \
+            android/docs/android/integration/compose.sh > compose-test.sh
+          bash compose-test.sh reader ${{ needs.build.outputs.mobileui_ref }} android
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: '10.0.x' }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '21' }
+      - run: dotnet workload install maui-android
+      - working-directory: reader
+        run: |
+          dotnet restore src/ChuvadiReader.Android/ChuvadiReader.Android.csproj --configfile ci/nuget.config
+          dotnet build -t:InstallAndroidDependencies -f net10.0-android --no-restore src/ChuvadiReader.Android/ChuvadiReader.Android.csproj -p:AndroidSdkDirectory=$ANDROID_HOME -p:AcceptAndroidSDKLicenses=True > /dev/null 2>&1
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules; sudo udevadm trigger --name-match=kvm
+      - run: pip install reportlab==4.2.5 pypdf==5.1.0 pillow
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -memory 4096
+          script: bash test/docs/android-test/ci/aot-variants.sh reader test/docs/android-test/ci/fixtures.py aot
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: aot-variants, path: aot/ }
+
+  aot-measure:
+    name: AT-14 measure ${{ matrix.device }}
+    needs: aot-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { device: phone, profile: pixel_7 }
+          - { device: tablet, profile: pixel_tablet }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { name: aot-variants, path: aot }
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules; sudo udevadm trigger --name-match=kvm
+      - run: pip install websocket-client==1.8.0 reportlab==4.2.5 pypdf==5.1.0 pillow
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          profile: ${{ matrix.profile }}
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -memory 4096
+          script: bash docs/android-test/ci/aot-measure.sh aot aot-results/${{ matrix.device }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: 'aot-results-${{ matrix.device }}', path: aot-results/ }
