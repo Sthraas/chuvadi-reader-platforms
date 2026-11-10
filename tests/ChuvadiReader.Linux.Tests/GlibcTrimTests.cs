@@ -22,15 +22,25 @@ public sealed class GlibcTrimTests
             unsafe { new Span<byte>((void*)blocks[i], 1000).Fill(1); } // touched, so it is resident
         }
 
-        foreach (var b in blocks)
+        // One block still in use above them, as in a long-running app: glibc can't give the freed ones back by
+        // shrinking the top of its heap on its own, so only malloc_trim returns them.
+        var pin = Marshal.AllocHGlobal(1000);
+        try
         {
-            Marshal.FreeHGlobal(b);
-        }
+            foreach (var b in blocks)
+            {
+                Marshal.FreeHGlobal(b);
+            }
 
-        var before = ResidentKb();
-        Assert.True(GlibcTrim.Trim(), "glibc had freed memory to give back");
-        var after = ResidentKb();
-        Assert.True(before - after > 32 * 1024, $"resident {before / 1024} MB → {after / 1024} MB: under 32 MB given back");
+            var before = ResidentKb();
+            Assert.True(GlibcTrim.Trim(), "glibc had freed memory to give back");
+            var after = ResidentKb();
+            Assert.True(before - after > 32 * 1024, $"resident {before / 1024} MB → {after / 1024} MB: under 32 MB given back");
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(pin);
+        }
     }
 
     [Fact]
