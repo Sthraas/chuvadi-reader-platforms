@@ -235,7 +235,8 @@ const CONTROLS = 'button:not(:disabled), a[href], summary, [role="button"], sele
  *  clickable (cursor: pointer — Blazor @onclick regions such as rows and scrims are styled that way). */
 function takesTap(el) {
     if (!el || el.nodeType !== 1) return false;
-    if (el.closest(CONTROLS + ', label, [contenteditable], [tabindex]:not([tabindex="-1"])')) return true;
+    // A spreadsheet cell takes its own tap (D-161: it shows the value the cell stores), though it isn't a control.
+    if (el.closest(CONTROLS + ', label, [contenteditable], [tabindex]:not([tabindex="-1"]), td.xv-cell')) return true;
     return getComputedStyle(el).cursor === 'pointer';
 }
 

@@ -1,8 +1,25 @@
 # Mobile app UI → Foundation: hooks and hand-off (updated 10 Nov)
 
-## Outstanding for Foundation: H-22 (`proposal/mobile-ui-hooks-9.patch`)
-`mobile-ui-hooks-9.patch` = H-22 alone; it applies cleanly to Foundation 741930b / foundation-pr 15033c8
-(the same tree). H-21 is withdrawn (below).
+## Outstanding for Foundation: H-22, H-23 (`proposal/mobile-ui-hooks-9.patch`)
+`mobile-ui-hooks-9.patch` = H-22 + H-23 (each also on its own in `proposal/`); it applies cleanly to
+foundation-pr dd59362 (patch 24). H-21 is withdrawn (below).
+
+### H-23: the Excel value bar's tap listener is added once the grid exists (D-161; found on the phone)
+(`Ui/Components/Viewers/XlsxView.razor`, +8 / −5)
+- Patch 24 arms the grid's click listener in `OnAfterRenderAsync` the first time `_wb` is set, behind a
+  flag. On the phone shell that after-render runs when the workbook has just arrived but the grid isn't
+  drawn yet: `_scroll` is still an empty `ElementReference` (`{"__internalId":null}` reaches
+  `gridValueBar`), no listener is added, and the flag says it was. Result on the phone, every time, portrait
+  and landscape: tapping a cell selects nothing and the value bar never shows. Tablet and desktop win the
+  race today.
+- The flag becomes the id of the grid element the listener is on: armed when `_scroll.Id` exists and differs
+  from the last one armed (so a re-created grid is armed again; `gridValueBar` already ignores a second
+  call on the same element). `LoadAsync` clears it as it cleared the flag.
+- **For:** fixes the phone; removes the race for every shell; no JS change.
+- **Against:** none found.
+- Checked at 412×915, 915×412, 800×1280 and 1280×800 with `Fixtures/Office/formats.xlsx`: B7, B9, B13 and B16
+  show `-1,234,567.89`, `($1,235)`, `25.60%`, `03-15-23`; a tap shows `B7 = -1234567.891`, `B9 = -1234.5`,
+  `B13 = 0.256`, `B16 = 45000` in the bar, on screen, no sideways page overflow.
 
 ### H-22: a page tile's actions in the desk ··· menu on touch, for the selected pages (D-163)
 (`Ui/Pages/Bench.razor`, +11 / −0)

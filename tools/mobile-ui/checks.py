@@ -221,6 +221,33 @@ async def main():
                 .map(([e, r]) => path + ' ' + e.className.split(' ')[0] + ' ' + Math.round(r.width) + 'x' + Math.round(r.height))''', path)
             await ctx.close()
         report("AT-06 controls have 44 px boxes", not small, small[:8])
+
+        # 10. Excel (D-161, patch 24): a cell shows its formatted text; a tap shows the value it stores in the
+        #     value bar, on screen (H-23: on the phone the tap listener was never added). Last: it opens a file.
+        import os, urllib.parse, urllib.request
+        xlsx = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "tests", "ChuvadiReader.Tests", "Fixtures", "Office", "formats.xlsx"))
+        urllib.request.urlopen(urllib.request.Request(url + "/__preview/open?path=" + urllib.parse.quote(xlsx), method="POST")).read()
+        pg = await fresh()
+        await pg.evaluate("document.querySelector('td.xv-cell[data-a=\"B9\"]')?.scrollIntoView({block: 'center', inline: 'center'})")
+        await pg.wait_for_timeout(500)
+        c = await pg.locator('td.xv-cell[data-a="B9"]').bounding_box()
+        if c:
+            await pg.touchscreen.tap(c["x"] + c["width"] / 2, c["y"] + c["height"] / 2); await pg.wait_for_timeout(700)
+        r = await pg.evaluate('''() => { const b = document.querySelector('.xv-valbar'), c = document.querySelector('td.xv-cell[data-a="B9"]');
+            if (!b || !c) return null; const q = b.getBoundingClientRect(), t = document.elementFromPoint(q.left + 30, q.top + q.height / 2);
+            return { shown: c.textContent.trim(), bar: b.hidden ? null : b.querySelector('.xv-val-addr').textContent + ' = ' + b.querySelector('.xv-val-text').textContent,
+                     onScreen: !b.hidden && !!t && b.contains(t) && q.right <= innerWidth, overflow: document.documentElement.scrollWidth - innerWidth }; }''')
+        ok = bool(r) and r["shown"] == "($1,235)" and r["bar"] == "B9 = -1234.5" and r["onScreen"] and r["overflow"] <= 0
+        report("Excel: formatted cell, and a tap shows its stored value in the value bar", ok, r)
+        # Close the workbook's tab, so the next run starts on the PDF again.
+        if phone:
+            await pg.locator('.ph-bar button[aria-label="More"]').click(); await pg.wait_for_timeout(500)
+            await pg.locator(".ph-row", has_text="Close").first.click()
+        else:
+            await pg.locator(".tb-doc").click(); await pg.wait_for_timeout(400)
+            await pg.locator(".pop-item", has_text="Close").first.click()
+        await pg.wait_for_timeout(1200)
+        await pg.context.close()
         await b.close()
     sys.exit(1 if fails else 0)
 

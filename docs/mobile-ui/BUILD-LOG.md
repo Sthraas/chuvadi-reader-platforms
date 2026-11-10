@@ -498,3 +498,21 @@ Evidence:
 - Results: 390 tests (247 + 16 + 86 + 41) on the patched tree; 74 touch checks pass at 4 sizes, two runs back
   to back; desktop before/after identical apart from the clock (Read, Mark, Arrange, Home, desk menu); 0
   console errors.
+
+## 10 Nov, 20:50: Foundation dd59362 (patch 24) merged; Excel on phone and tablet
+- Merged platform/foundation-pr dd59362: no conflicts.
+- Excel formats and the value bar, with `tests/…/Fixtures/Office/formats.xlsx` opened through the preview's
+  `/__preview/open`:
+  - Formatted cells show as on desktop at all four sizes (currency, separators, percentages, dates,
+    accounting, ₹); the grid scrolls sideways inside its own area, no page overflow.
+  - Tablet: a tap selects the cell and the value bar shows its address and stored value.
+  - **Phone: the value bar never showed** — the tap listener wasn't added (an after-render ran before the
+    grid was drawn; an empty element reference went to `gridValueBar`). → **H-23** (XlsxView.razor).
+  - mobile.js: a spreadsheet cell takes its own tap (it isn't a control, so a tap on a cell within 22 px of
+    a small control — the sheet tabs, Grid / As printed — would have gone to that control).
+  - Not this chat's: `h:mm` cells show `########` (Foundation's SH-L1) and date 14 shows `03-15-23` (SH-L2),
+    as Foundation's audit lists.
+- checks.py: Excel — `($1,235)` shown, a tap shows `B9 = -1234.5` in the bar, on screen; then closes the tab.
+- Results: 438 tests pass, 3 skipped by Foundation as library items (PDF-L1, PDF-L2, SH-L1): 292 + 16 + 89 + 41
+  on the patched tree; 78 touch checks pass at 4 sizes; desktop before/after identical apart from the clock
+  (Read, Mark, Arrange, Home, desk menu); 0 console errors.

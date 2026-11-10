@@ -1,0 +1,39 @@
+diff --git a/src/ChuvadiReader.Ui/Components/Viewers/XlsxView.razor b/src/ChuvadiReader.Ui/Components/Viewers/XlsxView.razor
+index 4618d10..77a447c 100644
+--- a/src/ChuvadiReader.Ui/Components/Viewers/XlsxView.razor
++++ b/src/ChuvadiReader.Ui/Components/Viewers/XlsxView.razor
+@@ -95,7 +95,7 @@
+     private string? _query;
+     private bool _scrollToHit;
+     private ElementReference _scroll;
+-    private bool _valueBarOn;      // the grid's click listener is on (the grid element lives while a workbook is shown)
++    private string? _valueBarFor;  // the grid element the click listener is on (its ElementReference id)
+ 
+     protected override async Task OnParametersSetAsync()
+     {
+@@ -125,7 +125,7 @@
+     {
+         var v = ++_version;
+         _wb = null;
+-        _valueBarOn = false;
++        _valueBarFor = null;
+         _error = null; _errorDetail = null;
+         _index = new();
+         _hits = new();
+@@ -259,10 +259,13 @@
+ 
+     protected override async Task OnAfterRenderAsync(bool firstRender)
+     {
+-        if (_wb is not null && !_valueBarOn)
++        // D-161: click or tap a cell to see the value it stores. Armed once per grid element, and only once the
++        // grid is drawn: an after-render that ran while the workbook had just arrived (the phone shell, every
++        // time) passed an empty reference, the listener was never added, and the flag said it had been.
++        if (_wb is not null && _scroll.Id is { } gridId && gridId != _valueBarFor)
+         {
+-            _valueBarOn = true;
+-            await JsVoidAsync("gridValueBar", _scroll);   // D-161: click or tap a cell to see the value it stores
++            _valueBarFor = gridId;
++            await JsVoidAsync("gridValueBar", _scroll);
+         }
+ 
+         if (_scrollToHit && _wb is not null)
