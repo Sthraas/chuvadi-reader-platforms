@@ -430,3 +430,16 @@ Built from source (`-p:UiTest=true`); 2 vCPU, no GPU. Arun's CAD file is run loc
   - I couldn't reproduce it here: 3 of 3 stand-in runs on their own were fine, and so were 6 of 6 close-then-reopen
     runs of the same file.
   - It may be finding 1 or the D-156 wait after 36b's close. It's for the Linux chat.
+
+
+---
+**10 Nov, Linux chat — the single head: `platform/linux` d918161** (Foundation's nineteenth patch, f88f9ef: a
+cancelled page is asked for again, the page in view stays put when heights change, a closed document's pages are let
+go; plus the Linux host now gives freed native memory back with glibc's `malloc_trim` after each memory relief).
+Linux CI green on x64 and ARM64; local full pass 121/121. Please re-verify B-28, B-29, B-30, the real CAD PDF's
+memory, and a quick regression.
+- **x64 36c (sheet 1 of a fresh open never drawn):** didn't recur on this head's CI.
+- **36c memory (stand-in):** 337 MB before → 2.0 GB with 5 sheets drawn → 519 MB 90 s after closing; 2–4 relief
+  passes ran, yet 80 s after closing the .NET heap still held 681–807 MB that one more aggressive collection clears
+  (to 3–5 MB, app within 100 MB of the start). With Foundation. Use the `gc` verb (it now also reports `reliefPasses`)
+  on the real CAD file: before and after it, 60–90 s after closing.
