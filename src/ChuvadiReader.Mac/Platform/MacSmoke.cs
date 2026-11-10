@@ -175,6 +175,7 @@ internal static class MacSmoke
         }
 
         var tabs = services.GetRequiredService<TabsService>();
+        _tabs = tabs;
         var last = string.Empty;
         void ReportTabs()
         {
@@ -288,11 +289,14 @@ internal static class MacSmoke
             })()
             """;
 
+    private static TabsService? _tabs;
+
     private static async Task<string> UiTextAsync(WKWebView view)
     {
         try
         {
-            return (await view.EvaluateJavaScriptAsync(UiScript))?.ToString() ?? string.Empty;
+            var page = (await view.EvaluateJavaScriptAsync(UiScript))?.ToString() ?? string.Empty;
+            return page + " active=" + (_tabs?.Active?.FileName ?? "-"); // M-08 / M-23: which tab is active
         }
         catch (Exception ex)
         {

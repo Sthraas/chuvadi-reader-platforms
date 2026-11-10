@@ -26,10 +26,18 @@ public sealed class AppDelegate : MauiUIApplicationDelegate
 
     /// <summary>Quit (⌘Q, Dock, logout): detach the page before MAUI and AppKit finish (Mac Test M-03).</summary>
     // M-21: Esc leaves Immersive even when the WebView does not have the keyboard (MacImmersive).
-    public override UIKeyCommand[] KeyCommands => new[] { MacImmersive.EscapeCommand() };
+    // M-08 / M-23: ⌃Tab, ⌃⇧Tab and ⌘1…⌘9 reach the page (MacPageKeys).
+    public override UIKeyCommand[] KeyCommands => new[] { MacImmersive.EscapeCommand() }.Concat(MacPageKeys.Commands()).ToArray();
 
-    public override bool CanPerform(Selector action, NSObject? withSender)
-        => action.Name == MacImmersive.EscapeSelector ? MacImmersive.IsOn : base.CanPerform(action, withSender);
+    public override bool CanPerform(Selector action, NSObject? withSender) => action.Name switch
+    {
+        MacImmersive.EscapeSelector => MacImmersive.IsOn,
+        MacPageKeys.Selector => MacPageKeys.Available,
+        _ => base.CanPerform(action, withSender),
+    };
+
+    [Export(MacPageKeys.Selector)]
+    public void OnPageKey(UIKeyCommand sender) => MacPageKeys.Handle(sender);
 
     [Export(MacImmersive.EscapeSelector)]
     public void OnImmersiveEscape(UIKeyCommand sender) => MacImmersive.SendEscapeToPage();

@@ -73,6 +73,9 @@ let keys: [String: (CGKeyCode, CGEventFlags)] = [
     "ctrl-cmd-f": (3, [.maskControl, .maskCommand]),
     "cmd-k": (40, [.maskCommand]),
     "cmd-o": (31, [.maskCommand]),
+    "cmd-1": (18, [.maskCommand]),
+    "ctrl-tab": (48, [.maskControl]),
+    "ctrl-shift-tab": (48, [.maskControl, .maskShift]),
 ]
 guard let (code, flags) = keys[args[2]] else { print("unknown key \(args[2])"); exit(2) }
 let src = CGEventSource(stateID: .hidSystemState)
