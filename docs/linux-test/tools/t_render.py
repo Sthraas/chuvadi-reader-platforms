@@ -68,12 +68,17 @@ def t36b(path, tag):
 
 def t36c(path, tag):
     base = mem(); t0 = time.time(); open_tab(path); d, worst = wait_drawn(0); first = time.time() - t0; m1 = mem(); times = []
+    hs, since = None, time.time()   # Linux finding 2: wait for the page heights to hold before moving to a page
+    while time.time() - since < 1.0:
+        h_ = a.js("return [...document.querySelectorAll('.rpage-wrap')].map(w=>Math.round(w.getBoundingClientRect().height)).join(',')")
+        if h_ != hs: hs, since = h_, time.time()
+        time.sleep(0.1)
     for n in range(2, 6):
         goto(n); dn, w = wait_drawn(n - 1); worst = max(worst, w); times.append(dn)
     for n in range(4, 0, -1):  # page back: already-drawn sheets
         goto(n); dn, w = wait_drawn(n - 1); worst = max(worst, w)
     m5 = mem(); close_tab(); tc = time.time(); after = {}
-    for s in (2, 10, 30, 60):
+    for s in (2, 10, 30, 60, 90):
         time.sleep(max(0, tc + s - time.time())); after[s] = mem()
     print(f"36c {tag}: sheet 1 {first:.2f} s, sheets 2-5 {', '.join(f'{t:.2f}' for t in times)} s; worst page answer {worst:.2f} s; "
           f"memory app/web MB: before {base[0]}/{base[1]}, sheet 1 {m1[0]}/{m1[1]}, 5 sheets {m5[0]}/{m5[1]}, after close "
@@ -85,6 +90,8 @@ for r in range(RUNS):
         a.launch(); time.sleep(4)
         if LABEL == "full":
             t36a(); t36b(HEAVY + "/cad.pdf", "stand-in"); t36b(CAD, "real CAD"); t36c(HEAVY + "/cad.pdf", "stand-in, after 36a/b"); t36c(CAD, "real CAD, after the rest")
+        elif LABEL == "close":
+            t36b(CAD, f"real CAD, run {r+1}"); t36b(CAD, f"real CAD again, run {r+1}")
         else:
             t36c(CAD, f"real CAD on its own, run {r+1}")
             if LABEL == "twice": t36c(CAD, f"real CAD second open, run {r+1}")

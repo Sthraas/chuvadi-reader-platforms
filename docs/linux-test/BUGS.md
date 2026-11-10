@@ -33,13 +33,13 @@ Every bug gets fixed; I re-verify on the fixing commit and mark it here.
 | B-21 | S3 | Linux | Show in folder: 5 s D-Bus timeout → `xdg-open` fallback → two file-manager windows | **verified fixed f3d5978** — cold Nautilus: one window; `xdg-open` fallback never called (logging stub) |
 | B-22 | S4 | shared Ui/Core | No designed keyboard-focus style: each engine draws its own (GTK blue on Linux) | **verified fixed e468d1a** (Foundation 8th patch) — focus ring 2 px solid in the theme accent (#8a3a1c in light) |
 | B-23 | S4 | shared Ui/Core | Tab order starts with one "Send page N to a desk" button per page | **verified fixed e468d1a** (Foundation 8th patch) — Tab starts on the current page's strip (rotate, send, snapshot, bookmark), not one button per page |
-| B-24 | S2 | **shared Ui/Core** | A stalled read (hung network share) shows a blank Reader with no "Opening…" or Cancel, and blocks every later open | **verified fixed 7595ef3** (13th patch) — stalled `.pdf`/`.xlsx`/`.docx`: "Opening…" at 0.3–0.9 s, Cancel at 10 s, Cancel closes the tab, later opens never blocked · re-verified 64c9c16 |
-| B-25 | S4 | **shared Ui/Core** | Excel viewer errors still use the old one-line wording (no WT-10 sentence + Details) | **verified fixed 7595ef3** — Excel "This file couldn't be read as an Excel workbook.", Word "…as a Word document.", damaged PDF "This PDF is damaged…", each with Details · re-verified 64c9c16 |
+| B-24 | S2 | **shared Ui/Core** | A stalled read (hung network share) shows a blank Reader with no "Opening…" or Cancel, and blocks every later open | **verified fixed 7595ef3** (13th patch) — stalled `.pdf`/`.xlsx`/`.docx`: "Opening…" at 0.3–0.9 s, Cancel at 10 s, Cancel closes the tab, later opens never blocked · re-verified 64c9c16 · 8dcf4d8 |
+| B-25 | S4 | **shared Ui/Core** | Excel viewer errors still use the old one-line wording (no WT-10 sentence + Details) | **verified fixed 7595ef3** — Excel "This file couldn't be read as an Excel workbook.", Word "…as a Word document.", damaged PDF "This PDF is damaged…", each with Details · re-verified 64c9c16 · 8dcf4d8 |
 | B-26 | S3 | **shared Ui/Core** | Excel number formats not applied: `"₹"#,##0.00` shows `1234.5`, `0.00%` shows `0.125` (values unaltered) — Sheets 2.0.2 now has `Cell.GetDisplayText` | **deferred by decision (D-147)** — raw stored value is the decided behaviour for now (Arun's data-integrity rule); option A (formatted display text, exact value on hover) is a later improvement, with Arun |
-| B-27 | S3 (perf) | **library + shared Ui/Core** | Large vector CAD PDF (5 × A1, ~1.44 M path ops): ~3–4 s to open + ~1 s to draw page 1; app memory 1.6 GB after viewing 5 pages | open — 64c9c16 (render off the Ui thread): the page stays responsive, but sheet 1 takes 6.0–8.4 s and each new sheet 10.5–13.5 s; Linux's generated stand-in takes 53–55 s for sheet 1 (Poppler 0.9 s). Hot path: `PageRasterizer.PaintStrokeOp` |
-| B-28 | S2 | Linux (UI test) | UI tests 36a–36c count the 24×24 loading icon as a drawn page, so their sheet times (0.1–0.2 s) and 36c memory don't measure the real drawing | **fixed 4de79ed** (in 8dcf4d8) — re-verify |
-| B-29 | S3 | **shared Ui/Core** (render queue) | Closing the CAD tab mid-render: the next file sometimes waits 3.7–4.6 s for its first page (2 of 6 closes) | **open** — 64c9c16 |
-| B-30 | S2 (perf) | **shared Ui/Core + Foundation** | Memory isn't given back after closing the CAD drawing: 1.43–1.77 GB stays for 60 s+, and 680 MB of managed heap is still live after a full collection | **open** — 64c9c16 |
+| B-27 | S3 (perf) | **library + shared Ui/Core** | Large vector CAD PDF (5 × A1, ~1.44 M path ops): ~3–4 s to open + ~1 s to draw page 1; app memory 1.6 GB after viewing 5 pages | open — 8dcf4d8: sheet 1 5.6–6.9 s, sheets 2–5 3.4–5.6 s (64c9c16: 10.5–13.5 s); page answers ≤ 0.39 s. Poppler ~1 s a sheet. Library rasteriser (`PaintStrokeOp`) |
+| B-28 | S2 | Linux (UI test) | UI tests 36a–36c count the 24×24 loading icon as a drawn page, so their sheet times (0.1–0.2 s) and 36c memory don't measure the real drawing | **verified fixed 8dcf4d8** (4de79ed) — `rendered()` counts only a page-sized svg; Linux's 36c sheet times (4.9–5.6 s) now match mine on the real file |
+| B-29 | S3 | **shared Ui/Core** (render queue) | Closing the CAD tab mid-render: the next file sometimes waits 3.7–4.6 s for its first page (2 of 6 closes) | **verified fixed 8dcf4d8** (fc6286a) — 6 of 6 mid-render closes: next file drawn in 0.26–0.27 s; closing then reopening the same drawing: sheet 1 drawn every time (6 of 6) |
+| B-30 | S2 (perf) | **shared Ui/Core + Foundation** | Memory isn't given back after closing the CAD drawing: 1.43–1.77 GB stays for 60 s+, and 680 MB of managed heap is still live after a full collection | **fixed (the closed document is released) 8dcf4d8** — after closing, a full collection leaves 3–5 MB of heap (64c9c16: 680 MB). **Gap recorded, not blocking:** app 620–690 MB for the first 60 s after closing, 357–580 MB at 90 s (started at 250); WebKit 220 → ~600 MB and stays (Linux finding 3, with Foundation) |
 | K-01 | — | Linux | GNOME close-only layout showed all three buttons (known, 7 Nov) | **verified fixed f7d0034, re-verified f3d5978** (6 layouts) |
 
 Routing (coordinator, 8 Nov): **Linux** → the Linux chat. **shared Ui/Core** → Foundation's combined patch, as exact diffs from the Linux chat or Foundation. **library** → the coordinator compiles them for Arun (library coordinator).
@@ -385,3 +385,48 @@ B-28 fixed). Please re-verify B-28, B-29, B-30, 36c's memory on the real CAD PDF
   closing, and 5 MB after one aggressive collection — nothing holds the document, but the relief runs too early.
   Your real-CAD numbers will tell Foundation whether that's the same there.
 - **Also found:** moving to a page while the view fits the first drawing can land two sheets on (finding 2).
+
+---
+## Linux Test — 10 Nov, re-verification on `platform/linux` 8dcf4d8 (B-28, B-29, B-30; B-27 update)
+Built from source (`-p:UiTest=true`); 2 vCPU, no GPU. Arun's CAD file is run locally only; numbers are committed, nothing from the file.
+`tools/t_render.py` now waits for the page heights to hold before moving to a page (Linux finding 2).
+
+- **B-28 ✅.** `tools/linux/uitest.py` `rendered()` counts a page only when its svg's viewBox is wider than 100.
+- **B-29 ✅.**
+  - Closing the CAD tab mid-render, then opening `five-pages.pdf`: the next file drew in **0.26–0.27 s**, 6 of 6
+    times (64c9c16: twice 3.7–4.6 s).
+  - Closing mid-render, then reopening the same drawing: sheet 1 drew in 4.3–5.9 s on the real file and 6.3–6.9 s on the
+    stand-in, 6 of 6 times.
+- **B-30: the release is fixed, and a gap is recorded.** Four runs on the real file:
+
+  | Point | Memory (app / WebKit, MB) |
+  |---|---|
+  | Before opening | 248–250 / 216–220 |
+  | 5 sheets | 1,403–1,488 / 655–665 |
+  | +2 to +60 s after closing | 651–692 / ~600 |
+  | +90 s after closing | 357–580 / ~600 |
+
+  A full collection afterwards leaves **3–5 MB** of managed heap (64c9c16: 680 MB), so nothing holds the closed
+  document any more. What's left:
+  - The app stays ~400 MB above its start for a minute, and ~100–330 MB above it at 90 s.
+  - WebKit keeps ~380 MB.
+
+  This is Linux's finding 3: the relief runs before the drawing is garbage. It's with Foundation; I'm not blocking on it.
+- **B-27 (update).**
+  - The real file: sheet 1 takes **5.6–6.9 s**, and sheets 2–5 take **3.4–5.6 s** each. The page answers in ≤ 0.39 s.
+  - Linux's new stand-in (10,000 strokes a sheet) behaves like the real file: sheets in 5.0–7.0 s, and 2.0–2.5 GB with 5 sheets.
+  - Note: the build log (§50) puts the real file at "~1 s a sheet". On this machine it's 3.4–6.9 s.
+- **Linux findings 1 and 2** (`docs/linux/PROPOSAL-render-findings-10nov.md`, with Foundation). I hit these on
+  my own before taking the wait from Linux's test.
+  - I typed 2 in the page box as soon as sheet 1's drawing arrived. At that moment sheet 1's slot shrinks from 3,680 px
+    to 1,014 px, so the jump lands two sheets on.
+  - Sheet 2, which was skipped, then **never drew in 240 s**. This happened in 2 of 3 runs.
+  - A person typing a page number at that moment would see the wrong sheet, and the skipped one would stay blank.
+    It's worth fixing before release.
+- **CI.** The Linux run on 8dcf4d8 ([42723205272](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/42723205272))
+  **failed on x64**.
+  - The failing step is the full UI pass: `36c-cad-drawing` "timed out waiting for sheet 1 drawn". arm64 passed, and
+    both packages were built.
+  - I couldn't reproduce it here: 3 of 3 stand-in runs on their own were fine, and so were 6 of 6 close-then-reopen
+    runs of the same file.
+  - It may be finding 1 or the D-156 wait after 36b's close. It's for the Linux chat.

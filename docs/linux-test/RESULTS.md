@@ -269,9 +269,54 @@ the page-sized drawing, the numbers above are the real ones.
 sheets"), and 3759b6f is on its way. On the next head I'll re-check 36c with the corrected check, 36b, and a quick
 regression pass. **Linux is ready for Arun's check, with these known**, and the checklist below has moved to 64c9c16.
 
-## Arun's check — Linux 64c9c16
+## Re-verification on 8dcf4d8 (10 Nov) — Foundation's patches 17–18
 
-**Get the package.** GitHub → `Sthraas/chuvadi-reader-platforms` → Actions → run **Linux** on `64c9c16` ([run 42685693367](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/42685693367)) → Artifacts → **linux-x64** (ARM machine: `linux-arm64`). Unzip it and use **`deb/chuvadi-reader_1.0.0~preview_amd64.deb`** — the self-contained one (37.8 MB, needs no .NET; artifacts kept until 7 Feb 2027). SHA-256 `2f6519b6b2166dd24efa4069aa16cf5941ecad1c177ca8ad9d123aeeaf13f356`. (`deb-framework-dependent/` is the smaller variant that pulls in Microsoft's .NET runtime package.) Or with the CLI: `gh run download 42685693367 -R Sthraas/chuvadi-reader-platforms -n linux-x64`.
+| Item | Result |
+|---|---|
+| B-28 | ✅ fixed |
+| B-29 | ✅ fixed: the next file draws in 0.26–0.27 s, 6 of 6 |
+| B-30 | ✅ the closed document is released (3–5 MB of heap left after a full collection). The memory gap after closing is recorded, not blocking |
+| B-27 | Real CAD sheet 1 takes 5.6–6.9 s, sheets 2–5 take 3.4–5.6 s each (64c9c16: 10.5–13.5 s). The page answers in ≤ 0.39 s |
+
+Memory with the real CAD file, app / WebKit, in MB:
+
+| Point | Memory |
+|---|---|
+| Before opening | ~250 / 220 |
+| 5 sheets | 1,400–1,490 / ~660 |
+| +2 to +60 s after closing | 650–690 / ~600 |
+| +90 s after closing | 360–580 / ~600 |
+
+**Quick regression ✅**
+
+| Case | Result |
+|---|---|
+| B-24 + B-08b Cancel | `.pdf`, `.xlsx` and `.docx`: "Opening…" in 0.3–0.4 s, Cancel at 10.0–10.3 s, Cancel closes the tab, and the next file opens |
+| B-25 | Excel, Word and PDF errors follow WT-10 |
+| Owner-password printing | User password: refused, 0 jobs. Owner password: 5 vector pages |
+| Single instance | One window, 4 tabs |
+| Drops | 2 tabs |
+| Print | Byte-identical, vector |
+| B-26 | Raw values, as decided (D-147; Sheets 2.0.4) |
+
+No files are left in `/tmp`.
+
+**Also seen:**
+- Linux's render findings 1 and 2. A page-box jump made as sheet 1's drawing lands goes two sheets on, and the
+  skipped sheet never draws (2 of 3 runs). This is with Foundation.
+- CI x64 failed on UI step 36c (run 42723205272). arm64 passed and the packages were built. I couldn't reproduce
+  the failure here; details are in BUGS.md.
+
+**Where Linux stands.** The regression is clean, B-28, B-29 and B-30 are fixed, and drawing is about twice as fast
+as on 64c9c16. Ready for Arun's check, with these known:
+- B-27: sheets take seconds, not milliseconds.
+- The memory gap after closing.
+- Findings 1 and 2.
+- A red x64 CI run.
+
+## Arun's check — Linux 8dcf4d8
+
+**Get the package.** GitHub → `Sthraas/chuvadi-reader-platforms` → Actions → run **Linux** on `8dcf4d8` ([run 42723205272](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/42723205272); the x64 UI-test step is red on 36c, see BUGS.md, but both packages were built) → Artifacts → **linux-x64** (ARM machine: `linux-arm64`). Unzip it and use **`deb/chuvadi-reader_1.0.0~preview_amd64.deb`** — the self-contained one (37.8 MB, needs no .NET; artifacts kept until 7 Feb 2027). SHA-256 `c953740ffa4591ebcc249ce5ddcc33e1d16c66d2c743c7c89b2829b0accd0f41`. (`deb-framework-dependent/` is the smaller variant that pulls in Microsoft's .NET runtime package.) Or with the CLI: `gh run download 42723205272 -R Sthraas/chuvadi-reader-platforms -n linux-x64`.
 
 **Install** (Ubuntu 24.04 or 26.04, desktop):
 ```
@@ -285,7 +330,7 @@ It appears in the app grid as **Chuvadi Reader**; it also installs and loads its
 1. **Start from the app grid**, cold and again warm — note how long until Home shows (here: ~1.0 s warm on 2 CPUs without a GPU).
 2. **Open a PDF by double-clicking it in Files**, then select **three files** → right-click → Open With → Chuvadi: each becomes its own tab in the one window.
 3. **Drag two files from Files onto the window** — two tabs.
-4. **The KDMC CAD drawing**: open it, page through all 5 sheets, close it. Note the time each sheet takes to draw, and the memory in System Monitor before opening, with 5 sheets, and a minute after closing. Here, on 2 CPUs with no GPU, sheet 1 takes 6–8 s, each new sheet 10–13 s, and memory isn't given back after closing (B-27, B-30). Your real-hardware numbers are the useful ones. The window should stay responsive while it draws.
+4. **The KDMC CAD drawing**: open it, page through all 5 sheets, close it. Note the time each sheet takes to draw, and the memory in System Monitor before opening, with 5 sheets, and a minute or two after closing. Here, on 2 CPUs with no GPU: sheet 1 takes ~6 s and each new sheet ~5 s; memory drops by about half on closing and keeps falling for ~90 s (B-27, B-30). Your real-hardware numbers are the useful ones. The window should stay responsive while it draws. If you type a page number just as sheet 1 appears, you may land on the wrong sheet (a known finding).
 5. **Print to your real printer**: a mixed portrait/landscape file, 2 copies; check it's crisp (vector), and that a file whose permissions forbid printing is refused — then works when opened with its owner password.
 6. **A password-protected PDF**: wrong password, then the right one.
 7. **Mark → annotate → Save as**, and **Protect → Find & redact** a word → Save redacted copy — then search the saved copy for the word (it must be gone).
