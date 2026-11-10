@@ -46,7 +46,7 @@ case, **plus** the Android workflow running the Release `.apk` on at least one e
 check the Mac Catalyst Release build for the same crash.** Until (a) lands, this chat tests a Release build with (c) applied in
 the test composition only, marked as such, so startup and design results reflect the shipping configuration.
 
-## AT-01 · S2 · Android + Foundation · Arun accepted the MAUI libraries (D-143); notices added by Foundation (PR #12, 255aee2) — re-verifying in-app (R6) — Third-party notices leave out AndroidX, Material Components and Kotlin, which ship in the app
+## AT-01 · S2 · Android + Foundation · **verified** R6 run 42751641303 (Foundation 846706e, Release): About › Licences › Third-party notices names AndroidX, Material, Kotlin, kotlinx, Glide, Tink, Gson, JetBrains, and all 29 binding assemblies in the Release app; ".NET runtime" tab present (phone and tablet) — Third-party notices leave out AndroidX, Material Components and Kotlin, which ship in the app
 **Steps:** build Release; list `obj/Release/net10.0-android/android-arm64/linked/*.dll` and the dex (`audit/assemblies.txt`,
 `audit/apk-contents.txt`); open About › Licences.
 **Expected:** every third-party component that ships has its notice (Apache-2.0 §4(d) requires it), and the Play data-safety
@@ -181,7 +181,7 @@ full path over (`DesktopSingleInstance` → `IncomingFiles`), so it focuses that
 - (c) Leave as is. *Cons:* differs from Windows; tabs and Recent fill with duplicates.
 **Recommendation:** (a).
 
-## AT-13 · S2 · Foundation (shared Ui; library if it's the renderer) · **passed in R5** (1.7 s phone and tablet, 1 run each) — intermittent, so repeated in the next runs before calling it verified — A page with one large image sometimes never paints
+## AT-13 · S2 · Foundation (shared Ui; library if it's the renderer) · passing: R5 1/1 each; R6 **5/5 phone** (4.0–5.0 s) and **5/5 tablet** (7.4–13.9 s) — keep repeating — A page with one large image sometimes never paints
 **Steps:** open `heavy-image.pdf` (one A4 page holding a 6000 × 6000 px JPEG; 28 MB file) with Open with; wait.
 **Expected:** page 1 painted within a few seconds (it does, when it works: 3.9 s and 4.5 s).
 **Actual:** in 2 of 4 runs the page stayed on its "page 1" placeholder for the whole wait (90 s, 120 s), app alive, CPU idle
