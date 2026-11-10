@@ -238,6 +238,29 @@ cp "$LOG" "$PWD/smoke-keys.log"
 quit_app || fail "keys run did not quit"
 sleep 2
 
+# --- M-08 / M-23 in Mac Test's state: files handed over by macOS, the window without a first responder, then real
+# ⌃Tab, ⌃⇧Tab and ⌘1 — judged by the tab strip on the page, as a person (and Mac Test's screenshots) see it ---------
+for k in t1 t2; do cp "$DOCS/five-pages.pdf" "$DOCS/$k.pdf"; done
+rm -f "$LOG"
+open -n --env CHUVADI_SMOKE=1 --env "CHUVADI_SMOKE_STEPS=wait;wait;unfocus;native:ctrl-tab;native:ctrl-shift-tab;native:cmd-1" \
+  --stdout "$LOG" --stderr "$LOG" -a "$APP" "$DOCS/t1.pdf" "$DOCS/t2.pdf"
+native_watch 180 &
+NW=$!
+wait_for 'CHUVADI steps done' 180 || fail "M-08 tab-key steps did not finish"
+wait $NW 2>/dev/null || true
+grep -E "CHUVADI (step [0-9]+ [a-z]+:|page-key|webview-focus)" "$LOG" | cut -c1-500
+strip() { grep -E "CHUVADI step $1 [a-z]+: route=" "$LOG" | tail -1 | sed -E 's/.* strip=("[^"]*"|-).*/\1/'; }
+first=$(grep -E "CHUVADI step 6 [a-z]+: route=" "$LOG" | tail -1 | sed -E 's/.* strip1=("[^"]*"|-).*/\1/')
+s3=$(strip 3); s4=$(strip 4); s5=$(strip 5); s6=$(strip 6)
+echo "tab strip: before=$s3 ⌃Tab=$s4 ⌃⇧Tab=$s5 ⌘1=$s6 (first $first)"
+grep -q "CHUVADI step 3 unfocus: resigned=True" "$LOG" && echo "(the WebView had given up the keyboard before the keys)"
+[ -n "$s4" ] && [ "$s4" != "-" ] && [ "$s4" != "$s3" ] && pass "M-08 without a first responder, real ⌃Tab changes the tab on screen" || fail "M-08 ⌃Tab: strip $s3 → $s4"
+[ -n "$s5" ] && [ "$s5" = "$s3" ] && pass "M-08 real ⌃⇧Tab changes it back on screen" || fail "M-08 ⌃⇧Tab: strip $s5 (expected $s3)"
+[ -n "$s6" ] && [ "$s6" = "$first" ] && pass "M-23 real ⌘1 shows the first tab on screen" || fail "M-23 ⌘1: strip $s6 (expected $first)"
+cp "$LOG" "$PWD/smoke-tabkeys.log"
+quit_app || fail "tab-key run did not quit"
+sleep 2
+
 # --- M-17 / M-18 / M-21 / M-19: the tester's sequences, scripted --------------------------------------------
 # Locked PDFs (qpdf: a testing tool, never shipped), a real-key sender with Post Event access, then one launch that
 # walks: page error → locked AES-256 file → wrong password → right password (each with a real Return) → real ⌃⌘F →

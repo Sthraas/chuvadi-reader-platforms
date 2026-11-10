@@ -51,6 +51,19 @@ internal static class MacSmoke
             var colon = step.IndexOf(':');
             var kind = colon < 0 ? step : step[..colon];
             var arg = colon < 0 ? string.Empty : step[(colon + 1)..];
+            if (kind == "unfocus")
+            {
+                // M-08 / M-23: the state Mac Test saw — the window has no first responder (focus on its content group).
+                var resigned = Current(view).ResignFirstResponder();
+                Log($"step {index + 1} unfocus: resigned={resigned} first={Current(view).IsFirstResponder}");
+                Later(2.0, async () =>
+                {
+                    Log($"step {index + 1} unfocus: " + await UiTextAsync(Current(view)));
+                    RunSteps(view, index + 1);
+                });
+                return;
+            }
+
             if (kind == "native")
             {
                 // The smoke script watches for this line and posts the real key (keys.swift), so the key travels
@@ -273,6 +286,11 @@ internal static class MacSmoke
                 + ' immersive=' + (document.body.classList.contains('chvd-immersive') ? 1 : 0)
                 + ' keys=[' + keys + ']'
                 + ' notice=' + (document.body && document.body.innerText.indexOf('stopped unexpectedly') >= 0 ? 1 : 0)
+                + (function () {   // M-08 / M-23: the tab strip as shown — the active tab and the first tab
+                  var a = document.querySelector('.rtab.active'), f = document.querySelector('.rtab');
+                  var t = function (e) { return e ? JSON.stringify(e.textContent.replace(/\s+/g, ' ').trim().slice(0, 40)) : '-'; };
+                  return ' strip=' + t(a) + ' strip1=' + t(f);
+                })()
                 + (function () {   // M-09: the View rail's Immersive label as the page shows it
                   var b = document.querySelector('button[aria-label="Immersive"]');
                   return b ? ' immersiveTip=' + JSON.stringify(b.getAttribute('title') || '') : '';

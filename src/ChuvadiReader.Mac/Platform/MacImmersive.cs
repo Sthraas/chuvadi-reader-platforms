@@ -53,31 +53,15 @@ internal sealed class MacImmersive : NSObject, IWKScriptMessageHandler
 
 /// <summary>
 /// Mac Test M-08 / M-23: keys that only the page handles — next/previous tab (⌃Tab, ⌃⇧Tab) and go to tab n (⌘1…⌘9).
-/// On Mac they did not arrive: after a panel closes the WebView no longer has the keyboard, and UIKit uses ⌃Tab for its
-/// own keyboard focus moves. App-level key commands now hand them to the page's focused element, where reader.js
-/// decides exactly as on Windows (it ignores them while typing in a field). The WebView also gets the keyboard back
-/// after every panel and whenever the window becomes key (<see cref="Refocus"/>).
+/// On Mac they did not arrive: the WebView often lacks the keyboard (after a panel, after files arrive) and UIKit
+/// uses ⌃Tab for its own focus moves. They are Window menu items (MacMenuBar) — a menu key equivalent works whatever
+/// has the keyboard — that hand the key to the page's focused element, where reader.js decides exactly as on Windows
+/// (it ignores them while typing in a field). The WebView also gets the keyboard back after panels, when files
+/// arrive, at first render and whenever the window becomes key (<see cref="Refocus"/>).
 /// </summary>
 internal static class MacPageKeys
 {
     public const string Selector = "chvdPageKey:";
-
-    public static IEnumerable<UIKeyCommand> Commands()
-    {
-        UIKeyCommand Make(string input, UIKeyModifierFlags flags)
-        {
-            var c = UIKeyCommand.Create(new NSString(input), flags, new ObjCRuntime.Selector(Selector));
-            c.WantsPriorityOverSystemBehavior = true;
-            return c;
-        }
-
-        yield return Make("\t", UIKeyModifierFlags.Control);
-        yield return Make("\t", UIKeyModifierFlags.Control | UIKeyModifierFlags.Shift);
-        for (var n = 1; n <= 9; n++)
-        {
-            yield return Make(n.ToString(System.Globalization.CultureInfo.InvariantCulture), UIKeyModifierFlags.Command);
-        }
-    }
 
     public static bool Available => ChuvadiReader.Mac.MainPage.WebKitView is not null;
 
