@@ -92,7 +92,7 @@ jobs:
             android/docs/android/integration/compose.sh > compose-test.sh
           bash compose-test.sh reader ${{ steps.plan.outputs.mobileui_ref }} android 2>&1 | tee compose.txt
       - uses: actions/setup-dotnet@v4
-        with: { dotnet-version: '10.0.x' }
+        with: { dotnet-version: '10.0.403' }   # pinned: 10.0.404 (10 Nov) breaks the clean build, see AT-19
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: '21' }
       - run: dotnet workload install maui-android
@@ -105,6 +105,7 @@ jobs:
       - name: Publish Release (.aab + .apk), timed, warnings counted
         working-directory: reader
         run: |
+          set -o pipefail
           start=$(date +%s)
           dotnet publish src/ChuvadiReader.Android/ChuvadiReader.Android.csproj -c Release -f net10.0-android --no-restore -p:AndroidSdkDirectory=$ANDROID_HOME -bl:../release.binlog 2>&1 | tee ../publish-release.txt
           echo "release publish seconds: $(( $(date +%s) - start ))" | tee -a ../publish-release.txt
@@ -234,7 +235,7 @@ jobs:
             android/docs/android/integration/compose.sh > compose-test.sh
           bash compose-test.sh reader ${{ needs.build.outputs.mobileui_ref }} android
       - uses: actions/setup-dotnet@v4
-        with: { dotnet-version: '10.0.x' }
+        with: { dotnet-version: '10.0.403' }   # pinned: 10.0.404 (10 Nov) breaks the clean build, see AT-19
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: '21' }
       - run: dotnet workload install maui-android

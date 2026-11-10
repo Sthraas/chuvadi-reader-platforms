@@ -381,6 +381,25 @@ The Android chat's own rounds never exercised a save to a new file, and neither 
 on the Release as built, and on a test-only build with only this switch flipped, so the saved files are read back either way.
 **Also:** a save that can't proceed should say so; silence is the worst outcome (Foundation, low priority once the switch is on).
 
+## AT-19 · S2 · Android (build) · open — The clean build breaks on the .NET SDK patch released 10 Nov (10.0.404): the toolchain isn't pinned
+**Steps:** clean runner, `actions/setup-dotnet` with `10.0.x` (what the Android workflow and mine use), `dotnet workload install
+maui-android`, publish Release (run 42863203546, 10 Nov 17:16 UTC; Android 8f173c9 + Foundation dd59362 + Mobile UI 3ecbc75).
+**Expected:** builds, as it did earlier the same day on SDK 10.0.403.
+**Actual:** Release and Debug both fail:
+`ChuvadiReader.Android.csproj(80,5): error : The app must ship .NET's third-party notices; not found at
+~/.nuget/packages/microsoft.netcore.app.runtime.mono.android-arm64/10.0.15/THIRD-PARTY-NOTICES.TXT`.
+The `ChuvadiRuntimeNotices` target builds the path from `$(BundledNETCoreAppPackageVersion)` (now 10.0.15), but that isn't the
+runtime pack the Android build actually resolves under the new SDK, so the file isn't there.
+**Why it matters:** a release build made tomorrow fails, or — worse, once fixed loosely — silently ships a different runtime than the
+one tested. Nothing in the repo fixes the SDK version (no `global.json`).
+**Fix options (Android chat / Foundation for `global.json`):**
+- (a) **Pin the SDK** (`global.json` with `rollForward: disable` or `latestPatch` off, and the same version in every workflow) and
+  move it deliberately. *Pros:* what is tested is what ships; byte-stable builds. *Cons:* security patches need a conscious bump.
+- (b) **Take the notices from the resolved runtime pack** (`@(ResolvedRuntimePack)` → `PackageDirectory`) instead of composing the
+  path. *Pros:* survives SDK patches. *Cons:* alone, builds still float with the SDK.
+- **Recommendation: both** — (b) so the target is correct, (a) so releases are reproducible.
+My workflow is pinned to 10.0.403 from round 9 on (and now fails the step when publish fails; it used to carry on).
+
 ## Questions for the coordinator (not filed as bugs)
 - **Q-1 Same file opened again → new tab** — answered by the coordinator (9 Nov 07:12): Windows is the reference. Checked the shared
   code and filed the difference as **AT-12** (Android).
