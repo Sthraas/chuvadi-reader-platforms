@@ -123,8 +123,8 @@ navigates only when the Reader isn't the current page.
 - **Verified (sandbox):** Platforms `-warnaserror` 0 warnings; tests 171 + 54 + 32 + 16 pass. On device: round 6
   (the composition applies Android's pending proposals), check "back steps back … with no dead presses".
 
-## P-08 Paths shown to the person go through a host seam, `IPathLabels` (AT-07) — **decided (a), D-146 (coordinator, 9 Nov 07:00 IST); for Foundation's combined patch**
-Patch: [`proposal/P-08-path-labels.patch`](proposal/P-08-path-labels.patch), against platform/foundation **022b7c0** (applies
+## P-08 Paths shown to the person go through a host seam, `IPathLabels` (AT-07) — **decided (a), D-146 — taken by Foundation (twelfth combined patch part 4, c91a581)**
+Patch: [`proposal/P-08-path-labels.patch`](proposal/applied/P-08-path-labels.patch), against platform/foundation **022b7c0** (applies
 on it alone, and on 022b7c0 + Mobile UI 558a276); 16 files, +89 −23. Rebased 9 Nov 07:30 onto the typed registrations:
 the seam is `Seam<IPathLabels, PlainPathLabels>(services, life)`, and `TypedRegistrationTests` pins it.
 

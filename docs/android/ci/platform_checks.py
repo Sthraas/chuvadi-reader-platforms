@@ -786,6 +786,26 @@ check("status and navigation bar areas take each theme's bar colour, light icons
       all(v["pass"] for v in bars.values()), bars)
 
 
+# ── 7d. AT-11: Android ends the app in the background; coming back lands on the same document ──
+tap_el('button[title="Home"]')
+wait_for(lambda s: s.get("route") == "/", 15, "Home")
+tap_el(".rcard")   # "Pick up where you left off" opens the Reader on that tab
+k0 = wait_for(lambda s: s.get("route") == "/reader" and s.get("pages", 0) > 0 and s.get("tab"), 30, "the Reader")
+key("KEYCODE_HOME")
+time.sleep(2)
+pid_before = pid()
+adb("shell", "am", "kill", PKG)          # what Android does to a background app under memory pressure
+time.sleep(2)
+killed = pid() in ("", None) or pid() != pid_before
+adb("shell", "monkey", "-p", PKG, "-c", "android.intent.category.LAUNCHER", "1")
+k1 = wait_for(lambda s: s.get("route") == "/reader" and s.get("pages", 0) > 0 and s.get("tab"), 45, "the Reader after the kill")
+shot("p10d-after-background-kill")
+keep = ("route", "tab", "tabs", "counter")
+check("after Android ends the app in the background, it comes back on the same document, page and tabs (AT-11)",
+      killed and pid() not in ("", pid_before) and all(k0.get(k) == k1.get(k) for k in keep),
+      {"killed": killed, "pid": [pid_before, pid()], "before": {k: k0.get(k) for k in keep}, "after": {k: k1.get(k) for k in keep}})
+
+
 # ── 8. Split screen ──────────────────────────────────────────────────────────
 def task_id():
     out = adb("shell", "dumpsys", "activity", "activities")

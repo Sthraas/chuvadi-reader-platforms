@@ -40,6 +40,8 @@ public sealed class MainActivity : MauiAppCompatActivity
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
+        // Recreated after Android ended the app in the background: come back on the same screen (AT-11).
+        SessionRoute.Restore(savedInstanceState);
         base.OnCreate(savedInstanceState);
         SystemBars.Apply(this);
 
@@ -73,6 +75,12 @@ public sealed class MainActivity : MauiAppCompatActivity
     {
         base.OnConfigurationChanged(newConfig);
         Service<AndroidPlatformInfo>()?.OnConfigurationChanged(newConfig);
+    }
+
+    protected override void OnSaveInstanceState(Bundle outState)
+    {
+        SessionRoute.Save(outState);
+        base.OnSaveInstanceState(outState);
     }
 
     protected override void OnPause()

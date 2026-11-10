@@ -663,3 +663,20 @@ same screen; no crash), smoke pass. With round 6 (API 36 phone and tablet, all c
 - Sandbox: Platforms `-warnaserror` 0 warnings; Core 212, Hosting 66, MobileUi 16, WebUi 39 pass; Android Debug and
   Release `-warnaserror` 0 warnings; Release manifest check 14/14.
 - Round: all four emulators, full suite, with the Release (trimmed) launch — for AT-03.
+
+### 57. Run 42549242105; rebase onto Foundation f88f9ef; AT-11 — coordinator, 9 Nov 20:23 and 10 Nov 07:23 IST
+- **Run 42549242105** (all four, full, d134c74 on 022b7c0): every stage green on all four, **Release (trimmed) launch
+  pass on all four — AT-03 fixed**. API 36: gestures and platform all pass, AT-07 and AT-08 included; API 35: WebView
+  gate 4/4.
+- Composition: Foundation `f88f9ef` (P-08, AT-03, AT-10, AT-13, Sheets 2.0.4) + Mobile UI `d34d542` merged (clean).
+  P-08 is in Foundation: moved to `proposal/applied/`; no Android proposals pending.
+- **AT-11** (phone tabs "lost" after a background kill): the tabs survive (TabsService saves them on every change; in
+  Android Test's runs the count before each kill grew 7 → 16), but a recreated activity started a fresh WebView on Home,
+  where the phone shows no tab strip — so the Reader, its tab and page were gone from view; the tablet's title-bar strip
+  hid it. Host fix, no Ui hook needed: `SessionRoute` saves the Ui's route in the activity's saved state
+  (`OnSaveInstanceState`) and a recreated activity starts the WebView there (`BlazorWebView.StartPath`); the Reader then
+  reopens the active tab at its page. A cold start (no saved state) still opens Home, as on Windows. Test:
+  `platform_checks.py` "after Android ends the app in the background, it comes back on the same document, page and tabs"
+  (Home → card → Reader, Home key, `am kill`, relaunch; route, tab, tab count and page counter equal).
+- Sandbox: Android Debug and Release `-warnaserror` 0 warnings; Release manifest 14/14; Core 233, Hosting 77, MobileUi 16,
+  WebUi 39 pass.

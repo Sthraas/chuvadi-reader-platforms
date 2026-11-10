@@ -33,7 +33,8 @@ public sealed class MainPage : ContentPage
         // Pre-paint colour matches the default (Cream paper) theme so there is no white flash.
         BackgroundColor = Color.FromArgb("#F2EAD6");
 
-        var web = new BlazorWebView { HostPage = "wwwroot/index.html" };
+        // After Android ended the app in the background, start where the person was (AT-11); else Home.
+        var web = new BlazorWebView { HostPage = "wwwroot/index.html", StartPath = Platform.SessionRoute.TakeStartPath() };
         web.RootComponents.Add(new RootComponent
         {
             Selector = "#app",
@@ -53,6 +54,7 @@ public sealed class MainPage : ContentPage
         // Transparent until the page paints, so a resume or first frame shows the page colour behind
         // it instead of the WebView's default white (round 4: a white frame on relaunch).
         e.WebView.SetBackgroundColor(global::Android.Graphics.Color.Transparent);
+        Platform.SessionRoute.Track(e.WebView);
 
         // By now BlazorWebView has registered its Back callback: put the Ui's first chance in front.
         MainThread.BeginInvokeOnMainThread(
