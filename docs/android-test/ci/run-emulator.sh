@@ -19,6 +19,8 @@ fi
 adb shell dumpsys webviewupdate | grep "Current WebView package" | tee "$OUT/webview.txt"
 
 python3 "$HERE/fixtures.py" "$OUT/fixtures" > "$OUT/fixtures.txt"
+# API 35 (decision (c), 9 Nov): only the WebView update screen is tested there.
+if [ "$API" -lt 36 ]; then SUITES=",gate,"; fi
 
 # 1. The Release package exactly as built (same build as the .aab): does it start? (AT-03)
 adb install -r "$PKGS/chuvadi-reader-release.apk" | tee "$OUT/install-release-as-built.txt"
@@ -60,6 +62,12 @@ if [[ $SUITES == *,design,* ]]; then
 fi
 if [[ $SUITES == *,function,* ]] && [ -f "$HERE/function.py" ]; then
   python3 "$HERE/function.py" "$OUT/function" "$OUT/fixtures" || rc=1
+fi
+if [[ $SUITES == *,function2,* ]]; then
+  python3 "$HERE/function2.py" "$OUT/function2" "$OUT/fixtures" || rc=1
+fi
+if [[ $SUITES == *,gate,* ]]; then
+  python3 "$HERE/gate.py" "$OUT/gate" || rc=1
 fi
 if [[ $SUITES == *,robust,* ]] && [ -f "$HERE/robust.py" ]; then
   python3 "$HERE/robust.py" "$OUT/robust" "$OUT/fixtures" || rc=1

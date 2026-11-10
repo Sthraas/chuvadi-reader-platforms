@@ -1,0 +1,289 @@
+#!/usr/bin/env python3
+"""Function suite part 2 (test tooling only): markup + Save / Save as with the saved file checked,
+form filling, box redaction (text really gone), tablet printing, fast typing in other fields.
+
+    function2.py <out-dir> <fixtures-dir>
+"""
+import json
+import os
+import re
+import sys
+import time
+
+from pypdf import PdfReader
+
+from lib import Cdp, PKG, Results, adb, component, dismiss_system_dialogs, open_with, push_media, screencap, sh, ui_dump
+
+OUT, FX = sys.argv[1], sys.argv[2]
+R = Results(OUT, "function2")
+cdp = Cdp()
+COMP = component()
+step = [0]
+
+FIND = r"""((labels, sel) => {
+  const vis = e => { const r = e.getBoundingClientRect(); const s = getComputedStyle(e);
+     return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none' && r.bottom > 0 && r.top < innerHeight; };
+  const pool = [...document.querySelectorAll(sel || 'button, a, [role=button], [role=tab], [role=menuitem], input, [title], [aria-label]')].filter(vis);
+  for (const want of labels) { const w = want.toLowerCase();
+    const hits = pool.filter(e => [e.getAttribute('aria-label'), e.getAttribute('title'), e.innerText, e.value]
+        .some(t => t && t.trim().toLowerCase().replace(/\s+/g, ' ').startsWith(w)));
+    hits.sort((a, b) => { const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect(); return ra.width * ra.height - rb.width * rb.height; });
+    if (hits[0]) { const r = hits[0].getBoundingClientRect();
+      return {label: want, text: (hits[0].getAttribute('aria-label') || hits[0].getAttribute('title') || hits[0].innerText || '').slice(0, 60),
+              x: r.left + r.width / 2, y: r.top + r.height / 2, disabled: !!hits[0].disabled}; } }
+  return null; })(%s, %s)"""
+
+
+def shot(name):
+    step[0] += 1
+    return screencap(os.path.join(OUT, f"{step[0]:02d}-{name}.png"))
+
+
+def find(*labels, sel=None):
+    return cdp.js(FIND % (json.dumps(list(labels)), json.dumps(sel)))
+
+
+def webview_bounds():
+    m = re.search(r'class="android.webkit.WebView"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', ui_dump())
+    return tuple(map(int, m.groups()))
+
+
+def to_screen(x, y):
+    b = webview_bounds()
+    d = cdp.js("devicePixelRatio")
+    return int(b[0] + x * d), int(b[1] + y * d)
+
+
+def tap(*labels, sel=None):
+    hit = find(*labels, sel=sel)
+    if hit:
+        sx, sy = to_screen(hit["x"], hit["y"])
+        sh(f"input tap {sx} {sy}")
+        time.sleep(1)
+    return hit
+
+
+def type_slow(text):
+    for ch in text:
+        sh(f"input text {ch}")
+        time.sleep(0.25)
+
+
+def is_phone():
+    return cdp.js("document.documentElement.getAttribute('data-shell')") == "phone"
+
+
+def page_pt_to_css(page_index, x_pt, y_pt, w_pt=595.28, h_pt=841.89):
+    r = cdp.js(f"(() => {{ const s = document.querySelectorAll('.rpage-wrap .rpage')[{page_index}]; const r = s.getBoundingClientRect();"
+               f" return [r.left, r.top, r.width, r.height]; }})()")
+    return r[0] + x_pt / w_pt * r[2], r[1] + (h_pt - y_pt) / h_pt * r[3]
+
+
+def mode(name):
+    return tap(name, sel=".ph-nav-b, .lb-btn, button")
+
+
+def wait(expr, secs=30):
+    return cdp.wait(expr, secs, 0.5)
+
+
+def mark_time():
+    sh("touch /data/local/tmp/at-mark")
+
+
+def newest_pdf():
+    rows = sh("find /storage/emulated/0/ -type f -name '*.pdf' -newer /data/local/tmp/at-mark 2>/dev/null")
+    files = [l.strip() for l in rows.splitlines() if l.strip()]
+    return files[-1] if files else None
+
+
+def saf_save():
+    """System 'save' picker (ACTION_CREATE_DOCUMENT): accept the suggested name in the current folder."""
+    for _ in range(8):
+        xml = ui_dump()
+        if "com.google.android.documentsui" in xml or "com.android.documentsui" in xml:
+            m = re.search(r'(?:text|content-desc)="(SAVE|Save)"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', xml)
+            if m:
+                x1, y1, x2, y2 = map(int, m.groups()[1:])
+                sh(f"input tap {(x1 + x2) // 2} {(y1 + y2) // 2}")
+                time.sleep(3)
+                return True
+        time.sleep(1)
+    return False
+
+
+def pull_text(remote, name):
+    local = os.path.join(OUT, name)
+    adb("pull", remote, local)
+    try:
+        r = PdfReader(local)
+        return local, "\n".join((p.extract_text() or "") for p in r.pages), r
+    except Exception as e:
+        return local, f"<unreadable {e}>", None
+
+
+def open_doc(fixture, as_name):
+    uri = push_media(os.path.join(FX, fixture), as_name)
+    open_with(uri)
+    ok = wait(f"(() => {{ const t = (document.querySelector('.rtab.active .rtab-name') || document.querySelector('.ph-t') || {{}}).textContent || '';"
+              f" return t.trim().startsWith('{as_name.split('.')[0]}') && document.querySelectorAll('.rpage svg').length > 0; }})()", 40)
+    return uri, ok
+
+
+sh(f"am start -W -n {COMP}")
+cdp.connect(60)
+wait("document.getElementById('app') && document.getElementById('app').children.length > 0", 60)
+phone = is_phone()
+
+# ── F-04 + F-09: text box markup, then Save (tablet: in place, write-back) / Save as new PDF (phone) ──
+uri, ok = open_doc("doc-12p.pdf", "mark-doc.pdf")
+mode("Mark")
+time.sleep(1)
+tool = tap("Mark: Text", "Text", sel=".ph-tool, .rb, button")
+x, y = page_pt_to_css(0, 300, 420)
+sx, sy = to_screen(x, y)
+sh(f"input tap {sx} {sy}")
+time.sleep(1.5)
+type_slow("chuvadimark")
+time.sleep(1)
+typed = cdp.js("(() => { const a = document.activeElement; return a ? (a.value ?? a.innerText ?? '') : null; })()")
+shot("mark-text")
+R.check("F-04a Mark › Text: tap on the page, type — the box holds the typed text", typed and "chuvadimark" in typed,
+        {"tool": tool, "typed": typed})
+sh("input keyevent KEYCODE_BACK")  # hide the keyboard
+time.sleep(1)
+mark_time()
+if phone:
+    hit = tap("Save as new PDF", sel=".ph-fab")
+else:
+    hit = tap("Save (Ctrl S)", "Save", sel=".rb, button")
+time.sleep(3)
+shot("after-save")
+picker = saf_save()
+time.sleep(3)
+saved = newest_pdf()
+txt = None
+if saved:
+    _, txt, _ = pull_text(saved, "marked.pdf")
+R.check("F-09a Save writes a file containing the new text box", bool(saved and txt and "chuvadimark" in txt),
+        {"button": hit, "picker": picker, "saved": saved, "has_text": bool(txt and "chuvadimark" in txt)})
+if not phone:
+    _, orig_txt, _ = pull_text("/sdcard/Download/mark-doc.pdf", "mark-doc-original.pdf")
+    R.check("F-09b tablet Save in place writes back to the file that was opened", "chuvadimark" in orig_txt,
+            {"original_has_markup": "chuvadimark" in orig_txt, "saved_file": saved})
+
+# ── Fast typing in the Mark text box (AT-10 scope) ──
+mode("Mark")
+tap("Mark: Text", "Text", sel=".ph-tool, .rb, button")
+x, y = page_pt_to_css(0, 300, 300)
+sx, sy = to_screen(x, y)
+sh(f"input tap {sx} {sy}")
+time.sleep(1.5)
+sh("input text burstwordtest")
+time.sleep(1.5)
+burst = cdp.js("(() => { const a = document.activeElement; return a ? (a.value ?? a.innerText ?? '') : null; })()")
+R.check("F-03c fast typing into a Mark text box keeps every character", burst and "burstwordtest" in burst, {"got": burst})
+sh("input keyevent KEYCODE_BACK")
+cdp.js("document.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', bubbles: true}))")
+
+# ── Library search box (AT-10 scope) ──
+cdp.js("Blazor.navigateTo('/library')")
+time.sleep(2)
+f = find("Search", sel="input")
+if f:
+    sx, sy = to_screen(f["x"], f["y"])
+    sh(f"input tap {sx} {sy}")
+    time.sleep(1.2)
+    sh("input text burstwordtest")
+    time.sleep(1.5)
+lib = cdp.js("(() => { const a = document.activeElement; return a && a.tagName === 'INPUT' ? a.value : null; })()")
+R.check("F-03d fast typing into the Library search keeps every character", lib == "burstwordtest", {"got": lib, "field": f})
+sh("input keyevent KEYCODE_BACK")
+
+# ── F-06 forms: fill the text field, save, value in the saved file ──
+uri, ok = open_doc("form.pdf", "form-fill.pdf")
+mode("Read")
+x, y = page_pt_to_css(0, 285, 781)
+sx, sy = to_screen(x, y)
+sh(f"input tap {sx} {sy}")
+time.sleep(1.5)
+type_slow("Ravi")
+time.sleep(1)
+shot("form-typed")
+sh("input keyevent KEYCODE_BACK")
+time.sleep(1)
+mark_time()
+hit = tap("Save as new PDF", "Save (Ctrl S)", "Save", sel=".ph-fab, .rb, button")
+time.sleep(2)
+saf_save()
+time.sleep(3)
+saved = newest_pdf() or ("/sdcard/Download/form-fill.pdf" if not phone else None)
+val = None
+if saved:
+    _, _, r = pull_text(saved, "form-filled.pdf")
+    try:
+        val = (r.get_fields() or {}).get("patient", {}).get("/V") if r else None
+    except Exception as e:
+        val = f"<{e}>"
+R.check("F-06 form text field filled by touch is saved", val == "Ravi", {"button": hit, "saved": saved, "value": val})
+
+# ── F-07 box redaction: draw a box over page 1's heading, save the redacted copy, the text is gone ──
+uri, ok = open_doc("doc-12p.pdf", "redact-doc.pdf")
+mode("Protect")
+time.sleep(1)
+tool = tap("Redact box", "Redact", sel=".ph-tool, .rb, button")
+x1, y1 = page_pt_to_css(0, 50, 760)
+x2, y2 = page_pt_to_css(0, 400, 740)
+a = to_screen(x1, y1)
+b = to_screen(x2, y2)
+sh(f"input swipe {a[0]} {a[1]} {b[0]} {b[1]} 600")
+time.sleep(1.5)
+shot("redact-box")
+mark_time()
+hit = tap("Save redacted copy", "Apply redaction", "Redact and save", "Save as new PDF", "Save", sel=".ph-fab, .rb, button, .chvd-card button")
+time.sleep(2)
+shot("redact-save")
+xml = ui_dump()
+saf_save()
+time.sleep(4)
+saved = newest_pdf()
+gone = None
+if saved:
+    _, txt, _ = pull_text(saved, "redacted.pdf")
+    first = txt.split("Discharge summary - page 2")[0] if txt else ""
+    gone = {"heading_page1_present": "page 1" in first.split("\n")[0:3].__str__(), "first_200": first[:200]}
+R.check("F-07 redacted copy saved and page 1's heading text is gone from it",
+        bool(saved and gone and "Discharge summary - page 1" not in (txt or "")),
+        {"tool": tool, "button": hit, "saved": saved, "check": gone})
+
+# ── F-11 tablet printing: Print card's own Print button ──
+uri, ok = open_doc("doc-12p.pdf", "print-doc.pdf")
+if phone:
+    tap("More", sel=".ph-ib")
+    time.sleep(1)
+    tap("Print", sel=".ph-row")
+else:
+    tap("Print", "Print (Ctrl P)", sel=".rb, .lb-btn, button")
+time.sleep(2)
+card = cdp.js("[...document.querySelectorAll('section.chvd-card button, .chvd-card button')].filter(b => b.getBoundingClientRect().width > 0)"
+              ".map(b => (b.innerText || b.getAttribute('aria-label') || '').trim())")
+shot("print-card")
+btn = None
+for sel in ("section.chvd-card .footer button", ".chvd-card footer button", ".chvd-card button.primary", ".chvd-card button"):
+    btn = find("Print", sel=sel)
+    if btn and not btn["disabled"]:
+        break
+if btn:
+    sx, sy = to_screen(btn["x"], btn["y"])
+    sh(f"input tap {sx} {sy}")
+time.sleep(5)
+xml = ui_dump()
+R.check(f"F-11d print card opens Android's print dialog ({'phone' if phone else 'tablet'})", "com.android.printspooler" in xml,
+        {"card_buttons": card, "button": btn})
+shot("print-dialog")
+sh("input keyevent KEYCODE_BACK")
+time.sleep(2)
+
+log = adb("logcat", "-d", "-v", "epoch")
+fatal = [l for l in log.splitlines() if "FATAL EXCEPTION" in l or f"ANR in {PKG}" in l]
+R.check("R-10 no crash / ANR in function part 2", not fatal, fatal[:5])
