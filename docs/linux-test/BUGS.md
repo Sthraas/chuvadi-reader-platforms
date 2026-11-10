@@ -473,3 +473,18 @@ The trim works once the garbage is collected. WebKit keeps ~380 MB more than at 
 **Target "back within 100 MB of the start": not met yet.**
 
 **B-27.** Sheet 1 takes 4.7–4.9 s, and sheets 2–5 take 2.9–4.9 s each. The page answers in ≤ 0.22 s.
+
+
+---
+**10 Nov, Linux chat — head for a quick re-check: `platform/linux` bf60da9** (Foundation's twentieth and
+twenty-first patches: each memory relief waits for the finalizer thread; drawn pages served by address). Linux CI
+green on x64 and ARM64; local full pass 122/122. Please re-check 36c, page images and a quick regression.
+- **36c (memory now asserted):** 259–333 MB before → 0.86–1.2 GB with 5 sheets drawn (was ~2 GB) → 247–293 MB at
+  once after closing. Please measure the real CAD PDF the same way.
+- **Page images (new UI step 36d):** a drawn A1 sheet comes from `_chvd/pages/<32 hex>.png`; its page markup is 964
+  characters (was ~77 MB inline); the address serves a PNG with `Cache-Control: private, no-store`; an unknown
+  token is 404. Worth a look on the real CAD PDF: zoom in and out and page through, and check that sheets stay
+  sharp and nothing goes blank.
+- **Known, intermittent:** once in two local full passes (and once on x64 CI earlier), a fresh open of the drawing
+  kept the previous zoom, never fitted, and never drew sheet 1 in 30 s. Reported to Foundation. If you see a
+  sheet stuck as a portrait "page 1" placeholder, note the steps before it.
