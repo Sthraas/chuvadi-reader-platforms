@@ -394,7 +394,7 @@ func sendKey(_ combo: String) {
     let d = CGEvent(keyboardEventSource: src, virtualKey: code, keyDown: true)!
     d.flags = flags
     d.post(tap: .cghidEventTap)
-    usleep(15_000)
+    usleep(60_000)  // same hold as the Mac smoke's keys.swift
     let u = CGEvent(keyboardEventSource: src, virtualKey: code, keyDown: false)!
     u.flags = flags
     u.post(tap: .cghidEventTap)
@@ -654,6 +654,10 @@ case "displays":
         print("switch to \(hi.width)x\(hi.height) HiDPI: \(r == .success ? "ok" : "error \(r.rawValue)")")
     }
 
+case "focused":
+    // the app's focused accessibility element (where keys go)
+    let app = appElement(pidOf(arg(0)))
+    if let f = ax(app, kAXFocusedUIElementAttribute) { print(describe(f as! AXUIElement)) } else { print("no focused element") }
 case "activate":
     NSRunningApplication(processIdentifier: pidOf(arg(0)))?.activate()
 

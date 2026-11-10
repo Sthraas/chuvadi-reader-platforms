@@ -1325,6 +1325,7 @@ def m_shared():
     ev["shot_before"] = shot("tabkeys-0-before")
     drive("activate", NAME)
     time.sleep(0.6)
+    ev["focused_before_keys"] = drive("focused", NAME)[1][:200]
     drive("key", "ctrl+tab")
     time.sleep(2)
     t2 = axdump("shared-after-ctrl-tab")
@@ -1349,6 +1350,7 @@ def m_shared():
         ev["ctrl_tab_shot"] = shot("tabkeys-3-click-ctrl-tab")
         ev["m08_ctrl_tab_switches_after_click"] = ev["status_before"] != ev["status_after_click_ctrl_tab"]
         # control: the same harness keys, another tab shortcut (⌘1 = Go to tab 1)
+        ev["focused_before_cmd_1"] = drive("focused", NAME)[1][:200]
         drive("key", "cmd+1")
         time.sleep(2)
         ev["status_after_cmd_1"] = status(axdump("shared-after-cmd-1"))
