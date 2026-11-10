@@ -1,5 +1,18 @@
 # Web portal UI — existing-file hooks
 
+## Still to apply — the Excel value bar often never turns on in the portal (found 10 Nov, re-checking patch 24 / D-161)
+**`proposal/web-ui-xlsx-value-bar-race.patch`**, against foundation **ec09f4f** (= foundation-pr dd59362 for `src`; applies cleanly). Two of the Foundation's files, 12 lines added and 4 removed:
+- `Components/Viewers/XlsxView.razor`: `OnAfterRenderAsync` set `_valueBarOn = true` before calling the script. That call can belong to a render from before the grid was drawn: the workbook finishes loading while the "busy" render is on its way to the browser, which is the normal case on Blazor Server. The script then finds no grid and does nothing, and it is never asked again. Now the flag is set only when the script says the listener is on (`JsAsync<bool>`), and only if no reload happened meanwhile (`_version`).
+- `wwwroot/js/viewers.js` `gridValueBar`: returns `true` when the listener is on (already or newly) and `false` when the grid isn't connected or the bar isn't there. The behaviour is otherwise unchanged.
+
+Measured in the preview (Web profile, 1280×720; open `formats.xlsx` / `realistic.xlsx`, wait 2.5 s, click the first cell):
+- Without the patch: the listener is on, and the bar shows on click, in **4 of 10** opens in each of Chromium, Firefox and WebKit.
+- With the patch: **10 of 10** in each. Windows profile with the patch: 4 of 4 in each.
+- With the patch, at desktop, tablet and phone sizes in all three browsers: a 26 px bar in LiPi Sans 12 px, showing the address and the stored value (B2: shown 3.141592654, stored 3.14159265358979). The page never scrolls sideways, the selected cell is outlined in the binding colour, and there are no console errors.
+- Screenshots: `screenshots/webkit-xlsx-value-bar.png`, `screenshots/webkit-xlsx-value-bar-phone.png`.
+
+Not part of this diff, already recorded by the Foundation as library item **SH-L1** (Sheets 2.0.4): time-only cells show "########" and the value bar shows -0.25 where the file holds 0.75. It is visible in the portal on `formats.xlsx` B18, B19, B38 and B44.
+
 ## Applied by the Foundation (combined patch, D-26, `3358b00`)
 H1 account menu in the top bar · H2 "Upload" for Open · H3 signed-in user in the status bar · H4 blue server dot (CSS in `shell.css`, light `#2c3e8c`, dark `#8fa3e6`). The Foundation wrote them in its own form (a MainLayout `IsPortal` property; the user item wrapped in `sb-item` by MainLayout) and proved Windows pixel-identical. Also applied: `IAccount.Unit` and "· Unit" in `AccountMenu` (D-35).
 

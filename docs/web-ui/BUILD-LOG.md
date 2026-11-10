@@ -301,3 +301,20 @@ After a restore for the new library versions: build `-warnaserror` 0 warnings; t
 - Build `-warnaserror` 0 warnings; tests 233 + 16 + 41 + 77 = **367 pass** (up from 331 with the Foundation's new tests).
 - Re-check against ce805d1 in a worktree: 63 screenshots in Chromium, Firefox and WebKit at desktop, tablet and phone sizes, covering 12a, the 12c Sangam gate, Home, the 12b account menu with its footer, Settings › Account (new in the sweep), Arrange, Redact, and the phone ⋮ sheet. The text is identical in all 63. Pixels are identical apart from the known flaky Chromium chip sliver and a 34×1 px anti-aliasing change on a toolbar button group's top edge in Chromium tablet Arrange. That one is consistent and comes from the Foundation's render patches; it's not a portal surface and you can't see it at normal size.
 - Drop overlay (U-17 / D-104): in all three browsers on both zones, a PDF drag hides the contents, keeps the frame and shows the overlay, and everything is restored afterwards. An image drag, window blur and the Windows profile never set it.
+
+## 2026-11-10 — session 18 (coordinator 20:50 and 22:45: merge foundation-pr dd59362, patches 20–24; Excel value bar in the portal)
+
+### 1. Branches, and which branch I merged
+Checked all: `platform/foundation-pr` dd59362, `platform/foundation` ec09f4f, `main` 9196b3a, `platform/web` 04cdd21, `platform/web-test` 6a6e981, `platform/mobile-ui` 5c66f1a.
+`foundation-pr` has a different history (patches 12–21 squashed in #12), so merging it conflicts in 10 files. Its tree is `platform/foundation` ec09f4f **minus 34 files**: `docs/design-handoff/` (26, the handout I build from), three coordination docs, and `.github/workflows/platforms.yml` and `platform-build.yml` (this branch's CI). `src`, `tests`, `tools` and `ci` are byte-identical. So I merged **`platform/foundation` ec09f4f**: the same patches 20–24, a clean merge, and it keeps CI and the handout. After the merge, `git diff HEAD origin/platform/foundation-pr -- src` is empty. Raised with the coordinator.
+
+### 2. Build and tests
+Build `-warnaserror` 0 warnings. Tests 292 + 16 + 41 + 89 = **438 pass**, 0 fail, 3 skipped (the Foundation's own skips, SH-L1 among them).
+
+### 3. Portal surfaces against d3a7139
+63 screenshots (Chromium / Firefox / WebKit × desktop / tablet / phone; 12a, 12c, Home, 12b, Settings › Account, Arrange, Redact, phone ⋮ sheet). The text is identical in all of them. The only pixel change is the Tools rail heading in Arrange and Redact at desktop and tablet sizes, now "TOOLS" (H-20, patch 22, intended). Drop overlay: 6 of 6.
+
+### 4. Excel in the portal (patch 24, D-161)
+- Formatted cells show as the file's number formats say (1,234,567 · ($1,235) · 25.60% · 1 1/4 · 15-Mar-23), right-aligned, at all sizes.
+- **Bug found**: the value bar's click listener was on in only 4 of 10 opens, the same in all three browsers. It is a render-order race in `XlsxView`. The fix is sent to the Foundation as `proposal/web-ui-xlsx-value-bar-race.patch` and measures 10 of 10 (HOOKS). The Foundation's files are reverted on this branch, so the bug is still here until the Foundation applies the diff.
+- Known library item SH-L1 is visible: time-only cells show "########", and the value bar shows -0.25 for a stored 0.75.
