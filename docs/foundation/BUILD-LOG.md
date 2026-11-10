@@ -342,3 +342,20 @@ Reproduced in the desktop preview, which now opens real files (`CHVD_OPEN`, test
 
 - 363/363 tests (2 runs); 0 warnings in both solutions; trimmed probe 54/54.
 
+### 44. Nineteenth combined patch: Linux's render findings (`PROPOSAL-render-findings-10nov.md`, platform/linux 8dcf4d8)
+1. **A page back in view after its render was cancelled is drawn.** Linux's one-line diff, unchanged: a cancelled entry in `_rendering` counts as gone, so the page is asked for again. Pinned by a source guard. The Core side already gives a page asked for after a stop a fresh draw (§41).
+2. **Moving to a page while the heights change lands on that page** (`reader.js`).
+   - The view keeps an anchor: the page at the top and how far into it the view starts, or the page asked for after a jump.
+   - A `ResizeObserver` on the pages puts it back whenever page heights change: the fit zoom landing, or a drawing replacing its placeholder.
+   - The page box is reported once the jump's quiet time is over (it kept showing 1).
+   - Gesture zooms (pinch, double-tap, marquee) still place the view themselves, and the anchor is re-read after them.
+   - `tools/PixelProof/page-anchor.js` (continuous mode, with Chromium's own scroll anchoring off, as in WebKit, which has none): **before 0/3, after 3/3** (twice). Cases: jump then the fit shrinks the pages; the fit grows them mid-jump; scrolled by hand then the heights change.
+   - On Windows, WebView2 already anchors natively, so its jumps behave as before. Desktop screens identical (every screen identical in at least one of 3 runs; the 1× relative-time and scrollbar artefacts move between runs).
+3. **Memory after closing: the relief ran before the drawing was garbage.**
+   - **Found:** Blazor keeps the render before last for diffing. One render after the document on show changes still holds the old document's page text (≈ 77 MB per CAD sheet); a second render lets it go. `PageReleaseTests` (Web Ui tests, real `PageSvg`, a minimal renderer) pins both halves: after one render the page is still alive, after a second it isn't.
+   - **Fixed:** the Reader renders once more after the document on show changes, and keys every `PageSvg` by its document, so the old document's page components are disposed instead of reused. The page text goes at the close, before the 0.5 s relief.
+   - **Outside the .NET heap** (Linux's ~150 MB after a full collection): none of it is ours or chuvadi-pdf's (both managed only). Here, without WebKit, resident memory comes back to within ~50 MB of a cold start (§41).
+     - On Linux the rest is WebKitGTK and GLib in the app's process, and freed C memory that glibc keeps until `malloc_trim(0)`.
+     - New `MemoryReliefNotice.Relieved` (Core, public static event) is raised after each relief pass, so the Linux host can call `malloc_trim(0)` there. That's the Linux chat's one line.
+- 366/366 tests (2 runs); 0 warnings in both solutions; trimmed probe 54/54; find-typing 3/3.
+

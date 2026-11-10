@@ -32,3 +32,26 @@ public sealed class TypingFieldsTests
         Assert.Empty(leaks);
     }
 }
+
+/// <summary>Nineteenth patch (Linux finding 3): the Reader keys every PageSvg by its document.</summary>
+public sealed class PageKeyTests
+{
+    [Fact]
+    public void Every_page_the_Reader_draws_is_keyed_by_its_document()
+    {
+        var reader = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "UiSources", "Pages", "Reader.razor"));
+        var pages = Regex.Matches(reader, @"<PageSvg\b[^>]*>").Select(m => m.Value).ToList();
+
+        Assert.NotEmpty(pages);
+        Assert.All(pages, p => Assert.Contains("@key=", p));
+        Assert.Contains("_renderToRelease = true;", reader);
+    }
+
+    /// <summary>Linux finding 1: a page back in view after its render was cancelled is asked for again.</summary>
+    [Fact]
+    public void A_cancelled_page_request_never_stops_the_page_being_asked_for_again()
+    {
+        var reader = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "UiSources", "Pages", "Reader.razor"));
+        Assert.Contains("(_rendering.TryGetValue((session, n), out var asked) && !asked.IsCancellationRequested)", reader);
+    }
+}
