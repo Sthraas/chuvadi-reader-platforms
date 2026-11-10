@@ -688,3 +688,15 @@ Built with warnings as errors; Reader 292/292 (3 skipped), host kit 89/89, Linux
 16/16. Fresh-open stall: 10 of 10 opens of the drawing in one app (after a small PDF at a fixed 111 % zoom) drew
 sheet 1 in 5.8–7.6 s and fitted the view (43 %); 36c as the first step in three fresh apps, 3 of 3. Full UI pass
 122/122 on the first run (36c: 338 MB before, 954 MB with 5 sheets drawn, 273 MB after closing).
+
+### 54. Foundation's twenty-fifth combined patch, parts 1 to 4 (742a5da, 11 Nov)
+Merged without conflicts (cold open straight into the Reader, Chuvadi.Docs 2.1.0 with left-out parts named, tab saves
+one at a time); every shared source and test file identical to 742a5da; no Linux change needed. Built with warnings
+as errors; Reader 305/305 (3 skipped), host kit 91/91, Linux 46/46, Web Ui 41/41, Mobile Ui 16/16; full UI pass 122/122.
+- **Open with (cold launch with a file, as the desktop entry's `%F` does):** a path with spaces and brackets, a
+  `file://` address with %20, and a Word file each went straight to the Reader — Home never shown (sampled every
+  0.1 s from the first render); document shown 1.3 s after start (8.2 s on the very first launch of a fresh build).
+  A second launch with two files handed both to the running copy in 0.1 s (exit 0); both tabs opened.
+- **Word:** `discharge.docx` and `landscape.docx` show all their text with no notice (the 4 x 4 px picture at 4 pt
+  is drawn at that size, as the file says); a copy of `discharge.docx` with its header part damaged opens with its
+  text and "Part of this document is damaged and is left out: a header."
