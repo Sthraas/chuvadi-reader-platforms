@@ -1,7 +1,7 @@
 {
-  "round": 6,
-  "emulators": "phone-36,tablet-36",
-  "suites": "licence,at13,aot",
+  "round": "6b",
+  "emulators": "none",
+  "suites": "aot",
   "foundation_ref": "846706e9f50bc7a64d4e7cb53caf29e2b8a18616",
   "mobileui_ref": "c5c0b7ecf5fc9c5acf3fd330844208207d369a57",
   "android_ref": "9ce073b5c298c056774d7f5fa512dc648bad4ad8"

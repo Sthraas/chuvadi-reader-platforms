@@ -32,6 +32,15 @@ adb shell am start -a android.intent.action.VIEW -d "content://media/external/do
 sleep 25
 adb shell input swipe 500 1500 500 500 300; sleep 5
 dotnet build "$P" "${C[@]}" -t:FinishAotProfiling "-p:AndroidAotCustomProfilePath=$OUT/chuvadi.aprof" > "$OUT/profiling-finish.txt" 2>&1; echo "finish exit $?"; tail -3 "$OUT/profiling-finish.txt"
+if [ ! -s "$OUT/chuvadi.aprof" ]; then
+  # The Linux SDK pack has no native aprofutil (tools/Linux/aprofutil: not found); run the managed one.
+  PACK="$(ls -d /usr/share/dotnet/packs/Microsoft.Android.Sdk.Linux/* | sort -V | tail -1)"
+  APU="$(find "$PACK" -iname 'aprofutil*.dll' | head -1)"
+  echo "managed aprofutil: $APU" | tee -a "$OUT/profiling-finish.txt"
+  adb forward tcp:9999 tcp:9999
+  [ -n "$APU" ] && timeout 120 dotnet "$APU" -s -v -p 9999 -o "$OUT/chuvadi.aprof" >> "$OUT/profiling-finish.txt" 2>&1
+  find "$PACK" -iname '*aprof*' >> "$OUT/profiling-finish.txt"
+fi
 ls -l "$OUT/chuvadi.aprof" || { grep -i -E "error|aprof" "$OUT/profiling-finish.txt" | head; }
 adb uninstall in.chuvadi.reader >/dev/null 2>&1
 
