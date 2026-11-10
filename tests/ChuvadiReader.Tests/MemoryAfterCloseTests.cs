@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime;
+using System.Runtime.CompilerServices;
 using Chuvadi.Pdf.Authoring;
 using Chuvadi.Pdf.Graphics;
 using Chuvadi.Pdf.Images;
@@ -371,6 +372,37 @@ public sealed class MemoryAfterCloseTests
         public Task<string?> GetAsync(string key, CancellationToken ct = default) => Task.FromResult(_d.TryGetValue(key, out var v) ? v : null);
 
         public Task SetAsync(string key, string value, CancellationToken ct = default) { _d[key] = value; return Task.CompletedTask; }
+    }
+
+    // ── Twentieth patch (D-158): the pass waits for what finalizers let go ──────────────────────────────────────
+
+    /// <summary>Stands in for the shared byte pool: drops its big buffer from a finalizer, after a collection.</summary>
+    private sealed class DropsOnFinalize
+    {
+        internal static byte[]? Held;
+
+        ~DropsOnFinalize() => Held = null;
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static WeakReference HoldUntilFinalized()
+    {
+        DropsOnFinalize.Held = new byte[96 * 1024 * 1024];
+        DropsOnFinalize.Held.AsSpan().Fill(1);
+        _ = new DropsOnFinalize();   // garbage at once; its finalizer lets the buffer go
+        return new WeakReference(DropsOnFinalize.Held);
+    }
+
+    [Fact]
+    public void A_relief_pass_also_frees_what_finalizers_release_during_it()
+    {
+        // The pool trims in a finalizer-thread callback after a full collection. A pass that collects again without
+        // waiting for that thread leaves the trimmed buffers as garbage until some later collection (Linux 36c).
+        var buffer = HoldUntilFinalized();
+
+        MemoryRelief.Pass();
+
+        Assert.False(buffer.IsAlive, "the buffer a finalizer let go during the pass is still in memory after it");
     }
 
     private static async Task<long> OpenDrawClose(string path)
