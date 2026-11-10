@@ -1343,6 +1343,11 @@ def m_shared():
         ev["status_after_click_ctrl_tab"] = status(axdump("shared-after-click-ctrl-tab"))
         ev["ctrl_tab_shot"] = shot("shared-after-click-ctrl-tab")
         ev["m08_ctrl_tab_switches_after_click"] = ev["status_before"] != ev["status_after_click_ctrl_tab"]
+        # control: the same harness keys, another tab shortcut (⌘1 = Go to tab 1)
+        drive("key", "cmd+1")
+        time.sleep(1.5)
+        ev["status_after_cmd_1"] = status(axdump("shared-after-cmd-1"))
+        ev["control_cmd_1_switches"] = ev["status_before"] != ev["status_after_cmd_1"]
     # M-09: every Immersive / F11 mention in the Reader (View rail included)
     ev["m09_reader_immersive"] = ax_paths(t, r"Immersive|F11")
     # hover the View rail's Immersive button so a tooltip, if any, is in the tree too
@@ -1368,7 +1373,7 @@ def m_shared():
     press("Shortcuts", role="AXButton", click=True)
     time.sleep(2.5)
     sc = axdump("shared-shortcuts")
-    ev["on_shortcuts_screen"] = bool(re.search(r'AXHeading desc="Shortcuts', sc))
+    ev["on_shortcuts_screen"] = "Next / previous tab" in sc
     ev["shortcuts_shot"] = shot("shared-shortcuts")
     ev["shortcuts_lines"] = ax_paths(sc, r"Immersive|tab|Tab|F11|Ctrl|⌃")[:30]
     ev["shortcuts_bad"] = [x for x in ev["shortcuts_lines"] if re.search(r"F11|⌘Tab|⌘ Tab|\bCtrl\b", x["element"])]
@@ -1376,7 +1381,7 @@ def m_shared():
     ev["m10_ok"] = any('"Zoom"' in l for l in ev["m10_lights_zoomed"]) and not any("full screen" in l for l in ev["m10_lights_zoomed"])
     ok = ev["m08_ctrl_tab_switches"] and ev["on_shortcuts_screen"] and not ev["shortcuts_bad"] and not ev["m09_bad"] and ev["m10_ok"]
     record("M-08/M-09/M-10 shared patch", "pass" if ok else "fail",
-           f"⌃Tab switches={ev['m08_ctrl_tab_switches']} (after a click on the page: {ev.get('m08_ctrl_tab_switches_after_click')}); Shortcuts screen={ev['on_shortcuts_screen']}; F11 left={len(ev['m09_bad'])}; bad shortcut labels={len(ev['shortcuts_bad'])}; green light when zoomed={ev['m10_lights_zoomed']}", **ev)
+           f"⌃Tab switches={ev['m08_ctrl_tab_switches']} (after a click on the page: {ev.get('m08_ctrl_tab_switches_after_click')}; control ⌘1 switches: {ev.get('control_cmd_1_switches')}); Shortcuts screen={ev['on_shortcuts_screen']}; F11 left={len(ev['m09_bad'])}; bad shortcut labels={len(ev['shortcuts_bad'])}; green light when zoomed={ev['m10_lights_zoomed']}", **ev)
     quit_app()
 
 
