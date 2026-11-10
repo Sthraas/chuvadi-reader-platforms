@@ -132,7 +132,7 @@ jobs:
             rm -rf src/ChuvadiReader.Android/obj/Release src/ChuvadiReader.Android/bin/Release.keep
             mv src/ChuvadiReader.Android/bin/Release src/ChuvadiReader.Android/bin/Release.keep
             sed -i 's/SavePickersEnabled { get; } = false/SavePickersEnabled { get; } = true/' $F
-            dotnet publish src/ChuvadiReader.Android/ChuvadiReader.Android.csproj -c Release -f net10.0-android --no-restore -p:AndroidSdkDirectory=$ANDROID_HOME -p:TreatWarningsAsErrors=false > ../publish-release-saves-on.txt 2>&1
+            dotnet publish src/ChuvadiReader.Android/ChuvadiReader.Android.csproj -c Release -f net10.0-android -p:RestoreConfigFile=ci/nuget.config -p:AndroidSdkDirectory=$ANDROID_HOME -p:TreatWarningsAsErrors=false > ../publish-release-saves-on.txt 2>&1
             echo "exit $?"; tail -3 ../publish-release-saves-on.txt
             find src/ChuvadiReader.Android/bin/Release -name '*-Signed.apk' -exec cp {} ../out/chuvadi-reader-release-saves-on.apk \;
             sed -i 's/SavePickersEnabled { get; } = true/SavePickersEnabled { get; } = false/' $F

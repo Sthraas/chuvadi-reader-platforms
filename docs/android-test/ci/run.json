@@ -1,7 +1,7 @@
 {
-  "round": "9 (SDK pinned 10.0.403), second start",
+  "round": "9b (save suite only)",
   "emulators": "phone-36,tablet-36",
-  "suites": "saves,drift,function,design,at13",
+  "suites": "saves",
   "foundation_ref": "dd59362b1d82bddd6da00303e1729f518e98eb01",
   "mobileui_ref": "3ecbc75bf626033379bb7d1f73b84accad27ac18",
   "android_ref": "8f173c9a7359e4b1fab8a22357041cd858cd89fb"

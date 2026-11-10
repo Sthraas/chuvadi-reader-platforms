@@ -115,6 +115,17 @@ def touch(*args):
     time.sleep(1)
 
 
+def longdrag(a, b, changed):
+    """Long-press and drag a → b. Android's own `input draganddrop` first (rotation-aware); the raw
+    touch script as a second way if `changed()` says nothing moved."""
+    sh(f"input draganddrop {a[0]} {a[1]} {b[0]} {b[1]} 1500")
+    time.sleep(1.5)
+    if changed():
+        return "input draganddrop"
+    touch("longdrag", a[0], a[1], b[0], b[1], 800, 1200)
+    return "touch.py longdrag" if changed() else "neither moved it"
+
+
 def phone():
     return cdp.js("document.documentElement.getAttribute('data-shell')") == "phone"
 
@@ -277,6 +288,7 @@ def case(name, fn):
 
 
 set_rotation(portrait_rotation())
+sh(f"pm clear {PKG}")              # fresh app: no tabs or theme left by other suites
 sh(f"am start -W -n {COMP}")
 cdp.connect(60)
 cdp.wait("!!(window.Blazor && Blazor.navigateTo) && document.getElementById('app').children.length > 0", 60)
@@ -450,10 +462,10 @@ def sv5_arrange():
         src = st["shelfVisible"][idx]
         a = to_screen(src["x"], src["y"])
         d = to_screen(st["desk"]["x"], st["desk"]["y"] + st["desk"]["h"] * 0.3)
-        touch("longdrag", a[0], a[1], d[0], d[1], 800, 900)
+        how = longdrag(a, d, lambda: cdp.js(BENCH)["order"] != st["order"])
         after = cdp.js(BENCH)
         new = [i for i in after["order"] if i not in st["order"]]
-        dropped.append({"shelf": src["key"], "new_ids": new, "order": after["order"]})
+        dropped.append({"shelf": src["key"], "new_ids": new, "order": after["order"], "gesture": how})
     st = cdp.js(BENCH)
     shot("sv5-two-on-desk")
     R.check("SV-5a long-press drag puts two shelf pages on the desk", len(st["order"]) == start + 2, {"drops": dropped, "desk_before": start})
@@ -469,8 +481,8 @@ def sv5_arrange():
             a, b = to_screen(c0["x"], c0["y"]), to_screen(c1["x"] + c1["w"] * 0.6, c1["y"])
         else:
             a, b = to_screen(c1["x"], c1["y"]), to_screen(c0["x"] - c0["w"] * 0.6, c0["y"])
-        touch("longdrag", a[0], a[1], b[0], b[1], 800, 1200)
-        tried.append(way)
+        how = longdrag(a, b, lambda: cdp.js(BENCH)["order"] != before)
+        tried.append(way + ": " + how)
     after = cdp.js(BENCH)["order"]
     shot("sv5-reordered")
     R.check("SV-5b long-press drag reorders pages on the desk", after != before and sorted(after) == sorted(before), {"before": before, "after": after, "tried": tried})
