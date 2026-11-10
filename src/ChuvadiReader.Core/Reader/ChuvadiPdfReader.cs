@@ -459,8 +459,18 @@ public sealed class ChuvadiPdfSession : IPdfSession
         return entry.Done.Task;
     }
 
-    /// <summary>The one worker: takes the next wanted page, draws it inside the gate, answers everyone waiting for it.</summary>
+    internal static WeakReference? LastAnsweredForDiag;
+    internal static int DrainingForDiag;
+
     private async Task DrainAsync()
+    {
+        Interlocked.Increment(ref DrainingForDiag);
+        try { await DrainCoreAsync().ConfigureAwait(false); }
+        finally { Interlocked.Decrement(ref DrainingForDiag); }
+    }
+
+    /// <summary>The one worker: takes the next wanted page, draws it inside the gate, answers everyone waiting for it.</summary>
+    private async Task DrainCoreAsync()
     {
         while (true)
         {
@@ -526,6 +536,7 @@ public sealed class ChuvadiPdfSession : IPdfSession
                 continue; // anyone who asked for this page since the stop waits for a fresh draw
             }
 
+            if (svg is { Length: > 1000 }) LastAnsweredForDiag = new WeakReference(svg);
             foreach (var waiting in TakeAll(page))
             {
                 waiting.Cancel.Dispose();

@@ -31,6 +31,8 @@ public sealed class MemoryAfterCloseTests
         MemoryRelief.MinGap = TimeSpan.Zero;
     }
 
+    internal static string HeavyPageForDiag() => HeavyLargeFormatPage();
+
     private static string HeavyLargeFormatPage(int pages = 1)
     {
         // 3125 × 2917 random pixels (one per drawn pixel) on a 1500 × 1400 pt page (larger than A2, so it is drawn as one PNG at 150 dpi):
