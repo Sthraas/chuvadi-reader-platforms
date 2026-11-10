@@ -325,3 +325,10 @@ Run 42863954875: 7 of 8 jobs pass (Linux, macOS, the trimmed launches, pack-chec
 - The Foundation's own run of ec09f4f (42805261634) passed on Windows.
 - This branch differs from ec09f4f only in `docs/web-ui`, the preview tool and the `_Imports.razor` it needs; nothing the test exercises. Locally (Linux) the test passes: 438 of 438.
 Raised with the coordinator for the Foundation.
+
+## 2026-11-10 — session 19 (coordinator 23:35: read Web Test's report on WT-03 to WT-06)
+- Coordinator's answers: merging `platform/foundation` rather than `foundation-pr` was right, and the branch stays as it is. The value-bar diff goes to the Foundation together with Mobile UI's H-23 (same area), and the Foundation reconciles the two. The Windows memory test is a known intermittent on 4-core Windows runners, also on main; the Foundation is fixing the cause.
+- Branches checked: `platform/web-test` 6a6e981 (10 Nov), `platform/web` 04cdd21, `platform/foundation` 9c1bf87, `platform/foundation-pr` 67823ad, `platform/mobile-ui` 5c66f1a, `main` 9196b3a.
+- Web Test `BUGS.md` / `RESULTS.md` at 6a6e981: **WT-03, WT-04 and WT-06 are verified fixed in three engines on `platform/web` d183ea8** (10 Nov 07:30–08:40). WT-05 was verified in 1b32ad8 and is unchanged. The WT-10 label and its Arrange addendum were verified in c38bd80 (no "Fetch" on the portal). Q-3 ("this session") is green in the regression run and in `verify_fixes.py`.
+- Nothing in Web Test's documents is open against the Web portal UI. The open items, WT-17 to WT-21, are Core, Foundation or Web items.
+- One note for Web Test's WT-17 re-test on patch 24: until `proposal/web-ui-xlsx-value-bar-race.patch` is applied, the Excel value bar turns on in only about 4 of 10 opens in the portal.
