@@ -676,3 +676,15 @@ Merged without conflicts. Reader 247/247, host kit 81/81, Linux 46/46, Web Ui 41
   drawing kept the previous zoom (115 %), never fitted the view, showed sheet 1 as a portrait placeholder and never
   drew it in 30 s — as if the document's page sizes never arrived. Not reproduced by steps 01–19 + 36 or 20–34 + 36,
   nor by the second full run; the same symptom as x64 CI on 8dcf4d8. Reported to Foundation with the screenshot.
+
+### 53. Foundation's patches 22 to 24 merged from platform/foundation-pr (dd59362, 10 Nov)
+Excel number formats as the file holds them (D-161), the CropBox everywhere (D-160), Mark with a finger, and the fix
+for the intermittent fresh-open stall. `platform/foundation-pr` carries PR #12 as one squashed commit, so the merge
+conflicted in 13 shared files (none Linux-owned); resolved by taking Foundation's version of each, and checked:
+every shared source and test file is identical to dd59362 (only the working repo's own CI workflows, coordination
+docs and design handoff differ). No Linux change needed.
+
+Built with warnings as errors; Reader 292/292 (3 skipped), host kit 89/89, Linux 46/46, Web Ui 41/41, Mobile Ui
+16/16. Fresh-open stall: 10 of 10 opens of the drawing in one app (after a small PDF at a fixed 111 % zoom) drew
+sheet 1 in 5.8–7.6 s and fitted the view (43 %); 36c as the first step in three fresh apps, 3 of 3. Full UI pass
+122/122 on the first run (36c: 338 MB before, 954 MB with 5 sheets drawn, 273 MB after closing).
