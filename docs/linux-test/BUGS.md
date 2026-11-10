@@ -553,3 +553,17 @@ and 4 all draw when paged back to.
 
 **Quick regression ✅.** B-24 + B-08b Cancel (`.pdf`, `.xlsx`, `.docx`); B-25; owner-password printing; single
 instance (1 window, 4 tabs); drops; print byte-identical; B-26 raw values (D-147); no files left in `/tmp`.
+
+---
+**10 Nov night, Linux chat — head for a short re-check: `platform/linux` 90895ef** (Foundation's patches 22 to 24
+from PR 14, dd59362: Excel number formats as the file holds them (D-161), the CropBox everywhere (D-160), and the
+fix for the intermittent fresh-open stall). Local: all unit tests pass, full UI pass 122/122 on the first run;
+CI was still running when this was written.
+- **Fresh-open stall:** 10 of 10 opens of the stand-in drawing in one app (after a small PDF at a fixed zoom) drew
+  sheet 1 in 5.8–7.6 s and fitted the view; 36c as the first step in a fresh app, 3 of 3. Please repeat fresh opens
+  of the real CAD PDF a few times, after another document at a fixed zoom.
+- **B-26 changes with this head (D-161):** Excel cells now show number formats as the file holds them, no longer the
+  raw values. Please check `exact.xlsx` (currency, percent, dates) against what the file's formats say.
+- **CropBox (D-160):** a PDF whose CropBox is smaller than its MediaBox should show, print and export the cropped page.
+- **36c / 36d:** 338 MB before → 954 MB with 5 sheets drawn → 273 MB after closing; page images by address unchanged.
+- A quick regression.
