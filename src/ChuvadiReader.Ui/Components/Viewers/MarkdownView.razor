@@ -9,7 +9,7 @@
 <div class="mdv">
     @if (_error is not null)
     {
-        <ViewerMessage IconName="warning" Error="true" Text="@_error" />
+        <ViewerMessage IconName="warning" Error="true" Text="@_error" Detail="@_errorDetail" />
     }
     else if (_doc is null || _render is null)
     {
@@ -41,6 +41,7 @@
     private TextDocument? _doc;
     private MarkdownRenderResult? _render;
     private string? _error;
+    private string? _errorDetail;
     private string? _loaded;
     private int _version;
     private bool _allowRemote;
@@ -94,7 +95,7 @@
         var v = ++_version;
         _doc = null;
         _render = null;
-        _error = null;
+        _error = null; _errorDetail = null;
         if (string.IsNullOrEmpty(Path)) return;
 
         try
@@ -117,7 +118,7 @@
         catch (Exception ex)
         {
             if (v != _version) return;
-            _error = Describe(ex, "file");
+            (_error, _errorDetail) = Describe(ex, "a Markdown file");
             await ReportOutlineAsync(Array.Empty<ViewerOutlineEntry>());
             await ReportStatusAsync("Markdown · couldn't open");
         }

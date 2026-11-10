@@ -153,7 +153,10 @@ public sealed class HostingTests
     [InlineData("Ctrl Shift S", "⇧⌘S")]
     [InlineData("Ctrl Alt W", "⌥⌘W")]
     [InlineData("Ctrl 1 … 9", "⌘1 … 9")]
-    [InlineData("F11", "F11")]
+    [InlineData("F11", "⌃⌘F")]
+    [InlineData("Ctrl Tab", "⌃Tab")]
+    [InlineData("Ctrl Shift Tab", "⌃⇧Tab")]
+    [InlineData("Ctrl T", "⌘T")]
     public void Mac_key_labels(string canonical, string expected) =>
         Assert.Equal(expected, new MacKeyLabels().Format(canonical));
 

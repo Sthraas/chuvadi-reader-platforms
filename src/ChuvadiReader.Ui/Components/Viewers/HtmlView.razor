@@ -18,7 +18,7 @@
 <div class="htv" @ref="_root">
     @if (_error is not null)
     {
-        <ViewerMessage IconName="warning" Error="true" Text="@_error" />
+        <ViewerMessage IconName="warning" Error="true" Text="@_error" Detail="@_errorDetail" />
     }
     else if (_doc is null || _result is null)
     {
@@ -73,6 +73,7 @@
     private HtmlSanitizeResult? _result;
     private string _srcdoc = "";
     private string? _error;
+    private string? _errorDetail;
     private string? _loaded;
     private int _version;
     private bool _allowRemote;
@@ -125,7 +126,7 @@
         _doc = null;
         _result = null;
         _srcdoc = "";
-        _error = null;
+        _error = null; _errorDetail = null;
         if (string.IsNullOrEmpty(Path)) return;
         try
         {
@@ -143,7 +144,7 @@
         catch (Exception ex)
         {
             if (v != _version) return;
-            _error = Describe(ex, "page");
+            (_error, _errorDetail) = Describe(ex, "a web page");
             await ReportOutlineAsync(Array.Empty<ViewerOutlineEntry>());
             await ReportStatusAsync("HTML · couldn't open");
         }

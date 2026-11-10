@@ -6,6 +6,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Tests only: the render gate's test hook (D-152). -->
+    <InternalsVisibleTo Include="ChuvadiReader.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!--
       chuvadi-pdf consumed ONLY as packaged distribution, from the committed ci/packages feed
       (byte-identical to what Windows ships). Individual packages, not the Chuvadi.Pdf umbrella:
@@ -30,7 +35,7 @@
     <PackageReference Include="Chuvadi.Pdf.Watermark" Version="$(ChuvadiPdfVersion)" />
     <PackageReference Include="Chuvadi.Pdf.Signatures" Version="$(ChuvadiPdfVersion)" />
     <PackageReference Include="Chuvadi.Docs" Version="2.0.0" />
-    <PackageReference Include="Chuvadi.Sheets" Version="2.0.2" />
+    <PackageReference Include="Chuvadi.Sheets" Version="2.0.4" />
   </ItemGroup>
 
   <ItemGroup>

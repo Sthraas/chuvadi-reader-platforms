@@ -14,7 +14,7 @@
     }
     else if (_error is not null)
     {
-        <ViewerMessage IconName="warning" Error="true" Text="@_error" />
+        <ViewerMessage IconName="warning" Error="true" Text="@_error" Detail="@_errorDetail" />
     }
     else if (_wb is null)
     {
@@ -79,6 +79,7 @@
 @code {
     private WorkbookView? _wb;
     private string? _error;
+    private string? _errorDetail;
     private string? _loaded;
     private string? _password;      // in memory for this tab only
     private bool _locked, _busy;
@@ -120,7 +121,7 @@
     {
         var v = ++_version;
         _wb = null;
-        _error = null;
+        _error = null; _errorDetail = null;
         _index = new();
         _hits = new();
         _sheetHits = Array.Empty<int>();
@@ -174,7 +175,7 @@
             else
             {
                 _locked = false;
-                _error = Describe(ex, "workbook");
+                (_error, _errorDetail) = Describe(ex, "an Excel workbook");
             }
         }
         finally

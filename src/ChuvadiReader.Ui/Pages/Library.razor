@@ -26,7 +26,7 @@
 
     <div class="libp-search">
         <Icon Name="search" Size="15" />
-        <input value="@_query" @oninput="e => _query = e.Value?.ToString() ?? string.Empty"
+        <input @bind="_query" @bind:event="oninput"
                @onkeydown="OnSearchKey" placeholder="Search a word across every PDF in the folder…" />
         @if (_searching)
         {
@@ -130,8 +130,7 @@
                             }
                             @if (_editingPath == e.Path)
                             {
-                                <input class="tag-input" list="libp-all-tags" value="@_tagInput" autofocus
-                                       @oninput="ev => _tagInput = ev.Value?.ToString() ?? string.Empty"
+                                <input class="tag-input" list="libp-all-tags" @bind="_tagInput" @bind:event="oninput" autofocus
                                        @onkeydown="ev => OnTagKey(ev, e.Path)" @onblur="() => CommitTag(e.Path)" placeholder="tag…" />
                             }
                             else

@@ -173,6 +173,32 @@ public sealed class ShellService
         Changed?.Invoke();
     }
 
+    // ── Global commands ───────────────────────────────────────────────────
+
+    private string _globalSignature = string.Empty;
+
+    /// <summary>The shell's own commands (Open, Settings, Go to, modes, themes, tabs) as MainLayout
+    /// last published them — the ones the Ctrl K bar lists before the page commands. Hosts read them
+    /// through IAppCommands for a native menu bar (Mac Test M-01, M-11).</summary>
+    public IReadOnlyList<ShellCommand> GlobalCommands { get; private set; } = Array.Empty<ShellCommand>();
+
+    /// <summary>Publishes the shell's own commands. Raises <see cref="Changed"/> only when an id, label,
+    /// shortcut or disabled reason differs, so calling it on every render can't loop.</summary>
+    public void SetGlobalCommands(IReadOnlyList<ShellCommand>? commands)
+    {
+        var list = commands ?? Array.Empty<ShellCommand>();
+        var signature = string.Join('\n', list.Select(c => $"{c.Id}\t{c.Label}\t{c.Keys}\t{c.DisabledReason}"));
+        if (signature == _globalSignature)
+        {
+            GlobalCommands = list; // fresh delegates, same content
+            return;
+        }
+
+        _globalSignature = signature;
+        GlobalCommands = list;
+        Changed?.Invoke();
+    }
+
     // ── Ctrl K ────────────────────────────────────────────────────────────
 
     /// <summary>Publish (or replace) the commands an owner contributes.</summary>

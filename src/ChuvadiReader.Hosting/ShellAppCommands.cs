@@ -18,8 +18,10 @@ public sealed class ShellAppCommands : IAppCommands, IDisposable
         _shell.Changed += OnShellChanged;
     }
 
+    /// <summary>The shell's own commands (Open, Settings, Go to, modes …) first, then the page's — the
+    /// order the Ctrl K bar lists them in.</summary>
     public IReadOnlyList<AppCommandInfo> Commands =>
-        _shell.Commands.Where(c => !IsSeparator(c)).Select(ToInfo).ToList();
+        _shell.GlobalCommands.Concat(_shell.Commands).Where(c => !IsSeparator(c)).Select(ToInfo).ToList();
 
     public IReadOnlyList<AppCommandInfo> DocumentMenu =>
         _shell.DocumentMenu.Select(ToInfo).ToList();
@@ -29,6 +31,7 @@ public sealed class ShellAppCommands : IAppCommands, IDisposable
     public async Task<bool> InvokeAsync(string id)
     {
         var command = _shell.DocumentMenu.FirstOrDefault(c => c.Id == id)
+                      ?? _shell.GlobalCommands.FirstOrDefault(c => c.Id == id)
                       ?? _shell.Commands.FirstOrDefault(c => c.Id == id);
         if (command is null || IsSeparator(command) || !command.IsEnabled)
         {
