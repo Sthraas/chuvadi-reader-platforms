@@ -446,5 +446,17 @@ Web found that Excel's text for cells with no number format (General) shortens n
 ## D-170 — Page images freed at session end (PageImages.RemoveOwner)
 10 Nov 2026. Web asked for a shared-Core call so a session's end frees every page image it drew. Pro: one simple promise to test and to state in the privacy notice. Con: one more small shared change for images already unreachable and gone within 3 minutes. **Decision: yes**, in Foundation's next patch.
 
+## D-171 — Excel Find searches the value and the shown text (Arun)
+10 Nov 2026. Arun agreed. A cell is found by its stored value or by the text it shows ("12,34,567", "March"). What you see is findable.
+
+## D-172 — Hidden sheets are shown, dimmed and marked "hidden" (Arun)
+10 Nov 2026. Arun agreed. Nothing the file holds is kept from view; differs from Excel, which leaves them out.
+
+## D-173 — Patch 25 goes as two PRs
+10 Nov 2026. Foundation asked: one PR (parts 1–5) or two (parts 1–4 first: Android cold open, AT-16/17, H-22, Mac tab lock, RemoveOwner, Docs 2.1.0; then part 5, the large Excel work). **Decision: two.** Android, Mac and Web get their fixes sooner and the Excel work is reviewed on its own; cost is one more merge word from Arun.
+
+## Note — usage limit, 10 Nov 2026 ~21:00 IST
+The account's weekly usage limit was reached ("Resets Nov 16 at 12:30 PM"). All 12 chats stopped mid-work. Left in flight: Linux merge 29a2386 (local, not pushed), Mobile UI and Web portal UI merging dd59362, Web Test re-testing WT-20/21 on 6be3c17, Mac workflow on 3bc7f68, Mac Test re-verifying M-08/M-23, Android Test round 9 on 8f173c9, Foundation patch 25 not started.
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).
