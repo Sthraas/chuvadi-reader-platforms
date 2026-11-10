@@ -11,7 +11,11 @@ namespace ChuvadiReader.Core.Documents;
 public sealed record WordView(
     string Title, string PageSize, bool Landscape,
     IReadOnlyList<WordBlock> Blocks,
-    IReadOnlyList<WordBlock> Header, IReadOnlyList<WordBlock> Footer);
+    IReadOnlyList<WordBlock> Header, IReadOnlyList<WordBlock> Footer)
+{
+    /// <summary>What reading the document allocated (WT-19); see <see cref="ViewMemory.Released"/>.</summary>
+    public long LoadedBytes { get; init; }
+}
 
 public abstract record WordBlock;
 
@@ -59,6 +63,20 @@ public sealed class DocxViewService(IPlatformInfo? platform = null)
     /// <param name="cancellationToken">Stops the read (B-08b): "Stop opening", a closed tab, or the viewer's
     /// time limit. The library checks it on every XML node, so it takes effect within a moment.</param>
     public WordView Load(string path, string? password = null, CancellationToken cancellationToken = default)
+    {
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        try
+        {
+            return LoadCore(path, password, cancellationToken) with { LoadedBytes = GC.GetAllocatedBytesForCurrentThread() - before };
+        }
+        catch
+        {
+            ViewMemory.Released(GC.GetAllocatedBytesForCurrentThread() - before);   // WT-19: a stopped heavy open
+            throw;
+        }
+    }
+
+    private WordView LoadCore(string path, string? password, CancellationToken cancellationToken)
     {
         Document doc;
         try
