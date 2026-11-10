@@ -799,7 +799,7 @@ same screen; no crash), smoke pass. With round 6 (API 36 phone and tablet, all c
 - **AT-18 (S1):** `AndroidFilePicker.SavePickersEnabled` (hard-coded false since before the Ui delivered its saves) is
   gone: Save as new PDF, Save redacted copy, Bind / Combined / lift PDFs, signed and flattened copies, password copies,
   Merge and Split, PNG snapshots and the Bench session open Android's "save to" picker, and each is delivered by
-  `WriteBack.DeliverOrThrowAsync` → `AndroidFileWriteBack` (Ui audit: every one of the 30 picker sites delivers).
+  `WriteBack.DeliverOrThrowAsync` → `AndroidFileWriteBack` (Ui audit on 742a5da: all 15 save-to-file picker sites deliver — Bench through RunSave, the password card through Reader's OnProtectedSaved — and the 7 writing folder sites deliver the folder).
   Folder picker on too, done properly for its two kinds of use:
   - writing (Export pages, Scatter, Split to a folder, Press): the whole working folder is sent back, **subfolders
     included**, and a file whose namesake is already there **replaces it** (it used to make "name (1)");
