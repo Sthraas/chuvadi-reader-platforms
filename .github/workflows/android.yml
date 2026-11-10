@@ -26,10 +26,10 @@ on:
         options: [full, smoke]
 
 env:
-  # platform/foundation: twelfth combined patch through AT-13 (P-08 path labels, AT-03, AT-10, AT-13, Sheets 2.0.4).
-  FOUNDATION_REF: f88f9ef047cd165f895430180ceb4ffb91fcee63
-  # platform/mobile-ui: Foundation 022b7c0 merged, H-17 to H-20.
-  MOBILEUI_REF: d34d54238efed17a5729d8ff054fa22022eb9434
+  # platform/foundation: through the twenty-second combined patch (D-158 page images by address, H-20).
+  FOUNDATION_REF: 846706e9f50bc7a64d4e7cb53caf29e2b8a18616
+  # platform/mobile-ui: Foundation f88f9ef merged, H-20 regenerated.
+  MOBILEUI_REF: c5c0b7ecf5fc9c5acf3fd330844208207d369a57
   DOTNET_NOLOGO: '1'
   DOTNET_CLI_TELEMETRY_OPTOUT: '1'
 

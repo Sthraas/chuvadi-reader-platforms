@@ -369,6 +369,19 @@ for name, mime, marker, shotname in (
           and (st.get("tabs") or 0) == (before.get("tabs") or 0) + 1 and len(acts["records"]) == 1 and acts == acts_before,
           {"uri": uri, "tab": st.get("tab"), "tabs": [before.get("tabs"), st.get("tabs")], "pid": [pid_before, pid()],
            "activities": [acts_before, acts], "am": out.splitlines()[-3:] if out else None, "marker": marker})
+
+# AT-12: Open with on a document that is already open brings its tab forward (as Windows does), no duplicate.
+uri = media_uri(DOCX)
+before = safe_state()
+am_as_shell("start", "-W", "-a", "android.intent.action.VIEW", "-d", str(uri), "-t",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "-p", PKG, "--grant-read-uri-permission")
+again = wait_for(lambda s: s.get("tab") == DOCX and office.DOCX_MARKER in (s.get("text") or ""), 30, f"{DOCX} in front")
+time.sleep(3)   # a duplicate would arrive after the copy and first render
+again = safe_state()
+shot("p2b-docx-again")
+check("Open with on a document that is already open focuses its tab, no duplicate (AT-12)",
+      again.get("tab") == DOCX and (again.get("tabs") or 0) == (before.get("tabs") or 0) and before.get("tab") == XLSX,
+      {"tab": [before.get("tab"), again.get("tab")], "tabs": [before.get("tabs"), again.get("tabs")]})
 save_log("log-open-with.txt")
 
 # ── 2. Share to Chuvadi: ACTION_SEND with a PDF stream ────────────────────────

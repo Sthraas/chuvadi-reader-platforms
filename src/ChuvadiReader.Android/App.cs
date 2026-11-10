@@ -34,7 +34,7 @@ public sealed class MainPage : ContentPage
         BackgroundColor = Color.FromArgb("#F2EAD6");
 
         // After Android ended the app in the background, start where the person was (AT-11); else Home.
-        var web = new BlazorWebView { HostPage = "wwwroot/index.html", StartPath = Platform.SessionRoute.TakeStartPath() };
+        var web = new ChuvadiWebView { HostPage = "wwwroot/index.html", StartPath = Platform.SessionRoute.TakeStartPath() };
         web.RootComponents.Add(new RootComponent
         {
             Selector = "#app",

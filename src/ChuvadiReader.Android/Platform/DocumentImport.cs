@@ -17,12 +17,14 @@ public sealed class DocumentImport
     private readonly DocumentLinks _links;
     private readonly IncomingFiles _incoming;
     private readonly ShellService _shell;
+    private readonly TabsService _tabs;
 
-    public DocumentImport(DocumentLinks links, IncomingFiles incoming, ShellService shell)
+    public DocumentImport(DocumentLinks links, IncomingFiles incoming, ShellService shell, TabsService tabs)
     {
         _links = links;
         _incoming = incoming;
         _shell = shell;
+        _tabs = tabs;
     }
 
     public void HandleIntent(Intent intent)
@@ -43,6 +45,10 @@ public sealed class DocumentImport
         var persistable = (intent.Flags & ActivityFlags.GrantPersistableUriPermission) != 0;
         var mime = intent.Type;
 
+        // The paths open in tabs now (read here, on the main thread): a document already open keeps its
+        // working copy untouched, so the router focuses its tab (AT-12).
+        var open = _tabs.Tabs.Select(t => Path.GetFullPath(t.Path)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         // Copy off the UI thread; the grant stays valid while the activity holds the intent.
         // A file that can't be opened is said so on screen (and in the log): never a silent no-op.
         _ = Task.Run(() =>
@@ -50,7 +56,7 @@ public sealed class DocumentImport
             string? local;
             try
             {
-                local = _links.Import(uri, mime, persistable, DocumentTypes.Extensions);
+                local = _links.Import(uri, mime, persistable, DocumentTypes.Extensions, open.Contains);
             }
             catch (Exception ex) when (ex is Java.Lang.SecurityException or Java.Lang.IllegalArgumentException
                                            or Java.Lang.UnsupportedOperationException or IOException or UnauthorizedAccessException)

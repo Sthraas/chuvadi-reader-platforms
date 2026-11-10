@@ -83,7 +83,15 @@ public sealed class DocumentLinks
     /// Streams a content URI into a fresh working copy (never loaded whole into memory) and links it.
     /// Returns the local path, or null when the provider refused.
     /// </summary>
-    public string? Import(AUri uri, string? mimeHint, bool takePersistable, IReadOnlyCollection<string>? allowedExtensions)
+    /// <summary>
+    /// Copies an incoming document into a working copy and links it to its source. A URI already linked
+    /// to a working copy keeps that copy's path (AT-12, as Windows' shared router expects: the same
+    /// document arrives under the same path, so an open tab is focused instead of duplicated, and
+    /// Home's Recent keeps one entry). That copy is left exactly as it is while a tab holds it
+    /// (<paramref name="isOpen"/>; it may carry unsaved edits); otherwise it is refreshed from the source.
+    /// </summary>
+    public string? Import(AUri uri, string? mimeHint, bool takePersistable, IReadOnlyCollection<string>? allowedExtensions,
+                          Func<string, bool>? isOpen = null)
     {
         var resolver = global::Android.App.Application.Context.ContentResolver;
         if (resolver is null)
@@ -104,19 +112,29 @@ public sealed class DocumentLinks
         }
 
         var persisted = takePersistable && TryPersist(resolver, uri);
-        var target = Path.Combine(NewWorkingFolder("open"), name);
-        try
+        if (LinkedCopy(uri, name) is { } existing)
         {
-            using var input = resolver.OpenInputStream(uri);
-            if (input is null)
+            if (isOpen?.Invoke(existing) == true)
+            {
+                Add(existing, uri, isTree: false, persisted || Find(existing)?.Persisted == true);
+                return existing;
+            }
+
+            // Not open: bring the copy up to date with the source, into a temporary file first so a
+            // failed read leaves the previous copy whole.
+            var fresh = existing + ".incoming";
+            if (!CopyFrom(resolver, uri, fresh))
             {
                 return null;
             }
 
-            using var output = File.Create(target);
-            input.CopyTo(output, CopyBufferBytes);
+            File.Move(fresh, existing, overwrite: true);
+            Add(existing, uri, isTree: false, persisted || Find(existing)?.Persisted == true);
+            return existing;
         }
-        catch (Exception ex) when (ex is IOException or Java.Lang.SecurityException or Java.IO.FileNotFoundException)
+
+        var target = Path.Combine(NewWorkingFolder("open"), name);
+        if (!CopyFrom(resolver, uri, target))
         {
             TryDeleteFolder(Path.GetDirectoryName(target)!);
             return null;
@@ -124,6 +142,47 @@ public sealed class DocumentLinks
 
         Add(target, uri, isTree: false, persisted);
         return target;
+    }
+
+    /// <summary>The working copy already linked to this URI (a file, not a folder), if it still exists under the same name.</summary>
+    private string? LinkedCopy(AUri uri, string name)
+    {
+        var key = uri.ToString();
+        lock (_gate)
+        {
+            return _links.Where(l => !l.Value.IsTree && l.Value.Uri == key && Path.GetFileName(l.Key) == name && File.Exists(l.Key))
+                         .Select(l => l.Key)
+                         .FirstOrDefault();
+        }
+    }
+
+    private static bool CopyFrom(ContentResolver resolver, AUri uri, string target)
+    {
+        try
+        {
+            using var input = resolver.OpenInputStream(uri);
+            if (input is null)
+            {
+                return false;
+            }
+
+            using var output = File.Create(target);
+            input.CopyTo(output, CopyBufferBytes);
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or Java.Lang.SecurityException or Java.IO.FileNotFoundException)
+        {
+            try
+            {
+                File.Delete(target);
+            }
+            catch (IOException)
+            {
+                // Best effort: a stray partial copy is never linked, so nothing opens it.
+            }
+
+            return false;
+        }
     }
 
     public static string QueryDisplayName(ContentResolver resolver, AUri uri)

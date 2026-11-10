@@ -695,3 +695,18 @@ same screen; no crash), smoke pass. With round 6 (API 36 phone and tablet, all c
   (`chuvadi-no-print.pdf`), same 5 tabs, same page. Share pass ([3, 4] tabs). The shared PDF again opened off page 1
   (phone "2 / 4", tablet "3") — the f88f9ef page drift, intermittent; with Foundation.
 - Handed to Android Test: head **7b7450b** on f88f9ef + Mobile UI d34d542, for AT-02, AT-03, AT-07, AT-08, AT-10, AT-11, AT-13.
+
+### 58. AT-12 (duplicate tab on Open with); D-158 page images wired; rebase onto Foundation 846706e — coordinator, 10 Nov 09:14 IST
+- Android Test round 5 on 9ce073b: AT-02, 03, 04, 05, 07, 08, 10, 11 verified.
+- **AT-12:** every incoming content URI was copied into a new working folder, so the same document arrived under a new
+  path and the shared router (`TabsService.OpenAsync`, same-path → focus) couldn't recognise it. `DocumentLinks.Import`
+  now reuses the working copy already linked to that URI (option (a) of the report): left exactly as it is while a tab
+  holds it (it may have unsaved edits), refreshed from the source when no tab does; Recent keeps one entry. Limit: the
+  same file reached through two different providers (MediaStore and Files) is still two URIs. Test: `platform_checks.py`
+  "Open with on a document that is already open focuses its tab, no duplicate" (.docx again after the .xlsx: same tab
+  count, .docx in front).
+- **D-158:** `ChuvadiWebView` (BlazorWebView subclass) wraps the host's file provider in Foundation's
+  `PageImageFileProvider`, as PAGE-IMAGES.md asks of the Android host; drawn page images load from memory, in process.
+  Covered by Foundation's `PageImageFileProviderTests`; no raster page in our device fixtures yet.
+- Composition: Foundation `846706e` + Mobile UI `c5c0b7e` (clean). Sandbox: Android Debug and Release `-warnaserror`
+  0 warnings; Release manifest 14/14; Core 247, Hosting 82, MobileUi 16, WebUi 41 pass.
