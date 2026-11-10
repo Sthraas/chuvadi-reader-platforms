@@ -390,3 +390,9 @@ See `docs/foundation/PAGE-IMAGES.md` for the design, the hooks per host and the 
 - **Windows behaviour change (D-134):** the tools rail heading reads TOOLS instead of READ/MARK/PROTECT/ARRANGE. Desktop before/after: only the rail heading differs (≈ 40 × 6 px at 1×, at the rail's top), plus Home's clock artefact. Every other screen identical.
 - 386/386 tests; 0 warnings in both solutions.
 
+### 48. PR #13's first Windows run: a test measured its own stack (10 Nov)
+- **The failure:** `Closing_a_heavy_document_brings_memory_back_near_where_it_was` failed once on windows-latest with 72 MB still live after the close (limit 16 MB). The re-run passed. Not H-20's (rail markup only).
+- **Found by reproducing the pattern and taking a heap dump:** `gcroot` on the 72 MB page string led to a stack slot of the test helper's own async frame (`MoveNext` of the helper that drew the page). When the drawn page's task completes, the test method can carry on inline, on top of that frame, and measures memory while the frame still holds the page. Whether it runs inline depends on timing, which is why the failure was intermittent. Nothing in the app held it.
+- **Fixed in the test:** `await Task.Yield()` after the helper and after the relief, so the measurement runs on a fresh stack. No production change.
+- 386/386 tests; 0 warnings.
+
