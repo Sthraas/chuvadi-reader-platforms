@@ -212,7 +212,7 @@ jobs:
         with: { name: 'results-${{ matrix.device }}-api${{ matrix.api }}', path: results/ }
 
   aot-build:
-    name: AT-14 variants (baseline, recorded profile, full AOT) — test-only
+    name: AT-14 variants (baseline, Chuvadi-full, full AOT, trace) — test-only
     needs: build
     if: contains(needs.build.outputs.suites, 'aot')
     runs-on: ubuntu-latest
@@ -240,20 +240,8 @@ jobs:
         run: |
           dotnet restore src/ChuvadiReader.Android/ChuvadiReader.Android.csproj --configfile ci/nuget.config
           dotnet build -t:InstallAndroidDependencies -f net10.0-android --no-restore src/ChuvadiReader.Android/ChuvadiReader.Android.csproj -p:AndroidSdkDirectory=$ANDROID_HOME -p:AcceptAndroidSDKLicenses=True > /dev/null 2>&1
-      - name: Enable KVM
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules; sudo udevadm trigger --name-match=kvm
-      - run: pip install reportlab==4.2.5 pypdf==5.1.0 pillow
-      - uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 36
-          target: google_apis
-          arch: x86_64
-          profile: pixel_7
-          disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -memory 4096
-          script: bash test/docs/android-test/ci/aot-variants.sh reader test/docs/android-test/ci/fixtures.py aot
+      - name: Variants (baseline, Chuvadi assemblies in full, full AOT, trace build)
+        run: bash test/docs/android-test/ci/aot-variants.sh reader test/docs/android-test/ci aot
       - uses: actions/upload-artifact@v4
         if: always()
         with: { name: aot-variants, path: aot/ }
