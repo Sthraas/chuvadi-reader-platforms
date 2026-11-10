@@ -20,6 +20,12 @@ public sealed class MemoryMeasurementCollection;
 [Collection(nameof(MemoryAfterCloseTests))]
 public sealed class MemoryAfterCloseTests
 {
+    private static string GcInfo()
+    {
+        var any = GC.GetGCMemoryInfo(GCKind.Any); var bg = GC.GetGCMemoryInfo(GCKind.Background); var blk = GC.GetGCMemoryInfo(GCKind.FullBlocking);
+        return $"any(#{any.Index} gen{any.Generation} conc={any.Concurrent} compacted={any.Compacted}) bg(#{bg.Index}) fullBlocking(#{blk.Index})";
+    }
+
     private static void Diag(string line) =>
         File.AppendAllText(Environment.GetEnvironmentVariable("CHVD_DIAG") ?? Path.Combine(Path.GetTempPath(), "chvd-diag.txt"), line + "\n");
 
@@ -178,8 +184,18 @@ public sealed class MemoryAfterCloseTests
 
         const long mb = 1024 * 1024;
         Diag($"MEASURED live {before.Live / mb}->{after.Live / mb} pageAlive={ChuvadiPdfSession.LastAnsweredForDiag?.IsAlive} sessions={ChuvadiPdfSession.AliveForDiag()}");
+        Diag($"  gc: concurrentSetting={System.Runtime.GCSettings.LatencyMode} env={Environment.GetEnvironmentVariable("DOTNET_gcConcurrent")} last={GcInfo()}");
         if (after.Live - before.Live >= 16 * mb)
         {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            for (var k = 0; k < 8; k++)
+            {
+                var c0 = GC.CollectionCount(2);
+                GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true, compacting: true);
+                Diag($"    again#{k} t={sw.ElapsedMilliseconds}ms gen2 {c0}->{GC.CollectionCount(2)} pageAlive={ChuvadiPdfSession.LastAnsweredForDiag?.IsAlive} live={GC.GetTotalMemory(false) / mb} last={GcInfo()}");
+                if (ChuvadiPdfSession.LastAnsweredForDiag?.IsAlive != true) break;
+            }
+
             await Task.Delay(500); var m2 = Measure();
             Diag($"  +0.5s live {m2.Live / mb} pageAlive={ChuvadiPdfSession.LastAnsweredForDiag?.IsAlive} sessions={ChuvadiPdfSession.AliveForDiag()}");
             await Task.Delay(5000); var m3 = Measure();

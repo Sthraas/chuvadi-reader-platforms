@@ -21,9 +21,13 @@ jobs:
         shell: bash
         run: |
           export CHVD_DIAG="$GITHUB_WORKSPACE/diag.txt"
-          echo "---- whole class, as CI runs it (6 times)"
-          for i in $(seq 1 10); do
+          for i in $(seq 1 8); do
             dotnet test tests/ChuvadiReader.Tests/ChuvadiReader.Tests.csproj -c Release --no-build > out.txt 2>&1 || true
-            grep -E "Passed!|Failed!|live memory|memory kept" out.txt | cut -c1-120; echo "RUN $i end" >> "$CHVD_DIAG"
+            grep -E "Passed!|Failed!|live memory" out.txt | cut -c1-120; echo "RUN default $i end" >> "$CHVD_DIAG"
+          done
+          export DOTNET_gcConcurrent=0
+          for i in $(seq 1 8); do
+            dotnet test tests/ChuvadiReader.Tests/ChuvadiReader.Tests.csproj -c Release --no-build > out.txt 2>&1 || true
+            grep -E "Passed!|Failed!|live memory" out.txt | cut -c1-120; echo "RUN noconcurrent $i end" >> "$CHVD_DIAG"
           done
           echo "---- diag"; cat "$CHVD_DIAG"
