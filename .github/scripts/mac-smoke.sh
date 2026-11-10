@@ -5,6 +5,7 @@
 #   M-17  locked PDFs (AES-256, RC4): wrong and right passwords; M-18 Settings after the Reader and Library;
 #   M-21  real ⌃⌘F / Esc in and out of Immersive; M-19 page errors reach the error log
 #   D-154 WebKit's content process ends → same screen back, plain message, chuvadi.log; M-18 Accessibility press
+#   several files from Finder at once: four at launch, six more while running — all tabs, no error
 #   M-02  files handed over by macOS open as tabs: at launch, and while running (single instance)
 #   M-01  the menu bar carries Chuvadi's commands (File, View, Document), ⌘ shortcuts, no AppKit Enter Full Screen
 #   M-11  Settings… ⌘, in the Chuvadi menu
@@ -256,16 +257,38 @@ cp "$LOG" "$PWD/smoke-keys.log"
 quit_app || fail "keys run did not quit"
 sleep 2
 
+# --- Several files from Finder at once (TabsService lock, Foundation patch 25): four at launch, six more while
+# running — every one becomes a tab, the Ui lives, nothing is logged as an error -------------------------------
+MANY="$RUNNER_TEMP/smoke-many"; rm -rf "$MANY"; mkdir -p "$MANY"
+for i in 01 02 03 04 05 06 07 08 09 10; do cp "$DOCS/five-pages.pdf" "$MANY/many$i.pdf"; done
+rm -f "$LOG"
+open -n --env CHUVADI_SMOKE=1 --env "CHUVADI_SMOKE_STEPS=wait;wait;wait;wait;wait;wait" --stdout "$LOG" --stderr "$LOG" \
+  -a "$APP" "$MANY/many01.pdf" "$MANY/many02.pdf" "$MANY/many03.pdf" "$MANY/many04.pdf"
+all_tabs() { local last; last=$(grep -E "CHUVADI tabs [0-9]+: " "$LOG" | tail -1); for i in "$@"; do [[ "$last" == *"many$i.pdf"* ]] || return 1; done; }
+end=$((SECONDS + 90)); until all_tabs 01 02 03 04 || [ $SECONDS -ge $end ]; do sleep 0.5; done
+all_tabs 01 02 03 04 && pass "four files at launch all become tabs" || fail "four files at launch: $(grep -E 'CHUVADI tabs' "$LOG" | tail -1 | sed -E 's/.*CHUVADI //')"
+open -a "$APP" "$MANY/many05.pdf" "$MANY/many06.pdf" "$MANY/many07.pdf" "$MANY/many08.pdf" "$MANY/many09.pdf" "$MANY/many10.pdf"
+end=$((SECONDS + 90)); until all_tabs 01 02 03 04 05 06 07 08 09 10 || [ $SECONDS -ge $end ]; do sleep 0.5; done
+all_tabs 01 02 03 04 05 06 07 08 09 10 && pass "six more files at once while running all become tabs (ten in all)" \
+  || fail "six more at once: $(grep -E 'CHUVADI tabs' "$LOG" | tail -1 | sed -E 's/.*CHUVADI //')"
+wait_for 'CHUVADI steps done' 60 || true
+s=$(grep -E "CHUVADI step [0-9]+ wait: route=" "$LOG" | tail -1)
+[[ "$s" == *"reader=1"* && "$s" == *"errorbar=none"* ]] && pass "after ten overlapping opens the Ui lives" || fail "after overlapping opens: ${s:-no report}"
+grep -qE 'CHUVADI log (Error|Critical)|Collection was modified' "$LOG" && { fail "overlapping opens logged an error"; grep -E 'CHUVADI log (Error|Critical)' "$LOG" | head -2 | cut -c1-600; } \
+  || pass "overlapping opens log no error"
+n=$(pgrep -f "$APP/Contents/MacOS/$EXE" | wc -l | tr -d ' ')
+[ "$n" = "1" ] && pass "still one process" || fail "overlapping opens: $n processes"
+cp "$LOG" "$PWD/smoke-many.log"
+quit_app || fail "many-files run did not quit"
+sleep 2
+
 # --- M-08 / M-23 in Mac Test's state: files handed over by macOS, the window without a first responder, then real
 # ⌃Tab, ⌃⇧Tab and ⌘1 — judged by the tab strip on the page, as a person (and Mac Test's screenshots) see it ---------
 for k in t1 t2; do cp "$DOCS/five-pages.pdf" "$DOCS/$k.pdf"; done
 rm -f "$LOG"
-# One file at launch, the second a moment later: two at once hit a shared race (TabsService.DropOtherCaches,
-# patch sent to Foundation — docs/mac/foundation/TabsService-overlapping-opens.patch), kept apart from M-08 here.
+# Both files at once, as Mac Test hands them over (the shared race this hit is fixed in Foundation's patch 25).
 open -n --env CHUVADI_SMOKE=1 --env "CHUVADI_SMOKE_STEPS=wait;wait;unfocus;native:ctrl-tab;native:ctrl-shift-tab;native:cmd-1" \
-  --stdout "$LOG" --stderr "$LOG" -a "$APP" "$DOCS/t1.pdf"
-wait_for 'CHUVADI tabs [0-9]+: .*t1\.pdf' 90 || true
-open -a "$APP" "$DOCS/t2.pdf"
+  --stdout "$LOG" --stderr "$LOG" -a "$APP" "$DOCS/t1.pdf" "$DOCS/t2.pdf"
 native_watch 180 &
 NW=$!
 wait_for 'CHUVADI steps done' 180 || fail "M-08 tab-key steps did not finish"
