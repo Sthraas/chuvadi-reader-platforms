@@ -293,8 +293,15 @@ internal static class MacSmoke
                 + ' keys=[' + keys + ']'
                 + ' notice=' + (document.body && document.body.innerText.indexOf('stopped unexpectedly') >= 0 ? 1 : 0)
                 + (function () {   // D-158: a raster page's image is served by address from memory (page-image hook)
-                  var m = (document.body ? document.body.innerHTML : '').match(/_chvd\/pages\/[0-9a-f]{32}\.png/);
-                  if (!m) { return ''; }
+                  var html = document.body ? document.body.innerHTML : '';
+                  var m = html.match(/_chvd\/pages\/[0-9a-f]{32}\.png/);
+                  if (!m) {
+                    // diagnosis: where the page went — inline base64, an <img> source, or not drawn yet
+                    var imgs = Array.prototype.map.call(document.querySelectorAll('.reader img, .reader image, .reader object'),
+                      function (e) { return (e.tagName + ':' + (e.getAttribute('src') || e.getAttribute('href') || e.getAttribute('data') || '')).slice(0, 48); });
+                    return document.querySelector('.reader') ? ' pageimg=none inline=' + (html.indexOf('data:image/png') >= 0 ? 1 : 0)
+                      + ' svgs=' + document.querySelectorAll('.reader svg').length + ' imgs=' + JSON.stringify(imgs.slice(0, 3)) : '';
+                  }
                   var href = m[0];
                   try {
                     var x = new XMLHttpRequest(); x.open('GET', href, false); x.send();
