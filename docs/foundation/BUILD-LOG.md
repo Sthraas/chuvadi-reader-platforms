@@ -182,3 +182,180 @@
 - Found while proving it: the trim analyser doesn't flag a `(Type, Type)` array, so the first fix's annotated record was safe only while every entry used it. Guard test added; matrix in TRIMMING.md.
 - 331/331 tests (Hosting 64); 0 warnings in both solutions; trimmed probe 53/53; StartupProbe no cost (JIT 1448 vs 1450). Windows: registrations pinned identical in order and type, and no Ui file changed.
 
+### 35. Twelfth combined patch, part 4: Android P-08 path labels (9 Nov, D-146)
+- From platform/android 4260ca4 (`docs/android/proposal/P-08-path-labels.patch`): `IPathLabels` seam with `PlainPathLabels` default (the path itself) in Platform; every path shown in the Ui (titles, chips, folder rows) goes through it; drift-guard test reads the Ui's .razor files.
+- The patch's registration hunk targeted the old `(Type, Type)` table; registered instead as one typed line, `Seam<IPathLabels, PlainPathLabels>`, per §34. `TypedRegistrationTests` gains the new row.
+- 333/333 tests (Hosting 66); 0 warnings in both solutions; trimmed probe 54/54; desktop 27/27 identical (Windows shows the same paths as before); drift guard proved by putting one raw `title="@entry.Path"` back: it fails naming Merge.razor:41.
+
+### 36. Thirteenth combined patch, part 1 (9 Nov evening)
+**Linux (platform/linux 2cb9c35, the f84c9ed diff rebased on c91a581):**
+- B-24 reopened: the Reader no longer opens each new tab's file on the page's thread (`RefreshDocKind` / `_isXfaDoc` removed; nothing read them; the XFA notice uses the session).
+- B-25: viewer errors follow WT-10. A plain sentence, the system's text under a collapsed **Details**, and one shared access sentence (`TabsService.CantRead`).
+- S3 (Linux step 31b, found after D-139): the Print card gets the tab's password, so a file opened with its owner password prints. **Windows has the same fix:** before, it opened the file to print with no password and failed.
+
+**Mac (platform/mac `docs/mac/foundation/*.patch`):**
+- M-01 / M-11: the shell's own commands (Open a file…, Settings, Go to, modes, themes, tabs) reach `IAppCommands`, so the macOS menu bar has File › Open… and Settings.
+  - Foundation change: published only when `Chrome.NativeMenuBar` (macOS). Other hosts have no menu bar to fill, so there's no extra render at startup and nothing changes there.
+- M-08 to M-10: ⌃Tab cycles tabs, labelled ⌃Tab on a Mac (on Windows, Ctrl+Tab does exactly what it did); F11 is labelled ⌃⌘F on a Mac; the green light is Zoom in both states.
+- D-132: privacy notice A2a for the macOS error log.
+
+**Android Test (D-149):**
+- AT-10 (Find drops typed characters): every typed field used `value="@x"` + `@oninput`, so each answer from the app wrote the field back to what it had seen so far. Now `@bind` / `@bind:get`/`@bind:set` with `@bind:event="oninput"` (Reader Find, viewer Find, bookmark rename, Library search and tags, Redact find, Bench search/range/bands, band editor, preferred name, Ctrl K).
+  - `tools/PixelProof/find-typing.js`, with the round trip slowed: before "burstdt", "butwtt", "burwdt"; after "burstwordtest" in all three fields, 3 runs.
+  - Guard: `TypingFieldsTests` fails if the old pairing comes back (proved: it names Library.razor:29 and :133 on the old file).
+- AT-13 (a heavy image page sometimes never paints, CPU idle): not reproduced here, since it needs the device. Code review found a way a page stays a placeholder for good: in-flight renders were remembered by page number and never forgotten, so after the tab's document was reopened in place (Save in place, unlock) with the same page count, or a render landed in a replaced session, that page was never asked for again.
+  - Now keyed by (session, page), forgotten when the render ends; a new session for the same tab re-arms the observers.
+  - Still open for the device: the page render runs on the Ui thread (a 6000 × 6000 image takes 4 s and holds up the next open). Options are with the coordinator.
+
+**Checks:**
+- 342/342 tests (Hosting 75);
+- 0 warnings in both solutions;
+- trimmed probe 54/54;
+- desktop 27/27 identical;
+- StartupProbe the same (JIT 1453 both; times within noise).
+
+### 37. Fourteenth combined patch: pages render off the Ui thread (9 Nov, D-152, AT-13)
+- `ChuvadiPdfSession.RenderPageSvgAsync` draws the page on a worker thread, one page at a time per document (a per-session gate, requests in the order asked). A heavy page no longer holds up the Ui or the next open.
+- **Why it's safe:** chuvadi-pdf says a `PdfDocument` is not for concurrent use. So after the open, every use of the session's document holds the same gate:
+  - the render;
+  - a measurement (`TryUseDocument`, which never waits: during a render it skips, and the next pointer move measures);
+  - closing (`Dispose` never waits; a render in progress closes the document when it ends, and nothing new starts).
+  - Layers are read once, at the open.
+  - The page cache is locked.
+  - A page drawn for layers that changed meanwhile isn't kept.
+- Redact's lazy render keyed by (session, page) and forgotten when done, as the Reader's (§36).
+- **Measured** with a 26 MB file holding one 6000 × 6000 JPEG, as AT-13: the call took 6549 ms to return before (the Ui thread blocked for the whole render); now 1.9 ms, with the page ready at 7.1 s. Its SVG is 4.0 MB after the raster fallback, from a ~35 MB vector SVG first, so the library ask (C, decode at display size) stands.
+- **Guard:** `RenderOffUiThreadTests` (6 stall tests).
+  - Rendering on the caller's thread fails 3 of them (caller held, two documents can't render together, measure held).
+  - The other 3 pin one-at-a-time and order, closing mid-render, and dropping a stale-layer page.
+- 348/348 tests (Reader 218); 0 warnings in both solutions; trimmed probe 54/54; desktop 27/27 identical; find-typing 3/3.
+
+### 38. The osx-arm64 trimmed-launch "hang" on 556090b (9 Nov, coordinator 22:28)
+- **What it was:** run 42654252893, first attempt. The osx-arm64 job has no runner name and no steps: it never got a macOS runner and sat in the queue until it was cancelled. On the re-run it also queued for 5 min before starting. Nothing ran, so nothing could hang.
+  - That job runs only `tools/TrimProbe`, which builds the services and never renders a page, so D-152's code isn't on its path at all.
+- **Could the render queue and a Ui dispatcher wait on each other? No.** A cycle needs the Ui thread to block on something the render side holds. Nothing on the Ui thread blocks:
+  - `Dispose` and `TryUseDocument` take the gate with `Wait(0)` and never wait;
+  - the render runs in `Task.Run` and never posts to the Ui;
+  - its continuations use `ConfigureAwait(false)` inside the session;
+  - callers only `await`; nothing uses `.Result` or `.Wait()` on a render.
+- **Guard added anyway:** two tests on a one-thread dispatcher (posted work runs in order, as the WPF, Mac Catalyst, GTK and Android Ui threads do):
+  - the Ui thread keeps answering (measure, cache, layer toggle, drop cache) while pages render, and each render comes back to it;
+  - closing a tab on the Ui thread mid-render never blocks it.
+  - Proved by making the gate block (`Wait(Timeout.Infinite)`): the suite goes red on the 5 s guard.
+- 350/350 tests. Tests only; no behaviour change.
+
+### 39. Fifteenth combined patch: fast paging (Linux on the fourteenth, platform/linux ba94dfa)
+- **The finding:** every page entering the view queued a render and nothing withdrew it, and renders ran in order, so after 150 fast PageDowns the landed page waited behind the backlog (about 2 s on the CAD PDF, with memory growing).
+- **Session (`ChuvadiPdfSession`):** renders wait in the session's own queue, not on the gate.
+  - A render that hasn't started is dropped when its token is cancelled; nothing is drawn for it, and its task reports cancelled.
+  - The worker takes the waiting page nearest the focus page (`IPdfSession.SetFocusPage`, a default no-op for other sessions), oldest first among equals. With no focus set (Bench, Redact) it's the order asked, as before.
+  - Still one worker and the same gate, so D-152's guarantees stand: the document is never used by two threads, and nothing on the Ui waits.
+- **Reader:**
+  - one token per (session, page) render;
+  - `PageLeft` (from the page observer, sent only for pages it asked for, so a long document doesn't send one message per far page) cancels it;
+  - `OnPageVisible` sets the focus page;
+  - a changed tab or reopened document cancels everything waiting.
+- **Guard tests:**
+  - 150 fast PageDowns at 40 ms a page: the landed page is drawn within the first 3, and at most 4 pages are drawn in all;
+  - waiting pages drawn nearest the page in view first (exact order pinned);
+  - a cancelled render never draws.
+  - With the old queue (in order, not cancellable) all 3 fail.
+- 353/353 tests; 0 warnings in both solutions; trimmed probe 54/54; desktop 27/27 identical (Home's relative-time artefact cleared on re-run).
+- **Behaviour on every platform, Linux included:** pages render nearest the one in view first, and pages scrolled past aren't drawn.
+
+### 40. Sixteenth combined patch: memory after closing a heavy document (Linux 36c, platform/linux-test ba94dfa note)
+Measured with Linux's own CAD stand-in (`tools/linux/make-heavy-pdfs.py`, run here test-only), with a GC heap dump (dotnet-gcdump / dotnet-dump, testing tools, never shipped) after closing:
+
+| After closing (one or two A1 sheets) | Live managed | Resident | Who held it |
+|---|---|---|---|
+| Before this patch | 205 MB | 1666 MB | a 134 MB `char[]` in the shared array pool, plus memory the runtime kept |
+| Pool fix only | 77 MB* | 1404–1745 MB | memory the runtime kept for later use (committed, nothing alive in it) |
+| Pool fix + relief | 77 MB* | 127–129 MB | — |
+
+\* The 77 MB left was the probe's own stack slot holding its last page (gcroot: the probe's `Render` frame), not the app.
+
+- **Our code, fixed:**
+  1. The raster page's SVG was built three times over (base64, data URI, then an interpolated string that grew through `ArrayPool<char>.Shared`). The pool kept a 134 MB buffer for the life of the app, and three 77 MB copies existed at once while drawing.
+     - Now `RasterSvg` writes the base64 straight into the final string, in one allocation, with the same characters as before (pinned against the old formula for 7 lengths).
+  2. The runtime keeps the memory a big drawing used, even with nothing alive in it, so the app stayed near 1.7 GB after the tab closed.
+     - `MemoryRelief`: when a closed document's pages held ≥ 64 MB, one aggressive collection runs on a worker 0.5 s after the close, at most once per 30 s (so a shared Web server never runs them back to back).
+     - Measured: 1745 → 129 MB resident, a 74 ms pause.
+- **Closing releases everything of ours:**
+  - the session's page cache is cleared at close;
+  - queued renders end empty;
+  - an in-flight render closes the document when it ends;
+  - session and document were collected (weak references dead).
+- **Test (`MemoryAfterCloseTests`, run alone):** a large-format page of noise (≈ 96 MB of page SVG, the raster path the CAD sheets take). After close, live memory is within 16 MB of where it was, and memory kept by the runtime within 64 MB. It fails without the relief (563 → 655 MB kept) and with the old string building (1 → 129 MB live).
+- **Left for the library (with B-27):**
+  - drawing one A1 sheet of 120,000 strokes peaks at about 1.8 GB resident inside the rasteriser, and takes about 37 s here;
+  - a page holding one big image first comes out as a vector SVG of about 35 MB before the raster fallback.
+- 356/356 tests; 0 warnings in both solutions; trimmed probe 54/54.
+- **Every platform, Linux and Web included:** that one collection after a heavy close.
+
+### 41. Sixteenth combined patch, part 2: what allocated after the close (Linux step 47, platform/linux 64c9c16)
+Reproduced in the desktop preview, which now opens real files (`CHVD_OPEN`, test-only). A cold app with the two sample PDFs and Linux's `cad.pdf` active: two sheets drawn, then Ctrl+W. Sampled with `tools/PixelProof/close-memory.js`, dotnet-counters and heap dumps (testing tools only).
+
+1. **A sheet kept drawing for the closed tab.** The page observer had already asked for sheet 3 (1000 px ahead), and the gate drew it to the end: about 55 MB/s allocated at one core's CPU for 33 s after the close, then a burst at its PNG encode. On Linux, where a sheet takes about 0.3 s, that is the "back up within 2 s".
+   - **Fixed:** the page being drawn stops when its page leaves the view and nobody else waits for it, or when the document closes. The library's rasteriser takes the token (`PageRasterizer.Rasterize(page, token)`).
+   - Whoever asks for that page after the stop waits for a fresh draw.
+   - Vector pages drawn by `SvgRenderer` can't be stopped inside the library: it takes no token. **Library item.**
+   - After the fix, allocation and CPU drop to 0 within 1 s of the close.
+2. **The relief didn't run for vector sheets** (their kept SVG is small).
+   - **Fixed:** a document also counts as heavy when its renders allocated ≥ 256 MB (library included; counted on the render thread). A blank A1 sheet costs 277 MB to draw and keeps 0.1 M characters.
+3. **Pooled buffers held by the Ui's transport.** After the close, about 260 MB stayed alive in .NET's shared byte pool: arrays of 8, 16, 32, 64 and 128 MB, grown while sending the pages' text to the Ui. No gcroot from our code. The pool lets go of a buffer only at a full collection after it has gone unused for about a minute.
+   - **Fixed:** the relief does a second pass 65 s after the first.
+   - Measured: resident memory 1198 MB before close → 623 MB at 0.5 s → **167 MB after the second pass** (cold start 114 MB, with the two sample PDFs still open).
+   - The cause is page images travelling as huge strings; options are with the coordinator.
+
+- **Tests (`MemoryAfterCloseTests`, run alone, 6):**
+  - closing mid-sheet stops the drawing (well under half a sheet's time);
+  - a sheet that leaves the view mid-draw stops, and the next sheet is ready within 1.4 sheet-times;
+  - a costly but small-keeping document gets the relief.
+  - The first two fail when the rasteriser is given no token; the third fails without the drawing-cost rule.
+- 360/360 tests (3 runs of the Reader suite); 0 warnings in both solutions; trimmed probe 54/54.
+- **Every platform, Linux included:** the drawing stops, and the second pass runs.
+
+### 42. Sixteenth combined patch, part 3: the drawing line at 64 MB (Linux proposal, platform/linux 2f6a803, step 48)
+- `MemoryRelief.HeavyDrawingBytes` 256 → 64 MB, Linux's one-line diff. Linux, cold 36c: memory back in 6 of 6 runs (5 of 7 before; the misses had allocated just under 256 MB). Warm full pass 121/121.
+- **Paging never runs a collection** (new test `Paging_never_runs_a_collection_only_closing_a_heavy_document_does`): drawing, pages cancelled as they leave the view, the focus page, dropping a background tab's cache and a layer reset leave the relief alone, however heavy the drawing. Closing is what asks.
+  - Proved by making a cache drop ask: the test fails.
+  - The only caller is `CloseDocument`.
+- **Ordinary documents don't qualify:** a text page costs about 0.04 MB to draw, so about 1,600 such pages would reach 64 MB.
+- **No startup cost:** nothing on the startup path changed; the relief code runs only when a document closes.
+- **Two drawings closed in a row** (Linux's note): the second close is skipped while the first relief runs, but that relief's second pass, 65 s later, collects for both.
+- 361/361 tests (2 runs); 0 warnings in both solutions; trimmed probe 54/54.
+
+### 43. Eighteenth combined patch (10 Nov)
+1. **D-156: a second heavy close inside the gap waits for the relief instead of being dropped.** Linux's exact diff (`PROPOSAL-memory-relief-defer-10nov.md`, platform/linux ec108e7, on a203a62), applied unchanged, with its test.
+   - Tests now set `MinGap` to zero in the memory class's constructor, so one test's relief never makes the next wait 30 s.
+2. **B-30 (Linux Test, on 64c9c16): nothing in Core holds a closed document.** New retention test `Nothing_holds_a_closed_document_its_pages_or_its_queued_renders`:
+   - a tab opened through `TabsService`, a page drawn and cached, one sheet mid-draw and one queued, then the tab closed;
+   - the session, the `PdfDocument` and the drawn page's string are all collected;
+   - live memory is within 16 MB of where it started.
+   - It passes on add7b05 (before 4f67a4c) too, so the 680 MB that B-30 saw after a full collection on 64c9c16 wasn't a stuck reference. It was the sheets still drawing for the closed tab (4f67a4c stops them; on 64c9c16 a real-CAD sheet takes 10–13 s, so at 60 s the background sheets could still be drawing), and the shared byte pool's buffers from the Ui's transport, which go at the 65 s second pass (§41; the preview showed the heap's large arrays fall from ~423 MB to ~2 MB).
+   - **For Linux Test:** measure 70 s or more after the close, past the second pass. At 60 s the pool's buffers are still there by design.
+3. **B-29: the closed tab's raster pass is cancelled mid-sheet.** New test `Closing_mid_sheet_never_holds_up_the_next_file`: an A1 stroked sheet (a real `PageRasterizer` pass) closed 0.3 s in, then the next file opened.
+   - The next file's page is ready within a second of its time alone.
+   - The closed sheet has stopped by then (< 1 s).
+   - On add7b05 it fails: the closed sheet was still drawing 5.2 s after the next file was ready.
+4. **B-27 for the library list** (Linux Test): draw time is in the library rasteriser (`PaintStrokeOp` under `RasterizeInternal`). Real CAD sheet 1 takes 6–8 s and sheets 2–3 take 10–13 s, against about 1 s in Poppler; the stand-in takes 53 s. Nothing to change in the app.
+
+- 363/363 tests (2 runs); 0 warnings in both solutions; trimmed probe 54/54.
+
+### 44. Nineteenth combined patch: Linux's render findings (`PROPOSAL-render-findings-10nov.md`, platform/linux 8dcf4d8)
+1. **A page back in view after its render was cancelled is drawn.** Linux's one-line diff, unchanged: a cancelled entry in `_rendering` counts as gone, so the page is asked for again. Pinned by a source guard. The Core side already gives a page asked for after a stop a fresh draw (§41).
+2. **Moving to a page while the heights change lands on that page** (`reader.js`).
+   - The view keeps an anchor: the page at the top and how far into it the view starts, or the page asked for after a jump.
+   - A `ResizeObserver` on the pages puts it back whenever page heights change: the fit zoom landing, or a drawing replacing its placeholder.
+   - The page box is reported once the jump's quiet time is over (it kept showing 1).
+   - Gesture zooms (pinch, double-tap, marquee) still place the view themselves, and the anchor is re-read after them.
+   - `tools/PixelProof/page-anchor.js` (continuous mode, with Chromium's own scroll anchoring off, as in WebKit, which has none): **before 0/3, after 3/3** (twice). Cases: jump then the fit shrinks the pages; the fit grows them mid-jump; scrolled by hand then the heights change.
+   - On Windows, WebView2 already anchors natively, so its jumps behave as before. Desktop screens identical (every screen identical in at least one of 3 runs; the 1× relative-time and scrollbar artefacts move between runs).
+3. **Memory after closing: the relief ran before the drawing was garbage.**
+   - **Found:** Blazor keeps the render before last for diffing. One render after the document on show changes still holds the old document's page text (≈ 77 MB per CAD sheet); a second render lets it go. `PageReleaseTests` (Web Ui tests, real `PageSvg`, a minimal renderer) pins both halves: after one render the page is still alive, after a second it isn't.
+   - **Fixed:** the Reader renders once more after the document on show changes, and keys every `PageSvg` by its document, so the old document's page components are disposed instead of reused. The page text goes at the close, before the 0.5 s relief.
+   - **Outside the .NET heap** (Linux's ~150 MB after a full collection): none of it is ours or chuvadi-pdf's (both managed only). Here, without WebKit, resident memory comes back to within ~50 MB of a cold start (§41).
+     - On Linux the rest is WebKitGTK and GLib in the app's process, and freed C memory that glibc keeps until `malloc_trim(0)`.
+     - New `MemoryReliefNotice.Relieved` (Core, public static event) is raised after each relief pass, so the Linux host can call `malloc_trim(0)` there. That's the Linux chat's one line.
+- 366/366 tests (2 runs); 0 warnings in both solutions; trimmed probe 54/54; find-typing 3/3.
+

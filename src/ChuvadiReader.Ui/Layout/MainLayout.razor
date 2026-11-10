@@ -16,6 +16,7 @@
 @inject BenchService Bench
 @inject UserProfileService Profile
 @inject ChuvadiReader.Platform.IPlatformInfo Platform
+@inject ChuvadiReader.Platform.IPathLabels PathLabels
 
 @*
     D-10 shell. One thin 40 px top bar (wordmark · tabs · ‹ n / N › · Document ▾ · Ctrl K ·
@@ -79,7 +80,7 @@
                 {
                     var isActive = t.Id == Tabs.Active?.Id && OnDocView;
                     <div class="rtab @(isActive ? "active" : null) fmt-@t.Format.ToString().ToLowerInvariant()" @key="t.Id"
-                         data-tab-id="@t.Id" @onclick="() => SwitchTab(t.Id)" title="@t.Path"
+                         data-tab-id="@t.Id" @onclick="() => SwitchTab(t.Id)" title="@PathLabels.Describe(t.Path)"
                          @onmousedown:stopPropagation="true" @ondblclick:stopPropagation="true"
                          @onmouseup="(e) => OnTabMouseUp(e, t.Id)">
                         <span class="rtab-ic"><Icon Name="@t.Format.IconName()" Size="12" /></span>
@@ -673,6 +674,14 @@
     // ── lifecycle / theme / window ────────────────────────────────────────
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // The shell's own commands, for hosts with a native menu bar (IAppCommands; macOS). Only raises
+        // Shell.Changed when they actually differ, so this can't re-render in a loop. Other hosts have no
+        // menu bar to fill, so they skip it: no extra render at startup, nothing changes there.
+        if (Platform.Chrome.NativeMenuBar)
+        {
+            Shell.SetGlobalCommands(GlobalCommands().ToList());
+        }
+
         if (!firstRender)
         {
             return;

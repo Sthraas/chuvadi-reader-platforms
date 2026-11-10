@@ -15,6 +15,7 @@
 @inject ChuvadiReader.Platform.IFileWriteBack WriteBack
 @inject ChuvadiReader.Platform.IAppPaths Paths
 @inject ChuvadiReader.Platform.IPlatformInfo Platform
+@inject ChuvadiReader.Platform.IPathLabels PathLabels
 @implements IAsyncDisposable
 
 <PageTitle>Chuvadi · Bench</PageTitle>
@@ -137,16 +138,14 @@
                         {
                             <div class="shelf-filter">
                                 <div class="sf-row">
-                                    <input class="sf-input" placeholder="Search this file…" value="@GetSrcQuery(s.Index)"
-                                           @oninput="e => SetSrcQuery(s.Index, e.Value?.ToString())"
+                                    <input class="sf-input" placeholder="Search this file…" @bind:get="GetSrcQuery(s.Index)" @bind:set="(string? v) => SetSrcQuery(s.Index, v)" @bind:event="oninput"
                                            @onkeydown="e => OnSearchKey(e, s.Index)" />
                                     <button class="sf-go" @onclick="() => RunSrcSearch(s.Index)" disabled="@_srcSearching.Contains(s.Index)" title="Search this file" aria-label="Search">
                                         @if (_srcSearching.Contains(s.Index)) { <span class="bspin sf-spin"></span> } else { <Icon Name="loupe" Size="13" /> }
                                     </button>
                                 </div>
                                 <div class="sf-row">
-                                    <input class="sf-input sf-range" placeholder="Pages e.g. 1-5, 8" value="@GetSrcRange(s.Index)"
-                                           @oninput="e => SetSrcRange(s.Index, e.Value?.ToString())"
+                                    <input class="sf-input sf-range" placeholder="Pages e.g. 1-5, 8" @bind:get="GetSrcRange(s.Index)" @bind:set="(string? v) => SetSrcRange(s.Index, v)" @bind:event="oninput"
                                            @onkeydown="e => OnRangeKey(e, s.Index)" />
                                     <button class="sf-go" @onclick="() => ApplyRange(s.Index)" title="Show only these pages" aria-label="Apply range"><Icon Name="check" Size="13" /></button>
                                     @if (BenchSvc.HasPageFilter(s.Index))
@@ -719,7 +718,7 @@
                 </div>
                 <p class="modal-body">Write every page of this desk as its own single-page PDF into:</p>
                 <div class="folder-row">
-                    <span class="folder-path" title="@_scatterFolder">@_scatterFolder</span>
+                    <span class="folder-path" title="@PathLabels.Describe(_scatterFolder)">@PathLabels.Describe(_scatterFolder)</span>
                     @if (Platform.Capabilities.PickFolders)
                     {
                         <button class="link" @onclick="ChangeScatterFolder">change…</button>
@@ -771,7 +770,7 @@
                 else
                 {
                     <div class="folder-row">
-                        <span class="folder-path" title="@_expFolder">@_expFolder</span>
+                        <span class="folder-path" title="@PathLabels.Describe(_expFolder)">@PathLabels.Describe(_expFolder)</span>
                         @if (Platform.Capabilities.PickFolders)
                     {
                         <button class="link" @onclick="ChangeExportFolder">change…</button>
@@ -934,7 +933,7 @@
                 </div>
                 <p class="modal-note">@PresetHint(_pressPreset)</p>
                 <div class="folder-row">
-                    <span class="folder-path" title="@_pressFolder">@_pressFolder</span>
+                    <span class="folder-path" title="@PathLabels.Describe(_pressFolder)">@PathLabels.Describe(_pressFolder)</span>
                     @if (Platform.Capabilities.PickFolders)
                     {
                         <button class="link" @onclick="ChangePressFolder">change…</button>
@@ -2433,8 +2432,7 @@
         </select>
         @if (GetKey(band, slot) == "custom")
         {
-            <input class="modal-input hf-slot-custom" placeholder="text" value="@GetBand(band, slot)"
-                   @oninput="e => SetBand(band, slot, e.Value?.ToString() ?? string.Empty)" disabled="@(!BandOn(band))" />
+            <input class="modal-input hf-slot-custom" placeholder="text" @bind:get="GetBand(band, slot)" @bind:set="(string? v) => SetBand(band, slot, v ?? string.Empty)" @bind:event="oninput" disabled="@(!BandOn(band))" />
         }
     </div>;
 

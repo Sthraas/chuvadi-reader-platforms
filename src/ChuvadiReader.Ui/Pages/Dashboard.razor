@@ -14,6 +14,7 @@
 @inject SaveFolderService SaveFolders
 @inject PreferencesService Prefs
 @inject ChuvadiReader.Platform.IPlatformInfo Platform
+@inject ChuvadiReader.Platform.IPathLabels PathLabels
 
 <PageTitle>Chuvadi · Home</PageTitle>
 
@@ -108,7 +109,7 @@
                 <div class="resume">
                     @foreach (var t in ResumeTabs)
                     {
-                        <button type="button" class="rcard" @key="t.Id" @onclick="() => OpenTab(t)" title="@t.Path">
+                        <button type="button" class="rcard" @key="t.Id" @onclick="() => OpenTab(t)" title="@PathLabels.Describe(t.Path)">
                             <span class="mini-page" aria-hidden="true">
                                 <span class="mp-head fmt-@FmtClass(t.Format)"></span>
                                 <span class="mp-line"></span><span class="mp-line"></span><span class="mp-line short"></span>
@@ -132,7 +133,7 @@
                 <div class="recent">
                     @foreach (var r in Recents.Items.Take(RecentCount))
                     {
-                        <button type="button" class="rrow" @onclick="() => OpenRecent(r)" title="@r.Path">
+                        <button type="button" class="rrow" @onclick="() => OpenRecent(r)" title="@PathLabels.Describe(r.Path)">
                             <span class="r-ic fmt-@FmtClass(r.Format)"><Icon Name="@r.Format.IconName()" Size="16" /></span>
                             <span class="r-name">@r.FileName</span>
                             <span class="r-lock">
@@ -153,7 +154,7 @@
                 <span>@(IsPortal ? ChuvadiReader.Ui.Components.Platform.PlatformText.HomeStorageMapTitle : "Storage map")</span>
                 @if (Platform.Capabilities.RevealInFolder)
                 {
-                    <span class="smap-folder" title="@Categories.BaseFolder">@Categories.BaseFolder</span>
+                    <span class="smap-folder" title="@PathLabels.Describe(Categories.BaseFolder)">@PathLabels.Describe(Categories.BaseFolder)</span>
                 }
                 <span class="smap-count">@(Lib.IsScanning ? "scanning…" : $"{Lib.Entries.Count} pdf{(Lib.Entries.Count == 1 ? "" : "s")}")</span>
             </h2>
@@ -183,7 +184,7 @@
             {
                 if (p.IsFolder)
                 {
-                    <div class="prow" title="@p.Path">
+                    <div class="prow" title="@PathLabels.Describe(p.Path)">
                         <span class="p-ic folder"><Icon Name="folder" Size="17" /></span>
                         <span class="p-name">@p.Name</span>
                     </div>
@@ -191,7 +192,7 @@
                 else
                 {
                     var fmt = p.Format ?? DocumentFormat.Pdf;
-                    <button type="button" class="prow" title="@p.Path" @onclick="() => OpenPinned(p)">
+                    <button type="button" class="prow" title="@PathLabels.Describe(p.Path)" @onclick="() => OpenPinned(p)">
                         <span class="p-ic fmt-@FmtClass(fmt)"><Icon Name="@fmt.IconName()" Size="17" /></span>
                         <span class="p-name">@p.Name</span>
                     </button>
@@ -204,7 +205,7 @@
                 <Icon Name="library" Size="12" /> Library
                 @if (Platform.Capabilities.RevealInFolder)
                 {
-                <span class="shelf-meta" title="@Lib.FolderPath">@ShortFolder(Lib.FolderPath) · @(Lib.IsScanning ? "scanning…" : $"{Lib.Entries.Count} pdf{(Lib.Entries.Count == 1 ? "" : "s")}")</span>
+                <span class="shelf-meta" title="@PathLabels.Describe(Lib.FolderPath)">@ShortFolder(Lib.FolderPath) · @(Lib.IsScanning ? "scanning…" : $"{Lib.Entries.Count} pdf{(Lib.Entries.Count == 1 ? "" : "s")}")</span>
                 }
                 else
                 {
@@ -237,7 +238,7 @@
         {
         <section class="watch">
             <h2 class="eye"><Icon Name="folder" Size="12" /> Watched folder</h2>
-            <span class="w-path" title="@Watched.FolderPath">@Watched.FolderPath</span>
+            <span class="w-path" title="@PathLabels.Describe(Watched.FolderPath)">@PathLabels.Describe(Watched.FolderPath)</span>
             <span class="w-sub">@Watched.DocumentCount documents found · scanned @HomeFormat.Relative(Watched.LastScanned)</span>
             <span class="w-actions">
                 <button type="button" class="mini accent" @onclick="ChangeWatched">change</button>

@@ -1,7 +1,13 @@
 @* Centered state card for the viewers: loading, error, empty. *@
 <div class="vm @(Error ? "vm-err" : null)" role="@(Error ? "alert" : "status")">
     <Icon Name="@IconName" Size="16" />
-    <span>@Text</span>
+    <span class="vm-body">
+        <span>@Text</span>
+        @if (!string.IsNullOrEmpty(Detail))
+        {
+            <details class="vm-detail"><summary>Details</summary>@Detail</details>
+        }
+    </span>
     @ChildContent
 </div>
 
@@ -9,5 +15,7 @@
     [Parameter] public string IconName { get; set; } = "info";
     [Parameter] public string? Text { get; set; }
     [Parameter] public bool Error { get; set; }
+    /// <summary>The system's own text for an error (WT-10), under a collapsed Details.</summary>
+    [Parameter] public string? Detail { get; set; }
     [Parameter] public RenderFragment? ChildContent { get; set; }
 }

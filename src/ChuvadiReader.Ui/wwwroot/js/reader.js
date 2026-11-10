@@ -39,6 +39,13 @@ let loupePage = null;
 let resizeObs = null;
 let resizeTimer = 0;
 let zoomNotifyTimer = 0;
+// Nineteenth patch (Linux finding 2): the page in view stays in view when page heights change (the fit zoom after
+// the first drawing lands, a page's drawing replacing its placeholder). anchor = { page, frac }: the page at the top
+// of the view and how far into it the view starts. A jump sets it to the page asked for.
+let anchor = null;
+let anchorObs = null;
+let ownZoomUntil = 0;       // a gesture zoom places the view itself; the anchor is re-read after it
+let reportTimer = 0;
 let chromeClickHandler = null;
 let loupeR = 84;
 let loupeMag = 2.2;
@@ -77,11 +84,18 @@ export function init(deskEl, dotnetRef) {
     ratios = {};
 
     // Render pages a bit before they reach the viewport.
+    // Pages asked for and not yet left: only these are reported when they leave, so a long document opening
+    // doesn't send one message per far page (fifteenth patch: a page that left the view isn't drawn any more).
+    const asked = new Set();
     lazy = new IntersectionObserver((entries) => {
         for (const e of entries) {
+            const n = pageOf(e.target);
+            if (n < 0) continue;
             if (e.isIntersecting) {
-                const n = pageOf(e.target);
-                if (n >= 0) invoke('RenderPage', n);
+                asked.add(n);
+                invoke('RenderPage', n);
+            } else if (asked.delete(n)) {
+                invoke('PageLeft', n);
             }
         }
     }, { root: deskEl, rootMargin: '1000px 0px', threshold: 0 });
@@ -95,6 +109,15 @@ export function init(deskEl, dotnetRef) {
 
     deskEl.querySelectorAll('[data-page]').forEach(el => { lazy.observe(el); spy.observe(el); });
 
+    // Keep the anchored page in view when page heights change.
+    if (anchorObs) anchorObs.disconnect();
+    anchor = anchor && deskEl.querySelector('.rpage-wrap[data-page="' + anchor.page + '"]') ? anchor : null;
+    anchorObs = new ResizeObserver(() => {
+        if (performance.now() < ownZoomUntil) { recordAnchor(); return; }
+        reanchor();
+    });
+    deskEl.querySelectorAll('.rpage-wrap').forEach(el => anchorObs.observe(el));
+
     // Report scroll position (throttled) so the active tab's ScrollTop stays current in
     // memory — this makes returning from the dashboard restore the exact position.
     if (scrollTarget && scrollHandler) scrollTarget.removeEventListener('scroll', scrollHandler);
@@ -106,7 +129,7 @@ export function init(deskEl, dotnetRef) {
             invoke('OnScroll', scrollTarget ? scrollTarget.scrollTop : 0);
             // A zoomed-in page is taller than the view, so scrolling within it crosses no visibility
             // threshold; re-check the page here too.
-            if (performance.now() >= suppressUntil) reportVisiblePage();
+            if (performance.now() >= suppressUntil) { recordAnchor(); reportVisiblePage(); }
         }, 200);
     };
     deskEl.addEventListener('scroll', scrollHandler, { passive: true });
@@ -119,6 +142,14 @@ export function init(deskEl, dotnetRef) {
         if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable)) return;
 
         if (e.key === 'Escape') { invoke('OnEscape'); return; }
+
+        // Next/previous tab: ⌃Tab / ⌃⇧Tab on every platform. On macOS this is the only way —
+        // ⌘Tab is the system app switcher and never reaches the page (Safari, Finder, Xcode use ⌃Tab).
+        if (e.key === 'Tab' && e.ctrlKey === true && e.metaKey !== true && e.altKey !== true) {
+            e.preventDefault();
+            invoke('CycleTab', e.shiftKey ? -1 : 1);
+            return;
+        }
 
         // Tab-close shortcuts: handle the Alt/Shift variants of W before the no-Alt block.
         if (isPrimary(e) && e.key.toLowerCase() === 'w') {
@@ -454,6 +485,7 @@ function readZoom() {
 }
 function setZoomVar(s) {
     if (!deskRef) return;
+    ownZoomUntil = performance.now() + 400; // a gesture zoom places the view itself (anchorZoom, zoomToRect)
     deskRef.style.setProperty('--rpage-zoom', s);
     // Above 100% the page is larger than the view: drop paged snap/slides so it
     // scrolls freely and marquee-zoom lands exactly where it was drawn (snap can't
@@ -726,6 +758,7 @@ export function scrollToPage(deskEl, index) {
     const el = deskEl && deskEl.querySelector('[data-page="' + index + '"]');
     if (!el) return;
     suppressUntil = performance.now() + 1400;
+    anchor = { page: index, frac: 0 }; // stays the target while heights change under the jump
     // Scroll the desk itself — NOT scrollIntoView, which also scrolls every
     // scrollable ancestor and would drag the toolbar/page up with it.
     const top = deskEl.scrollTop + (el.getBoundingClientRect().top - deskEl.getBoundingClientRect().top);
@@ -763,6 +796,7 @@ export function setScrollTop(deskEl, top) {
     // Suppress the spy briefly so restoring position doesn't fire spurious page updates.
     suppressUntil = performance.now() + 400;
     deskEl.scrollTop = top || 0;
+    recordAnchor();
 }
 
 // Current on-page text selection, for auto-filling the Find box (selection only; no clipboard
@@ -881,6 +915,33 @@ function invoke2(method, a, b) {
 function teardownObservers() {
     if (lazy) { lazy.disconnect(); lazy = null; }
     if (spy) { spy.disconnect(); spy = null; }
+    if (anchorObs) { anchorObs.disconnect(); anchorObs = null; }
+}
+
+// The page at the top of the view, and how far into it the view starts (0 = its top edge).
+function recordAnchor() {
+    if (!scrollTarget) return;
+    const top = scrollTarget.getBoundingClientRect().top;
+    for (const w of scrollTarget.querySelectorAll('.rpage-wrap')) {
+        const r = w.getBoundingClientRect();
+        if (r.bottom > top + 1) {
+            anchor = { page: pageOf(w), frac: r.height ? Math.max(0, (top - r.top) / r.height) : 0 };
+            return;
+        }
+    }
+}
+
+// Page heights changed: put the anchored page back where it was in the view, then report the page in view once
+// the jump's quiet time is over (after a jump the page box kept showing 1 while page 2 was in view).
+function reanchor() {
+    if (!scrollTarget || !anchor) return;
+    const w = scrollTarget.querySelector('.rpage-wrap[data-page="' + anchor.page + '"]');
+    if (!w) return;
+    const d = scrollTarget.getBoundingClientRect(), r = w.getBoundingClientRect();
+    const delta = (r.top + anchor.frac * r.height) - d.top;
+    if (Math.abs(delta) > 1) scrollTarget.scrollTop += delta;
+    if (reportTimer) clearTimeout(reportTimer);
+    reportTimer = setTimeout(() => { reportTimer = 0; reportVisiblePage(); }, Math.max(0, suppressUntil - performance.now()) + 60);
 }
 
 // Markup: report a page's redaction layer rect (viewport pixels) so the C# side

@@ -13,8 +13,8 @@
     <div class="cmd" role="dialog" aria-label="Command bar">
         <div class="cmd-field">
             <Icon Name="search" Size="16" />
-            <input @ref="_input" class="cmd-in" placeholder="Find or do anything…" value="@_query"
-                   @oninput="OnInput" @onkeydown="OnKey" @onkeydown:preventDefault="_swallow" spellcheck="false" />
+            <input @ref="_input" class="cmd-in" placeholder="Find or do anything…" @bind="_query" @bind:event="oninput" @bind:after="OnQueryChanged"
+                   @onkeydown="OnKey" @onkeydown:preventDefault="_swallow" spellcheck="false" />
             <span class="kbd">Esc</span>
         </div>
         <div class="cmd-list">
@@ -120,9 +120,9 @@
         _ => 7,
     };
 
-    private void OnInput(ChangeEventArgs e)
+    private void OnQueryChanged()
     {
-        _query = e.Value?.ToString() ?? string.Empty;
+        _query ??= string.Empty;
         _sel = 0;
         Refresh();
     }

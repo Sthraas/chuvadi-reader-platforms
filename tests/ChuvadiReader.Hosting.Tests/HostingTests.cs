@@ -68,6 +68,39 @@ public sealed class HostingTests
         Assert.IsType<TestWriteBack>(sp.GetRequiredService<IFileWriteBack>());
     }
 
+    /// <summary>AT-07: desktop hosts keep showing real paths; the default label is the path itself.</summary>
+    [Fact]
+    public void Default_path_labels_show_the_path()
+    {
+        var services = new ServiceCollection();
+        services.AddChuvadiReader(AppStateLifetime.Process);
+        using var sp = services.BuildServiceProvider();
+        var labels = sp.GetRequiredService<IPathLabels>();
+        Assert.IsType<PlainPathLabels>(labels);
+        Assert.Equal(@"C:\Users\a\Documents\report.pdf", labels.Describe(@"C:\Users\a\Documents\report.pdf"));
+        Assert.Equal(string.Empty, labels.Describe(null));
+    }
+
+    /// <summary>
+    /// AT-07 drift guard: a path is never put in front of the person (a title, an accessible name or
+    /// the text itself) without going through <see cref="IPathLabels"/>, or Android shows and TalkBack
+    /// reads the working copy in the app's private cache.
+    /// </summary>
+    [Fact]
+    public void Ui_shows_paths_only_through_path_labels()
+    {
+        var dir = Path.Combine(AppContext.BaseDirectory, "UiSources");
+        var raw = new System.Text.RegularExpressions.Regex(
+            @"(?:title|aria-label|Text)=""@\(?[\w.]*(?:Path|Folder)\b[^""]*""|>@[\w.]*(?:Path|Folder)\s*<");
+        var leaks = Directory.GetFiles(dir, "*.razor", SearchOption.AllDirectories)
+            .SelectMany(f => File.ReadLines(f).Select((line, i) => (f, i, line)))
+            .Where(x => raw.IsMatch(x.line))
+            .Select(x => $"{Path.GetRelativePath(dir, x.f)}:{x.i + 1}: {x.line.Trim()}")
+            .ToList();
+        Assert.True(Directory.GetFiles(dir, "*.razor", SearchOption.AllDirectories).Length > 20, "Ui sources not copied");
+        Assert.Empty(leaks);
+    }
+
     private sealed class TestWriteBack : IFileWriteBack
     {
         public bool IsNeeded => true;
@@ -120,7 +153,10 @@ public sealed class HostingTests
     [InlineData("Ctrl Shift S", "⇧⌘S")]
     [InlineData("Ctrl Alt W", "⌥⌘W")]
     [InlineData("Ctrl 1 … 9", "⌘1 … 9")]
-    [InlineData("F11", "F11")]
+    [InlineData("F11", "⌃⌘F")]
+    [InlineData("Ctrl Tab", "⌃Tab")]
+    [InlineData("Ctrl Shift Tab", "⌃⇧Tab")]
+    [InlineData("Ctrl T", "⌘T")]
     public void Mac_key_labels(string canonical, string expected) =>
         Assert.Equal(expected, new MacKeyLabels().Format(canonical));
 

@@ -19,6 +19,11 @@ public sealed class MacKeyLabels : IKeyLabels
     public string Format(string canonical)
     {
         if (string.IsNullOrWhiteSpace(canonical)) return canonical;
+
+        // macOS conventions that are not a plain Ctrl → ⌘ swap:
+        // F11 is Show Desktop on a Mac; full screen is ⌃⌘F (the Mac host binds Immersive to it).
+        if (canonical == "F11") return "⌃⌘F";
+
         bool cmd = false, shift = false, alt = false;
         var rest = new List<string>();
         foreach (var part in canonical.Split(' ', StringSplitOptions.RemoveEmptyEntries))
@@ -32,7 +37,12 @@ public sealed class MacKeyLabels : IKeyLabels
             }
         }
 
+        // Next/previous tab is ⌃Tab on a Mac — ⌘Tab is the system app switcher (reader.js accepts ⌃Tab).
+        var control = cmd && rest.Count == 1 && rest[0] == "Tab";
+        if (control) cmd = false;
+
         var sb = new StringBuilder();
+        if (control) sb.Append('⌃');
         if (alt) sb.Append('⌥');
         if (shift) sb.Append('⇧');
         if (cmd) sb.Append('⌘');

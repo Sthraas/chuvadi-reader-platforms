@@ -8,7 +8,7 @@
 <div class="txv">
     @if (_error is not null)
     {
-        <ViewerMessage IconName="warning" Error="true" Text="@_error" />
+        <ViewerMessage IconName="warning" Error="true" Text="@_error" Detail="@_errorDetail" />
     }
     else if (_doc is null)
     {
@@ -25,6 +25,7 @@
 @code {
     private TextDocument? _doc;
     private string? _error;
+    private string? _errorDetail;
     private string? _loaded;
     private int _version;
     private SourceLines? _lines;
@@ -38,7 +39,7 @@
         _loaded = Path;
         var v = ++_version;
         _doc = null;
-        _error = null;
+        _error = null; _errorDetail = null;
         if (string.IsNullOrEmpty(Path)) return;
 
         try
@@ -53,7 +54,7 @@
         catch (Exception ex)
         {
             if (v != _version) return;
-            _error = Describe(ex, "file");
+            (_error, _errorDetail) = Describe(ex, "a text file");
             await ReportStatusAsync("Text · couldn't open");
         }
         await ReportOutlineAsync(Array.Empty<ViewerOutlineEntry>());
