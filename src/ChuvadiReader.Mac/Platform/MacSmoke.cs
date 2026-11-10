@@ -271,7 +271,15 @@ internal static class MacSmoke
                 + ' unlock=' + (document.querySelector('.uc') ? 1 : 0)
                 + ' immersive=' + (document.body.classList.contains('chvd-immersive') ? 1 : 0)
                 + ' keys=[' + keys + ']'
-                + ' notice=' + (document.body && document.body.innerText.indexOf('stopped unexpectedly') >= 0 ? 1 : 0) + (function () {
+                + ' notice=' + (document.body && document.body.innerText.indexOf('stopped unexpectedly') >= 0 ? 1 : 0)
+                + (function () {   // M-09: the View rail's Immersive label as the page shows it
+                  var b = document.querySelector('button[aria-label="Immersive"]');
+                  return b ? ' immersiveTip=' + JSON.stringify(b.getAttribute('title') || '') : '';
+                })()
+                + (function () {   // M-14: a .NET message shown by the Ui, as text or as a resource key
+                  var t = document.body ? document.body.innerText : '';
+                  return /Access to the path/.test(t) ? ' dotnet=text' : /UnauthorizedAccess_|IO_|_Generic\b/.test(t) ? ' dotnet=key' : '';
+                })() + (function () {
                   var f = document.querySelector('iframe.htv-frame');
                   if (!f) { return ''; }
                   var b = f.contentDocument && f.contentDocument.body;
