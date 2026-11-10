@@ -399,6 +399,7 @@
                 <button class="rrecover-x" @onclick="() => _recoverBannerDismissed = true" title="Dismiss"><Icon Name="x" Size="13" /></button>
             </div>
         }
+        _deskGen = _loadGen;   // this render has the desk for this generation (see OnAfterRenderAsync)
         <div class="rdesk @LayoutClass @(CurScale > 1.001 ? "zoomed" : null) @(Tab?.ScrollLocked == true ? "locked" : null)"
              style="--rpage-zoom:@Zoom" tabindex="-1" @ref="_desk">
             @foreach (var n in _pages)
@@ -1506,6 +1507,7 @@
     // The next init is for another document: the page kept in view belongs to the last one (Android round 5 drift).
     private bool _initNewDocument;
     private int _observedGen;   // last generation the JS observers were attached to
+    private int _deskGen;       // the generation the last render drew the desk for
 
     private bool _curl = true;
     private string _pageInput = "1";
@@ -3427,13 +3429,24 @@
             }
         }
 
-        if (_observedGen != _loadGen)
+        // Linux fresh-open stall: a document that finishes loading between a render and its OnAfterRender was armed
+        // with the desk of the render before — the loading view had removed that desk — so init failed silently, no
+        // page was ever asked for and the fit measured nothing. The observers are armed only after a render that drew
+        // the desk for this generation, and again on the next render if arming failed.
+        if (_observedGen != _loadGen && _deskGen == _loadGen)
         {
-            _observedGen = _loadGen;
             var newDocument = _initNewDocument;
+            try
+            {
+                await _js.InvokeVoidAsync("init", _desk, _ref, newDocument);
+            }
+            catch (JSException)
+            {
+                return;   // not armed: the next render tries again
+            }
+
+            _observedGen = _loadGen;
             _initNewDocument = false;
-            try { await _js.InvokeVoidAsync("init", _desk, _ref, newDocument); }
-            catch { }
 
             if (_tool != ReaderTool.None)
             {
@@ -3453,7 +3466,10 @@
                 // scroll offset (Android round 5: a shared PDF shown on 2–4 of 4 with no input).
                 try { await _js.InvokeVoidAsync("setScrollTop", _desk, 0); }
                 catch { }
-                await ApplyFit(Platform.FormFactor == ChuvadiReader.Platform.FormFactor.Phone ? ReaderFitMode.Width : ReaderFitMode.Page);
+                // A page that takes longer than the fit waits for (a heavy sheet on a cold app) is fitted when it lands.
+                _firstFit = Platform.FormFactor == ChuvadiReader.Platform.FormFactor.Phone ? ReaderFitMode.Width : ReaderFitMode.Page;
+                _firstFitTab = await ApplyFit(_firstFit, drawnOnly: true) ? null : tab.Id;
+                _firstFitScale = tab.Scale;
             }
             else if (_restoreScroll)
             {
@@ -3567,7 +3583,11 @@
             }
 
             cts.Dispose();
-            await InvokeAsync(StateHasChanged);
+            await InvokeAsync(async () =>
+            {
+                StateHasChanged();
+                await FirstFitWhenDrawnAsync(session);
+            });
         }
     }
 
@@ -3945,25 +3965,55 @@
         await ApplyFit(ReaderFitMode.Page);
     }
 
-    private async Task ApplyFit(ReaderFitMode mode)
+    /// <param name="drawnOnly">Measure a drawn page only (a placeholder's size isn't the page's); false when none is drawn yet.</param>
+    /// <returns>True when the fit was applied.</returns>
+    private async Task<bool> ApplyFit(ReaderFitMode mode, bool drawnOnly = false)
     {
         var tab = Tabs.Active;
         if (tab?.Session is null || _js is null)
         {
-            return;
+            return false;
         }
 
         try
         {
-            var s = await _js.InvokeAsync<double>("measureFit", _desk, mode == ReaderFitMode.Width ? "width" : "page");
+            var s = await _js.InvokeAsync<double>("measureFit", _desk, mode == ReaderFitMode.Width ? "width" : "page", drawnOnly);
             if (s > 0)
             {
                 tab.Scale = s;
                 tab.FitMode = mode;
                 StateHasChanged();
+                return true;
             }
         }
         catch { }
+
+        return false;
+    }
+
+    // The first fit of a document whose first page wasn't drawn in time: applied when one of its pages lands, unless
+    // the person zoomed or fitted it meanwhile.
+    private string? _firstFitTab;
+    private ReaderFitMode _firstFit;
+    private double _firstFitScale;   // the zoom it opened at: a different one means the person chose their own
+
+    private async Task FirstFitWhenDrawnAsync(IPdfSession session)
+    {
+        if (_firstFitTab is null || Tabs.Active is not { } tab || tab.Id != _firstFitTab || !ReferenceEquals(tab.Session, session))
+        {
+            return;
+        }
+
+        if (tab.Scale != _firstFitScale)
+        {
+            _firstFitTab = null;   // zoomed or fitted by hand meanwhile: theirs stands
+            return;
+        }
+
+        if (await ApplyFit(_firstFit, drawnOnly: true))
+        {
+            _firstFitTab = null;
+        }
     }
 
     private void ActualSize()

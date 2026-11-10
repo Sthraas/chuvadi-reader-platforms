@@ -1,5 +1,6 @@
 using Chuvadi.Pdf.Authoring;
 using Chuvadi.Pdf.Documents;
+using ChuvadiReader.Core.Documents;
 using Chuvadi.Pdf.Graphics;
 using Chuvadi.Pdf.Operations;
 using ChuvadiReader.Core.Storage;
@@ -82,7 +83,7 @@ public sealed class BenchComposer
                     double cellX = margin + c * (cellW + gutter);
                     double cellTop = margin + r * (cellH + gutter);
                     double cellBottom = sheetH - cellTop - cellH; // y-up
-                    pc.PlacePage(src, pi, FitCentered(src.Pages[pi].Width, src.Pages[pi].Height, cellX, cellBottom, cellW, cellH));
+                    pc.PlacePage(src, pi, FitShown(src.Pages[pi], cellX, cellBottom, cellW, cellH));
                 }
             }
             using var fs = File.Create(outputPath);
@@ -130,7 +131,16 @@ public sealed class BenchComposer
         double x, double bottom, double w, double h)
     {
         if (pageIndex < 0 || pageIndex >= realCount) return; // blank padding slot
-        pc.PlacePage(src, pageIndex, FitCentered(src.Pages[pageIndex].Width, src.Pages[pageIndex].Height, x, bottom, w, h));
+        pc.PlacePage(src, pageIndex, FitShown(src.Pages[pageIndex], x, bottom, w, h));
+    }
+
+    /// <summary>D-160: fits the page as shown (its CropBox within its MediaBox) into a box: the shown box's corner is moved
+    /// to the origin, then scaled and centred.</summary>
+    private static Transform FitShown(PdfPage page, double boxX, double boxBottom, double boxW, double boxH)
+    {
+        var shown = ShownBox.Of(page);
+        var fit = FitCentered(shown.W, shown.H, boxX, boxBottom, boxW, boxH);
+        return shown.AtOrigin ? fit : Transform.CreateTranslation(-shown.X0, -shown.Y0).Multiply(fit);
     }
 
     public async Task<byte[]> ComposeAsync(IReadOnlyList<BenchPage> pages, CancellationToken ct = default, string? normalizeSize = null)
@@ -356,7 +366,7 @@ public sealed class BenchComposer
 
     /// <summary>Paints white over everything outside the crop window on one full-size page,
     /// by stamping a four-band overlay. Authoring coords are top-left/y-down.</summary>
-    private static byte[] StampMaskBands(byte[] bytes, int pageIndex, (double X, double Bottom, double W, double H) win, double pw, double ph)
+    private static byte[] StampMaskBands(byte[] bytes, int pageIndex, (double X, double Bottom, double W, double H) win, double pw, double ph, ShownBox shown)
     {
         double cx = win.X, cw = win.W, ch = win.H;
         double cy = ph - (win.Bottom + win.H); // top edge from the top
@@ -373,7 +383,7 @@ public sealed class BenchComposer
         using var target = PdfDocument.Open(new MemoryStream(bytes, writable: false));
         using var overlayDoc = PdfDocument.Open(new MemoryStream(overlay.ToByteArray(), writable: false));
         using var ms = new MemoryStream();
-        PageStamper.Place(ms, target, pageIndex, overlayDoc, 0, Transform.Identity, StampPlacement.Overlay);
+        PageStamper.Place(ms, target, pageIndex, overlayDoc, 0, RedactService.AtShown(Transform.Identity, shown), StampPlacement.Overlay);
         return ms.ToArray();
     }
 
@@ -388,6 +398,7 @@ public sealed class BenchComposer
         if (!pages.Any(p => p.Crop != null)) return bytes;
 
         var origSizes = new List<(double W, double H)>();
+        var shownAt = new List<ShownBox>();   // each page's shown box (where the mask goes)
         // page index -> kept rectangle (y-up points) to whiten around after compose.
         var maskRects = new Dictionary<int, (double X, double Bottom, double W, double H)>();
 
@@ -400,8 +411,11 @@ public sealed class BenchComposer
             var pc = new PageComposer();
             for (var i = 0; i < src.PageCount; i++)
             {
-                double pw = src.Pages[i].Width, ph = src.Pages[i].Height;
+                // D-160: the crop is a fraction of the box the page shows; windows below are in that box's frame.
+                var shown = ShownBox.Of(src.Pages[i]);
+                double pw = shown.W, ph = shown.H;
                 origSizes.Add((pw, ph));
+                shownAt.Add(shown);
                 var page = i < pages.Count ? pages[i] : null;
                 var crop = page?.Crop;
                 var mode = page?.CropMode ?? CropFit.ToSize;
@@ -414,7 +428,7 @@ public sealed class BenchComposer
                 var w = win.Value;
                 if (mode == CropFit.ToSize)
                 {
-                    pc.AddPage(w.W, w.H).PlacePage(src, i, Transform.CreateTranslation(-w.X, -w.Bottom));
+                    pc.AddPage(w.W, w.H).PlacePage(src, i, Transform.CreateTranslation(-(w.X + shown.X0), -(w.Bottom + shown.Y0)));
                 }
                 else if (mode == CropFit.Mask)
                 {
@@ -430,11 +444,12 @@ public sealed class BenchComposer
                     double cw = w.W * s, ch = w.H * s;
                     double destX = boxX + (boxW - cw) / 2.0;
                     double destBottom = boxBottom + (boxH - ch) / 2.0;
-                    var t = Transform.CreateTranslation(-w.X, -w.Bottom)
+                    var t = Transform.CreateTranslation(-(w.X + shown.X0), -(w.Bottom + shown.Y0))
                         .Multiply(Transform.CreateScale(s, s))
                         .Multiply(Transform.CreateTranslation(destX, destBottom));
                     pc.AddPage(pw, ph).PlacePage(src, i, t);
                     maskRects[i] = (destX, destBottom, cw, ch); // kept region = the placed crop
+                    shownAt[i] = new ShownBox(0, 0, pw, ph);    // the new page starts at the origin
                 }
             }
             using var ms = new MemoryStream();
@@ -447,7 +462,7 @@ public sealed class BenchComposer
         foreach (var kv in maskRects)
         {
             var (ow, oh) = origSizes[kv.Key];
-            composed = StampMaskBands(composed, kv.Key, kv.Value, ow, oh);
+            composed = StampMaskBands(composed, kv.Key, kv.Value, ow, oh, shownAt[kv.Key]);
         }
         return composed;
     }
@@ -468,7 +483,8 @@ public sealed class BenchComposer
             var pc = new PageComposer();
             for (var i = 0; i < src.PageCount; i++)
             {
-                double pw = src.Pages[i].Width, ph = src.Pages[i].Height;
+                var shown = ShownBox.Of(src.Pages[i]);   // D-160: the page as shown is what gets inset
+                double pw = shown.W, ph = shown.H;
                 var m = i < pages.Count ? pages[i].Margins : null;
                 if (m == null)
                 {
@@ -478,7 +494,7 @@ public sealed class BenchComposer
                 double iw = Math.Max(1, pw - m.Left - m.Right);
                 double ih = Math.Max(1, ph - m.Top - m.Bottom);
                 // inner box in y-up page coords: left=Left, bottom=Bottom.
-                pc.AddPage(pw, ph).PlacePage(src, i, FitCentered(pw, ph, m.Left, m.Bottom, iw, ih));
+                pc.AddPage(pw, ph).PlacePage(src, i, Transform.CreateTranslation(-shown.X0, -shown.Y0).Multiply(FitCentered(pw, ph, m.Left, m.Bottom, iw, ih)));
             }
             using var ms = new MemoryStream();
             pc.Write(ms);
@@ -503,8 +519,8 @@ public sealed class BenchComposer
             var pc = new PageComposer();
             for (var i = 0; i < src.PageCount; i++)
             {
-                double pw = src.Pages[i].Width, ph = src.Pages[i].Height;
-                pc.AddPage(tw, th).PlacePage(src, i, Placement.ScaleToFit(pw, ph, tw, th));
+                var shown = ShownBox.Of(src.Pages[i]);   // D-160: the page as shown is what gets resized
+                pc.AddPage(tw, th).PlacePage(src, i, Transform.CreateTranslation(-shown.X0, -shown.Y0).Multiply(Placement.ScaleToFit(shown.W, shown.H, tw, th)));
             }
             using var ms = new MemoryStream();
             pc.Write(ms);

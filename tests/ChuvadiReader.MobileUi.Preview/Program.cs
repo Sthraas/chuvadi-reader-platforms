@@ -105,8 +105,16 @@ var first = await tabs.OpenAsync(a, Path.GetFileName(a), DocumentFormat.Pdf);
 // CHVD_OPEN=path;path: also open these real files (memory and render checks with heavy test PDFs); the last is active.
 foreach (var extra in (Environment.GetEnvironmentVariable("CHVD_OPEN") ?? "").Split(';', StringSplitOptions.RemoveEmptyEntries))
 {
-    first = await tabs.OpenAsync(extra, Path.GetFileName(extra), DocumentFormat.Pdf);
+    first = await tabs.OpenAsync(extra, Path.GetFileName(extra), DocumentFormatExtensions.FromPath(extra));
 }
+
+// POST /__preview/open?path=…: open a real file while the app runs, as a host's Open does (the Linux fresh-open check).
+app.MapPost("/__preview/open", async (string path) =>
+{
+    var tab = await tabs.OpenAsync(path, Path.GetFileName(path), DocumentFormatExtensions.FromPath(path));
+    shell.SetMode(DocMode.Read, tab.Id);
+    return Results.Ok(new { tab.Id });
+});
 
 shell.SetMode(DocMode.Read, first.Id);
 

@@ -43,6 +43,15 @@ const port = process.argv[2] || 5102;
   await p.waitForTimeout(500);
   await refit(0.6); await p.waitForTimeout(600);
   check('scrolled by hand, then the heights change', await topPage(), 9);
+  // 4. Scroll with the wheel and a page changes size before the scrolling has settled (the anchor is taken 200 ms
+  //    after scrolling stops): the view stays where the wheel took it, not back where it was.
+  await p.mouse.move(700, 450);
+  const before = await topPage();
+  await p.mouse.wheel(0, 2400); await p.waitForTimeout(60);
+  const wheeled = await topPage();
+  await refit(1.02); await p.waitForTimeout(600);
+  check('wheel, then a page changes size at once', await topPage(), wheeled);
+  if (wheeled === before) { fail++; console.log('FAIL  the wheel did not move the view'); }
   await b.close();
   process.exit(fail ? 1 : 0);
 })();

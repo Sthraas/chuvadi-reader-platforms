@@ -35,16 +35,19 @@ public sealed class DocumentPropertiesService
         {
             PdfPage? first = null;
             var seen = new HashSet<string>();
+            // D-160: the size of the page as shown (its CropBox within its MediaBox), as viewers report it.
             foreach (var p in doc.Pages)
             {
                 first ??= p;
-                seen.Add($"{Math.Round(p.Width)}x{Math.Round(p.Height)}");
+                var shown = ShownBox.Of(p);
+                seen.Add($"{Math.Round(shown.W)}x{Math.Round(shown.H)}");
             }
 
             if (first is not null)
             {
-                var wmm = first.Width * 25.4 / 72.0;
-                var hmm = first.Height * 25.4 / 72.0;
+                var size1 = ShownBox.Of(first);
+                var wmm = size1.W * 25.4 / 72.0;
+                var hmm = size1.H * 25.4 / 72.0;
                 size = $"{wmm:0} × {hmm:0} mm{PaperName(wmm, hmm)}";
                 if (seen.Count > 1)
                 {
