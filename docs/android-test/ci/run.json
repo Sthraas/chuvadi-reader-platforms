@@ -1,8 +1,8 @@
 {
-  "round": "4g",
+  "round": 5,
   "emulators": "phone-36,tablet-36",
-  "suites": "function2",
+  "suites": "design,function,function2,robust",
   "foundation_ref": "f88f9ef047cd165f895430180ceb4ffb91fcee63",
-  "mobileui_ref": "d34d54238efed17a5729d8ff054fa22022eb9434",
-  "android_ref": "d134c74876fe514653b8ed1cede6a89ba4de824e"
+  "mobileui_ref": "c5c0b7ecf5fc9c5acf3fd330844208207d369a57",
+  "android_ref": "9ce073b5c298c056774d7f5fa512dc648bad4ad8"
 }

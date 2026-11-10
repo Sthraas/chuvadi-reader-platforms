@@ -227,6 +227,15 @@ R.check("F-01c Open with opens the PDF", (st.get("tab") or "").lower().startswit
 F17 = sh("dumpsys activity activities | grep -c 'Hist.*in.chuvadi.reader'").strip()
 R.check("F-17 single instance: one activity record after three arrivals", F17 == "1", {"activity_records": F17})
 
+# AT-12 the same file opened again focuses its tab (Windows behaviour), no duplicate
+tabs_before = state().get("tabs") or 0
+open_with(uris["doc-12p.pdf"])
+time.sleep(5)
+st = state()
+R.check("AT-12 Open with of an already-open file focuses its tab (no new tab)",
+        (st.get("tabs") or 0) == tabs_before and (st.get("tab") or "").lower().startswith("doc-12p"),
+        {"tabs_before": tabs_before, "after": st})
+
 # F-02 Page navigation by the pager buttons
 st0 = state()
 if is_phone():
