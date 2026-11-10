@@ -788,3 +788,6 @@ same screen; no crash), smoke pass. With round 6 (API 36 phone and tablet, all c
 - Sandbox: Android Debug and Release `-warnaserror` 0 warnings; Release manifest 14/14; Core 292 (+3 skipped),
   Hosting 89, MobileUi 16, WebUi 41 pass.
 - AT-01 is verified (Android Test R6); nothing of it waits on Arun.
+- **Run 42841112122** (all four, full, 8f173c9): **all green** — API 35 WebView gate 4/4 on both; gestures 10/10 and 9/9;
+  platform 29/29 (phone) and 27/27 (tablet), AT-07, AT-08, AT-11, AT-12 included; Release launch pass on all four.
+  Head for Android Test round 9: 8f173c9.
