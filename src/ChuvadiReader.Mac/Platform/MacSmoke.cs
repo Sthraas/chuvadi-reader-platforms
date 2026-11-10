@@ -277,7 +277,7 @@ internal static class MacSmoke
                   return b ? ' immersiveTip=' + JSON.stringify(b.getAttribute('title') || '') : '';
                 })()
                 + (function () {   // M-14: a .NET message shown by the Ui, as text or as a resource key
-                  var t = document.body ? document.body.innerText : '';
+                  var t = document.body ? document.body.textContent : '';   // the message sits under a closed "Details"
                   return /Access to the path/.test(t) ? ' dotnet=text' : /UnauthorizedAccess_|IO_|_Generic\b/.test(t) ? ' dotnet=key' : '';
                 })() + (function () {
                   var f = document.querySelector('iframe.htv-frame');
