@@ -210,6 +210,7 @@ public sealed class ChuvadiPdfSession : IPdfSession
 
     public ChuvadiPdfSession(PdfDocument document, PdfDocumentVm vm, bool transparentBackground = false)
     {
+        lock (AllForDiag) AllForDiag.Add(new WeakReference<ChuvadiPdfSession>(this));
         _document = document;
         Document = vm;
         _transparentBackground = transparentBackground;
@@ -475,6 +476,23 @@ public sealed class ChuvadiPdfSession : IPdfSession
     }
 
     internal static WeakReference? LastAnsweredForDiag;
+    internal static readonly List<WeakReference<ChuvadiPdfSession>> AllForDiag = new();
+
+    internal static string AliveForDiag()
+    {
+        var sb = new System.Text.StringBuilder();
+        lock (AllForDiag)
+        {
+            foreach (var w in AllForDiag)
+            {
+                if (!w.TryGetTarget(out var x)) continue;
+                long chars; lock (x._svgCache) chars = x._svgCache.Values.Sum(v => (long)v.Length);
+                int q; lock (x._queue) q = x._queue.Count;
+                sb.Append($"[{x.Document.FileName} close={x._closeRequested} doc={(x._document is null ? "closed" : "open")} cacheMB={chars * 2 / 1048576} queue={q} draining={x._draining} drawing={x._drawingPage}] ");
+            }
+        }
+        return sb.Length == 0 ? "none" : sb.ToString();
+    }
     internal static int DrainingForDiag;
 
     private async Task DrainAsync()

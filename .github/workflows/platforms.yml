@@ -21,13 +21,9 @@ jobs:
         shell: bash
         run: |
           export CHVD_DIAG="$GITHUB_WORKSPACE/diag.txt"
-          for i in $(seq 1 30); do
-            dotnet test tests/ChuvadiReader.Tests/ChuvadiReader.Tests.csproj -c Release --no-build --filter "FullyQualifiedName~MemoryDiag" > out.txt 2>&1 || true
-            grep -E "Passed!|Failed!" out.txt | cut -c1-60
-          done
           echo "---- whole class, as CI runs it (6 times)"
-          for i in $(seq 1 6); do
+          for i in $(seq 1 10); do
             dotnet test tests/ChuvadiReader.Tests/ChuvadiReader.Tests.csproj -c Release --no-build > out.txt 2>&1 || true
-            grep -E "Passed!|Failed!|live memory|memory kept" out.txt | cut -c1-120
+            grep -E "Passed!|Failed!|live memory|memory kept" out.txt | cut -c1-120; echo "RUN $i end" >> "$CHVD_DIAG"
           done
           echo "---- diag"; cat "$CHVD_DIAG"

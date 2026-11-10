@@ -20,8 +20,13 @@ public sealed class MemoryMeasurementCollection;
 [Collection(nameof(MemoryAfterCloseTests))]
 public sealed class MemoryAfterCloseTests
 {
-    public MemoryAfterCloseTests()
+    private static void Diag(string line) =>
+        File.AppendAllText(Environment.GetEnvironmentVariable("CHVD_DIAG") ?? Path.Combine(Path.GetTempPath(), "chvd-diag.txt"), line + "\n");
+
+    public MemoryAfterCloseTests(Xunit.Abstractions.ITestOutputHelper output)
     {
+        var test = output.GetType().GetField("test", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)?.GetValue(output) as Xunit.Abstractions.ITest;
+        Diag($"START {test?.DisplayName?.Split('.').Last()} live={GC.GetTotalMemory(false) / 1048576}MB sessions={ChuvadiPdfSession.AliveForDiag()}");
         // No waiting in tests: the relief runs at once, back to back, and its one-minute second pass is off.
         MemoryRelief.Settle = TimeSpan.Zero;
         MemoryRelief.FollowUp = TimeSpan.Zero;
@@ -172,6 +177,14 @@ public sealed class MemoryAfterCloseTests
         var after = Measure();
 
         const long mb = 1024 * 1024;
+        Diag($"MEASURED live {before.Live / mb}->{after.Live / mb} pageAlive={ChuvadiPdfSession.LastAnsweredForDiag?.IsAlive} sessions={ChuvadiPdfSession.AliveForDiag()}");
+        if (after.Live - before.Live >= 16 * mb)
+        {
+            await Task.Delay(500); var m2 = Measure();
+            Diag($"  +0.5s live {m2.Live / mb} pageAlive={ChuvadiPdfSession.LastAnsweredForDiag?.IsAlive} sessions={ChuvadiPdfSession.AliveForDiag()}");
+            await Task.Delay(5000); var m3 = Measure();
+            Diag($"  +5.5s live {m3.Live / mb} pageAlive={ChuvadiPdfSession.LastAnsweredForDiag?.IsAlive} sessions={ChuvadiPdfSession.AliveForDiag()}");
+        }
         Assert.True(drawnChars * sizeof(char) >= MemoryRelief.HeavyBytes, $"the test page is too light ({drawnChars * 2 / mb} MB)");
         Assert.True(after.Live - before.Live < 16 * mb, $"live memory after close: {before.Live / mb} → {after.Live / mb} MB");
         Assert.True(after.Committed - before.Committed < 64 * mb, $"memory kept by the runtime after close: {before.Committed / mb} → {after.Committed / mb} MB");
