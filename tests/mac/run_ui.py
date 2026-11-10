@@ -1403,6 +1403,39 @@ def m_shared():
     quit_app()
 
 
+@case("T4.0d ⌘O in several states")
+def t4_0d():
+    """T4.0 failed twice on 15-Intel in the full suite (Esc then ⌘O with no pause, Library behind). Which state is it?"""
+    def panel_now(wait=2.5):
+        time.sleep(wait)
+        _, wins = drive("windows")
+        up = any(l.startswith(NAME + "\t") and "Open a document" in l for l in wins.splitlines())
+        if up:
+            drive("key", "escape")
+            time.sleep(1.2)
+        return up
+    reset_state({"theme": "light"})
+    launch(settle=4)
+    ev = {}
+    drive("key", "cmd+o"); ev["home"] = panel_now()
+    press("Library"); time.sleep(1.5)
+    drive("key", "cmd+o"); ev["library"] = panel_now()
+    drive("key", "cmd+k"); time.sleep(1.5); drive("key", "escape"); time.sleep(1.0)
+    drive("key", "cmd+o"); ev["cmdk_esc_wait_1s"] = panel_now()
+    drive("key", "cmd+k"); time.sleep(1.5); drive("key", "escape")
+    drive("key", "cmd+o"); ev["cmdk_esc_no_wait"] = panel_now()
+    ev["shot_no_wait"] = shot("cmdo-after-esc-no-wait")
+    if not ev["cmdk_esc_no_wait"]:
+        drive("key", "cmd+o"); ev["cmdk_esc_no_wait_second_press"] = panel_now()
+    drive("key", "cmd+k"); time.sleep(1.5)
+    drive("key", "cmd+o"); ev["while_cmdk_open"] = panel_now()
+    ev["shot_while_open"] = shot("cmdo-while-cmdk-open")
+    drive("key", "escape")
+    bad = [k for k in ("home", "library", "cmdk_esc_wait_1s", "cmdk_esc_no_wait") if not ev[k]]
+    record("T4.0d ⌘O in several states", "fail" if bad else "pass", f"no panel in: {bad}; all: " + str({k: v for k, v in ev.items() if isinstance(v, bool)}), **ev)
+    quit_app()
+
+
 @case("M-14 .NET message in Details")
 def m14():
     src = f"{FX}/noaccess.pdf"
@@ -1439,6 +1472,7 @@ def main():
         return
     if A.suite == "shared":
         t4_0()
+        t4_0d()
         m_shared()
         m14()
         t3_5()
