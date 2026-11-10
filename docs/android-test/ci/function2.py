@@ -69,6 +69,29 @@ def type_slow(text):
         time.sleep(0.25)
 
 
+PLOG = r"""(() => { if (window.__atlog) { window.__atlog.length = 0; return 'reset'; } window.__atlog = [];
+  for (const t of ['pointerdown','pointermove','pointerup','pointercancel','touchstart','touchend','touchcancel','click','scroll'])
+    document.addEventListener(t, e => { const l = window.__atlog; if (t.endsWith('move') && l.length && l[l.length-1].t === t) { l[l.length-1].n++; return; }
+      l.push({t, n: 1, tgt: (e.target && e.target.className && e.target.className.baseVal !== undefined ? e.target.className.baseVal : (e.target.className || e.target.tagName || '')).toString().slice(0, 40),
+              ta: e.target && e.target.nodeType === 1 ? getComputedStyle(e.target).touchAction : null}); }, {capture: true, passive: true});
+  return 'installed'; })()"""
+
+
+def plog_reset():
+    cdp.js(PLOG)
+
+
+def plog():
+    return cdp.js("(window.__atlog || []).slice(0, 30)")
+
+
+def ui_state():
+    return cdp.js(r"""(() => ({ active: (() => { const a = document.activeElement; return a ? a.tagName + '.' + (a.className || '').toString().slice(0, 40) : null; })(),
+      pressed: [...document.querySelectorAll('.ph-tool.on, .ph-tool[aria-pressed=true], .rb.on, .rb[aria-pressed=true], .rb.active')].map(e => e.getAttribute('aria-label') || e.title),
+      boxes: (document.body.innerText.match(/(\d+) box/) || [])[1], editors: document.querySelectorAll('textarea, [contenteditable=true], input[type=text]').length,
+      url: location.pathname }))()""")
+
+
 def is_phone():
     return cdp.js("document.documentElement.getAttribute('data-shell')") == "phone"
 
@@ -139,17 +162,25 @@ phone = is_phone()
 uri, ok = open_doc("doc-12p.pdf", "mark-doc.pdf")
 mode("Mark")
 time.sleep(1)
-tool = tap("Mark: Text", "Text", sel=".ph-tool, .rb, button")
+tool = tap("Mark: Text", sel=".ph-tool") if phone else tap("Text", sel=".rb")
+after_tool = ui_state()
+shot("mark-tool-selected")
+plog_reset()
 x, y = page_pt_to_css(0, 300, 420)
 sx, sy = to_screen(x, y)
 sh(f"input tap {sx} {sy}")
 time.sleep(1.5)
-type_slow("chuvadimark")
-time.sleep(1)
-typed = cdp.js("(() => { const a = document.activeElement; return a ? (a.value ?? a.innerText ?? '') : null; })()")
+after_tap = ui_state()
+events = plog()
+shot("mark-page-tapped")
+typed = None
+if after_tap.get("active", "").split(".")[0] in ("TEXTAREA", "INPUT") or after_tap.get("editors"):
+    type_slow("chuvadimark")
+    time.sleep(1)
+    typed = cdp.js("(() => { const a = document.activeElement; return a ? (a.value ?? a.innerText ?? '') : null; })()")
 shot("mark-text")
-R.check("F-04a Mark › Text: tap on the page, type — the box holds the typed text", typed and "chuvadimark" in typed,
-        {"tool": tool, "typed": typed})
+R.check("F-04a Mark › Text: a finger tap on the page makes a text box; typing goes into it", bool(typed and "chuvadimark" in typed),
+        {"tool": tool, "after_tool": after_tool, "after_tap": after_tap, "events": events, "typed": typed})
 sh("input keyevent KEYCODE_BACK")  # hide the keyboard
 time.sleep(1)
 mark_time()
@@ -179,6 +210,8 @@ x, y = page_pt_to_css(0, 300, 300)
 sx, sy = to_screen(x, y)
 sh(f"input tap {sx} {sy}")
 time.sleep(1.5)
+if not (ui_state().get("active", "").split(".")[0] in ("TEXTAREA", "INPUT")):
+    sh("input keyevent KEYCODE_ESCAPE")
 sh("input text burstwordtest")
 time.sleep(1.5)
 burst = cdp.js("(() => { const a = document.activeElement; return a ? (a.value ?? a.innerText ?? '') : null; })()")
@@ -189,7 +222,8 @@ cdp.js("document.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', bubb
 # ── Library search box (AT-10 scope) ──
 cdp.js("Blazor.navigateTo('/library')")
 time.sleep(2)
-f = find("Search", sel="input")
+f = cdp.js(r"""(() => { const i = [...document.querySelectorAll('input')].find(e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && e.type !== 'checkbox'; });
+  if (!i) return null; const r = i.getBoundingClientRect(); return {x: r.left + r.width / 2, y: r.top + r.height / 2, ph: i.placeholder, label: i.getAttribute('aria-label')}; })()""")
 if f:
     sx, sy = to_screen(f["x"], f["y"])
     sh(f"input tap {sx} {sy}")
@@ -236,9 +270,23 @@ x1, y1 = page_pt_to_css(0, 50, 760)
 x2, y2 = page_pt_to_css(0, 400, 740)
 a = to_screen(x1, y1)
 b = to_screen(x2, y2)
+before = ui_state()
+plog_reset()
 sh(f"input swipe {a[0]} {a[1]} {b[0]} {b[1]} 600")
 time.sleep(1.5)
+after_swipe = ui_state()
+ev1 = plog()
+shot("redact-swipe")
+plog_reset()
+import subprocess
+subprocess.run([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), "touch.py"), "longdrag", str(a[0]), str(a[1]), str(b[0]), str(b[1])], timeout=60)
+time.sleep(1.5)
+after_long = ui_state()
+ev2 = plog()
 shot("redact-box")
+R.check("F-07a Protect › Box: a finger drag on the page draws a redaction box",
+        str(after_swipe.get("boxes")) not in ("0", "None") or str(after_long.get("boxes")) not in ("0", "None"),
+        {"before": before, "after_swipe": after_swipe, "swipe_events": ev1, "after_longdrag": after_long, "longdrag_events": ev2})
 mark_time()
 hit = tap("Save redacted copy", "Apply redaction", "Redact and save", "Save as new PDF", "Save", sel=".ph-fab, .rb, button, .chvd-card button")
 time.sleep(2)
@@ -261,7 +309,7 @@ uri, ok = open_doc("doc-12p.pdf", "print-doc.pdf")
 if phone:
     tap("More", sel=".ph-ib")
     time.sleep(1)
-    tap("Print", sel=".ph-row")
+    tap("Print", sel=".ph-sheet *")
 else:
     tap("Print", "Print (Ctrl P)", sel=".rb, .lb-btn, button")
 time.sleep(2)
