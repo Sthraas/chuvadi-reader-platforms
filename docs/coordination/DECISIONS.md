@@ -440,5 +440,11 @@ Web found that Excel's text for cells with no number format (General) shortens n
 ## D-168 — Docs 2.1.0 released; Reader moves to it
 10 Nov 2026. Library coordinator: docs-v2.1.0, tag on f87ea0a; release record with package hashes in the Chuvadi Exports project, `claude/docs-2.1.0-release-record.md`. For the Reader: (1) open files with the Docs `ForUntrustedInput()` reader options; (2) open DocxReader with a CancellationToken that lives as long as the reader itself, not a short per-call token. Layout 0.2.0 (with Docs 2.1.0 wiring) and Layout.Pdf follow. **Decision:** Foundation takes Docs 2.1.0 in its next patch after the Excel-format work, checking each package against the release record's hashes; Windows Reader does the same on its side.
 
+## D-169 — PR #14 merged on Arun's word
+10 Nov 2026. Reader main f8971af (patch 24: Excel number formats, CropBox everywhere, fidelity audit, Linux fresh-open fix).
+
+## D-170 — Page images freed at session end (PageImages.RemoveOwner)
+10 Nov 2026. Web asked for a shared-Core call so a session's end frees every page image it drew. Pro: one simple promise to test and to state in the privacy notice. Con: one more small shared change for images already unreachable and gone within 3 minutes. **Decision: yes**, in Foundation's next patch.
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).
