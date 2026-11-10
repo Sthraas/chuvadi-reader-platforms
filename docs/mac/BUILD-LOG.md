@@ -543,3 +543,12 @@ Run 42727139667 (c3ff2da): 47/47.
   GPU-less VMs; the prewarm cannot share it (each WKWebView gets its own content process). Host-side room is small
   (~0.6 s of MAUI/runtime start, already AOT). Shared: ~0.7 s of Blazor start and first render. A real Mac
   (REAL-MAC-CHECKS §11) is needed before more work on the WebKit part.
+
+### 2026-11-10 (08:30) — rebased onto Foundation f88f9ef; M-08 and M-23 fixed
+- **Cause:** keys that only the page handles did not arrive on Mac. After a panel closes the WebView is often no
+  longer first responder (as in M-21), and UIKit uses ⌃Tab for its own keyboard focus moves. The shared side is
+  right: reader.js takes ⌃Tab / ⌃⇧Tab before its ⌘ block and ⌘1–⌘9 under `isPrimary`; nothing for Foundation.
+- **Fix (48f2f8c), Mac only:** `MacPageKeys` — app-level key commands for ⌃Tab, ⌃⇧Tab and ⌘1–⌘9 hand the key to the
+  page's focused element as a keydown, so reader.js decides as on Windows (it ignores keys while typing in a field);
+  and the WebView gets the keyboard back after every Open/Save panel and whenever the window becomes key.
+- Smoke (run 42741171454): after the Open panel, real ⌃Tab → another tab, real ⌃⇧Tab → back, real ⌘1 → the first tab.
