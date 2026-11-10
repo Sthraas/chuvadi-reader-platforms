@@ -20,5 +20,6 @@
     <None Include="..\..\src\ChuvadiReader.Windows\Platform\WpfFilePicker.cs" Link="WpfFilePicker.cs.txt" CopyToOutputDirectory="PreserveNewest" />
     <!-- The Ui's markup, read as text by the path-label drift test (AT-07). -->
     <None Include="..\..\src\ChuvadiReader.Ui\**\*.razor" Exclude="..\..\src\ChuvadiReader.Ui\bin\**;..\..\src\ChuvadiReader.Ui\obj\**" LinkBase="UiSources" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\src\ChuvadiReader.Ui\wwwroot\js\reader.js" LinkBase="UiSources\wwwroot\js" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
