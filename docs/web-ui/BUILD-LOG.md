@@ -318,3 +318,10 @@ Build `-warnaserror` 0 warnings. Tests 292 + 16 + 41 + 89 = **438 pass**, 0 fail
 - Formatted cells show as the file's number formats say (1,234,567 · ($1,235) · 25.60% · 1 1/4 · 15-Mar-23), right-aligned, at all sizes.
 - **Bug found**: the value bar's click listener was on in only 4 of 10 opens, the same in all three browsers. It is a render-order race in `XlsxView`. The fix is sent to the Foundation as `proposal/web-ui-xlsx-value-bar-race.patch` and measures 10 of 10 (HOOKS). The Foundation's files are reverted on this branch, so the bug is still here until the Foundation applies the diff.
 - Known library item SH-L1 is visible: time-only cells show "########", and the value bar shows -0.25 for a stored 0.75.
+
+### 5. CI on dfbca11: one Windows-only failure, not from this branch
+Run 42863954875: 7 of 8 jobs pass (Linux, macOS, the trimmed launches, pack-check, the Windows app). `shared (windows-latest)` fails one test, the Foundation's `MemoryAfterCloseTests.Closing_a_heavy_document_brings_memory_back_near_where_it_was`: "live memory after close: 4 → 72 MB". It gives the same numbers on a re-run of the job. The other 437 pass there (16 + 89 + 41 + 291).
+- `platform/mobile-ui`'s merge of the same patch (run 42862735037) fails on the same test with the same numbers, also Windows only.
+- The Foundation's own run of ec09f4f (42805261634) passed on Windows.
+- This branch differs from ec09f4f only in `docs/web-ui`, the preview tool and the `_Imports.razor` it needs; nothing the test exercises. Locally (Linux) the test passes: 438 of 438.
+Raised with the coordinator for the Foundation.
