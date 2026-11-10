@@ -5,7 +5,7 @@ For each run: clear the app's data (a first open), stop it, drop the page cache,
 Open with (ACTION_VIEW, as the shell user so the URI grant holds) and the extra chuvadi.timing=true.
 The app writes its timeline to the log, tag ChuvadiTiming, in ms since its process started:
     process · runtime · maui · activity · import-start · import-done · handed · webview · webview-ready
-    · html · ui · opening · painted
+    · html · ui · reader · loading · opening · painted
 (Platform/StartupTimeline.cs). Prints each run and the median and worst per stage, and writes JSON.
 
     cold_open_timeline.py <apk> <label> <pdf> <results-dir> [runs=10]
@@ -22,7 +22,7 @@ APK, LABEL, PDF, OUT = sys.argv[1:5]
 RUNS = int(sys.argv[5]) if len(sys.argv) > 5 else 10
 PKG = "in.chuvadi.reader"
 STAGES = ["runtime", "maui", "activity", "import-start", "import-done", "handed", "webview", "webview-ready",
-          "html", "ui", "opening", "painted"]
+          "html", "ui", "reader", "loading", "opening", "painted"]
 os.makedirs(OUT, exist_ok=True)
 
 

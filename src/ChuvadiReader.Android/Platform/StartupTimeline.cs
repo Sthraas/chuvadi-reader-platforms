@@ -12,8 +12,9 @@ namespace ChuvadiReader.Android.Platform;
 /// in milliseconds since the process started:
 /// <code>
 ///   process 0 · runtime · maui · activity · import-start · import-done · handed · webview · webview-ready
-///   · html (DOMContentLoaded) · ui (Blazor's first UI) · opening (the Reader shows the document's pages)
-///   · painted (page 1's drawing is on the page)
+///   · html (DOMContentLoaded) · ui (Blazor's first UI) · reader (the Reader's route) · loading (its
+///   "Opening &lt;name&gt;…" line: the tab exists, the document is being read) · opening (the Reader shows the
+///   document's pages) · painted (page 1's drawing is on the page)
 /// </code>
 /// Page stages are read from the page every 25 ms (EvaluateJavascript, so it works on the Release
 /// build, which has no DevTools), so they are good to ±25 ms. Nothing is ever sent anywhere.
@@ -89,7 +90,7 @@ public static class StartupTimeline
             {
                 var now = Java.Lang.JavaSystem.CurrentTimeMillis();
                 var parts = (value ?? string.Empty).Trim('"', '[', ']').Split(',');
-                if (parts.Length == 4)
+                if (parts.Length == 6)
                 {
                     if (long.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var html) && html > 0 && seen.Add("html"))
                     {
@@ -97,8 +98,10 @@ public static class StartupTimeline
                     }
 
                     if (parts[1] == "1" && seen.Add("ui")) Write("ui", now);
-                    if (parts[2] == "1" && seen.Add("opening")) Write("opening", now);
-                    if (parts[3] == "1" && seen.Add("painted")) Write("painted", now);
+                    if (parts[2] == "1" && seen.Add("reader")) Write("reader", now);
+                    if (parts[3] == "1" && seen.Add("loading")) Write("loading", now);
+                    if (parts[4] == "1" && seen.Add("opening")) Write("opening", now);
+                    if (parts[5] == "1" && seen.Add("painted")) Write("painted", now);
                 }
 
                 if (!seen.Contains("painted") && SystemClock.ElapsedRealtime() < deadline)
@@ -115,11 +118,13 @@ public static class StartupTimeline
         handler.Post(Poll);
     }
 
-    // [DOMContentLoaded epoch, Blazor UI present, Reader pages present, page 1 drawn]
+    // [DOMContentLoaded epoch, Blazor UI present, on the Reader's route, "Opening …" shown, Reader pages present, page 1 drawn]
     private const string PageProbe = """
         (function(){var t=performance.timing,a=document.getElementById('app');
         return [t.domContentLoadedEventEnd||0,
           a&&a.children.length&&!document.getElementById('blazor-error-ui')?.offsetParent?1:0,
+          location.pathname==='/reader'?1:0,
+          [...document.querySelectorAll('.rempty-t')].some(e=>/^Opening /.test(e.textContent))?1:0,
           document.querySelector('.rpage-wrap')?1:0,
           document.querySelector('.rpage-wrap .rpage svg')?1:0].join(',');})()
         """;

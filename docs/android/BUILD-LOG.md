@@ -742,3 +742,24 @@ same screen; no crash), smoke pass. With round 6 (API 36 phone and tablet, all c
   before it was filled (phone after "", tablet before ""). Fixed: wait for the counter on both sides.
 - **Run 42799417097** (timeline): the variant build failed — NETSDK1047, the Debug x86_64 build had restored for
   android-x64 only and the variant used `--no-restore`. Fixed: the variant restores.
+- **Run 42803390901 — AT-14 timeline** (phone and tablet API 36, Release, 12-page 5 KB PDF, 10 cold Open with runs each;
+  ms since the process started, median / worst):
+
+  | stage | phone shipped | phone Chuvadi AOT | tablet shipped | tablet Chuvadi AOT |
+  |---|---|---|---|---|
+  | runtime (first managed code) | 258 / 925 | 182 / 439 | 663 / 1248 | 784 / 1276 |
+  | activity | 400 / 1357 | 329 / 589 | 857 / 1553 | 950 / 1453 |
+  | webview ready | 702 / 2450 | 629 / 905 | 1256 / 2674 | 1336 / 1864 |
+  | file copied (import-done) | 611 / 1903 | 542 / 799 | 1056 / 2347 | 1151 / 1693 |
+  | handed to the Ui | 823 / 2731 | 741 / 1027 | 1425 / 2938 | 1489 / 2053 |
+  | html (DOMContentLoaded) | 878 / 3082 | 807 / 1126 | 2018 / 3128 | 1895 / 2857 |
+  | ui (Blazor's first UI) | 1757 / 5726 | 1585 / 1895 | 2674 / 6399 | 2622 / 3216 |
+  | opening (Reader pages present) | 4425 / 9783 | 4243 / 4691 | 7875 / 12711 | 7480 / 7894 |
+  | **painted (page 1)** | **4848 / 11308** | **4593 / 4939** | **8688 / 14206** | **8156 / 8644** |
+
+  Where the time goes (medians): Android, .NET and MAUI to the activity ~0.4 s (phone) / 0.9 s (tablet); file copy
+  ~0.1 s; WebView ready and page loaded by ~0.9 / 2.0 s; Blazor's first UI +0.9 / +0.7 s; then **Blazor UI → Reader
+  pages present: 2.7 s (phone) / 5.2 s (tablet)** — for a 5 KB PDF, so not parsing; then page 1 painted +0.4 / +0.8 s.
+  Chuvadi-only full AOT: median −0.26 s / −0.53 s (−5 % / −6 %), worst case roughly halved (11.3 → 4.9 s, 14.2 →
+  8.6 s), and the Ui-to-pages gap unchanged (2.66 / 4.86 s) — so that gap isn't JIT. Cost +7.7 MB (+18 %), build 122 s.
+- Timeline now also stamps `reader` (the Reader's route) and `loading` (its "Opening <name>…" line) to split that gap.
