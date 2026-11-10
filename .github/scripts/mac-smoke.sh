@@ -66,6 +66,17 @@ out += b"xref\n0 %d\n0000000000 65535 f \n" % (len(objs) + 1)
 for o in offs: out += b"%010d 00000 n \n" % o
 out += b"trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n" % (len(objs) + 1, x)
 open(os.path.join(d, "five-pages.pdf"), "wb").write(out)
+# D-158: an A0 page (area above Core's large-format threshold) is drawn as a raster image, served by address.
+a0 = [b"<< /Type /Catalog /Pages 2 0 R >>", b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+      b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 2384 3370] >>"]
+out = bytearray(b"%PDF-1.4\n"); offs = []
+for i, o in enumerate(a0, 1):
+    offs.append(len(out)); out += b"%d 0 obj\n" % i + o + b"\nendobj\n"
+x = len(out)
+out += b"xref\n0 %d\n0000000000 65535 f \n" % (len(a0) + 1)
+for o in offs: out += b"%010d 00000 n \n" % o
+out += b"trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n" % (len(a0) + 1, x)
+open(os.path.join(d, "large-a0.pdf"), "wb").write(out)
 open(os.path.join(d, "notes.md"), "w").write("# Notes\n\nA *Markdown* file.\n\n- one\n- two\n")
 open(os.path.join(d, "plain.txt"), "w").write("A plain text file.\nSecond line.\n")
 open(os.path.join(d, "page.html"), "w").write("<!doctype html><html><body><h1>Page</h1><p>An HTML file.</p></body></html>\n")
@@ -95,12 +106,12 @@ SW
 }
 
 # --- M-16: the left bar's Open button → the real Open panel → the Reader, for every format --------------
-PICKS="five-pages.pdf notes.md plain.txt page.html letter.docx table.xlsx"
+PICKS="five-pages.pdf notes.md plain.txt page.html letter.docx table.xlsx large-a0.pdf"
 PICK_ENV=$(for f in $PICKS; do printf '%s;' "$DOCS/$f"; done)
 rm -f "$LOG"
 LOGDIR="$HOME/Library/Logs/Chuvadi"; rm -rf "$LOGDIR"
 open -n --env CHUVADI_SMOKE=1 --env CHUVADI_SMOKE_LOGFILL=1 --env "CHUVADI_SMOKE_PICK=$PICK_ENV" --stdout "$LOG" --stderr "$LOG" -a "$APP"
-wait_for 'CHUVADI tabs 6: ' 150 || true
+wait_for 'CHUVADI tabs 7: ' 170 || true
 sleep 3   # the last Ui report comes 1.5 s after the tab
 grep -E 'CHUVADI (open-button|picked|tabs|ui) ' "$LOG"
 i=0
@@ -113,6 +124,9 @@ for f in $PICKS; do
     fail "M-16 Open panel $f: ${line:-no Ui report}"
   fi
 done
+li=$(grep "CHUVADI ui " "$LOG" | sed -n "7p")
+[[ "$li" == *"pageimg=200/image/png"* ]] && pass "D-158 a raster page's image is served from memory by address (page-image hook)" \
+  || fail "D-158 page image: ${li:-no Ui report}"
 hl=$(grep "CHUVADI ui " "$LOG" | sed -n "4p")
 [[ "$hl" == *'frame="Page'* && "$hl" == *"An HTML file"* ]] && pass "HTML viewer shows the document in its frame" \
   || fail "HTML viewer frame: ${hl:-no Ui report}"
