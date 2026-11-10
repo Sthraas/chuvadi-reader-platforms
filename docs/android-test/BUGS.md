@@ -340,7 +340,7 @@ most likely the phone/tablet swipe-and-pan handling on `.rdesk` (mobile.js) capt
 every markup gesture on touch (text, shapes, freehand, probably the Protect redaction box). Owner: whoever owns that handler
 (Mobile UI's mobile.js, or Foundation's reader.js); the markup layer should win when a markup tool is active.
 
-## AT-16 · S3 · Foundation (shared Ui) · open — Page box drifts from the page on screen (tablet, after Find)
+## AT-16 · S3 · Foundation (shared Ui) · open (with Foundation; still there in R9 on dd59362) — Page box drifts from the page on screen (tablet, after Find)
 **Steps:** tablet API 36, open `doc-12p.pdf`, Find `zephyrine` (one match, foot of page 3).
 **Expected:** the page box says 3 — page 3 fills the screen.
 **Actual:** the match is shown and page 3 fills the screen, but the page box says **2** ("2 / 12"). Phone says "3 / 12".
@@ -350,7 +350,7 @@ a second document, a reopen, a rotation and a restart) ran in R8b: cold open, se
 tablet (box = page on screen, steady for 6–8 s). Its "move to page 5" and "restart" steps were wrong in my script (it scrolled the page
 from script, and a plain launch opens on Home); corrected for round 9. So the only drift seen so far is the tablet one after Find.
 
-## AT-17 · S2 · Foundation (shared Ui, markup) · open — Mark › Text: the new box doesn't take the caret; typing fires one-key shortcuts instead
+## AT-17 · S2 · Foundation (shared Ui, markup) · open (with Foundation; still there in R9/R9b on dd59362) — Mark › Text: the new box doesn't take the caret; typing fires one-key shortcuts instead
 **Steps:** phone or tablet, open a PDF, Mark › Text, tap the page (a box appears — AT-15 fixed that), type `chuvadimark`.
 **Expected:** the caret is in the new box (and the on-screen keyboard opens); the letters go into the box.
 **Actual:** an editor element exists but focus stays on the page area (`DIV.rdesk`); nothing is typed into the box, and the letters
@@ -380,6 +380,11 @@ The Android chat's own rounds never exercised a save to a new file, and neither 
 **Fix (Android chat):** set the switch on (or remove it), then confirm each save site delivers. Round 9 runs my save suite twice:
 on the Release as built, and on a test-only build with only this switch flipped, so the saved files are read back either way.
 **Also:** a save that can't proceed should say so; silence is the worst outcome (Foundation, low priority once the switch is on).
+**Round 9 / 9b (runs 42867016981, 42875987375; Android 8f173c9 + Foundation dd59362 + Mobile UI 3ecbc75, Release):** confirmed on the
+build as handed over — Save as new PDF, Save redacted copy and Bind all open no picker and write no file, phone and tablet.
+On the **test-only build with only this switch turned on** (tablet): Save as new PDF wrote `sv-shape-edited.pdf` with the rectangle on
+page 1 and `sv-form-edited.pdf` with the form values intact; Save redacted copy wrote `sv-redact-redacted.pdf` with the covered heading
+gone from the page content and everything else kept. So the shared code behind the switch works; the switch is the fault.
 
 ## AT-19 · S2 · Android (build) · open — The clean build breaks on the .NET SDK patch released 10 Nov (10.0.404): the toolchain isn't pinned
 **Steps:** clean runner, `actions/setup-dotnet` with `10.0.x` (what the Android workflow and mine use), `dotnet workload install
@@ -399,6 +404,16 @@ one tested. Nothing in the repo fixes the SDK version (no `global.json`).
   path. *Pros:* survives SDK patches. *Cons:* alone, builds still float with the SDK.
 - **Recommendation: both** — (b) so the target is correct, (a) so releases are reproducible.
 My workflow is pinned to 10.0.403 from round 9 on (and now fails the step when publish fails; it used to carry on).
+
+## AT-20 · S2 · Android / Mobile UI · open, needs a second look — Tablet: long-press drag from the Shelf doesn't put a page on a desk
+**Steps:** tablet API 36 portrait, one PDF open, Arrange (Shelf sheet shows pages 1–12, Desk 1 says "Drag pages here"); long-press
+shelf page 3 and drag it onto the desk.
+**Expected:** the page lands on the desk (it does on the phone: two pages dragged, then reordered by long-press drag, R9b).
+**Actual:** the desk stays at 0 pages. Tried with Android's own `input draganddrop` (long press + drag, rotation-aware) and with the raw
+touch script, twice each per run, in R9 and R9b: 0 of 8. `Bind all` therefore stays disabled.
+**Caveat:** this is the one result here that rests on synthetic gestures only, and the raw script is known not to follow the tablet's
+rotation; the Android chat's own gesture check covers this drag — please say whether it passes on the tablet in portrait. If it
+does, this is my tooling and I'll close it.
 
 ## Questions for the coordinator (not filed as bugs)
 - **Q-1 Same file opened again → new tab** — answered by the coordinator (9 Nov 07:12): Windows is the reference. Checked the shared

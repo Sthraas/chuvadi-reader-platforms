@@ -166,6 +166,27 @@ As-built Release: 0 crashes, 3/3 first frames (phone, tablet).
 | Print card → Android print dialog, tablet | **PASS**; the tablet's saved file still not checked (script) |
 | **Not verified yet** | Save / Save as with the saved file read back (markup, form value, redacted text gone), form filling by touch, Arrange drag and save. My script didn't complete these: on the phone the text-box property sheet covered the Save button; my test grant was read-only so in-place Save had nowhere to write; the form tap missed the field. No app fault shown or ruled out |
 
+## Round 9 / 9b (runs 42867016981 and 42875987375; Android 8f173c9 + Foundation dd59362 + Mobile UI 3ecbc75; **Release**, API 36)
+Built with SDK 10.0.403 pinned (10.0.404 breaks the clean build → AT-19). 0 warnings. As-built Release: 0 crashes, 3/3 launches.
+The save suite opens **writable** files through the system picker, changes them by touch and reads the saved files back; it ran on
+the Release as built and on a test-only build with the host's save pickers switched on.
+| Case | As built | Pickers switched on (test-only) |
+|---|---|---|
+| Open through the system picker | **PASS** phone, tablet | **PASS** |
+| Text box typed (after the second tap, AT-17) | **PASS** phone, tablet | **PASS** |
+| **Save in place** (tablet): the picked file now holds the text | **PASS** — "Saved to sv-text.pdf", text read back | **PASS** |
+| **Save as new PDF** | **FAIL → AT-18** (no picker, no file) | tablet **PASS**: rectangle in the new file (page 1 has the stamped mark), 12 pages; original untouched. Phone: not reached — the selected mark's sheet covers the Save button and my script couldn't dismiss it |
+| Form values kept through a Save as (patient Ravi, ward Cardiac) | FAIL → AT-18 | tablet **PASS** |
+| **Form filling by touch** | **not offered**: the Reader has no Fill form tool yet (greyed "until built" on every platform, PHASE1-PARITY); filled values are displayed (**PASS**) | same |
+| Redaction box by finger | **PASS** phone, tablet | **PASS** |
+| **Save redacted copy** | **FAIL → AT-18** | tablet **PASS**: heading gone from the page content and text, body and other pages kept, original untouched |
+| Arrange: long-press drag two pages to a desk, reorder | phone **PASS** (both); tablet **FAIL → AT-20** | same |
+| **Bind** the desk to a PDF | **FAIL → AT-18** | not reached (phone second pass lost the picker folder; tablet has no pages on the desk) |
+| Print → Android dialog → PDF | **PASS** phone and **tablet** (first time): 12 pages, 40,550 chars, 0 images | **PASS** |
+Other suites (R9): page-box check 6/6 phone; tablet 5/6 — the box always matched the page on screen, but four taps on Next page
+moved three pages (twice now; looking at whether a tap is dropped). Function 19/19 phone; tablet fails only AT-16 (box 2 after Find)
+and my old print script. AT-13 5/5 phone (5.5–5.7 s), 5/5 tablet (10.0–11.2 s). Touch targets: unchanged from round 8.
+
 ## Blocked in CI: Reader on Android 15 (API 35)
 The API 35 image ships WebView 124, so the app correctly shows only its update screen (D-105). Updating it in CI from the API 36
 image's WebView failed twice: that WebView needs the Trichrome static library, which my donor job couldn't locate on the API 36
