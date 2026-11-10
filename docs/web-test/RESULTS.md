@@ -191,3 +191,19 @@ Corpus `tests/web-test/make_fidelity.py`: 14 text tokens built to catch normalis
 - **LIB-1** ✅ on `platform/web` **002bf02** (chuvadi-pdf **3.32.0**, Firefox): AES-256 PDFs written by pypdf with an unsigned `/P` (4294965240, 4294967292) open; the user-password one after "open-me"; the no-print permission is read correctly from the unsigned value (Print card: "This file's permissions don't allow printing.").
 - Wrote `STAGING-VM-ASK.md` (V-1…V-7, 40-person load) and `MANUAL-SCRIPT.md` (M-1…M-4, G-12).
 - Waiting for the Web head with Web portal UI ce805d1 + Foundation f88f9ef for WT-17, WT-03…WT-06 and the regression (incl. large Excel uploads, limits, cancel).
+
+### Large Excel uploads — baseline on 002bf02 (Sheets 2.0.2, `ForUntrustedInput`: 256 MB/part, 1 GB total, 500:1, 20,000 entries, 1,048,576 rows), Firefox
+Files from `tests/web-test/make_large_xlsx.py`.
+
+| File | Result |
+|---|---|
+| big-100k.xlsx (100,000 rows × 6) | grid in **2,576 ms** |
+| rows-1048576.xlsx (Excel's maximum rows) | grid in **3,245 ms**, worker ~586 MB |
+| rows-1048577.xlsx (one row over) | refused in 1.9 s: "This Excel workbook is too large to open: it goes beyond what Chuvadi allows. It may be damaged." ✅ |
+| entries-20001.xlsx | refused in 0.6 s, same plain sentence ✅ |
+| ratio-600.xlsx (300 MB part) | refused in 0.3 s — but with **raw library text**: "Couldn't open this workbook: Decompressed size limit of 268435456 bytes exceeded for package part 'xl/worksheets/sheet1.xml' (declared 314573011)." ⚠️ |
+| zip-bomb.xlsx (2 GB part) | refused in 0.6 s, the same raw text ⚠️ (on c38bd80 the same file got the plain "unpacks to more than 2,048 MB" sentence) |
+| cancel-1m-x12.xlsx (565 MB part) | refused, raw text ⚠️ (`screenshots/v4-xlsx-part-limit-raw-text.png`) |
+| **Cancel**: cancel-4x1m.xlsx (89 MB, 4 × 139 MB parts, within limits) | "Stop" shown at 12.3 s; opening ended **187 ms** after the click; no grid; the person carries on ✅ |
+
+To re-run on the f88f9ef head (Sheets 2.0.4); the raw part-limit text becomes a bug if it is still there.
