@@ -1,6 +1,6 @@
 # Mac Test — results
 
-Subject: `platform/mac` **7a65178** → c6d7705 → 00a5975 → 83207af → b790370 → dd67166 → 812079f → **0ea9f09** (current). Harness: `tests/mac/` + `.github/workflows/mac-test.yml` on `platform/mac-test`.
+Subject: `platform/mac` **7a65178** → c6d7705 → 00a5975 → 83207af → b790370 → dd67166 → 812079f → 0ea9f09 → a7be951 → **3bc7f68** (signed off). Harness: `tests/mac/` + `.github/workflows/mac-test.yml` on `platform/mac-test`.
 Runs (one each, read before the next — no retries):
 
 | Round | Run | What changed in the harness |
@@ -10,6 +10,71 @@ Runs (one each, read before the next — no retries):
 | 2 | 42490785792 | menu bar and `open -a` found broken (M-01, M-02) → drive through ⌘O / ⌘K instead; quit-crash capture |
 | 3 | 42494662734 | ⌘O found not to open a panel → the Open button; app stdout per launch; diagnostic exception build |
 | 4 | 42517758923 | panel path set through Accessibility (typing into the Go-to field was lossy) → documents open; timing sets skipped |
+
+## SIGN-OFF — platform/mac 3bc7f68 (11 Nov 2026): Mac is ready for Arun's check
+
+**Verdict: ready**, on the three GitHub runners I can reach (macOS 26.x Apple Silicon, macOS 15 Apple Silicon, macOS 15
+Intel). Every bug M-01 to M-23 is closed except the ones listed under "Open, not blocking". Nothing here was run on
+a real Mac, on macOS 12–14, or on a Retina display. Those are Arun's checks below.
+
+Runs on 3bc7f68: **42862906806** and **42872524734** (shared suite: ⌘O in five states, tab keys, Immersive, labels,
+Details), **42863094262** (full suite), **42872804427** (passwords + M-18 recovery). All three runners each.
+
+| Area | Result on 3bc7f68 |
+|---|---|
+| Build, universal bundle, ad-hoc signature, Info.plist, legal files, third-party audit | ✅ |
+| Menu bar (File, Edit, View, Document, Window, Help), ⌘ labels, Settings… ⌘, | ✅ |
+| Open (button, ⌘O in five states, launch with a PDF, single instance with tabs) | ✅ |
+| Tab keys ⌃Tab, ⌃⇧Tab, ⌘1/⌘2 — with and without the page focused (M-08, M-23) | ✅ |
+| Immersive ⌃⌘F, Esc leaves; green light is Zoom; no F11 / Ctrl labels | ✅ |
+| Passwords: AES-256, AES-128, RC4, wrong then right, owner-only | ✅ |
+| Print through the macOS panel: vector (fonts embedded, 0 images, text selectable), marks drawn; no-print file refused | ✅ |
+| Clipboard text + PNG snapshot, Copy file path, Show in Finder | ✅ |
+| Settings, Licences (5 tabs, .NET runtime notices), 5 themes, interface sizes | ✅ |
+| Damaged / unreadable files (plain message, Details shows the .NET text), many tabs, no network, fresh / corrupt / read-only settings, low memory | ✅ |
+| Quit (⌘Q and terminate): no crash report | ✅ |
+| Web-process crash (M-18): app reopens the same screen with a message and a log line | ✅ |
+
+**Open, not blocking**
+
+| Item | State |
+|---|---|
+| M-06 startup time | waiting on a real Mac. On the VMs: warm first render ~2.5–3 s (Windows ~1.7 s), cold 6–9 s |
+| M-20 heavy vector page never draws | library, with B-27; needs Arun's real CAD PDF |
+| M-18 root cause | Apple's accessibility layer on macOS 26 (a press landing on plain text). App recovers; Apple Feedback to file (D-154) |
+| Several files opened at once from Finder | TabsService overlapping-opens patch is with Foundation (coordinator, 10 Nov) |
+| Two one-off results on the Intel runner | (1) a7be951, once in 5 runs: Immersive came up with the page left as its "page 1" placeholder and no exit button; (2) a7be951 and 3bc7f68, full suite only: ⌘O straight after Esc opened no panel. The dedicated ⌘O test passes in all five states on Intel. Not reproducible, so not filed — please watch both on a real Intel Mac |
+| Recovery message style | uses the green success tick; asked whether it should be the plain info style |
+| Licence text | opens with "DRAFT, to be reviewed by counsel" |
+| My harness | password typing on macOS 26 in the long full run, and the xlsx marker on sheet 2 — test-side only; the dedicated runs pass |
+
+### For Arun: getting the app
+1. Open the Mac workflow run for 3bc7f68: https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/42839767989
+   → Artifacts → **Chuvadi-mac-universal-unsigned** (48 MB, kept until 8 Feb 2027).
+2. Unzip until you see `Chuvadi.app` (GitHub wraps it in a second zip) and drag it into **Applications**.
+3. Double-click it. macOS will refuse the first time. Open **System Settings → Privacy & Security**, find the line
+   about Chuvadi, click **Open Anyway**, then **Open**. (Terminal alternative:
+   `xattr -dr com.apple.quarantine /Applications/Chuvadi.app`.) Only the first launch needs this.
+4. Note the Mac model, chip and macOS version, since no real Mac has run this build yet.
+
+### Ten things to try first
+1. **First launch:** no white flash, traffic lights on the left, and how long until the Home screen shows (M-06 — a
+   stopwatch guess is fine; `~/Library/Logs/Chuvadi/startup.log` has the exact numbers).
+2. **Sharpness on Retina:** text, icons, and a PDF page at 100 % and 400 %. CI has no Retina display.
+3. **Open three ways:** ⌘O, drag a PDF from Finder onto the window, and right-click a PDF → Open With → Chuvadi while
+   it is running (should be a new tab, no second Dock icon). Then several PDFs at once — a known open item.
+4. **Trackpad:** two-finger scroll, pinch to zoom the page. CI has no trackpad.
+5. **Tabs and keys:** ⌃Tab, ⌃⇧Tab, ⌘1…⌘9, ⌘K, ⌘F, ⌃⌘F into Immersive and Esc out.
+6. **Mark and save:** highlight, add a note, sign; Save, then Save as; reopen the saved file in Preview.
+7. **Print to a real printer:** the macOS panel, the local-network question on first use, and the paper — text
+   should be sharp (vector), marks included. Then try a no-print-permission PDF: it must be refused.
+8. **Your real CAD PDF (M-20 / B-27):** does the heavy page draw, and how long does it take next to Windows?
+9. **Word and Excel files,** a password-protected PDF, and one damaged file (plain message, no crash).
+10. **VoiceOver (⌘F5) on macOS 26:** Settings → Appearance and About → Licences with VO-Space. If the screen
+    reloads with "Part of Chuvadi stopped unexpectedly…", that is M-18 recovering as designed — note it.
+
+The full list is `docs/mac/REAL-MAC-CHECKS.md` on platform/mac. If an Intel Mac or a Mac on macOS 12–14 is at hand,
+items 1, 3 and 5 there matter most: CI has neither.
 
 ## Re-test on platform/mac 0ea9f09 (10 Nov) — not signed off
 
