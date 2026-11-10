@@ -1325,37 +1325,35 @@ def m_shared():
     ev["shot_before"] = shot("tabkeys-0-before")
     drive("activate", NAME)
     time.sleep(0.6)
-    ev["focused_before_keys"] = drive("focused", NAME)[1][:200]
-    drive("key", "ctrl+tab")
-    time.sleep(2)
-    t2 = axdump("shared-after-ctrl-tab")
-    ev["status_after_ctrl_tab"] = status(t2)
-    ev["shot_ctrl_tab"] = shot("tabkeys-1-ctrl-tab")
-    drive("key", "ctrl+shift+tab")
-    time.sleep(2)
-    ev["status_after_ctrl_shift_tab"] = status(axdump("shared-after-ctrl-shift-tab"))
-    ev["shot_ctrl_shift_tab"] = shot("tabkeys-2-ctrl-shift-tab")
-    ev["m08_ctrl_tab_switches"] = ev["status_before"] != ev["status_after_ctrl_tab"]
-    if not ev["m08_ctrl_tab_switches"]:
-        # give the page the keyboard first (click the page), then try again
-        w = window_up(3)
-        m = re.search(r"\t(\d+),(\d+) (\d+)x(\d+)", w or "")
-        if m:
-            x, y, wd, ht = map(int, m.groups())
-            drive("click", x + wd // 2, y + ht // 2)
-            time.sleep(0.8)
-        drive("key", "ctrl+tab")
-        time.sleep(1.5)
-        ev["status_after_click_ctrl_tab"] = status(axdump("shared-after-click-ctrl-tab"))
-        ev["ctrl_tab_shot"] = shot("tabkeys-3-click-ctrl-tab")
-        ev["m08_ctrl_tab_switches_after_click"] = ev["status_before"] != ev["status_after_click_ctrl_tab"]
-        # control: the same harness keys, another tab shortcut (⌘1 = Go to tab 1)
-        ev["focused_before_cmd_1"] = drive("focused", NAME)[1][:200]
-        drive("key", "cmd+1")
-        time.sleep(2)
-        ev["status_after_cmd_1"] = status(axdump("shared-after-cmd-1"))
-        ev["shot_cmd_1"] = shot("tabkeys-4-cmd-1")
-        ev["control_cmd_1_switches"] = ev["status_before"] != ev["status_after_cmd_1"]
+
+    def which(tag):
+        st = status(axdump("tabkeys-" + tag))
+        shot("tabkeys-" + tag)
+        j = " ".join(st)
+        return "many" if "of 500" in j else ("five" if "of 5" in j else "?" + j[:60])
+
+    # Two tabs: 1 = five-pages, 2 = many-pages (active). Each key must land exactly where a person expects, in two
+    # states: A as the app stands after opening files (no first responder), B after a click on the page (page focused).
+    seq = [("ctrl+tab", "five"), ("ctrl+shift+tab", "many"), ("cmd+1", "five"), ("cmd+2", "many")]
+    ev["tabkeys"] = {}
+    for state in ("A-as-opened", "B-page-clicked"):
+        if state.startswith("B"):
+            w = window_up(3)
+            m = re.search(r"\t(\d+),(\d+) (\d+)x(\d+)", w or "")
+            if m:
+                x, y, wd, ht = map(int, m.groups())
+                drive("click", x + wd // 2, y + ht // 2)
+                time.sleep(0.8)
+        r = {"focused": drive("focused", NAME)[1][:120], "start": which(state + "-start")}
+        for key, want in seq:
+            drive("key", key)
+            time.sleep(2)
+            got = which(f"{state}-{key.replace('+', '-')}")
+            r[key] = {"want": want, "got": got, "ok": got == want}
+        ev["tabkeys"][state] = r
+    ev["tabkeys_failed"] = [f"{st}: {k} → {v['got']} (want {v['want']})" for st, r in ev["tabkeys"].items()
+                            for k, v in r.items() if isinstance(v, dict) and not v["ok"]]
+    ev["m08_ctrl_tab_switches"] = not ev["tabkeys_failed"]
     # M-09: every Immersive / F11 mention in the Reader (View rail included)
     ev["m09_reader_immersive"] = ax_paths(t, r"Immersive|F11")
     # hover the View rail's Immersive button so a tooltip, if any, is in the tree too
@@ -1389,7 +1387,7 @@ def m_shared():
     ev["m10_ok"] = any('"Zoom"' in l for l in ev["m10_lights_zoomed"]) and not any("full screen" in l for l in ev["m10_lights_zoomed"])
     ok = ev["m08_ctrl_tab_switches"] and ev["on_shortcuts_screen"] and not ev["shortcuts_bad"] and not ev["m09_bad"] and ev["m10_ok"]
     record("M-08/M-09/M-10 shared patch", "pass" if ok else "fail",
-           f"⌃Tab switches={ev['m08_ctrl_tab_switches']} (after a click on the page: {ev.get('m08_ctrl_tab_switches_after_click')}; control ⌘1 switches: {ev.get('control_cmd_1_switches')}); Shortcuts screen={ev['on_shortcuts_screen']}; F11 left={len(ev['m09_bad'])}; bad shortcut labels={len(ev['shortcuts_bad'])}; green light when zoomed={ev['m10_lights_zoomed']}", **ev)
+           f"tab keys (⌃Tab, ⌃⇧Tab, ⌘1, ⌘2 in two focus states) all right={ev['m08_ctrl_tab_switches']} {ev['tabkeys_failed']}; Shortcuts screen={ev['on_shortcuts_screen']}; F11 left={len(ev['m09_bad'])}; bad shortcut labels={len(ev['shortcuts_bad'])}; green light when zoomed={ev['m10_lights_zoomed']}", **ev)
     quit_app()
 
 
