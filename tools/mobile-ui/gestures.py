@@ -38,8 +38,8 @@ async def main():
             document.addEventListener(t,e=>{if(e.pointerType==='touch')window.__ev.push(t)},true);''')
         await pg.goto(url + "/reader"); await pg.wait_for_timeout(3500)
         phone = await pg.evaluate("document.documentElement.getAttribute('data-shell')") == "phone"
-        if phone:
-            await pg.locator(".ph-nav-b:nth-child(1)").click(); await pg.wait_for_timeout(800)
+        # Start in Read whatever mode the preview kept from the last run (swipes page only in Read).
+        await pg.locator(".ph-nav-b:nth-child(1), .lb-mode:nth-of-type(1)").first.click(); await pg.wait_for_timeout(800)
         cx, cy = W // 2, H // 2
 
         def report(name, ok, detail):

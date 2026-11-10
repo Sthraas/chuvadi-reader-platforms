@@ -140,6 +140,10 @@ async def main():
                      desk: [Math.round(a.top), Math.round(a.bottom)], counter: '' + eval(COUNTER) }; }'''.replace("COUNTER", repr(COUNTER)))
         ok = bool(r) and r["desk"][0] <= r["top"] and r["bottom"] <= r["desk"][1] and r["counter"][:1] == "3"
         report("Find shows the match on screen and the counter is on its page", ok, r)
+        # The preview keeps a tab's zoom between runs: put it back to Fit page, so the next run (gestures:
+        # swiping needs pages that fit) starts as a fresh install would.
+        await pg.keyboard.press("Escape"); await pg.wait_for_timeout(300)
+        await pg.keyboard.press("p"); await pg.wait_for_timeout(800)
         await pg.context.close()
         # 7. Tablet: the tools rail shows "TOOLS" and keeps the mode name for screen readers (H-20, D-151);
         #    Mark's Save and Save as new PDF stay in view while the rail scrolls (D-150).
@@ -159,6 +163,7 @@ async def main():
                          scrolls: r.scrollHeight > r.clientHeight, bothSavesInView: out }; }''')
             ok = r["head"] == "TOOLS" and r["label"] == "MARK" and all(r["bothSavesInView"])
             report("tablet Mark rail: TOOLS shown, MARK announced, both Saves in view while it scrolls", ok, r)
+            await pg.locator(".lb-mode:nth-of-type(1)").first.click(); await pg.wait_for_timeout(800)   # back to Read
             await pg.context.close()
         await b.close()
     sys.exit(1 if fails else 0)

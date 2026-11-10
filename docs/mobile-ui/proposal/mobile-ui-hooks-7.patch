@@ -22,10 +22,10 @@ index 9c9791d..6298da1 100644
      [Parameter] public RenderFragment? ChildContent { get; set; }
  }
 diff --git a/src/ChuvadiReader.Ui/Pages/Bench.razor b/src/ChuvadiReader.Ui/Pages/Bench.razor
-index 4fe0ed4..2c70060 100644
+index 9e368c1..9bb3b98 100644
 --- a/src/ChuvadiReader.Ui/Pages/Bench.razor
 +++ b/src/ChuvadiReader.Ui/Pages/Bench.razor
-@@ -1154,7 +1154,7 @@
+@@ -1152,7 +1152,7 @@
      </div>
  
      <div class="mview-rails">
@@ -35,10 +35,10 @@ index 4fe0ed4..2c70060 100644
              <RailButton Icon="folder" Label="@(ChuvadiReader.Ui.Components.Platform.PlatformText.FetchOrUpload(Platform, "Fetch file", "Upload file"))" Disabled="@(_busy || _fetching)" OnClick="FetchFile" />
              <RailButton Icon="plus" Label="Add desk" Disabled="@(_busy || !BenchSvc.CanAddDesk)" DisabledReason="@(BenchSvc.CanAddDesk ? null : "30-desk limit reached")" OnClick="AddDesk" />
 diff --git a/src/ChuvadiReader.Ui/Pages/Reader.razor b/src/ChuvadiReader.Ui/Pages/Reader.razor
-index 35d36f4..f1b626e 100644
+index f0ca26c..3cbc89f 100644
 --- a/src/ChuvadiReader.Ui/Pages/Reader.razor
 +++ b/src/ChuvadiReader.Ui/Pages/Reader.razor
-@@ -1132,7 +1132,7 @@
+@@ -1130,7 +1130,7 @@
              }
              else if (_markup)
              {
@@ -47,7 +47,7 @@ index 35d36f4..f1b626e 100644
                      <RailButton Icon="text-box" Label="Text" Keys="T" Active='_mkTool == "text" && !_sigOpen' OnClick='() => PickMkTool("text")' />
                      <RailButton Icon="file-image" Label="Image" Keys="I" Active='_mkTool == "image" && !_sigOpen' OnClick="PickImageTool" />
                      <RailButton Icon="shape-rect" Label="Rectangle" Keys="B" Active='_mkTool == "rect" && !_sigOpen' OnClick='() => PickMkTool("rect")' />
-@@ -1156,7 +1156,7 @@
+@@ -1154,7 +1154,7 @@
              }
              else if (_protect)
              {
@@ -56,7 +56,7 @@ index 35d36f4..f1b626e 100644
                      <RailButton Icon="redact" Label="Redact box" Keys="R" OnClick="() => GoRedact(false)" />
                      <RailButton Icon="find-in-page" Label="Find & redact" OnClick="() => GoRedact(true)" />
                      <RailButton Icon="stamp" Label="Stamp" Active='_card == "stamp" && _stampFocus != "watermark"' OnClick='() => OpenStamp("stamp")' />
-@@ -1171,7 +1171,7 @@
+@@ -1169,7 +1169,7 @@
              }
              else
              {
@@ -66,10 +66,10 @@ index 35d36f4..f1b626e 100644
                      <RailButton Icon="bookmark" Label="Add bookmark" Keys="Ctrl B" OnClick="AddBookmarkHere" />
                      <RailButton Icon="snapshot" Label="Snapshot" Keys="S" Active="_tool == ReaderTool.Snapshot" OnClick="() => SetTool(ReaderTool.Snapshot)" />
 diff --git a/src/ChuvadiReader.Ui/Pages/Redact.razor b/src/ChuvadiReader.Ui/Pages/Redact.razor
-index 97a2db0..3efafe3 100644
+index 661518a..765812f 100644
 --- a/src/ChuvadiReader.Ui/Pages/Redact.razor
 +++ b/src/ChuvadiReader.Ui/Pages/Redact.razor
-@@ -222,7 +222,7 @@
+@@ -221,7 +221,7 @@
      </div>
  
      <div class="mview-rails">

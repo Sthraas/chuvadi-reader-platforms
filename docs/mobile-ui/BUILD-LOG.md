@@ -442,3 +442,21 @@ Evidence:
   - With (today): Save as new stays visible; plain Save scrolls away in landscape.
   - Desktop for comparison: fits at 1440×900 and 1366×768; at 1280×720 Save as new is below the fold.
   - Pin kept until the coordinator decides (options in the status).
+
+## 10 Nov: D-150 and D-151 done; Foundation f88f9ef merged
+- Merged Foundation c91a581 (9 Nov) and f88f9ef (nineteenth combined patch).
+- **D-150** (mobile.css, tablet only): Mark's Save pins just above Save as new PDF at the foot of the tools
+  rail (48 px button + 4 px gap; only the gap is covered between them). Protect and Arrange keep their single
+  pinned action. Desktop untouched.
+- **D-151 → H-20 updated**: SideRail `Label` parameter (aria-label), Heading TOOLS on every tools rail with
+  the mode name as Label. Regenerated against f88f9ef as `mobile-ui-hooks-7.patch`.
+- checks.py: tablet Mark rail shows TOOLS, announces MARK, and both Saves stay in view at the rail's top,
+  middle and foot (1280×800 and 1024×768 scroll; 800×1280 fits).
+- Test hygiene: the preview keeps a tab's mode and zoom between runs, so the new Mark-rail check left the
+  next tablet run in Mark, where swipes don't page (3 false swipe failures). checks.py now returns to Read
+  and Fit page after its checks, and gestures.py starts in Read. Two back-to-back full runs: 66 / 66 pass.
+- Results:
+  - 367 tests (233 + 16 + 77 + 41) on the patched tree (localpackages from `scripts/setup-feed.sh`).
+  - Desktop before/after at 1440×900: Read, Mark, Arrange and the desk menu differ only in the rail heading
+    (40 × 6 px, READ / MARK / ARRANGE → TOOLS) and the clock; Home clock only; aria-labels unchanged
+    (READ, MARK, ARRANGE, PROTECT); 0 console errors.

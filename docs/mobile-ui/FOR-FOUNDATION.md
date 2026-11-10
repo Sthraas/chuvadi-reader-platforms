@@ -1,20 +1,23 @@
-# Mobile app UI → Foundation: hooks and hand-off (updated 9 Nov, 07:45)
+# Mobile app UI → Foundation: hooks and hand-off (updated 10 Nov)
 
 ## Outstanding for Foundation: H-20 (`proposal/mobile-ui-hooks-7.patch`)
-H-17, H-18 and H-19 landed in the twelfth combined patch, part 3 (bfffab6), exactly as written
-(reverse-apply check on 022b7c0). `mobile-ui-hooks-6.patch` moved to `proposal/landed/`.
+H-17, H-18 and H-19 landed in the twelfth combined patch, part 3 (bfffab6), exactly as written.
+H-20 applies cleanly to Foundation f88f9ef (regenerated against it on 10 Nov).
 
-### H-20: every tools rail is headed "TOOLS" (D-134; all platforms)
-(`Ui/Pages/Reader.razor`, `Ui/Pages/Bench.razor`, `Ui/Pages/Redact.razor`, +5 / −5)
-- D-134 (9 Nov 03:45): the tool rail heading becomes "TOOLS" on every platform. Foundation 022b7c0 has it
-  on the view-only rail only; Read, Mark, Protect (Reader and Redact) and Arrange still say READ, MARK,
-  PROTECT, ARRANGE. The diff changes those five `Heading=` values; nothing else.
-- Desktop: the rail heading text changes, as D-134 asks; nothing else moves.
-- **For:** D-134 as decided, on every platform at once.
-- **Against:** `SideRail` also uses the heading as the rail's `aria-label`, so a screen reader hears
-  "TOOLS" instead of the mode name. If that matters, SideRail could take a separate label (one parameter);
-  not in this diff.
-- D-135 (Save at the foot of the Mark rail): already true on every platform (Save, then Save as new PDF).
+### H-20: every tools rail is headed "TOOLS"; screen readers keep the mode name (D-134, D-151; all platforms)
+(`Ui/Components/Rails/SideRail.razor`, `Ui/Pages/Reader.razor`, `Ui/Pages/Bench.razor`,
+`Ui/Pages/Redact.razor`, +9 / −6)
+- `SideRail` gains `[Parameter] string? Label`: the rail's `aria-label` is `Label ?? Heading`. Rails without
+  a Label behave exactly as today.
+- The five tools rails show `Heading="TOOLS"` and keep their mode name as `Label`: READ, MARK, PROTECT
+  (Reader and Redact), ARRANGE. The view-only rail already said TOOLS and is unchanged.
+- So a screen reader hears exactly what it hears today (the mode name); only the visible text changes.
+- Desktop: only the rail heading text differs (before/after at 1440×900: a 40 × 6 px area at the heading,
+  plus the clock; no console errors).
+- **For:** D-134 on every platform at once; accessibility unchanged (D-151).
+- **Against:** none found; `Label` is optional, so other callers don't change.
+- D-135 (Save at the foot of the Mark rail): already true on every platform. On the tablet both Saves are
+  pinned at the foot while the rail scrolls (D-150, mobile.css only, touch only).
 
 ## Landed: H-17, H-18, H-19 (twelfth combined patch, part 3, bfffab6)
 Approved by the coordinator for Foundation (9 Nov 06:40). Desktop: static screens pixel-identical (clock
