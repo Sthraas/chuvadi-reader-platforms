@@ -32,6 +32,8 @@ let wheelHandler = null;
 let deskPointer = null;
 let panning = null;
 let penSplit = null;
+// A pen has touched the desk in this run (AT-15); kept across documents.
+let penSeen = false;
 let marq = null;
 let marqEl = null;
 let loupeEl = null;
@@ -78,7 +80,7 @@ function reportVisiblePage() {
     if (best >= 0) invoke('OnPageVisible', best + 1);
 }
 
-export function init(deskEl, dotnetRef) {
+export function init(deskEl, dotnetRef, newDocument) {
     dotnet = dotnetRef;
     teardownObservers();
     ratios = {};
@@ -109,9 +111,10 @@ export function init(deskEl, dotnetRef) {
 
     deskEl.querySelectorAll('[data-page]').forEach(el => { lazy.observe(el); spy.observe(el); });
 
-    // Keep the anchored page in view when page heights change.
+    // Keep the anchored page in view when page heights change. Another document starts with none: the last one's
+    // page would pull the new one to it (Android round 5: a shared PDF opened on page 1 and was on 4 of 4 with no input).
     if (anchorObs) anchorObs.disconnect();
-    anchor = anchor && deskEl.querySelector('.rpage-wrap[data-page="' + anchor.page + '"]') ? anchor : null;
+    anchor = !newDocument && anchor && deskEl.querySelector('.rpage-wrap[data-page="' + anchor.page + '"]') ? anchor : null;
     anchorObs = new ResizeObserver(() => {
         if (performance.now() < ownZoomUntil) { recordAnchor(); return; }
         reanchor();
@@ -370,9 +373,12 @@ function setupViewTools(deskEl) {
     // Tablets with a pen (<html data-input~="pen">, design 12e, D-42): the pen draws on the Mark
     // layer, a finger pans. A finger on a Mark layer never reaches its (Blazor) stroke handler and
     // pans the desk instead. data-input is absent on Windows, so nothing changes there.
+    // AT-15: a host says "pen" when the system supports one (Android always does), not when one is
+    // there, so the split starts only after a pen has touched the desk. Until then a finger marks.
     if (penSplit) deskRef.removeEventListener('pointerdown', penSplit, true);
     penSplit = (e) => {
-        if (e.pointerType !== 'touch') return;
+        if (e.pointerType === 'pen') { penSeen = true; return; }
+        if (e.pointerType !== 'touch' || !penSeen) return;
         if (!/(^|\s)pen(\s|$)/.test(document.documentElement.getAttribute('data-input') || '')) return;
         const layer = e.target && e.target.closest ? e.target.closest('.mk-layer') : null;
         if (!layer) return;
@@ -776,10 +782,23 @@ export async function scrollToMatch(deskEl, index) {
         if (hl) {
             suppressUntil = performance.now() + 1400;
             const d = deskEl.getBoundingClientRect(), h = hl.getBoundingClientRect();
-            const top = deskEl.scrollTop + (h.top - d.top) - Math.max(0, (deskEl.clientHeight - h.height) / 3);
+            const hTop = deskEl.scrollTop + (h.top - d.top), view = deskEl.clientHeight;
+            let top = hTop - Math.max(0, (view - h.height) / 3);
             const left = deskEl.scrollWidth > deskEl.clientWidth
                 ? deskEl.scrollLeft + (h.left - d.left) - Math.max(0, (deskEl.clientWidth - h.width) / 2)
                 : deskEl.scrollLeft;
+            const w = deskEl.querySelector('.rpage-wrap[data-page="' + index + '"]');
+            // Snapping pages place themselves; otherwise (a zoomed or tall page) the view is the match's.
+            if (w && !/^(y|both|block)/.test(getComputedStyle(deskEl).scrollSnapType || '')) {
+                const r = w.getBoundingClientRect(), wTop = deskEl.scrollTop + (r.top - d.top), wEnd = wTop + r.height;
+                // Stay on the match's page where the match allows (AT-09: a match at a page's foot, a third of the
+                // way down, left the next page covering most of the view, and the page box said that page).
+                if (top + view > wEnd && wEnd - view <= hTop) top = Math.max(wTop, wEnd - view);
+                if (top < wTop && wTop + view >= hTop + h.height) top = wTop;
+                // The match, not its page's top, stays in view while page heights change (AT-09: a page drawn
+                // during the scroll put the view back on the page's top, the match below it off screen).
+                if (r.height) anchor = { page: index, frac: Math.max(0, (top - wTop) / r.height) };
+            }
             deskEl.scrollTo({ top, left, behavior: 'smooth' });
             return;
         }

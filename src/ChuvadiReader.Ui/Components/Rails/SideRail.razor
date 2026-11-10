@@ -1,8 +1,10 @@
 @*
     A right-hand rail. Kind "tools" (64 px, nearest the page, follows the mode) or "view"
     (54 px, outermost). Expands leftwards over the canvas on hover to show labels.
+    Heading is what the rail shows; Label is what a screen reader hears (D-151): the tools rail shows
+    "TOOLS" everywhere, its label keeps the mode name.
 *@
-<aside class="srail srail-@Kind" aria-label="@Heading">
+<aside class="srail srail-@Kind" aria-label="@(Label ?? Heading)">
     <span class="srail-h">@Heading</span>
     @ChildContent
 </aside>
@@ -10,5 +12,6 @@
 @code {
     [Parameter] public string Kind { get; set; } = "tools";
     [Parameter] public string Heading { get; set; } = "TOOLS";
+    [Parameter] public string? Label { get; set; }
     [Parameter] public RenderFragment? ChildContent { get; set; }
 }

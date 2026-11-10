@@ -73,7 +73,13 @@ public sealed class MemoryAfterCloseTests
         var before = Measure();
 
         var drawnChars = await OpenDrawClose(path);
+
+        // PR #13's first Windows run measured 72 MB still live, once: this method had carried on inline, on top of
+        // OpenDrawClose's own frame, which still held the drawn page (gcroot: a stack slot of that frame). Leave
+        // the helper's frame before measuring.
+        await Task.Yield();
         await (MemoryRelief.Last ?? Task.CompletedTask).WaitAsync(TimeSpan.FromSeconds(30));
+        await Task.Yield();
         var after = Measure();
 
         const long mb = 1024 * 1024;
