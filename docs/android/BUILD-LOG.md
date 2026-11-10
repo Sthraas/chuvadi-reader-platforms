@@ -710,3 +710,8 @@ same screen; no crash), smoke pass. With round 6 (API 36 phone and tablet, all c
   Covered by Foundation's `PageImageFileProviderTests`; no raster page in our device fixtures yet.
 - Composition: Foundation `846706e` + Mobile UI `c5c0b7e` (clean). Sandbox: Android Debug and Release `-warnaserror`
   0 warnings; Release manifest 14/14; Core 247, Hosting 82, MobileUi 16, WebUi 41 pass.
+- **Run 42752591502** (phone and tablet API 36, full, 68a00b1 on 846706e): **AT-12 pass on both** (.docx again: 3 → 3
+  tabs, .docx in front); AT-11 pass on both; Release launch pass on both; phone 29/29, gestures 10/10 and 9/9. Tablet
+  26/27: "keyboard → next page" — the shared PDF was on page 4 of 4 before the key (the page drift from f88f9ef, with
+  Foundation; not the keyboard).
+- Handed to Android Test: head **68a00b1** for AT-12 (and D-158 page images).
