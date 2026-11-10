@@ -1436,6 +1436,67 @@ def t4_0d():
     quit_app()
 
 
+@case("P25 files from Finder (cold, several at once, Word)")
+def p25():
+    """Foundation patch 25: cold open goes straight into the Reader; several files at once all become tabs."""
+    ev, bad = {}, []
+
+    def tabs_in(txt, names):
+        return [n for n in names if n in txt]
+
+    # (a) cold start, Open With one PDF
+    reset_state({"theme": "light"})
+    quit_app()
+    launch(f"{FX}/five-pages.pdf", settle=0.5)
+    ev["a_early_shot"] = shot("p25-a-cold-one-early")
+    time.sleep(6)
+    t = axdump("p25-a-cold-one")
+    ev["a"] = {"tab": "five-pages.pdf" in t, "page": bool(re.search(r"page \d+ of 5|of 5", t)), "home_showing": "Open a document to begin" in t,
+               "error": ui_error(), "procs": len(pids()), "shot": shot("p25-a-cold-one")}
+    if not (ev["a"]["tab"] and ev["a"]["page"] and not ev["a"]["error"] and ev["a"]["procs"] == 1):
+        bad.append("cold start with one PDF")
+    quit_app()
+
+    # (b) cold start with four files at once, one of them Word
+    four = ["five-pages.pdf", "second.pdf", "third.pdf", "sample.docx"]
+    reset_state({"theme": "light"})
+    launch(*[f"{FX}/{n}" for n in four], settle=10)
+    t = axdump("p25-b-cold-four")
+    got = tabs_in(t, four)
+    ev["b"] = {"tabs": got, "error": ui_error(), "procs": len(pids()), "shot": shot("p25-b-cold-four")}
+    if len(got) != 4 or ev["b"]["error"] or ev["b"]["procs"] != 1:
+        bad.append(f"cold start with four files (tabs {got})")
+
+    # (c) six more while running, in one go
+    six = ["many-pages.pdf", "annotated.pdf", "sample.xlsx", "notes.md", "notes.txt", "page.html"]
+    sh(["open", "-a", APP, *[f"{FX}/{n}" for n in six]])
+    time.sleep(12)
+    t = axdump("p25-c-six-more")
+    got = tabs_in(t, four + six)
+    ev["c"] = {"tabs": got, "missing": [n for n in four + six if n not in got], "error": ui_error(), "procs": len(pids()),
+               "shot": shot("p25-c-six-more")}
+    if len(got) != 10 or ev["c"]["error"] or ev["c"]["procs"] != 1:
+        bad.append(f"six more while running (missing {ev['c']['missing']})")
+    # the tab keys still land right with ten tabs: ⌘1 → five-pages (5 pages)
+    drive("key", "cmd+1")
+    time.sleep(2)
+    t = axdump("p25-c-cmd1")
+    ev["c"]["cmd1_first_tab"] = bool(re.search(r"of 5\b", " ".join(l for l in t.splitlines() if re.search(r"page \d+ of \d+", l))))
+    quit_app()
+
+    # (d) Word file on a cold start
+    reset_state({"theme": "light"})
+    launch(f"{FX}/sample.docx", settle=8)
+    t = axdump("p25-d-word")
+    ev["d"] = {"tab": "sample.docx" in t, "text": "marker-docx" in t, "error": ui_error(), "shot": shot("p25-d-word"),
+               "notes": [l.strip()[:200] for l in t.splitlines() if re.search(r"skipp|not shown|left out|couldn", l, re.I)][:5]}
+    if not (ev["d"]["tab"] and ev["d"]["text"] and not ev["d"]["error"]):
+        bad.append("Word file on a cold start")
+    quit_app()
+    record("P25 files from Finder (cold, several at once, Word)", "fail" if bad else "pass",
+           f"failed: {bad}" if bad else f"cold one → Reader; cold four → 4 tabs; six more → 10 tabs; ⌘1 first tab={ev['c']['cmd1_first_tab']}; Word shows its text", **ev)
+
+
 @case("M-14 .NET message in Details")
 def m14():
     src = f"{FX}/noaccess.pdf"
@@ -1471,6 +1532,7 @@ def main():
         m18()
         return
     if A.suite == "shared":
+        p25()
         t4_0()
         t4_0d()
         m_shared()
