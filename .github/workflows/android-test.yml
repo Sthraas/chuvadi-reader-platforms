@@ -84,7 +84,8 @@ jobs:
       - name: Compose (the Android chat's compose.sh; a Mobile UI hook patch that no longer applies either way is reported and skipped)
         run: |
           set -o pipefail
-          sed 's#echo "$(basename "$PATCH") does not apply"; exit 1#echo "WARNING: $(basename "$PATCH") does not apply either way: skipped (hooks reported landed in Foundation)"#' \
+          sed -e 's#echo "$(basename "$PATCH") does not apply"; exit 1#echo "WARNING: $(basename "$PATCH") does not apply either way: skipped (reported landed in Foundation)"#' \
+              -e 's#echo "$(basename "$P") does not apply"; exit 1#echo "WARNING: $(basename "$P") does not apply either way: skipped (reported landed in Foundation)"#' \
             android/docs/android/integration/compose.sh > compose-test.sh
           bash compose-test.sh reader ${{ steps.plan.outputs.mobileui_ref }} android 2>&1 | tee compose.txt
       - uses: actions/setup-dotnet@v4
