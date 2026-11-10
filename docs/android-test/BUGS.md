@@ -9,7 +9,7 @@ run [42518447149](https://github.com/Sthraas/chuvadi-reader-platforms/actions/ru
 
 ---
 
-## AT-03 · S1 · Foundation (+ Android CI) · fixed in Foundation c91a581 — to verify on Release — The Release app crashes at every launch (trimmed constructor)
+## AT-03 · S1 · Foundation (+ Android CI) · **verified** (Foundation f88f9ef + Mobile UI d34d542 + Android d134c74, run 42739175820: as-built Release 0 crashes in 3 launches on phone API 35, phone API 36, tablet API 36) — The Release app crashes at every launch (trimmed constructor)
 **Steps:** install the Release `.apk` from the build above (the same build as the Play `.aab`) on any emulator; tap the icon,
 or Open with a PDF.
 **Expected:** the app starts.

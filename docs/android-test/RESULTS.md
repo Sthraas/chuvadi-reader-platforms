@@ -100,6 +100,16 @@ to Release-only behaviour (trimming, AOT).
 | R-07 | Fresh install (data cleared): first-run box, no samples, no name (R4b) | **PASS** ("Open your first document") | **PASS** |
 | R-10 | No crash / ANR in the suite (Debug) | **PASS** — the 4 FATAL lines in the log are the as-built Release launches before the suite (AT-03); logcat is now cleared before the suites | **PASS** (same) |
 
+## Round 4d (run 42739175820; Foundation f88f9ef + Mobile UI d34d542 + Android d134c74)
+Compose note: `P-08-path-labels.patch` (Android proposal) no longer applies either way on f88f9ef — Foundation took P-08 in its own
+form; skipped and reported. Android is rebasing.
+| # | Case | Result |
+|---|---|---|
+| B-12 | As-built Release starts (AT-03) | **PASS** — 0 crashes, 3 of 3 first frames, phone API 35, phone API 36, tablet API 36 |
+| F-13 | D-105 gate, stock API 35 (WebView 124.0.6367.219) | **PASS** — "One small update first … needs version 128 or newer. On this device it is version 124.0.6367.219 … free from Google Play"; app alive, no crash |
+| F-13b | API 36 (WebView 133): no update screen | **PASS** |
+| F-04, F-06, F-07, F-11d, F-03c/d | Markup, forms, redaction, print card, typing in other fields | test tool didn't reach the controls (a Mark tap landed in the system image picker; redaction drag drew 0 boxes; sheet selector) — diagnostics added, R4e |
+
 ## Blocked in CI: Reader on Android 15 (API 35)
 The API 35 image ships WebView 124, so the app correctly shows only its update screen (D-105). Updating it in CI from the API 36
 image's WebView failed twice: that WebView needs the Trichrome static library, which my donor job couldn't locate on the API 36
