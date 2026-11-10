@@ -195,6 +195,22 @@ compare Foundation's B-24 "a stalled read never freezes the Reader") rather than
 Release once AT-03 lands. **Evidence:** R4 › results-phone-api36 › robust/; R4b › results-tablet-api36 › robust/ (screenshots,
 results.jsonl with PSS and `top`).
 
+## AT-14 · S3 · Android (build settings) · open — Cold "Open with" takes 3.9 s (phone) / 6.0 s (tablet) to paint page 1 on Release
+**Evidence:** R4e (run 42741617577), table in RESULTS §2: from the launch to page 1 painted, median 3,920 ms phone and 6,028 ms
+tablet over 12 cold runs, while the activity's first frame is ~1.2–1.5 s. The Release uses MAUI's default **profiled AOT**: the
+startup profile covers MAUI and the BCL, but Chuvadi's assemblies get 4–14 KB AOT images each (B-08), i.e. the PDF open, parse
+and render path is JIT-compiled on every cold start.
+**Expected:** Arun asked for loads in milliseconds; first page well under 2 s on a mid-range phone.
+**Options (for the coordinator; each to be measured by this chat before deciding):**
+- (a) **Record a Chuvadi AOT profile** (startup + Open with + first render) and ship it with MAUI's (`AndroidAotProfile` items).
+  *Pros:* precompiles exactly the hot path; small size cost. *Cons:* a recording step to keep current (CI can record it on the
+  emulator each release).
+- (b) **Full AOT** (`AndroidEnableProfiledAot=false`). *Pros:* everything precompiled, no profile to maintain. *Cons:* bigger
+  download (typically +30–60 %), longer build.
+- (c) **Leave as is.** *Cons:* 4–6 s first page.
+**Recommendation:** let me build (a) and (b) as test-only variants in one run and report both numbers and sizes; then decide.
+Startup trimming / work deferral in Foundation (B-29) already applies; this is about JIT on the open/render path.
+
 ## Questions for the coordinator (not filed as bugs)
 - **Q-1 Same file opened again → new tab** — answered by the coordinator (9 Nov 07:12): Windows is the reference. Checked the shared
   code and filed the difference as **AT-12** (Android).

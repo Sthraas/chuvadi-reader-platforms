@@ -22,9 +22,17 @@ Mobile UI 95b9d79 + Android 7ec8017; cancelled after the API 35 jobs proved AT-0
 | B-11 | Play data safety | **FAIL (wording) → AT-01** — answers ("no data collected") match the package (no INTERNET, backups off); the basis line about libraries is wrong | PLAY-DATA-SAFETY.md |
 | B-12 | **Release package starts** | **FAIL → AT-03 (S1)** — crashes at every launch (trimmed seam constructors) | R1 › results-*-api35 › dropbox.txt |
 
-## 2. Startup
-**Release: not measurable yet** — the shipped Release never reaches a first frame (AT-03; R1c re-confirmed 3 of 3 launches crash on
-API 36 phone and tablet). R1c's test-only rooted build still crashed (the build reused the previous link output); R2 rebuilds it clean.
+## 2. Startup — **Release** (R4e, run 42741617577; Foundation f88f9ef + Mobile UI d34d542 + Android d134c74), API 36
+The as-built Release `.apk` (profiled AOT, as shipped). 12 runs each after one discarded warm-up; device-clock ms from
+ActivityTaskManager's launch. "UI painted" / "page 1 painted" come from an in-page probe (the emulator images are userdebug, so the
+Release WebView is inspectable there; it isn't on a user build).
+| Emulator | Cold → first frame | Cold → UI painted | Warm → first frame | Hot → first frame | Cold Open with → first frame | Cold Open with → page 1 painted |
+|---|---|---|---|---|---|---|
+| Phone (pixel_7) | **1,045** (worst 2,601) | **1,562** (worst 4,318) | **149** (worst 275) | **157** (worst 280) | **1,155** (worst 1,246) | **3,920** (worst 4,314) |
+| Tablet (pixel_tablet) | **1,607** (worst 2,601) | **2,215** (worst 3,918) | **241** (worst 402) | **264** (worst 463) | **1,494** (worst 1,786) | **6,028** (worst 6,516) |
+Against Debug (R1): cold UI −27 % phone / −23 % tablet; cold first page −7 % / −15 %. Warm "UI painted": no valid sample (the
+probe always arrived after the paint — reported as upper bounds in `warm.json`). x86_64 emulators with a software GPU on shared
+runners: compare between rounds, not with a phone in the hand. Cold first page is the slow spot → **AT-14**.
 
 **Preliminary, Debug x64 build of the same composition (JIT, no AOT, not what ships), API 36, 12 runs, device clock, ms:**
 | Emulator | Cold → first frame | Cold → UI painted | Warm → first frame | Hot → first frame | Cold Open with → first frame | Cold Open with → page 1 painted |
