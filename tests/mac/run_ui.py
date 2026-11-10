@@ -889,7 +889,7 @@ def t3_5():
     ev["dock"] = screen("screen-with-dock")
     record("T3.5 window + immersive + keys", "pass" if ev["immersive_on_ctrl_cmd_f"] and ev["escape_leaves"] and ev["minimized"] else "fail",
            f"⌃⌘F → Immersive={ev['immersive_on_ctrl_cmd_f']}; Esc leaves={ev['escape_leaves']}; F11 enters={ev['f11_enters']}; "
-           f"⌃Tab switches tab={ev['ctrl_tab_changed_screen']} (M-08, shared); minimise={ev['minimized']}", **ev)
+           f"minimise={ev['minimized']} (tab keys: see the M-08 case)", **ev)
     quit_app()
 
 
