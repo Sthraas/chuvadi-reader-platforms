@@ -838,6 +838,18 @@ def t3_5():
     time.sleep(2.5)
     ev["immersive-shot"] = shot("light-reader-immersive")
     ev["immersive_on_ctrl_cmd_f"] = find("exit", timeout=2)[0] == 0
+    if not ev["immersive_on_ctrl_cmd_f"]:
+        # seen once on 15-Intel (a7be951): Immersive on, page left as its "page 1" placeholder, no exit button, keys dead.
+        # Keep what the process is doing (main-thread stack) and look again later to tell slow from stuck.
+        os.makedirs(f"{OUT}/logs", exist_ok=True)
+        pid = (pids() or [""])[0]
+        sh(f"sample {pid} 3 -file {OUT}/logs/t3_5-stuck-sample.txt", timeout=60)
+        _, cpu = sh(f"ps -o %cpu=,rss=,state= -p {pid}")
+        ev["stuck_ps"] = cpu.strip()
+        time.sleep(15)
+        ev["stuck_shot_after_20s"] = shot("t3_5-stuck-after-20s")
+        ev["stuck_exit_after_20s"] = find("exit", timeout=2)[0] == 0
+        ev["stuck_ax_lines"] = len(axdump("t3_5-stuck").splitlines())
     drive("key", "escape")
     time.sleep(1.5)
     ev["escape_leaves"] = find("exit", timeout=1)[0] != 0
