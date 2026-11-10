@@ -1,0 +1,14 @@
+diff --git a/src/ChuvadiReader.Ui/Components/Viewers/DocxView.razor.css b/src/ChuvadiReader.Ui/Components/Viewers/DocxView.razor.css
+index 0ca301c6..fff179db 100644
+--- a/src/ChuvadiReader.Ui/Components/Viewers/DocxView.razor.css
++++ b/src/ChuvadiReader.Ui/Components/Viewers/DocxView.razor.css
+@@ -41,6 +41,7 @@
+ .dv-header { margin: -28px -16px 22px; padding: 0 16px 10px; border-bottom: 1px solid #e2e6ec; }
+ .dv-footer { margin: 24px -16px -28px; padding: 12px 16px 0; border-top: 1px solid #e2e6ec; }
+ 
+-/* D-168: the file refers to something that could not be read; say so above the page. */
+-.dv-leftout { max-width: 794px; margin: 0 auto 14px; padding: 8px 14px; border: 1px solid #e6c87a; border-radius: 6px;
++/* D-168: the file refers to something that could not be read; say so above the page, with the page's own side
++   margins on a narrow screen (the sheet is calc(100% - 48px) wide there). */
++.dv-leftout { max-width: min(794px, calc(100% - 48px)); margin: 0 auto 14px; padding: 8px 14px; border: 1px solid #e6c87a; border-radius: 6px;
+     background: #fff8e1; color: #5b4300; font-size: 13px; }

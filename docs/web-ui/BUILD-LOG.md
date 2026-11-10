@@ -332,3 +332,23 @@ Raised with the coordinator for the Foundation.
 - Web Test `BUGS.md` / `RESULTS.md` at 6a6e981: **WT-03, WT-04 and WT-06 are verified fixed in three engines on `platform/web` d183ea8** (10 Nov 07:30–08:40). WT-05 was verified in 1b32ad8 and is unchanged. The WT-10 label and its Arrange addendum were verified in c38bd80 (no "Fetch" on the portal). Q-3 ("this session") is green in the regression run and in `verify_fixes.py`.
 - Nothing in Web Test's documents is open against the Web portal UI. The open items, WT-17 to WT-21, are Core, Foundation or Web items.
 - One note for Web Test's WT-17 re-test on patch 24: until `proposal/web-ui-xlsx-value-bar-race.patch` is applied, the Excel value bar turns on in only about 4 of 10 opens in the portal.
+
+## 2026-11-11 — session 20 (coordinator 02:35: merge the latest Foundation, patch 25 parts 1–4; Word "left out" note)
+
+### 1. Branches and merge
+Checked all: `platform/foundation-pr` 742a5da, `platform/foundation` 382aada, `main` 159d04b, `platform/web` 04cdd21, `platform/web-test` aa25188, `platform/mobile-ui` 5c66f1a. As on 10 Nov (confirmed by the coordinator at 23:35), I merged **`platform/foundation` 382aada**: `src`, `tests`, `tools` and `ci` are identical to foundation-pr 742a5da, and the merge is clean. After the merge `src` equals foundation-pr's.
+
+### 2. Build and tests
+Build `-warnaserror` 0 warnings. Tests 305 + 16 + 41 + 91 = **453 pass**, 0 fail, 3 skipped (the Foundation's).
+
+### 3. Portal surfaces against df9c399
+63 screenshots (three browsers × desktop / tablet / phone; 12a, 12c, Home, 12b, Settings › Account, Arrange, Redact, phone ⋮ sheet): **text and pixels identical in all 63**. Drop overlay 6 of 6.
+
+### 4. Word files: parts left out (D-168)
+I made damaged copies as the tests do: a broken `word/header1.xml` in `discharge.docx`, and `landscape.docx` without its picture.
+- The note shows above the page in all three browsers at all three sizes: "Part of this document is damaged and is left out: a header." / "… a picture." A sound file shows no note. There are no page errors and no sideways scroll.
+- Look: LiPi Sans 13 px on a pale yellow box (fixed colours, the same in Night paper, where the Word page also stays white). On desktop it is exactly as wide as the page.
+- **Found**: on tablet and phone the note is wider than the page (edge to edge on a phone). A one-rule diff is sent to the Foundation: `proposal/web-ui-docx-leftout-margins.patch` (HOOKS). The Foundation's file is reverted here.
+
+### 5. Excel value bar
+Not in yet (it goes into the Foundation's part 5); `proposal/web-ui-xlsx-value-bar-race.patch` still applies to 382aada. Measured again on this build: the bar came up in 6 of 18 opens.

@@ -1,5 +1,19 @@
 # Web portal UI — existing-file hooks
 
+## Still to apply — the Word "left out" note is wider than the page on tablet and phone (found 11 Nov, re-checking patch 25 part 4 / D-168)
+**`proposal/web-ui-docx-leftout-margins.patch`**, against foundation **382aada** (= foundation-pr 742a5da for `src`; applies cleanly). One of the Foundation's files, `Components/Viewers/DocxView.razor.css`, one rule:
+`.dv-leftout { max-width: 794px; … }` → `max-width: min(794px, calc(100% - 48px));`. The sheet is `width: 794px; max-width: calc(100% - 48px)`, so on a narrow stage the note was wider than the page. The colours and text are untouched.
+
+Measured (preview, `leftout-header.docx` = the tests' damaged-header copy of `discharge.docx`; left–right edges in px, the same in Chromium, Firefox and WebKit unless noted):
+
+| Size | Page | Note without the patch | Note with the patch |
+|---|---|---|---|
+| Desktop 1280 (Web and Windows profiles) | 288–1082 (WebKit 283–1077) | same as the page | same as the page (unchanged) |
+| Tablet 1024 touch | 96–868 | 85–879 (11 px wider each side) | 96–868 |
+| Phone 390 touch | 24–366 | 0–390 (edge to edge) | 24–366 |
+
+Screenshots: `screenshots/chromium-docx-leftout-phone-before-after.png`, `screenshots/chromium-docx-leftout-desktop.png`. Not a portal-only matter: Android phones and tablets get the same rule.
+
 ## Still to apply — the Excel value bar often never turns on in the portal (found 10 Nov, re-checking patch 24 / D-161)
 **`proposal/web-ui-xlsx-value-bar-race.patch`**, against foundation **ec09f4f** (= foundation-pr dd59362 for `src`; applies cleanly). Two of the Foundation's files, 12 lines added and 4 removed:
 - `Components/Viewers/XlsxView.razor`: `OnAfterRenderAsync` set `_valueBarOn = true` before calling the script. That call can belong to a render from before the grid was drawn: the workbook finishes loading while the "busy" render is on its way to the browser, which is the normal case on Blazor Server. The script then finds no grid and does nothing, and it is never asked again. Now the flag is set only when the script says the listener is on (`JsAsync<bool>`), and only if no reload happened meanwhile (`_version`).
