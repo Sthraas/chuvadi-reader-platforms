@@ -77,6 +77,23 @@ public sealed class PlainPathLabels : IPathLabels
     public string Describe(string? path) => path ?? string.Empty;
 }
 
+/// <summary>
+/// D-158: whose drawn page images these are. A page image is served only to its owner. In the app hosts there is one
+/// person and one process, so the default is a constant. The portal registers its own (per connection): the
+/// signed-in user and their session, the same value its page-image endpoint checks on every request.
+/// </summary>
+public interface IPageImageOwner
+{
+    /// <summary>The owner of images drawn now. Never null.</summary>
+    string Current { get; }
+}
+
+/// <summary>Default for the app hosts (Windows, macOS, Linux, Android): one person per process.</summary>
+public sealed class LocalPageImageOwner : IPageImageOwner
+{
+    public string Current => "local";
+}
+
 /// <summary>Folders the app uses. Replaces direct use of Environment.SpecialFolder in Core and Ui.</summary>
 public interface IAppPaths
 {

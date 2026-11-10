@@ -64,6 +64,8 @@ public sealed class TypedRegistrationTests
         "IAppLifecycle = NoAppLifecycle",
         "IFileManager = NoFileManager",
         "IPathLabels = PlainPathLabels", // P-08 (D-146), the first default added after this test
+        "IPageImageOwner = LocalPageImageOwner", // D-158
+        "PageImages = PageImages",               // D-158: one per process
     ];
 
     [Theory]
@@ -75,7 +77,8 @@ public sealed class TypedRegistrationTests
         services.AddChuvadiReader(lifetime);
 
         Assert.Equal(Before, services.Select(d => $"{d.ServiceType.Name} = {d.ImplementationType!.Name}"));
-        Assert.All(services, d => Assert.Equal(expected, d.Lifetime));
+        Assert.All(services.Where(d => d.ServiceType != typeof(ChuvadiReader.Core.Reader.PageImages)), d => Assert.Equal(expected, d.Lifetime));
+        Assert.Equal(ServiceLifetime.Singleton, services.Single(d => d.ServiceType == typeof(ChuvadiReader.Core.Reader.PageImages)).Lifetime);
     }
 
     [Fact]
