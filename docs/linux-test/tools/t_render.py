@@ -4,7 +4,7 @@ import helpers as h, threading
 from lt_base import *
 CAD, LABEL = sys.argv[1], sys.argv[2]; RUNS = int(sys.argv[3]) if len(sys.argv) > 3 else 1
 AFTER = [int(x) for x in os.environ.get("AFTER","2,10,30,60,90").split(",")]
-HEAVY = "/home/claude/heavy10"; GC = os.environ.get("GC") == "1"; FIVE = "/home/claude/lt/five-pages.pdf"
+HEAVY = os.environ.get("HEAVY", "/home/claude/heavy10"); GC = os.environ.get("GC") == "1"; FIVE = "/home/claude/lt/five-pages.pdf"
 
 def ping():
     t0 = time.time(); a.js("return 1"); return time.time() - t0
@@ -107,6 +107,8 @@ for r in range(RUNS):
         a.launch(); time.sleep(4)
         if LABEL == "full":
             t36a(); t36b(HEAVY + "/cad.pdf", "stand-in"); t36b(CAD, "real CAD"); t36c(HEAVY + "/cad.pdf", "stand-in, after 36a/b"); t36c(CAD, "real CAD, after the rest")
+        elif LABEL == "paging":
+            t36a()
         elif LABEL == "jumps":
             t_jumps(CAD, r + 1)
         elif LABEL == "close":

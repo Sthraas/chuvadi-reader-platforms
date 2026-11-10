@@ -314,7 +314,7 @@ as on 64c9c16. Ready for Arun's check, with these known:
 - Findings 1 and 2.
 - A red x64 CI run.
 
-## Sign-off — Linux d918161 (10 Nov): ready for Arun
+## Sign-off — Linux d918161 (10 Nov) — superseded by bf60da9 below
 
 **Build and CI.** Built from source. [CI run 42731544977](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/42731544977)
 is green on x64 and arm64; the red x64 36c from 8dcf4d8 is gone.
@@ -365,9 +365,64 @@ No files are left in `/tmp`.
   - The library items B-08a, B-09a (library side) and B-11a.
 - The real-machine checks above still need a real desktop: GPU, GNOME Wayland/KDE, a real printer, Files/Dolphin, and fractional scaling.
 
-## Arun's check — Linux d918161
+## Sign-off — Linux bf60da9 (10 Nov): ready for Arun
 
-**Get the package.** GitHub → `Sthraas/chuvadi-reader-platforms` → Actions → run **Linux** on `d918161` ([run 42731544977](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/42731544977), green) → Artifacts → **linux-x64** (ARM machine: `linux-arm64`). Unzip it and use **`deb/chuvadi-reader_1.0.0~preview_amd64.deb`** — the self-contained one (37.8 MB, needs no .NET; artifacts kept until 8 Feb 2027). SHA-256 `24c060eaaf24d3e0182f490da35301ded4ea9982b8842efa9c6924ee1b07bc94`. (`deb-framework-dependent/` is the smaller variant that pulls in Microsoft's .NET runtime package.) Or with the CLI: `gh run download 42731544977 -R Sthraas/chuvadi-reader-platforms -n linux-x64`.
+**Build and CI.** Built from source. [CI run 42756482625](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/42756482625)
+is green on x64 and arm64. This replaces the d918161 sign-off above.
+
+**With Arun's real CAD file** (2 vCPU, no GPU):
+
+| Item | Result |
+|---|---|
+| Memory after closing (B-30) ✅ | App back to 267–270 MB 2 s after closing, against 247–250 MB before opening. See the table below |
+| Page images by address (36d) ✅ | All 5 sheets are pixel-identical to d918161 (same hash for every pixel). Each page's markup drops from 2.7–4.4 MB to 964 characters. Zooming in and out keeps the image; nothing goes blank |
+| Fast paging ✅ | The page answers in ≤ 0.10 s, and the landed page is drawn |
+| Close mid-render (B-29) ✅ | The next file draws in 0.25–0.28 s, 6 of 6 |
+| Cancelled sheets ✅ | A page-box jump lands on the right sheet, and cancelled sheets draw when paged back to |
+| Sheet times (B-27, open, library) | Sheet 1 takes 5.8–6.4 s; each new sheet takes 3.6–5.7 s. The window answers in ≤ 0.09 s |
+
+Memory, app / WebKit, in MB:
+
+| Point | Memory |
+|---|---|
+| Before opening | ~250 / 220 |
+| 5 sheets | 862–985 / ~595 (was ~1.9 GB) |
+| 2–60 s after closing | 267–270 / ~585 |
+
+WebKit's web process keeps ~365 MB more than at the start; that is recorded.
+
+**Intermittent fresh-open stall (reported by Linux): not reproduced** in 32 fresh starts, opened four ways, 12 of
+them under CPU load. I did catch its starting state: 115 % zoom, with sheet 1 as a portrait placeholder. It
+sometimes outlasts the first draw before the view fits. The steps and numbers are in BUGS.md. It's with Foundation,
+and it doesn't block.
+
+**Quick regression ✅**
+
+| Case | Result |
+|---|---|
+| B-24 + B-08b Cancel | `.pdf`, `.xlsx`, `.docx`: Cancel at 10.1–10.3 s, the tab closes, and the next file opens |
+| B-25 | WT-10 wording with Details for Excel, Word and PDF |
+| Owner-password printing | User password: refused, 0 jobs. Owner password: 5 vector pages |
+| Single instance | One window, 4 tabs |
+| Drops | 2 tabs |
+| Print | Byte-identical |
+| B-26 | Raw values (D-147) |
+
+No files are left in `/tmp`.
+
+**Ready.** Linux at bf60da9 is ready for Arun's check.
+- Everything Linux-routed and shared is verified fixed: B-01 to B-25, B-28, B-29, B-30, and Linux's render findings.
+- Deferred or by design: B-18 (D-133) and B-26 (D-147).
+- Open, not blocking:
+  - B-27: sheets take seconds; the fix is in the library's rasteriser.
+  - The intermittent fresh-open stall.
+  - WebKit's memory after closing.
+  - The library items B-08a, B-09a (library side) and B-11a.
+- The real-machine checks still need a real desktop.
+
+## Arun's check — Linux bf60da9
+
+**Get the package.** GitHub → `Sthraas/chuvadi-reader-platforms` → Actions → run **Linux** on `bf60da9` ([run 42756482625](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/42756482625), green) → Artifacts → **linux-x64** (ARM machine: `linux-arm64`). Unzip it and use **`deb/chuvadi-reader_1.0.0~preview_amd64.deb`** — the self-contained one (37.8 MB, needs no .NET; artifacts kept until 8 Feb 2027). SHA-256 `4bb65be7870e2f164257ae9db76a2f40aa5af42ed021a0e19916e83404e2c0b3`. (`deb-framework-dependent/` is the smaller variant that pulls in Microsoft's .NET runtime package.) Or with the CLI: `gh run download 42756482625 -R Sthraas/chuvadi-reader-platforms -n linux-x64`.
 
 **Install** (Ubuntu 24.04 or 26.04, desktop):
 ```
@@ -381,7 +436,7 @@ It appears in the app grid as **Chuvadi Reader**; it also installs and loads its
 1. **Start from the app grid**, cold and again warm — note how long until Home shows (here: ~1.0 s warm on 2 CPUs without a GPU).
 2. **Open a PDF by double-clicking it in Files**, then select **three files** → right-click → Open With → Chuvadi: each becomes its own tab in the one window.
 3. **Drag two files from Files onto the window** — two tabs.
-4. **The KDMC CAD drawing**: open it, page through all 5 sheets (try typing a sheet number, and jumping ahead then back), close it. Note the time each sheet takes to draw, and the memory in System Monitor before opening, with 5 sheets, and a minute or two after closing. Here, on 2 CPUs with no GPU: sheet 1 takes ~5 s and each new sheet 3–5 s; memory drops to roughly a third on closing but not back to the start (B-27, B-30, both known). Your real-hardware numbers are the useful ones. The window should stay responsive while it draws, and every sheet should draw.
+4. **The KDMC CAD drawing**: open it, page through all 5 sheets (try typing a sheet number, and jumping ahead then back), zoom in and out, close it. Note the time each sheet takes to draw, and the memory in System Monitor before opening, with 5 sheets, and just after closing. Here, on 2 CPUs with no GPU: sheet 1 takes ~6 s and each new sheet 4–6 s (B-27, known); the app goes from ~250 MB to ~0.9–1 GB with 5 sheets and back to ~270 MB on closing. Your real-hardware numbers are the useful ones. The window should stay responsive while it draws, and every sheet should draw and stay sharp. **One thing to watch for:** if a freshly opened drawing ever sits at 115 % with sheet 1 as a tall blank page and never draws, note exactly what you did just before. It's a rare stall we haven't been able to reproduce.
 5. **Print to your real printer**: a mixed portrait/landscape file, 2 copies; check it's crisp (vector), and that a file whose permissions forbid printing is refused — then works when opened with its owner password.
 6. **A password-protected PDF**: wrong password, then the right one.
 7. **Mark → annotate → Save as**, and **Protect → Find & redact** a word → Save redacted copy — then search the saved copy for the word (it must be gone).
