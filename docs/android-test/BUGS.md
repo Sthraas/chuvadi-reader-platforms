@@ -46,7 +46,7 @@ case, **plus** the Android workflow running the Release `.apk` on at least one e
 check the Mac Catalyst Release build for the same crash.** Until (a) lands, this chat tests a Release build with (c) applied in
 the test composition only, marked as such, so startup and design results reflect the shipping configuration.
 
-## AT-01 · S2 · Android + Foundation · waiting on Arun (rule 3; coordinator 9 Nov) — Third-party notices leave out AndroidX, Material Components and Kotlin, which ship in the app
+## AT-01 · S2 · Android + Foundation · Arun accepted the MAUI libraries (D-143); notices added by Foundation (PR #12, 255aee2) — re-verifying in-app (R6) — Third-party notices leave out AndroidX, Material Components and Kotlin, which ship in the app
 **Steps:** build Release; list `obj/Release/net10.0-android/android-arm64/linked/*.dll` and the dex (`audit/assemblies.txt`,
 `audit/apk-contents.txt`); open About › Licences.
 **Expected:** every third-party component that ships has its notice (Apache-2.0 §4(d) requires it), and the Play data-safety
@@ -195,7 +195,7 @@ compare Foundation's B-24 "a stalled read never freezes the Reader") rather than
 Release once AT-03 lands. **Evidence:** R4 › results-phone-api36 › robust/; R4b › results-tablet-api36 › robust/ (screenshots,
 results.jsonl with PSS and `top`).
 
-## AT-14 · S3 · Android (build settings) · open — Cold "Open with" takes 3.9 s (phone) / 6.0 s (tablet) to paint page 1 on Release
+## AT-14 · S3 · Android (build settings) · open — coordinator: build (a) and (b) as test-only variants (R6) — Cold "Open with" takes 3.9 s (phone) / 6.0 s (tablet) to paint page 1 on Release
 **Evidence:** R4e (run 42741617577), table in RESULTS §2: from the launch to page 1 painted, median 3,920 ms phone and 6,028 ms
 tablet over 12 cold runs, while the activity's first frame is ~1.2–1.5 s. The Release uses MAUI's default **profiled AOT**: the
 startup profile covers MAUI and the BCL, but Chuvadi's assemblies get 4–14 KB AOT images each (B-08), i.e. the PDF open, parse
@@ -211,7 +211,7 @@ and render path is JIT-compiled on every cold start.
 **Recommendation:** let me build (a) and (b) as test-only variants in one run and report both numbers and sizes; then decide.
 Startup trimming / work deferral in Foundation (B-29) already applies; this is about JIT on the open/render path.
 
-## AT-15 · S2 · Foundation (shared Ui, markup layer) · **still open** R5 run 42746209649 (Foundation f88f9ef + Mobile UI c5c0b7e + Android 9ce073b, Release) — Mark › Text: a finger tap on the page makes no text box (phone and tablet)
+## AT-15 · S2 · Foundation (routed 10 Nov, with the page drift) · **still open** R5 run 42746209649 (Foundation f88f9ef + Mobile UI c5c0b7e + Android 9ce073b, Release) — Mark › Text: a finger tap on the page makes no text box (phone and tablet)
 **Steps:** Release (f88f9ef composition), API 36, open a PDF, Mark, choose Text (button shows as on), tap the page — quick tap, then
 a slow tap (finger held 400 ms) elsewhere on the page.
 **Expected:** a text box appears where the finger touched (`MkUpCore`: "tiny drag = a click → default-sized box"), with the caret in it.
