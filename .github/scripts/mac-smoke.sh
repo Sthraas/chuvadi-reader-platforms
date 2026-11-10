@@ -209,7 +209,7 @@ for k in k1 k2 k3 locked; do cp "$DOCS/five-pages.pdf" "$DOCS/$k.pdf"; done   # 
 chmod 000 "$DOCS/locked.pdf"   # M-14: an unreadable file — the Ui shows .NET's own message for it
 rm -f "$LOG"
 open -n --env CHUVADI_SMOKE=1 --env "CHUVADI_SMOKE_PICK=$DOCS/k1.pdf;$DOCS/k2.pdf;$DOCS/k3.pdf;$DOCS/locked.pdf" \
-  --env "CHUVADI_SMOKE_STEPS=native:cmd-o;wait;pick;native:ctrl-cmd-f;native:escape;native:cmd-o;wait;pick;wait" \
+  --env "CHUVADI_SMOKE_STEPS=native:cmd-o;wait;pick;native:ctrl-cmd-f;native:escape;native:cmd-o;wait;pick;wait;native:ctrl-tab;native:ctrl-shift-tab;native:cmd-1" \
   --stdout "$LOG" --stderr "$LOG" -a "$APP"
 native_watch 180 &
 NW=$!
@@ -226,6 +226,13 @@ s=$(grep -E "CHUVADI step 3 pick: route=" "$LOG" | tail -1)
 [[ "$s" == *'immersiveTip="Immersive (⌃⌘F)"'* ]] && pass "M-09 the View rail labels Immersive ⌃⌘F" || fail "M-09 View rail label: ${s:-no report}"
 s=$(grep -E "CHUVADI step 9 wait: route=" "$LOG" | tail -1)
 [[ "$s" == *"dotnet=text"* ]] && pass "M-14 an unreadable file shows .NET's message as text" || fail "M-14 unreadable file: ${s:-no report}"
+act() { grep -E "CHUVADI step $1 [a-z]+: route=" "$LOG" | tail -1 | sed -E 's/.* active=//'; }
+a9=$(act 9); a10=$(act 10); a11=$(act 11); a12=$(act 12)
+first=$(grep -E "CHUVADI tabs [0-9]+: " "$LOG" | tail -1 | sed -E 's/.*CHUVADI tabs [0-9]+: //; s/, .*//')
+echo "active: before=$a9 ⌃Tab=$a10 ⌃⇧Tab=$a11 ⌘1=$a12 (first tab $first)"
+[ -n "$a10" ] && [ "$a10" != "$a9" ] && pass "M-08 real ⌃Tab moves to another tab" || fail "M-08 ⌃Tab left the tab at $a10"
+[ -n "$a11" ] && [ "$a11" = "$a9" ] && pass "M-08 real ⌃⇧Tab moves back" || fail "M-08 ⌃⇧Tab: $a11 (expected $a9)"
+[ -n "$a12" ] && [ "$a12" = "$first" ] && pass "M-23 real ⌘1 goes to the first tab" || fail "M-23 ⌘1: $a12 (expected $first)"
 chmod 644 "$DOCS/locked.pdf"
 cp "$LOG" "$PWD/smoke-keys.log"
 quit_app || fail "keys run did not quit"

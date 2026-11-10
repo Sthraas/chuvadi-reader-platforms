@@ -123,6 +123,7 @@ public sealed class MainPage : ContentPage
         WebKitView = view;
         PageErrorBridge.Attach(view, _services); // M-19: page errors to the D-132 log
         MacImmersive.Attach(view); // M-21: Esc leaves Immersive
+        MacPageKeys.WatchWindow(); // M-08/M-23: the page has the keyboard whenever the window is key
         WebContentRecovery.Attach(view, _services.GetRequiredService<Microsoft.Extensions.Logging.ILoggerFactory>().CreateLogger("ChuvadiReader.Mac.WebContent"));
 
         // No page zoom gestures — only the Interface size setting zooms (as on Windows).

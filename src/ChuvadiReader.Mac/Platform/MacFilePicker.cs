@@ -78,6 +78,10 @@ public sealed class MacFilePicker : IFilePicker
             {
                 tcs.SetException(ex);
             }
+            finally
+            {
+                MacPageKeys.Refocus(); // M-08/M-21/M-23: the panel took the keyboard; give it back to the page
+            }
         });
         return tcs.Task;
     }

@@ -47,7 +47,78 @@ internal sealed class MacImmersive : NSObject, IWKScriptMessageHandler
     public static void SendEscapeToPage()
     {
         MacSmoke.Log("immersive escape → page");
+        MacPageKeys.Send("Escape", "Escape", ctrl: false, shift: false, meta: false);
+    }
+}
+
+/// <summary>
+/// Mac Test M-08 / M-23: keys that only the page handles — next/previous tab (⌃Tab, ⌃⇧Tab) and go to tab n (⌘1…⌘9).
+/// On Mac they did not arrive: after a panel closes the WebView no longer has the keyboard, and UIKit uses ⌃Tab for its
+/// own keyboard focus moves. App-level key commands now hand them to the page's focused element, where reader.js
+/// decides exactly as on Windows (it ignores them while typing in a field). The WebView also gets the keyboard back
+/// after every panel and whenever the window becomes key (<see cref="Refocus"/>).
+/// </summary>
+internal static class MacPageKeys
+{
+    public const string Selector = "chvdPageKey:";
+
+    public static IEnumerable<UIKeyCommand> Commands()
+    {
+        UIKeyCommand Make(string input, UIKeyModifierFlags flags)
+        {
+            var c = UIKeyCommand.Create(new NSString(input), flags, new ObjCRuntime.Selector(Selector));
+            c.WantsPriorityOverSystemBehavior = true;
+            return c;
+        }
+
+        yield return Make("\t", UIKeyModifierFlags.Control);
+        yield return Make("\t", UIKeyModifierFlags.Control | UIKeyModifierFlags.Shift);
+        for (var n = 1; n <= 9; n++)
+        {
+            yield return Make(n.ToString(System.Globalization.CultureInfo.InvariantCulture), UIKeyModifierFlags.Command);
+        }
+    }
+
+    public static bool Available => ChuvadiReader.Mac.MainPage.WebKitView is not null;
+
+    public static void Handle(UIKeyCommand command)
+    {
+        var input = command.Input ?? string.Empty;
+        var flags = command.ModifierFlags;
+        if (input == "\t")
+        {
+            Send("Tab", "Tab", ctrl: true, shift: flags.HasFlag(UIKeyModifierFlags.Shift), meta: false);
+        }
+        else if (input.Length == 1 && char.IsDigit(input[0]))
+        {
+            Send(input, "Digit" + input, ctrl: false, shift: false, meta: true);
+        }
+    }
+
+    /// <summary>A keydown on the page's focused element (bubbling to the document, where reader.js listens).</summary>
+    public static void Send(string key, string code, bool ctrl, bool shift, bool meta)
+    {
+        MacSmoke.Log($"page-key {(ctrl ? "⌃" : "")}{(shift ? "⇧" : "")}{(meta ? "⌘" : "")}{key}");
+        var b = (bool v) => v ? "true" : "false";
         _ = ChuvadiReader.Mac.MainPage.WebKitView?.EvaluateJavaScriptAsync(
-            "document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true, cancelable: true }))");
+            $"(document.activeElement || document.body || document).dispatchEvent(new KeyboardEvent('keydown', {{ key: '{key}', code: '{code}', ctrlKey: {b(ctrl)}, shiftKey: {b(shift)}, metaKey: {b(meta)}, bubbles: true, cancelable: true }}))");
+    }
+
+    /// <summary>Gives the WebView the keyboard (after a panel closes, when the window becomes key).</summary>
+    public static void Refocus()
+    {
+        if (ChuvadiReader.Mac.MainPage.WebKitView is { } view && !view.IsFirstResponder)
+        {
+            var ok = view.BecomeFirstResponder();
+            MacSmoke.Log("webview-focus " + ok);
+        }
+    }
+
+    private static NSObject? _keyWatch;
+
+    public static void WatchWindow()
+    {
+        _keyWatch ??= NSNotificationCenter.DefaultCenter.AddObserver(UIWindow.DidBecomeKeyNotification,
+            _ => UIApplication.SharedApplication.BeginInvokeOnMainThread(Refocus));
     }
 }
