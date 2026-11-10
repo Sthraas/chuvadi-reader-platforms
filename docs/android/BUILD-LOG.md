@@ -680,3 +680,13 @@ same screen; no crash), smoke pass. With round 6 (API 36 phone and tablet, all c
   (Home → card → Reader, Home key, `am kill`, relaunch; route, tab, tab count and page counter equal).
 - Sandbox: Android Debug and Release `-warnaserror` 0 warnings; Release manifest 14/14; Core 233, Hosting 77, MobileUi 16,
   WebUi 39 pass.
+- **Run 42739965634** (all four, full, ccd4452 on f88f9ef): build pass; **Release (trimmed) launch pass on all four**;
+  API 35 WebView gate 4/4 on both; gestures 10/10 and 9/9; AT-07 and AT-08 pass on both API 36 (icons now judged:
+  light on Night, dark on the rest). Failures:
+  - phone 36: the AT-11 check stopped with a traceback — after the kill, the new process's DevTools reset the connection
+    and `safe_state` only caught SystemExit. Test bug: fixed (any failure to reach the page means "not yet").
+  - tablet 36: Share "4 → 4 tabs" — test race: the tab count was read after the intent, and the shared tab was already
+    there. Fixed (read before). **Ui regression, for Foundation:** the shared PDF opened on page 1 (p3-shared) and,
+    with no input, was on page 4 of 4 two seconds later (p4-rotated, rotation check's base counter 4); so "keyboard →
+    next page" had nowhere to go. Passed on 022b7c0 (run 42549242105); new between 022b7c0 and f88f9ef (render
+    scheduling / "page in view stays put" changes).

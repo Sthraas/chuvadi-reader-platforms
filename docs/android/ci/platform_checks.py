@@ -139,10 +139,12 @@ def state():
 
 
 def safe_state():
+    """The page state, or {"error": …} while the WebView isn't reachable yet (a new process after a kill:
+    DevTools refuses or resets the connection for a moment — run 42739965634)."""
     try:
         return state()
-    except SystemExit as e:
-        return {"error": str(e)}
+    except (SystemExit, Exception) as e:  # noqa: BLE001 — any failure to reach the page means "not yet"
+        return {"error": f"{type(e).__name__}: {e}"}
 
 
 def brief(st, *keys):
@@ -373,9 +375,9 @@ save_log("log-open-with.txt")
 # The URI goes in both EXTRA_STREAM (what a sharing app sets) and the data field, because `am`
 # grants --grant-read-uri-permission on the data URI; DocumentImport reads EXTRA_STREAM.
 uri = media_uri(SHARE_PDF)
+tabs_before = safe_state().get("tabs") or 0   # before the intent: the tab can be there before the next read
 print(am_as_shell("start", "-a", "android.intent.action.SEND", "-t", "application/pdf", "-d", str(uri),
                   "--eu", "android.intent.extra.STREAM", str(uri), "-p", PKG, "--grant-read-uri-permission").strip())
-tabs_before = safe_state().get("tabs") or 0
 # Pages from the page elements: the tablet's counter is a box with the page number only (no "/ 4").
 st = wait_for(lambda s: SHARE_PDF.split(".")[0] in (s.get("tab") or "") and s.get("pages", 0) == 4,
               60, "the shared PDF to open")
