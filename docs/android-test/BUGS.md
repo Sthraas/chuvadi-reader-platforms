@@ -195,7 +195,7 @@ compare Foundation's B-24 "a stalled read never freezes the Reader") rather than
 Release once AT-03 lands. **Evidence:** R4 › results-phone-api36 › robust/; R4b › results-tablet-api36 › robust/ (screenshots,
 results.jsonl with PSS and `top`).
 
-## AT-14 · S3 · Android (build settings) / Foundation (render path) · measured R6/R6b — decision needed — Cold "Open with" takes 3.9 s (phone) / 6.0 s (tablet) to paint page 1 on Release
+## AT-14 · S3 · Foundation (open sequencing) · profiled R7/R7b: the time is a ~3 s wait for the ready signal, not JIT or the library — decision needed — Cold "Open with" takes 3.9 s (phone) / 6.0 s (tablet) to paint page 1 on Release
 **Evidence:** R4e (run 42741617577), table in RESULTS §2: from the launch to page 1 painted, median 3,920 ms phone and 6,028 ms
 tablet over 12 cold runs, while the activity's first frame is ~1.2–1.5 s. The Release uses MAUI's default **profiled AOT**: the
 startup profile covers MAUI and the BCL, but Chuvadi's assemblies get 4–14 KB AOT images each (B-08), i.e. the PDF open, parse
@@ -279,6 +279,47 @@ after a chain of sequential JS round-trips on first render (platform attributes,
 storage, the `shell.js` module import); the WebView doesn't even paint until 3.6 s; (2) on the tablet, **2.1 s between the page
 boxes and the first render request**; (3) the .NET runtime start (0.6 s phone, 1.4 s tablet); (4) loading `blazor.webview.js` (0.4 s).
 R7b adds markers on each hydrate step, the ready signal, the release of the waiting file and the render request to pin (1) and (2).
+
+### AT-14 round 7b (run 42800207093) — the wait pinned down
+Same trace build with finer markers (and without the Chuvadi-full AOT this time); phone / tablet, median ms after the launch, 10 runs:
+| Milestone | Phone | Tablet |
+|---|---|---|
+| host has copied the incoming file (`Opened from another app`) | **991** | **1,554** |
+| `IncomingFiles.Receive` (file handed to the kit; parked until Ready) | 1,226 | 1,826 |
+| Blazor up: `MainLayout` first render | 2,051 | 2,591 |
+| a PDF open starts — caller `EnsureLoadedAsync` (last session's tab being restored, not the incoming file) | 2,190 | 2,754 |
+| save folders / profile / theme hydrated, theme applied | 2,280 → 2,296 | 2,912 → 2,928 |
+| `shell.js` import begins | 2,441 | 4,346 (2,614 at best) |
+| WebView's first paint (Home) | 3,799 | 4,224 |
+| **`Ready.SignalReady()` → file released → open requested** | **4,268** | **5,087** |
+| `TabsService.OpenAsync` | 4,414 | 5,222 |
+| page boxes in the DOM | 4,503 | 5,321 |
+| **first render request for page 1** | 4,834 | **7,320** |
+| page 1 render start → end | 4,843 → 4,976 | 7,330 → 7,427 |
+| page 1 in the DOM → painted | 5,043 → **5,150** | 7,485 → **7,572** |
+
+**Where the cold first page goes (phone 5.15 s; tablet 7.57 s):**
+1. **Waiting for Ready: ~3.0 s phone / 3.3 s tablet.** The file is copied and handed over at ~1.0–1.8 s, but `IncomingFiles` holds it
+   until `MainLayout.OnAfterRenderAsync` reaches `Ready.SignalReady()` — after the hydrate calls, `ApplyThemeAsync`, a storage read
+   and `import("shell.js")` + `init`, all awaited one after another. From "theme applied" to Ready is **~2.0–2.2 s**, during which the
+   WebView is doing Home's first layout and paint (first paint lands at 3.8–4.2 s) and the JS calls queue behind it.
+2. **Home is painted first, then thrown away** for the Reader (~1.5 s of first paint that an Open-with launch doesn't need).
+3. **Tablet only: 2.0 s between the page boxes and the first render request** (5,321 → 7,320; phone 0.33 s).
+4. Smaller: .NET runtime start 0.6 s phone / 1.2 s tablet; `blazor.webview.js` 0.35 s; the previous session's tab is reopened
+   first (2,190) even though an incoming file is waiting.
+5. **Not** the bottleneck: library open **~120 ms**, page render **~100–130 ms**, SVG into the DOM and paint ~170 ms, JIT (AOT variants above).
+
+**Options (Foundation; each measurable by this chat the same way):**
+- (A) **Don't park the incoming file behind Ready.** Start the open as soon as Blazor is up (2.05 s) — or begin the library open on the
+  host's copy (0.99 s) — and route straight to the Reader. *Pros:* removes most of (1) and (2): about **−2 to −2.5 s**; shared code, so
+  every platform's "open with" gains. *Cons:* the Reader must render before theme/profile hydration finishes (first-paint theme is
+  already in `index.html`); ordering care with session restore.
+- (B) **Raise Ready earlier / shorten the chain:** signal before `shell.js` import and the storage read, run the hydrates concurrently.
+  *Pros:* small change, ~−1.5 to −2 s. *Cons:* Home is still painted first.
+- (C) **Tablet render-request gap (3):** find what the tablet shell waits for between page boxes and the first render (~−2 s tablet).
+- (D) Leave the build settings as shipped; no AOT change (Chuvadi-only full AOT: +9 % size for no median gain, only a steadier worst case).
+**Recommendation:** (A) + (C), with (B) as the first step if (A) is too large for now; (D) for the build. Expected on these emulators:
+phone ≈ 2.5–3 s, tablet ≈ 3.5–4 s for a cold Open with; a real phone is several times faster than this software-rendered emulator.
 
 ## AT-15 · S2 · Foundation (routed 10 Nov, with the page drift) · **still open** R5 run 42746209649 (Foundation f88f9ef + Mobile UI c5c0b7e + Android 9ce073b, Release) — Mark › Text: a finger tap on the page makes no text box (phone and tablet)
 **Steps:** Release (f88f9ef composition), API 36, open a PDF, Mark, choose Text (button shows as on), tap the page — quick tap, then
