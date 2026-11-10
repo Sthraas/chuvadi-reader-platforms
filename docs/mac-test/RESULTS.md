@@ -1,6 +1,6 @@
 # Mac Test — results
 
-Subject: `platform/mac` **7a65178** → c6d7705 → 00a5975 → 83207af → b790370 → dd67166 → 812079f → 0ea9f09 → a7be951 → **3bc7f68** (signed off). Harness: `tests/mac/` + `.github/workflows/mac-test.yml` on `platform/mac-test`.
+Subject: `platform/mac` **7a65178** → c6d7705 → 00a5975 → 83207af → b790370 → dd67166 → 812079f → 0ea9f09 → a7be951 → 3bc7f68 → **e2a1cc8** (signed off). Harness: `tests/mac/` + `.github/workflows/mac-test.yml` on `platform/mac-test`.
 Runs (one each, read before the next — no retries):
 
 | Round | Run | What changed in the harness |
@@ -10,6 +10,32 @@ Runs (one each, read before the next — no retries):
 | 2 | 42490785792 | menu bar and `open -a` found broken (M-01, M-02) → drive through ⌘O / ⌘K instead; quit-crash capture |
 | 3 | 42494662734 | ⌘O found not to open a panel → the Open button; app stdout per launch; diagnostic exception build |
 | 4 | 42517758923 | panel path set through Accessibility (typing into the Go-to field was lossy) → documents open; timing sets skipped |
+
+## SIGN-OFF moved to platform/mac e2a1cc8 (11 Nov 2026, Foundation patch 25)
+
+**Verdict: still ready for Arun's check**, now on e2a1cc8. Runs **42903578048** and **42906361892** (shared suite plus
+the new patch-25 case, all three runners) and **42903751170** (full suite, all three runners).
+
+| Patch-25 check | macOS 26 | macOS 15 | 15 Intel |
+|---|---|---|---|
+| Cold start with one PDF (Open With): straight into the Reader, tab and page shown, Home never showing | ✅ | ✅ | ✅ |
+| Four files at launch (three PDFs + a Word file): four tabs, one process, no error | ✅ | ✅ | ✅ |
+| Six more at once while running: ten tabs, one process, no error | ✅ | ✅ | ✅ |
+| ⌘n with ten tabs lands on the right tab | ✅ | ✅ | ✅ |
+| Word file on a cold start shows its text | ✅ | ✅ | ✅ |
+| M-08 / M-23 tab keys, both focus states | ✅ | ✅ | ✅ |
+| Full regression | ✅ | ✅ | ✅ |
+
+The full suite's only failures are my two test-side items on macOS 26 (password typing in the long run, xlsx marker).
+My Word fixture has no parts that Docs would skip, so "skipped parts named" (Docs 2.1.0) is **not exercised here**.
+
+**Two small bugs filed on this round, not blocking Arun's check:** **M-24** (tabs from several files don't follow the
+order given; the "several files at once" open item itself is closed — all files open) and **M-25** (Intel runner only,
+intermittent: first ⌘O straight after Esc opens no panel; it replaces the "one-off" line in the table below).
+
+Getting the app: use the Mac workflow run for e2a1cc8 — https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/42899731526
+→ Artifacts → **Chuvadi-mac-universal-unsigned**. Install steps and the ten things to try are unchanged, below; in
+item 3, "several PDFs at once" now works — please look at the tab order instead (M-24).
 
 ## SIGN-OFF — platform/mac 3bc7f68 (11 Nov 2026): Mac is ready for Arun's check
 
