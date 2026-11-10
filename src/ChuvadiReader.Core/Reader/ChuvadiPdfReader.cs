@@ -167,8 +167,23 @@ public sealed class ChuvadiPdfSession : IPdfSession
     {
         public int Page { get; } = page;
         public long Order { get; } = order;
-        public TaskCompletionSource<string> Done { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource Done { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public CancellationTokenRegistration Cancel { get; set; }
+
+        // The drawn page, left here by the worker for this waiter alone and taken exactly once (see Answer).
+        private string? _page;
+
+        public void Leave(string page) => Volatile.Write(ref _page, page);
+
+        public string Take() => Interlocked.Exchange(ref _page, null) ?? string.Empty;
+    }
+
+    /// <summary>The waiter's side of the hand-over: once signalled, it takes the page out of its entry, so the entry
+    /// (which the worker may still be holding) no longer leads to the page.</summary>
+    private static async Task<string> TakeWhenDrawn(QueuedRender entry)
+    {
+        await entry.Done.Task.ConfigureAwait(false);
+        return entry.Take();
     }
 
     private readonly List<QueuedRender> _queue = new();
@@ -456,7 +471,7 @@ public sealed class ChuvadiPdfSession : IPdfSession
             _ = Task.Run(DrainAsync);
         }
 
-        return entry.Done.Task;
+        return TakeWhenDrawn(entry);
     }
 
     internal static WeakReference? LastAnsweredForDiag;
@@ -488,11 +503,11 @@ public sealed class ChuvadiPdfSession : IPdfSession
                 _drawingPage = page;
             }
 
-            string? svg = null;
             Exception? failed = null;
             var stopped = false;
-            if (!TryGetRenderedSvg(page, out var cached))
+            if (!TryGetRenderedSvg(page, out string? svg))
             {
+                svg = null;
                 await _gate.WaitAsync().ConfigureAwait(false);
                 var allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
                 try
@@ -526,10 +541,6 @@ public sealed class ChuvadiPdfSession : IPdfSession
                     _gate.Release();
                 }
             }
-            else
-            {
-                svg = cached;
-            }
 
             if (stopped && !_closeRequested)
             {
@@ -537,25 +548,45 @@ public sealed class ChuvadiPdfSession : IPdfSession
             }
 
             if (svg is { Length: > 1000 }) LastAnsweredForDiag = new WeakReference(svg);
-            foreach (var waiting in TakeAll(page))
-            {
-                waiting.Cancel.Dispose();
-                if (failed is not null)
-                {
-                    waiting.Done.TrySetException(failed);
-                }
-                else
-                {
-                    waiting.Done.TrySetResult(svg ?? string.Empty);
-                }
-            }
+            Answer(TakeAll(page), ref svg, failed);
         }
 
         // Closed while renders still waited: they get the closed document's answer, an empty page.
-        foreach (var waiting in TakeAll(null))
+        string? none = string.Empty;
+        Answer(TakeAll(null), ref none, null);
+    }
+
+    /// <summary>
+    /// Hands a drawn page to everyone waiting for it and keeps nothing. A waiter is resumed on another thread the
+    /// moment it is signalled, and may close the document and expect the page gone at once; the worker used to hold
+    /// the page in its own variables until its loop came round, so on a machine with few cores a 70 MB page of a
+    /// closed document could still be reachable for a moment (Windows, 4 cores: "live memory after close: 4 to 73 MB").
+    /// So: the page is left in each waiter's entry, the worker's own reference is cleared (<paramref name="page"/>,
+    /// by reference), and only then are the waiters signalled; each takes the page out of its entry. From the first
+    /// signal on, nothing the worker holds leads to the page.
+    /// </summary>
+    private static void Answer(List<QueuedRender> waiters, ref string? page, Exception? failed)
+    {
+        foreach (var waiting in waiters)
         {
             waiting.Cancel.Dispose();
-            waiting.Done.TrySetResult(string.Empty);
+            if (failed is null)
+            {
+                waiting.Leave(page ?? string.Empty);
+            }
+        }
+
+        page = null;
+        foreach (var waiting in waiters)
+        {
+            if (failed is not null)
+            {
+                waiting.Done.TrySetException(failed);
+            }
+            else
+            {
+                waiting.Done.TrySetResult();
+            }
         }
     }
 
