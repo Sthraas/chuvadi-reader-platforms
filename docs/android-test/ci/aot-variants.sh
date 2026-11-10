@@ -19,8 +19,11 @@ collect() {
 }
 build() { t=$(date +%s); clean; dotnet publish "$P" "${C[@]}" "$@" > "$OUT/build-$V.txt" 2>&1; echo "$V build exit $? in $(( $(date +%s)-t )) s" | tee -a "$OUT/sizes.txt"; collect "$V"; }
 
-V=baseline build
+VARIANTS="${AT_VARIANTS:-baseline chuvadi fullaot trace}"
+has() { [[ " $VARIANTS " == *" $1 "* ]]; }
+has baseline && { V=baseline build; }
 
+if has chuvadi; then
 # chuvadi: edit the SDK pack's AOT targets on this runner only.
 AOTT="$(ls -d /usr/share/dotnet/packs/Microsoft.Android.Sdk.Linux/* | sort -V | tail -1)/targets/Microsoft.Android.Sdk.Aot.targets"
 sudo cp "$AOTT" "$AOTT.orig"
@@ -42,10 +45,14 @@ PY
 V=chuvadi build
 grep "ATAOT" "$OUT/build-chuvadi.txt" | sort -u | head -8 | cut -c1-260 | tee "$OUT/chuvadi-aot-args.txt"
 sudo cp "$AOTT.orig" "$AOTT"
+dotnet build-server shutdown > /dev/null 2>&1   # MSBuild nodes cache the edited targets (R7's trace build inherited them)
+fi
 
-V=fullaot build -p:AndroidEnableProfiledAot=false
+has fullaot && { V=fullaot build -p:AndroidEnableProfiledAot=false; }
 
 # trace
+if has trace; then
 python3 "$CI/trace-patch.py" "$READER" | tee "$OUT/trace-patch.txt"
 V=trace build
+fi
 for v in baseline chuvadi fullaot trace; do [ -f "$OUT/$v.apk" ] && echo "$v: $(unzip -l "$OUT/$v.apk" | awk '/libaot-Chuvadi/ {s+=$1} END {print s}') bytes of Chuvadi AOT images" | tee -a "$OUT/sizes.txt"; done

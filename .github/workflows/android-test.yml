@@ -241,7 +241,10 @@ jobs:
           dotnet restore src/ChuvadiReader.Android/ChuvadiReader.Android.csproj --configfile ci/nuget.config
           dotnet build -t:InstallAndroidDependencies -f net10.0-android --no-restore src/ChuvadiReader.Android/ChuvadiReader.Android.csproj -p:AndroidSdkDirectory=$ANDROID_HOME -p:AcceptAndroidSDKLicenses=True > /dev/null 2>&1
       - name: Variants (baseline, Chuvadi assemblies in full, full AOT, trace build)
-        run: bash test/docs/android-test/ci/aot-variants.sh reader test/docs/android-test/ci aot
+        run: |
+          export AT_VARIANTS="$(python3 -c "import json; print(json.load(open('test/docs/android-test/ci/run.json')).get('variants', 'baseline chuvadi fullaot trace'))")"
+          echo "variants: $AT_VARIANTS"
+          bash test/docs/android-test/ci/aot-variants.sh reader test/docs/android-test/ci aot
       - uses: actions/upload-artifact@v4
         if: always()
         with: { name: aot-variants, path: aot/ }

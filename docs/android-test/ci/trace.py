@@ -80,6 +80,8 @@ for i in range(RUNS + 1):  # first run discarded (post-install effects)
             continue
         if "Start proc" in l and PKG in l:
             m.setdefault("process_start", t)
+        elif "Opened from another app" in l:
+            m.setdefault("host_import_copied", t)
         elif "WebViewFactory" in l and "Loading" in l:
             m.setdefault("webview_provider_load", t)
         elif "Displayed " + PKG in l or ("Displayed" in l and PKG in l):
@@ -106,7 +108,7 @@ for i in range(RUNS + 1):  # first run discarded (post-install effects)
     rows.append(rel)
     print(json.dumps(rel), flush=True)
     open(os.path.join(OUT, f"logcat-run{i}.txt"), "w").write("\n".join(l for l in lines if "ATT" in l or "START u0" in l or "Start proc" in l
-                                                                        or "WebViewFactory" in l or "Displayed" in l or "monodroid" in l))
+                                                                        or "WebViewFactory" in l or "Displayed" in l or "monodroid" in l or "Chuvadi" in l))
 rows = rows[1:]
 json.dump(rows, open(os.path.join(OUT, "timeline-runs.json"), "w"), indent=1)
 keys = []

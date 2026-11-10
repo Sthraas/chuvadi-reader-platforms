@@ -39,7 +39,21 @@ patch(f"{A}/Platforms/Android/MainActivity.cs", "    private static void Deliver
 patch(f"{A}/MauiProgram.cs", "        var builder = MauiApp.CreateBuilder();", "        " + W.format("maui-createbuilder") + "\n")
 patch(f"{A}/MauiProgram.cs", "        return builder.Build();", "        " + W.format("maui-build") + "\n")
 C = "src/ChuvadiReader.Core/Reader/ChuvadiPdfReader.cs"
-patch(C, "        var document = string.IsNullOrEmpty(password)", "        " + W.format("pdf-open-start") + "\n")
+patch(C, "        var document = string.IsNullOrEmpty(password)",
+      "        System.Console.WriteLine(\"ATT pdf-open-start \" + System.Diagnostics.Stopwatch.GetTimestamp() + \" caller: \" + string.Join(\" < \", new System.Diagnostics.StackTrace(1, false).GetFrames().Take(6).Select(f => f.GetMethod()?.DeclaringType?.Name + \".\" + f.GetMethod()?.Name)));\n")
+patch(C, "    public Task<string> RenderPageSvgAsync(int pageNumber, CancellationToken cancellationToken = default)\n    {",
+      "\n        System.Console.WriteLine(\"ATT render-request-p\" + pageNumber + \" \" + System.Diagnostics.Stopwatch.GetTimestamp());", before=False)
+L = "src/ChuvadiReader.Ui/Layout/MainLayout.razor"
+patch(L, "        await ApplyPlatformAttributesAsync();", "        " + W.format("layout-firstrender") + "\n")
+for a, n in (("            await SaveFolders.HydrateAsync();", "hydrate-savefolders"), ("            await Profile.HydrateAsync();", "hydrate-profile"),
+             ("            await Theme.HydrateAsync();", "hydrate-theme"), ("            await ApplyThemeAsync();", "apply-theme"),
+             ("            _self = DotNetObjectReference.Create(this);", "shelljs-import"), ("            Ready.SignalReady();", "ready-signal")):
+    patch(L, a, "            " + W.format(n) + "\n")
+H = "src/ChuvadiReader.Hosting/IncomingFiles.cs"
+patch(H, "    private void Release()\n    {", "\n        " + W.format("incoming-release"), before=False)
+patch(H, "    public int Receive(IEnumerable<string> paths)\n    {", "\n        " + W.format("incoming-receive"), before=False)
+O = "src/ChuvadiReader.Core/Reader/OpenDocumentService.cs"
+patch(O, "    public void Request(string path, string name, int? page)\n    {", "\n        " + W.format("open-request"), before=False)
 patch(C, "        var vm = new PdfDocumentVm", "        " + W.format("pdf-open-end") + "\n")
 patch(C, "        var svg = RenderPage(document, renderer, overrides, pageNumber, cancellationToken, png => token = KeepImage(png));",
       "        System.Console.WriteLine(\"ATT render-start-p\" + pageNumber + \" \" + System.Diagnostics.Stopwatch.GetTimestamp());\n")
