@@ -1,6 +1,6 @@
 # Mac Test — results
 
-Subject: `platform/mac` **7a65178** → c6d7705 → 00a5975 → 83207af → b790370 → **dd67166** (current). Harness: `tests/mac/` + `.github/workflows/mac-test.yml` on `platform/mac-test`.
+Subject: `platform/mac` **7a65178** → c6d7705 → 00a5975 → 83207af → b790370 → dd67166 → **812079f** (current). Harness: `tests/mac/` + `.github/workflows/mac-test.yml` on `platform/mac-test`.
 Runs (one each, read before the next — no retries):
 
 | Round | Run | What changed in the harness |
@@ -10,6 +10,30 @@ Runs (one each, read before the next — no retries):
 | 2 | 42490785792 | menu bar and `open -a` found broken (M-01, M-02) → drive through ⌘O / ⌘K instead; quit-crash capture |
 | 3 | 42494662734 | ⌘O found not to open a panel → the Open button; app stdout per launch; diagnostic exception build |
 | 4 | 42517758923 | panel path set through Accessibility (typing into the Go-to field was lossy) → documents open; timing sets skipped |
+
+## Re-test on platform/mac 812079f (10 Nov, Foundation fc6286a) — current state
+
+Runs **42729787491** (full suite, all runners), **42729700046**, **42736222709**, **42737825523** (new "shared" suite:
+T4.0, M-08/09/10, M-14, T3.5 — all runners).
+
+| Case | macOS 26 | macOS 15 | 15 Intel | Note / bug |
+|---|---|---|---|---|
+| M-08 Shortcuts labels | ✅ | ✅ | ✅ | "⌃Tab · ⌃⇧Tab" |
+| M-08 ⌃Tab / ⌃⇧Tab switch tabs | ❌ | ❌ | ❌ | the active tab doesn't change, even after a click on the page |
+| M-23 ⌘1 Go to tab 1 | ❌ | ❌ | ❌ | new; likely the same cause |
+| M-09 no F11, Immersive label | ✅ | ✅ | ✅ | |
+| M-10 green light "Zoom" | ✅ | ✅ | ✅ | |
+| M-14 Details shows .NET text | ✅ | ✅ | ✅ | "Access to the path … is denied." |
+| M-15 ⌘O opens the panel | ✅ | ✅ | ✅ | my earlier ❌ were a harness error (panel is layer 8) |
+| M-21 Esc leaves Immersive | ✅ | ✅ | ✅ | |
+| M-03 quit | ✅ | ✅ | ✅ | |
+| M-18 recovery / T1.10 Licences | ✅ / ✅ | ✅ | ✅ | |
+| T4.7 print vector, T4.8 no-print | ✅ | ✅ | ✅ | |
+| T3.7 menus, T3.7c no Ctrl/F11/⌘Tab labels | ✅ | ✅ | ✅ | |
+| T4.12–T4.14, T5.4, T5.5, T5.7, T5.9 | ✅ | ✅ | ✅ | |
+| T4.6 passwords | ⚠️ harness (full suite) | ✅ | ✅ | still my typing on 26 in the long run; not Secure Event Input (checked: none held). Dedicated runs pass |
+| T4.9 xlsx | ⚠️ | | | harness artefact (marker on sheet 2), as before |
+| T5.3 heavy vector | ❌ | | | M-20 |
 
 ## Re-test on platform/mac dd67166 (10 Nov) — current state
 
