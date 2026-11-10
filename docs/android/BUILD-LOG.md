@@ -763,3 +763,18 @@ same screen; no crash), smoke pass. With round 6 (API 36 phone and tablet, all c
   Chuvadi-only full AOT: median −0.26 s / −0.53 s (−5 % / −6 %), worst case roughly halved (11.3 → 4.9 s, 14.2 →
   8.6 s), and the Ui-to-pages gap unchanged (2.66 / 4.86 s) — so that gap isn't JIT. Cost +7.7 MB (+18 %), build 122 s.
 - Timeline now also stamps `reader` (the Reader's route) and `loading` (its "Opening <name>…" line) to split that gap.
+- **Run 42806063037 — AT-14 timeline with the gap split** (same setup; medians, ms since process start):
+
+  | stage | phone shipped | phone Chuvadi AOT | tablet shipped | tablet Chuvadi AOT |
+  |---|---|---|---|---|
+  | ui (Blazor's first UI) | 2022 | 1970 | 2216 | 2173 |
+  | **reader** (route /reader) | **4327 (+2305)** | **4319 (+2349)** | **5137 (+2921)** | **5288 (+3115)** |
+  | loading ("Opening …") | 4573 (+246) | 4558 (+239) | 5219 (+82) | 5434 (+146) |
+  | opening (pages present) | 4884 (+311) | 4831 (+273) | 7302 (+2083) | 7332 (+1898) |
+  | painted (page 1) | 5382 (+498) | 5169 (+338) | 8127 (+825) | 8006 (+674) |
+
+  The largest gap is **Blazor's first UI → the Reader's route: 2.3 s phone, 2.9–3.1 s tablet**, AOT or not. The
+  incoming file is held by `IncomingFiles` until `IAppReadySignal`, which `MainLayout.OnAfterRenderAsync(firstRender)`
+  raises only after its awaits in series (platform attributes, SaveFolders / Profile / Theme hydration, theme apply,
+  `leftbar.open`, the `shell.js` import and init). Second on the tablet: reading the document, "Opening" → pages,
+  ~2 s (0.3 s on the phone). Both are in the shared Ui / Core: for Foundation, with these numbers.
