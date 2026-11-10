@@ -143,7 +143,9 @@ public sealed class StampService
             return bytes;
         }
 
-        double pw = target.Pages[pageIndex].Width, ph = target.Pages[pageIndex].Height;
+        // D-160: the number sits inside the box the page shows (its CropBox), not in a part the file hides.
+        var shown = ShownBox.Of(target.Pages[pageIndex]);
+        double pw = shown.W, ph = shown.H;
         const double margin = 24;
         var lineH = num.FontSize * 1.4;
         var boxW = Math.Max(1, pw - 2 * margin);
@@ -163,7 +165,7 @@ public sealed class StampService
 
         using var overlayDoc = PdfDocument.Open(new MemoryStream(overlay.ToByteArray(), writable: false));
         using var ms = new MemoryStream();
-        PageStamper.Place(ms, target, pageIndex, overlayDoc, 0, Transform.Identity, StampPlacement.Overlay);
+        PageStamper.Place(ms, target, pageIndex, overlayDoc, 0, RedactService.AtShown(Transform.Identity, shown), StampPlacement.Overlay);
         return ms.ToArray();
     }
 

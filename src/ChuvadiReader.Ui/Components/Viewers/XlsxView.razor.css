@@ -15,6 +15,18 @@
    unless the cell asks for it (then pre-wrap). The browser's default collapses spaces. */
 .xv-cell { padding: 3px 8px; background: var(--chvd-page); max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: pre; }
 .xv-cell.frozen-row { position: sticky; top: 26px; z-index: 1; font-weight: 600; }
+.xv-cell.sel { box-shadow: inset 0 0 0 2px var(--chvd-binding); }
+/* D-161: a "*x" format fills the cell with x where the library says (accounting formats put the symbol at the left edge). */
+.xv-fill { display: flex; white-space: pre; }
+.xv-rep { flex: 1 1 0; min-width: 0; overflow: hidden; white-space: pre; }
+/* D-161: the value the selected cell stores, as the file holds it (a formula bar's place, view-only). */
+.xv-valbar {
+    flex: 0 0 auto; display: flex; gap: 10px; align-items: baseline; padding: 4px 10px; font-size: 12px;
+    border-bottom: 1px solid var(--chvd-border); background: var(--chvd-surface-hi); color: var(--chvd-ink);
+}
+.xv-valbar[hidden] { display: none; }
+.xv-val-addr { flex: 0 0 auto; min-width: 48px; font-weight: 600; color: var(--chvd-ink-muted); }
+.xv-val-text { flex: 1 1 auto; min-width: 0; white-space: pre; overflow-x: auto; user-select: text; }
 .xv-cell.hit { box-shadow: inset 0 0 0 2px var(--chvd-marigold); background-color: rgba(196, 116, 22, .18) !important; }
 
 /* bottom bar: sheet tabs + Grid / As printed */

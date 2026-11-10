@@ -12,3 +12,17 @@ w.add_metadata({'/Title': 'pypdf unsigned P'})
 perms = 0xFFFFFFFF & ~(1 << 2) & ~(1 << 11)
 w.encrypt(user_password='user', owner_password='owner', permissions_flag=perms, algorithm='AES-256')
 with open(os.path.join(out, 'pypdf-unsigned-p.pdf'), 'wb') as f: w.write(f)
+
+# D-160: a 600 x 800 page whose CropBox [50 200 450 700] is inherited from the page tree (/Pages), not on the page.
+# "INSIDE" is in the shown box, "OUTSIDE" in the part it hides.
+import io
+from reportlab.pdfgen import canvas
+from pypdf.generic import NameObject, ArrayObject, FloatObject
+buf = io.BytesIO(); c = canvas.Canvas(buf, pagesize=(600, 800)); c.setFont('Helvetica-Bold', 24)
+c.drawString(120, 590, 'INSIDE'); c.drawString(10, 770, 'OUTSIDE'); c.showPage(); c.save()
+w = pypdf.PdfWriter(); w.append(pypdf.PdfReader(io.BytesIO(buf.getvalue())))
+pages = w._root_object['/Pages'].get_object()
+pages[NameObject('/CropBox')] = ArrayObject([FloatObject(50), FloatObject(200), FloatObject(450), FloatObject(700)])
+for kid in pages['/Kids']:
+    if '/CropBox' in kid.get_object(): del kid.get_object()['/CropBox']
+with open(os.path.join(out, 'inherited-cropbox.pdf'), 'wb') as f: w.write(f)
