@@ -1,7 +1,7 @@
 {
-  "round": "4e",
+  "round": "4f",
   "emulators": "phone-36,tablet-36",
-  "suites": "startup,function2",
+  "suites": "function2",
   "foundation_ref": "f88f9ef047cd165f895430180ceb4ffb91fcee63",
   "mobileui_ref": "d34d54238efed17a5729d8ff054fa22022eb9434",
   "android_ref": "d134c74876fe514653b8ed1cede6a89ba4de824e"

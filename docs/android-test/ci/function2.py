@@ -43,9 +43,17 @@ def find(*labels, sel=None):
     return cdp.js(FIND % (json.dumps(list(labels)), json.dumps(sel)))
 
 
+_wv = [None]
+
+
 def webview_bounds():
-    m = re.search(r'class="android.webkit.WebView"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', ui_dump())
-    return tuple(map(int, m.groups()))
+    for _ in range(4):
+        m = re.search(r'class="android.webkit.WebView"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', ui_dump())
+        if m:
+            _wv[0] = tuple(map(int, m.groups()))
+            return _wv[0]
+        time.sleep(1)
+    return _wv[0] or (0, 0, 0, 0)
 
 
 def to_screen(x, y):
@@ -173,6 +181,21 @@ time.sleep(1.5)
 after_tap = ui_state()
 events = plog()
 shot("mark-page-tapped")
+# Same place, a slow tap (finger held 400 ms): if this makes a box and the quick tap didn't, the quick
+# tap's pointerup is arriving before MkDown has finished its awaited layer-rect read.
+x2_, y2_ = page_pt_to_css(0, 300, 560)
+s2x, s2y = to_screen(x2_, y2_)
+plog_reset()
+sh(f"input swipe {s2x} {s2y} {s2x} {s2y} 400")
+time.sleep(1.5)
+after_slow = ui_state()
+slow_events = plog()
+shot("mark-page-slow-tap")
+R.check("F-04b Mark › Text: quick finger tap behaves like a slow tap (both make a box)",
+        bool(after_tap.get("editors")) == bool(after_slow.get("editors")),
+        {"quick_tap": after_tap, "quick_events": events, "slow_tap": after_slow, "slow_events": slow_events})
+if not after_tap.get("editors") and after_slow.get("editors"):
+    after_tap = after_slow
 typed = None
 if after_tap.get("active", "").split(".")[0] in ("TEXTAREA", "INPUT") or after_tap.get("editors"):
     type_slow("chuvadimark")
