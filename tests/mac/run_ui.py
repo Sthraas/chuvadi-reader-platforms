@@ -406,6 +406,17 @@ def t4_0b():
     quit_app()
 
 
+def secure_input_holder():
+    """Which process has Secure Event Input on (it silently drops synthetic keystrokes for every app)."""
+    _, out = sh("ioreg -l -w 0 | grep -o '\"kCGSSessionSecureInputPID\"=[0-9]*' | head -1")
+    m = re.search(r"=(\d+)", out)
+    if not m:
+        return None
+    pid = m.group(1)
+    _, name = sh(["ps", "-o", "comm=", "-p", pid])
+    return f"{pid} {name.strip()}"
+
+
 def open_licences(mouse=True):
     """About is open: scroll its column so the Help card shows, then press the Open button on the Licences row
     (the third plain "Open" button; the row's label is static text)."""
@@ -1040,6 +1051,14 @@ def t4_6():
     Before each submit the harness presses "show" so the typed value is readable in the AX tree,
     then re-focuses the field and presses Return, so a failure can't be a lost keystroke."""
     ev = {}
+    # In the full suite on macOS 26 keystrokes stopped reaching the field after the print cases; check whether some
+    # process (a print or auth sheet) still holds Secure Event Input, and end it — testing only.
+    holder = secure_input_holder()
+    ev["secure_input_before"] = holder
+    if holder and "Chuvadi" not in holder:
+        sh(["sudo", "kill", holder.split()[0]])
+        time.sleep(1)
+        ev["secure_input_after_kill"] = secure_input_holder()
 
     def submit(tag, f, pw):
         r = {"focused": focus_field("Password to open")}
