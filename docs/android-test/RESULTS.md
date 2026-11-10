@@ -118,6 +118,28 @@ form; skipped and reported. Android is rebasing.
 | F-13b | API 36 (WebView 133): no update screen | **PASS** |
 | F-04, F-06, F-07, F-11d, F-03c/d | Markup, forms, redaction, print card, typing in other fields | test tool didn't reach the controls (a Mark tap landed in the system image picker; redaction drag drew 0 boxes; sheet selector) — diagnostics added, R4e |
 
+## Round 5 — re-verification on the Android handoff (run 42746209649; Foundation f88f9ef + Mobile UI c5c0b7e + Android 9ce073b; **Release**, API 36)
+Compose: clean (no skipped patches). Build 0 warnings; `.aab` 42.6 MB, Play download (arm64) 25.3 MB.
+| Bug | Result |
+|---|---|
+| AT-02 Essentials components | **verified** — gone from the manifest |
+| AT-03 Release launch | **verified** — 0 crashes, 3 of 3 first frames (phone, tablet) |
+| AT-04 desk header on touch | **verified** — name + `···` only |
+| AT-05 tablet portrait `Document ▾` | **verified** |
+| AT-06 touch targets | **still open** (unchanged sizes) |
+| AT-07 path labels | **verified** — none on any screen |
+| AT-08 system bars follow the theme | **verified** through a real Settings tap (`screenshots/r4/r5-at08-night-theme.png`). The design sweep sets themes from the page only, which the host doesn't see — so its cream bars aren't evidence |
+| AT-09 Find brings the match into view | phone **PASS**; tablet **still open** |
+| AT-10 typed keys kept | **verified** — Find box and Library search, burst and slow |
+| AT-11 tabs after a background kill | **verified** — 11/11 phone and tablet |
+| AT-12 same file → same tab | **still open** (4 → 5 tabs) |
+| AT-13 heavy image page | **PASS this run** (1.7 s both); intermittent, repeating |
+| AT-15 markup by touch | **still open**; shapes fail the same way (pointer goes to the desk) |
+Other cases this round: Find 1/1 on page 3 (phone), D-08 keyboard, F-12 Back, F-16 trim-memory, D-10 theme persists, R-01 damaged
+files, R-03 600 pages, R-04 provider URI, R-05 airplane, R-06 locales, R-07 fresh install, R-10 no crash — all **PASS** on Release.
+F-14 phone "page moved 1 → 3 on rotation": the before-state was read while the reopened tab was still restoring its last page (3);
+test timing, not filed. Tablet print card button and F-06/F-07 saves still not reached by the tool (AT-15 blocks markup).
+
 ## Blocked in CI: Reader on Android 15 (API 35)
 The API 35 image ships WebView 124, so the app correctly shows only its update screen (D-105). Updating it in CI from the API 36
 image's WebView failed twice: that WebView needs the Trichrome static library, which my donor job couldn't locate on the API 36

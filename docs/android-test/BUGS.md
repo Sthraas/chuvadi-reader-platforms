@@ -68,14 +68,14 @@ data-safety basis line ("…and Google's AndroidX/Material and JetBrains' Kotlin
 **For the coordinator (rule 3):** these are Google and JetBrains code that MAUI pulls in, not Microsoft's. I read them as
 "ships with MAUI" (allowed); please confirm.
 
-## AT-02 · S4 · Android · open (routed to the Android chat 9 Nov) — Unused MAUI Essentials components are declared in the shipped manifest
+## AT-02 · S4 · Android · **verified** R5 run 42746209649 (Foundation f88f9ef + Mobile UI c5c0b7e + Android 9ce073b, Release): no Essentials activities/receivers/provider in the manifest — Unused MAUI Essentials components are declared in the shipped manifest
 **Evidence:** `audit/manifest-xmltree.txt`: `WebAuthenticatorIntermediateActivity`, `IntermediateActivity`,
 `microsoft.maui.essentials.fileProvider`, and three broadcast receivers (Essentials Connectivity, Battery, Energy Saver). All
 `exported=false`, so not reachable from other apps; the app uses none of them (it has its own `SharedFileProvider`).
 **Expected:** only what the app uses (smaller attack surface; nothing in a Play review that looks like connectivity monitoring).
 **Fix (proposal):** `tools:node="remove"` entries in the host's `AndroidManifest.xml`. Low risk; verify Share and Open still work.
 
-## AT-04 · S3 · Mobile UI · open (routed 9 Nov) — Desk header on touch still shows the desktop action row (12f, 12i; D-114)
+## AT-04 · S3 · Mobile UI · **verified** R5 run 42746209649 (Foundation f88f9ef + Mobile UI c5c0b7e + Android 9ce073b, Release): desk header = name + `···` (phone and tablet) — Desk header on touch still shows the desktop action row (12f, 12i; D-114)
 **Steps:** phone or tablet, open a PDF, Arrange.
 **Expected (12f / 12i, D-114):** desk header = name, page count, `···`; the desk actions live in the `···` menu on touch.
 **Actual:** header shows the colour swatch, name, a "BM" chip, page count, ← → arrows, duplicate, `···` and delete — the desktop
@@ -84,12 +84,12 @@ row. The arrows/duplicate/delete are ~20 dp targets and the swatch 16 dp (see AT
 Foundation 839d39d's message says H-16 (desk actions in the menu on touch) landed, so either it covers only the desk toolbar or it
 isn't keyed on the touch form factor here.
 
-## AT-05 · S3 · Mobile UI · open (routed 9 Nov) — Tablet portrait top bar has no `Document ▾` menu (12f)
+## AT-05 · S3 · Mobile UI · **verified** R5 run 42746209649 (Foundation f88f9ef + Mobile UI c5c0b7e + Android 9ce073b, Release): `Document actions` in the tablet portrait top bar — Tablet portrait top bar has no `Document ▾` menu (12f)
 **Expected (12f):** tabs · pager · `Document ▾` · search, as in landscape.
 **Actual:** tablet portrait shows tabs · pager · search; `Document ▾` is gone, so Properties / Export / Compress / Merge / Split
 have no entry point from the top bar in portrait. **Evidence:** `screenshots/r1/12f-vs-app.png`.
 
-## AT-06 · S3 · Mobile UI · open (routed 9 Nov) — Touch targets under 44 dp (handout: 48 dp on tablet and phone)
+## AT-06 · S3 · Mobile UI · **still open** R5 run 42746209649 (Foundation f88f9ef + Mobile UI c5c0b7e + Android 9ce073b, Release): same sizes (phone avatar 32, pager 36 high, sheet handle, library search 27.6, tag chips 32; tablet top bar 36–40, brand 22.5) — Touch targets under 44 dp (handout: 48 dp on tablet and phone)
 Measured in the page (CSS px = dp), every visible control, all screens, R1 API 36 (`design/*.layout.json`):
 | Form | Control | Size (dp) |
 |---|---|---|
@@ -105,13 +105,13 @@ Measured in the page (CSS px = dp), every visible control, all screens, R1 API 3
 **Expected:** ≥ 44 dp everywhere (Android's own minimum is 48 dp; the handout asks 48 on tablet rails and phone bars). A larger
 hit area (padding / `::after` inset) keeps the drawn size.
 
-## AT-07 · S4 · Android · fixed in Foundation c91a581 (P-08) — to verify — Tabs and Home's recent cards/rows label themselves with the internal working path
+## AT-07 · S4 · Android · **verified** R5 run 42746209649 (Foundation f88f9ef + Mobile UI c5c0b7e + Android 9ce073b, Release): no control labelled with a /data/ path on any screen — to verify — Tabs and Home's recent cards/rows label themselves with the internal working path
 The tablet tab's `title`, and the accessible name/`title` of every Home "Pick up where you left off" card (`.rcard`) and Recent
 row (`.rrow`) on phone and tablet, is the working copy path, e.g. `/data/user/0/in.chuvadi.reader/cache/work/open/1429e6d5d0cd4…`
 (`design/*-home.layout.json`). TalkBack reads that path aloud. Android shows `title` on long-press/hover with a mouse. **Expected:** the document's name
 (or the original location the person chose), never the app's private cache path.
 
-## AT-08 · S3 · Android · open (routed to the Android chat 9 Nov) — Status and navigation bar areas stay cream in the Night, Palm and Indigo themes
+## AT-08 · S3 · Android · **verified** R5 run 42746209649 (Foundation f88f9ef + Mobile UI c5c0b7e + Android 9ce073b, Release): Night paper set by a real Settings tap → dark status and navigation bars with light icons, phone and tablet — Status and navigation bar areas stay cream in the Night, Palm and Indigo themes
 **Steps:** phone, Settings › theme Night paper (or Palm leaf / Indigo ink); look at the top (clock, signal) and the bottom
 (gesture bar).
 **Expected:** the system-bar areas take the theme's paper colour (as the first-paint background in `index.html` already does per
@@ -122,7 +122,7 @@ below a dark bottom bar; Palm and Indigo show a mismatched band.
 **Fix (proposal):** `SystemBars` follows the theme (theme-changed signal → window background / `isAppearanceLightStatusBars`),
 or the WebView draws under the bars and pads with `env(safe-area-inset-*)`.
 
-## AT-09 · S3 · Mobile UI · open (routed 9 Nov) — Find reports the match but doesn't bring it into view
+## AT-09 · S3 · Mobile UI · **still open on tablet** R5 run 42746209649 (Foundation f88f9ef + Mobile UI c5c0b7e + Android 9ce073b, Release): 1/1 but the page box stays on 2; phone passes — Find reports the match but doesn't bring it into view
 **Steps:** tablet (API 36), open `doc-12p.pdf` (12 pages; the word "zephyrine" appears once, near the foot of page 3), Find,
 type `zephyrine`.
 **Expected:** 1/1, and the view moves so the highlighted match is on screen (page 3, foot).
@@ -130,7 +130,7 @@ type `zephyrine`.
 says 2. **Evidence:** R2 run 42533545934 › results-tablet-api36 › function/04-find.png (`screenshots/r1/r2-find-print.png`, left).
 Re-checked next round on phone too (phone typing in R2 was cut short by the test, see notes).
 
-## AT-10 · S2 · Foundation (shared Ui) · open (routed D-149) — The Find box drops typed characters; a plain field doesn't
+## AT-10 · S2 · Foundation (shared Ui) · **verified** R5 run 42746209649 (Foundation f88f9ef + Mobile UI c5c0b7e + Android 9ce073b, Release): Find box and Library search keep every key of a burst, phone and tablet (Mark text box untestable until AT-15) — The Find box drops typed characters; a plain field doesn't
 **Steps:** API 36, open a PDF, Find, type on the on-screen keyboard path (`adb shell input text`, i.e. real key events through the IME).
 **Expected:** every character arrives, as in any text field.
 **Actual (R3, run 42537723474):**
@@ -145,7 +145,7 @@ or the IME. The Android chat's "garbled typing" (D-81) was this. Other Blazor-bo
 form fields, desk names) likely share the pattern; to check next round.
 **Evidence:** R3 › results-*-api36 › function/results.jsonl (F-03b); `screenshots/r1/r3-print-dialog-find-typing.png` (right).
 
-## AT-11 · S2 · Android (host process-death restore; Foundation only if a Ui hook is needed) · open (routed D-149) — On the phone, open tabs are lost when Android ends the app in the background
+## AT-11 · S2 · Android (host process-death restore; Foundation only if a Ui hook is needed) · **verified** R5 run 42746209649 (Foundation f88f9ef + Mobile UI c5c0b7e + Android 9ce073b, Release): tabs back after a background kill 11 of 11, phone and tablet — On the phone, open tabs are lost when Android ends the app in the background
 **Steps:** phone API 36, several tabs open, Home key, `am kill in.chuvadi.reader` (what Android does to a background app under memory
 pressure), open the app again.
 **Expected:** the tabs come back on the same document.
@@ -156,7 +156,7 @@ may not save tabs at all), not at the kill timing. Anyone who switches apps on a
 **Evidence:** R3 run 42537723474 and R3b run 42539596914 › results-phone-api36 › function/results.jsonl (F-15, F-15b),
 10-after-process-death.png.
 
-## AT-12 · S3 · Android · open — Opening a file that is already open adds a duplicate tab (Windows focuses the open tab)
+## AT-12 · S3 · Android · **still open** R5 run 42746209649 (Foundation f88f9ef + Mobile UI c5c0b7e + Android 9ce073b, Release): Open with of the open file → tabs 4 → 5, phone and tablet (Android's DocumentLinks, see the analysis) — Opening a file that is already open adds a duplicate tab (Windows focuses the open tab)
 **Shared behaviour (chuvadi-reader main 2b8899d, PR #11):** `IncomingFiles.Receive` → `OpenDocumentService.Request(path)` →
 Reader → `TabsService.OpenAsync(path, …)`, which **focuses the existing tab when a tab with the same path is already open**
 (`TabsService.cs:123–131`, case-insensitive path match). On Windows, opening an already-open file from Explorer hands the same
@@ -181,7 +181,7 @@ full path over (`DesktopSingleInstance` → `IncomingFiles`), so it focuses that
 - (c) Leave as is. *Cons:* differs from Windows; tabs and Recent fill with duplicates.
 **Recommendation:** (a).
 
-## AT-13 · S2 · Foundation (shared Ui; library if it's the renderer) · open, intermittent (routed D-149) — A page with one large image sometimes never paints
+## AT-13 · S2 · Foundation (shared Ui; library if it's the renderer) · **passed in R5** (1.7 s phone and tablet, 1 run each) — intermittent, so repeated in the next runs before calling it verified — A page with one large image sometimes never paints
 **Steps:** open `heavy-image.pdf` (one A4 page holding a 6000 × 6000 px JPEG; 28 MB file) with Open with; wait.
 **Expected:** page 1 painted within a few seconds (it does, when it works: 3.9 s and 4.5 s).
 **Actual:** in 2 of 4 runs the page stayed on its "page 1" placeholder for the whole wait (90 s, 120 s), app alive, CPU idle
@@ -211,7 +211,7 @@ and render path is JIT-compiled on every cold start.
 **Recommendation:** let me build (a) and (b) as test-only variants in one run and report both numbers and sizes; then decide.
 Startup trimming / work deferral in Foundation (B-29) already applies; this is about JIT on the open/render path.
 
-## AT-15 · S2 · Foundation (shared Ui, markup layer) · open — Mark › Text: a finger tap on the page makes no text box (phone and tablet)
+## AT-15 · S2 · Foundation (shared Ui, markup layer) · **still open** R5 run 42746209649 (Foundation f88f9ef + Mobile UI c5c0b7e + Android 9ce073b, Release) — Mark › Text: a finger tap on the page makes no text box (phone and tablet)
 **Steps:** Release (f88f9ef composition), API 36, open a PDF, Mark, choose Text (button shows as on), tap the page — quick tap, then
 a slow tap (finger held 400 ms) elsewhere on the page.
 **Expected:** a text box appears where the finger touched (`MkUpCore`: "tiny drag = a click → default-sized box"), with the caret in it.
@@ -224,7 +224,11 @@ results.jsonl F-04a/F-04b); `screenshots/r4/at15-mark-text-tap.png`.
 it sets `_mkMode`, so even an `up` on the layer can arrive while the mode is still `None`.
 **Fix (proposal):** on `pointerdown` in the markup layer, `setPointerCapture(e.pointerId)` (a few lines in the existing markup JS) so
 `move`/`up` come back to the layer; set `_mkMode`/draft synchronously before the awaited rect read (or read the rect first on tool
-selection). Likely the same for shapes, freehand and the Protect redaction box — the next run checks each.
+selection). **R5 adds shapes:** Mark › Rectangle, a 600 ms finger drag → "0 shapes"; the page log shows `pointerdown` on `.mk-layer.drawmode`,
+then **all 21 `pointermove`s and the `pointerup` on `.rdesk`** (touch-action pan-y). So something holds the pointer for the desk —
+most likely the phone/tablet swipe-and-pan handling on `.rdesk` (mobile.js) capturing the pointer on `pointerdown`, which steals
+every markup gesture on touch (text, shapes, freehand, probably the Protect redaction box). Owner: whoever owns that handler
+(Mobile UI's mobile.js, or Foundation's reader.js); the markup layer should win when a markup tool is active.
 
 ## Questions for the coordinator (not filed as bugs)
 - **Q-1 Same file opened again → new tab** — answered by the coordinator (9 Nov 07:12): Windows is the reference. Checked the shared
