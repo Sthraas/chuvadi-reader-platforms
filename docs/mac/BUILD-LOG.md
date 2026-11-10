@@ -552,3 +552,24 @@ Run 42727139667 (c3ff2da): 47/47.
   page's focused element as a keydown, so reader.js decides as on Windows (it ignores keys while typing in a field);
   and the WebView gets the keyboard back after every Open/Save panel and whenever the window becomes key.
 - Smoke (run 42741171454): after the Open panel, real ⌃Tab → another tab, real ⌃⇧Tab → back, real ⌘1 → the first tab.
+
+### 2026-11-10 (16:30) — rebased onto Foundation 741930b; M-08 and M-23 judged on screen; a shared race found
+- **Why Mac Test still saw no tab change on 0ea9f09:** its app had no first responder (focus on the window's content
+  group). UIKit offers responder-chain key commands only through a first responder, so my app-level commands never
+  fired there; menu key equivalents (⌘K, ⌘O, ⌃⌘F) fire regardless — exactly the split Mac Test saw. My smoke had
+  just closed the Open panel and refocused the WebView, so it passed.
+- **Fix:** Window menu items "Show Next Tab ⌃Tab", "Show Previous Tab ⌃⇧Tab" and "Go to Tab" › Tab 1–9 ⌘1–⌘9 (as
+  Safari has them) — they work without a first responder. While the WebView has the keyboard UIKit takes ⌃Tab for its
+  own focus moves before the menu sees it, so ⌃Tab/⌃⇧Tab are also priority key commands; the two never fire together.
+  The WebView is also refocused when files arrive and at first render.
+- **Smoke now judges the screen** (the tab strip's `.rtab.active`, its order) and checks every press moves exactly one
+  tab, in both states: page focused (after the Open panel) and no first responder (files handed over, then the
+  WebView resigns). Run 42798525515: all six pass.
+- **Shared race (found here, patch for Foundation):** two files handed over at once killed the Ui —
+  `InvalidOperationException: Collection was modified` from `TabsService.DropOtherCaches`. `OpenAsync` continues on
+  the thread pool after `ConfigureAwait(false)`, so `DropOtherCaches` and `PersistAsync` walked the tab list while the
+  next open added to it. Patch: one lock around every change to the list, those two readers walk a snapshot taken
+  under it; `TabsConcurrencyTests` (2) fail on 741930b with exactly that error and pass with the patch; Core 249/249.
+  `docs/mac/foundation/TabsService-overlapping-opens.patch`. Not applied to platform/mac (shared code).
+- **Page-image hook (D-158):** `ChuvadiWebView` overrides MAUI's `CreateFileProvider` with `PageImageFileProvider`, as
+  PAGE-IMAGES.md asks. Smoke opens an A0 page (above the large-format threshold) and fetches its `_chvd/pages/…png`.
