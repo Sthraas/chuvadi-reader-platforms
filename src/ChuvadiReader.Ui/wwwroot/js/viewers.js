@@ -109,6 +109,27 @@ export function scrollGridTo(el, top) {
     if (el) el.scrollTop = Math.max(0, top - el.clientHeight / 2);
 }
 
+// D-161: a spreadsheet cell shows its display text; clicking or tapping it shows the value the file stores in the bar
+// above the grid (hovering shows it too, as the cell's title). One listener on the grid, nothing per cell.
+export function gridValueBar(el) {
+    if (!el || el._chvdValueBar) return;
+    const bar = el.parentElement && el.parentElement.querySelector('.xv-valbar');
+    if (!bar) return;
+    let sel = null;
+    el._chvdValueBar = (e) => {
+        const td = e.target && e.target.closest ? e.target.closest('td.xv-cell') : null;
+        if (!td || !el.contains(td)) return;
+        if (sel) sel.classList.remove('sel');
+        if (!td.hasAttribute('data-a')) { sel = null; bar.hidden = true; return; }
+        sel = td;
+        td.classList.add('sel');
+        bar.querySelector('.xv-val-addr').textContent = td.getAttribute('data-a');
+        bar.querySelector('.xv-val-text').textContent = td.getAttribute('data-v') || '';
+        bar.hidden = false;
+    };
+    el.addEventListener('click', el._chvdValueBar);
+}
+
 export function scrollToSelector(el, selector) {
     if (!el) return;
     const t = el.querySelector(selector);

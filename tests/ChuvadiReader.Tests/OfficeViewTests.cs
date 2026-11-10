@@ -12,6 +12,8 @@ namespace ChuvadiReader.Tests;
 /// the file holds it. The truth is <c>Fixtures/Office/expected.json</c>, written by
 /// <c>tools/OfficeCorpus/make.py</c> from the files' own XML and openpyxl, never from Chuvadi. Plus the
 /// libraries' limits (B-08) and cancellation (B-08b).
+/// D-161: a cell shows its display text and keeps its stored value; these exact-data checks are on the stored value
+/// (<see cref="SheetCell.Value"/>), which copy, export and Find use. The display text is checked in XlsxDisplayTests.
 /// </summary>
 public sealed class OfficeViewTests
 {
@@ -28,11 +30,11 @@ public sealed class OfficeViewTests
     }
 
     private static Dictionary<(int, int), string> Cells(WorkbookView wb, int sheet) =>
-        wb.Sheets[sheet].Cells.ToDictionary(c => (c.Row, c.Col), c => c.Text);
+        wb.Sheets[sheet].Cells.ToDictionary(c => (c.Row, c.Col), c => c.Value);
 
     private static void SameNumber(double want, string shown, string where)
     {
-        Assert.True(double.TryParse(shown, NumberStyles.Float, CultureInfo.CurrentCulture, out var got), $"{where}: '{shown}' isn't a number");
+        Assert.True(double.TryParse(shown, NumberStyles.Float, CultureInfo.InvariantCulture, out var got), $"{where}: '{shown}' isn't a number");
         Assert.True(Math.Abs(got - want) <= Math.Abs(want) * 1e-12, $"{where}: file holds {want}, viewer shows {shown}");
     }
 
@@ -53,6 +55,12 @@ public sealed class OfficeViewTests
                     case "numbers":
                         SameNumber(cell.Value.GetDouble(), shown!, where);
                         break;
+                    case "dates_1900":
+                    case "dates_1904":
+                        // Excel stores a date as a day count; the stored value is that number (computed here from the
+                        // date openpyxl read, with Excel's own day zero: 1899-12-31 with the fictitious 29 Feb 1900, or 1904-01-01).
+                        SameNumber(Serial(cell.Value.GetString()!, group.Name == "dates_1904"), shown!, where);
+                        break;
                     case "booleans":
                         Assert.Equal(cell.Value.GetBoolean() ? "TRUE" : "FALSE", shown);
                         break;
@@ -62,6 +70,16 @@ public sealed class OfficeViewTests
                 }
             }
         }
+    }
+
+    private static bool IsoDate(string s) =>
+        DateTime.TryParseExact(s, ["yyyy-MM-dd", "yyyy-MM-dd HH:mm"], CultureInfo.InvariantCulture, DateTimeStyles.None, out _);
+
+    private static double Serial(string iso, bool date1904)
+    {
+        var d = DateTime.ParseExact(iso, iso.Length > 10 ? "yyyy-MM-dd HH:mm" : "yyyy-MM-dd", CultureInfo.InvariantCulture);
+        if (date1904) return (d - new DateTime(1904, 1, 1)).TotalDays;
+        return d < new DateTime(1900, 3, 1) ? (d - new DateTime(1899, 12, 31)).TotalDays : (d - new DateTime(1899, 12, 30)).TotalDays;
     }
 
     [Fact]
@@ -79,6 +97,11 @@ public sealed class OfficeViewTests
             if (cell.Value.GetProperty("kind").GetString() == "number")
             {
                 SameNumber(cell.Value.GetProperty("value").GetDouble(), shown!, cell.Name);
+            }
+            else if (IsoDate(cell.Value.GetProperty("value").GetString()!) && double.TryParse(shown, NumberStyles.Float, CultureInfo.InvariantCulture, out _))
+            {
+                // A date cell (make.py writes openpyxl's dates as ISO text): the stored value is its day count.
+                SameNumber(Serial(cell.Value.GetProperty("value").GetString()!, date1904: false), shown!, cell.Name);
             }
             else
             {

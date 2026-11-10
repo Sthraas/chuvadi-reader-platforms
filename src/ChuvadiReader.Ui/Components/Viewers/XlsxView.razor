@@ -3,6 +3,8 @@
     column widths, cell styles, frozen header rows, sheet tabs along the bottom, and the Grid / As
     printed toggle (As printed waits for the Layout library). Password-protected workbooks show the
     unlock card; the password lives only in this component. Counter unit: sheet.
+    D-161: every cell shows its display text (its number format, by Chuvadi.Sheets, in the system culture);
+    copy, Find and the value bar use the value the file stores (hover a cell, or click or tap it).
 *@
 @inherits ViewerBase
 @inject XlsxViewService Xlsx
@@ -25,6 +27,7 @@
         var s = _wb.Sheets[_active];
         var lastRow = Math.Min(Math.Max(s.LastRow + 2, 24), 5000);
         var lastCol = Math.Min(Math.Max(s.LastCol + 1, 12), 256);
+        <div class="xv-valbar" hidden aria-live="polite"><span class="xv-val-addr"></span><span class="xv-val-text"></span></div>
         <div class="xv-gridwrap" @ref="_scroll">
             <table class="xv-grid" style="zoom:@Css(Scale)">
                 <thead>
@@ -92,6 +95,7 @@
     private string? _query;
     private bool _scrollToHit;
     private ElementReference _scroll;
+    private bool _valueBarOn;      // the grid's click listener is on (the grid element lives while a workbook is shown)
 
     protected override async Task OnParametersSetAsync()
     {
@@ -121,6 +125,7 @@
     {
         var v = ++_version;
         _wb = null;
+        _valueBarOn = false;
         _error = null; _errorDetail = null;
         _index = new();
         _hits = new();
@@ -228,7 +233,7 @@
             {
                 int n = 0;
                 foreach (var c in _wb.Sheets[i].Cells)
-                    if (c.Text.Contains(_query, StringComparison.OrdinalIgnoreCase)) n++;
+                    if (c.Value.Contains(_query, StringComparison.OrdinalIgnoreCase)) n++;
                 _sheetHits[i] = n;
                 total += n;
             }
@@ -249,11 +254,17 @@
         _hits = new();
         if (_wb is null || _query is null) return;
         foreach (var c in _wb.Sheets[_active].Cells)
-            if (c.Text.Contains(_query, StringComparison.OrdinalIgnoreCase)) _hits.Add((c.Row, c.Col));
+            if (c.Value.Contains(_query, StringComparison.OrdinalIgnoreCase)) _hits.Add((c.Row, c.Col));
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (_wb is not null && !_valueBarOn)
+        {
+            _valueBarOn = true;
+            await JsVoidAsync("gridValueBar", _scroll);   // D-161: click or tap a cell to see the value it stores
+        }
+
         if (_scrollToHit && _wb is not null)
         {
             _scrollToHit = false;
@@ -284,7 +295,7 @@
         return byName >= 0 ? SelectAsync(byName) : Task.CompletedTask;
     }
 
-    /// <summary>Every sheet as tab-separated rows (cell text as displayed), sheets separated by a
+    /// <summary>Every sheet as tab-separated rows (each cell's stored value, D-161), sheets separated by a
     /// blank line and headed by their name when there is more than one.</summary>
     public override string GetAllText()
     {
@@ -305,7 +316,7 @@
                 for (int c = sh.FirstCol; c <= sh.LastCol; c++)
                 {
                     if (c > sh.FirstCol) sb.Append('\t');
-                    if (map.TryGetValue((r, c), out var cell)) sb.Append(cell.Text);
+                    if (map.TryGetValue((r, c), out var cell)) sb.Append(cell.Value);
                 }
                 sb.Append('\n');
             }
@@ -347,9 +358,17 @@
         {
             var cell = Cell(r, c);
             <td class="xv-cell @(cell is null ? "empty" : null) @(s.FreezeRows > 0 && r <= s.FreezeRows ? "frozen-row" : null) @(cell is not null && _hits.Contains((r, c)) ? "hit" : null)"
-                style="@CellStyle(cell)">@cell?.Text</td>
+                style="@CellStyle(cell)" title="@cell?.Value" data-a="@(cell is null ? null : ColLetter(c) + r.ToString(System.Globalization.CultureInfo.InvariantCulture))" data-v="@cell?.Value">@CellText(cell)</td>
         }
     </tr>;
+
+    /// <summary>The display text; a "*x" format repeats x to fill the cell where the library says (FillIndex).</summary>
+    private static RenderFragment? CellText(SheetCell? cell) => cell switch
+    {
+        null => null,
+        { FillCharacter: char fill, FillIndex: int at } when at >= 0 && at <= cell.Text.Length => @<span class="xv-fill"><span>@cell.Text[..at]</span><span class="xv-rep" aria-hidden="true">@(new string(fill, 256))</span><span>@cell.Text[at..]</span></span>,
+        _ => @<text>@cell.Text</text>,
+    };
 
     private static string ColLetter(int col)
     {
