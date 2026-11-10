@@ -312,3 +312,13 @@ dotnet test tests/ChuvadiReader.Web.Tests -c Release   # 123 passed, 0 warnings
 - Tests: `PageImageEndpointTests` (5) and `tests/web-e2e/page_images.py` (a large-format page drawn from its address through the gateway; another person 404; after the tab closes, 404), 6/6 in four engines.
 - **For Web Test's security pass before it ships** (TEST-PLAN S-19).
 - **WT-17, WT-18, WT-19** are shared Core, not host; options sent to the coordinator (WT-17 changes what every platform shows; WT-18 needs the library to report the per-part limit as its limit exception; WT-19 needs a relief request from Excel and Word closes).
+
+### 31. WT-17 (D-161, D-162) as an exact diff for the Foundation — 10 Nov, afternoon
+- Arun's decision: option (b). Built and tested on `platform/foundation` @ `741930b` in a separate worktree; **not** applied to Core on this branch. The diff is `docs/web/proposal/D-161-excel-number-formats.patch` (applies with `git apply` on `741930b`):
+  - `XlsxViewService.MapCell`: a cell whose style has a number format (a code other than General, or a built-in id above 0) shows `Cell.DisplayText` (the library's NumberFormatter); a General cell keeps the full value it holds. `SheetCell` gains `Stored`, the value as held, set only when it differs from what the grid shows.
+  - `XlsxViewService.ReadOptions`: `DisplayCulture = CultureInfo.CurrentCulture`, so en-IN gives Indian grouping.
+  - `XlsxView.razor`: the cell's `title` is `Stored` (hover); Find also matches the held value. Showing it on selection (touch) needs a Ui choice; left to the Foundation and the Web portal UI.
+  - `OfficeViewTests`: the "as the file holds it" tests compare the held value (`Stored ?? Text`); new theory with a built workbook (en-IN and en-US): `#,##0.00` → 12,34,567.89 / 1,234,567.89, `0.0%`, a ₹ currency code, `yyyy-mm-dd hh:mm`, a three-section custom code ("zero"), and General 0.30000000000000004 and 1234567890123 shown in full with no hover text.
+  - Checks on `741930b` with the diff: shared solution 0 warnings; Core tests 249/249 three runs in a row.
+- **For the Sheets list:** the dates in `values.xlsx` and `dates1904.xlsx` use built-in format 14 (the system short date). Sheets 2.0.4 renders it as `mm-dd-yy` ("11-05-24" for 2024-11-05, "01-01-04" for 1904-01-01): a format-14 issue in both date systems, not a 1904 one. Excel shows "11/5/2024" in en-US and "05-11-2024" in en-IN.
+- **WT-18 for the Sheets list:** the per-part cap (`MaxPartBytes`) throws `InvalidDataException`; it should throw `XlsxLimitExceededException` (limit "MaxPartBytes"), as the total and ratio limits already do. Then the Core's existing catch says "too large to open".

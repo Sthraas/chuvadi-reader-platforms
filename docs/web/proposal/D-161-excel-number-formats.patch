@@ -1,0 +1,171 @@
+diff --git a/src/ChuvadiReader.Core/Documents/XlsxViewService.cs b/src/ChuvadiReader.Core/Documents/XlsxViewService.cs
+index 7e3183d..1abf911 100644
+--- a/src/ChuvadiReader.Core/Documents/XlsxViewService.cs
++++ b/src/ChuvadiReader.Core/Documents/XlsxViewService.cs
+@@ -29,7 +29,7 @@ public sealed record SheetCell(
+     bool Bold, bool Italic, bool Underline,
+     string? Color, string? Fill, bool IsNumber,
+     string? FontName = null, double? FontSizePt = null, bool Wrap = false,
+-    string VAlign = "Bottom");
++    string VAlign = "Bottom", string? Stored = null);
+ 
+ /// <summary>Loads an .xlsx into a <see cref="WorkbookView"/> via <c>Chuvadi.Sheets</c>.</summary>
+ public sealed class XlsxViewService
+@@ -41,6 +41,7 @@ public sealed class XlsxViewService
+     {
+         var options = XlsxReaderOptions.ForUntrustedInput();
+         options.CancellationToken = cancellationToken;
++        options.DisplayCulture = CultureInfo.CurrentCulture; // D-161: the system's separators and grouping (en-IN: 12,34,567.89)
+         return options;
+     }
+ 
+@@ -113,7 +114,12 @@ public sealed class XlsxViewService
+     {
+         CellStyle? st = c.Style;
+         bool isNum = c.Value is double or float or int or long or decimal;
+-        string text = FormatValue(c.Value);
++        // D-161/D-162 (WT-17): a cell with a number format shows exactly what its format says (the library's
++        // NumberFormatter: currency, separators, decimals, percent, dates, times, custom sections); a General cell
++        // shows the full value it holds, never shortened. When the two differ, Stored carries the value as held,
++        // for the Ui to show on hover or selection.
++        string stored = FormatValue(c.Value);
++        string text = HasNumberFormat(st) && c.Value is not null and not string ? c.DisplayText : stored;
+         string align = st is { } s && s.HAlign != HorizontalAlign.General
+             ? s.HAlign.ToString()
+             : (isNum ? "Right" : "Left");
+@@ -125,13 +131,18 @@ public sealed class XlsxViewService
+             st is { } fs && !string.IsNullOrWhiteSpace(fs.FontName) ? fs.FontName : null,
+             st is { } ss && ss.FontSize > 0 ? ss.FontSize : null,
+             st?.WrapText ?? false,
+-            st is { } vs && vs.VAlign != VerticalAlign.Bottom ? vs.VAlign.ToString() : "Bottom");
++            st is { } vs && vs.VAlign != VerticalAlign.Bottom ? vs.VAlign.ToString() : "Bottom",
++            text == stored ? null : stored);
+     }
+ 
+     // Displays the cell's value as-is. Interpreting the workbook's number-format code
+     // (percent, thousands, decimals, date masks, etc.) is the library's job and must NOT
+     // be re-implemented here — when Chuvadi.Sheets exposes a formatted display string per
+     // cell, map that instead. Until then the raw value is shown plainly.
++    /// <summary>A style with a number format other than General (a code, or a built-in id above 0).</summary>
++    private static bool HasNumberFormat(CellStyle? st)
++        => st is { } s && (s.NumberFormat is { Length: > 0 } code ? !code.Equals("General", StringComparison.OrdinalIgnoreCase) : s.NumberFormatId is > 0);
++
+     private static string FormatValue(object? v) => v switch
+     {
+         null => "",
+diff --git a/src/ChuvadiReader.Ui/Components/Viewers/XlsxView.razor b/src/ChuvadiReader.Ui/Components/Viewers/XlsxView.razor
+index f5f544d..8922abc 100644
+--- a/src/ChuvadiReader.Ui/Components/Viewers/XlsxView.razor
++++ b/src/ChuvadiReader.Ui/Components/Viewers/XlsxView.razor
+@@ -228,7 +228,7 @@
+             {
+                 int n = 0;
+                 foreach (var c in _wb.Sheets[i].Cells)
+-                    if (c.Text.Contains(_query, StringComparison.OrdinalIgnoreCase)) n++;
++                    if (c.Text.Contains(_query, StringComparison.OrdinalIgnoreCase) || (c.Stored?.Contains(_query, StringComparison.OrdinalIgnoreCase) ?? false)) n++;
+                 _sheetHits[i] = n;
+                 total += n;
+             }
+@@ -249,7 +249,7 @@
+         _hits = new();
+         if (_wb is null || _query is null) return;
+         foreach (var c in _wb.Sheets[_active].Cells)
+-            if (c.Text.Contains(_query, StringComparison.OrdinalIgnoreCase)) _hits.Add((c.Row, c.Col));
++            if (c.Text.Contains(_query, StringComparison.OrdinalIgnoreCase) || (c.Stored?.Contains(_query, StringComparison.OrdinalIgnoreCase) ?? false)) _hits.Add((c.Row, c.Col));
+     }
+ 
+     protected override async Task OnAfterRenderAsync(bool firstRender)
+@@ -347,7 +347,7 @@
+         {
+             var cell = Cell(r, c);
+             <td class="xv-cell @(cell is null ? "empty" : null) @(s.FreezeRows > 0 && r <= s.FreezeRows ? "frozen-row" : null) @(cell is not null && _hits.Contains((r, c)) ? "hit" : null)"
+-                style="@CellStyle(cell)">@cell?.Text</td>
++                style="@CellStyle(cell)" title="@cell?.Stored">@cell?.Text</td>
+         }
+     </tr>;
+ 
+diff --git a/tests/ChuvadiReader.Tests/OfficeViewTests.cs b/tests/ChuvadiReader.Tests/OfficeViewTests.cs
+index ab80365..309e61f 100644
+--- a/tests/ChuvadiReader.Tests/OfficeViewTests.cs
++++ b/tests/ChuvadiReader.Tests/OfficeViewTests.cs
+@@ -27,8 +27,10 @@ public sealed class OfficeViewTests
+         return (int.Parse(a[i..], CultureInfo.InvariantCulture), col);
+     }
+ 
++    // The value as the file holds it: the grid text for General cells, Stored (shown on hover or selection)
++    // when a number format changes how it reads (D-161, D-162).
+     private static Dictionary<(int, int), string> Cells(WorkbookView wb, int sheet) =>
+-        wb.Sheets[sheet].Cells.ToDictionary(c => (c.Row, c.Col), c => c.Text);
++        wb.Sheets[sheet].Cells.ToDictionary(c => (c.Row, c.Col), c => c.Stored ?? c.Text);
+ 
+     private static void SameNumber(double want, string shown, string where)
+     {
+@@ -293,4 +295,68 @@ public sealed class OfficeViewTests
+         Assert.ThrowsAny<OperationCanceledException>(() => new XlsxViewService().Load(Path.Combine(Dir, "realistic.xlsx"), null, cancelled.Token));
+         Assert.Equal(cancelled.Token, XlsxViewService.ReadOptions(cancelled.Token).CancellationToken);
+     }
++
++    // ── D-161, D-162 (WT-17): a cell with a number format shows what the format says; General shows all it holds ──
++
++    private static string FormattedWorkbook()
++    {
++        var path = Path.Combine(Path.GetTempPath(), $"formats-{Guid.NewGuid():N}.xlsx");
++        (string Code, string Value)[] cells =
++        [
++            ("#,##0.00", "1234567.891"), ("0.0%", "0.1234"), ("\u20B9#,##0.00", "1234.5"),
++            ("yyyy-mm-dd hh:mm", "45601.5"), ("0.00;-0.00;\"zero\"", "-3.5"), ("0.00;-0.00;\"zero\"", "0"),
++            ("General", "0.30000000000000004"), ("General", "1234567890123"),
++        ];
++        var fmts = string.Concat(cells.Select((c, i) => $"<numFmt numFmtId=\"{164 + i}\" formatCode=\"{System.Security.SecurityElement.Escape(c.Code)}\"/>"));
++        var xfs = "<xf numFmtId=\"0\" fontId=\"0\" fillId=\"0\" borderId=\"0\"/>" + string.Concat(cells.Select((c, i) =>
++            $"<xf numFmtId=\"{(c.Code == "General" ? 0 : 164 + i)}\" fontId=\"0\" fillId=\"0\" borderId=\"0\" applyNumberFormat=\"1\"/>"));
++        var rows = string.Concat(cells.Select((c, i) => $"<row r=\"{i + 1}\"><c r=\"A{i + 1}\" s=\"{i + 1}\"><v>{c.Value}</v></c></row>"));
++        var parts = new Dictionary<string, string>
++        {
++            ["[Content_Types].xml"] = "<?xml version=\"1.0\"?><Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Default Extension=\"xml\" ContentType=\"application/xml\"/><Override PartName=\"/xl/workbook.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\"/><Override PartName=\"/xl/worksheets/sheet1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/><Override PartName=\"/xl/styles.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml\"/></Types>",
++            ["_rels/.rels"] = "<?xml version=\"1.0\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"xl/workbook.xml\"/></Relationships>",
++            ["xl/workbook.xml"] = "<?xml version=\"1.0\"?><workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><sheets><sheet name=\"Formats\" sheetId=\"1\" r:id=\"rId1\"/></sheets></workbook>",
++            ["xl/_rels/workbook.xml.rels"] = "<?xml version=\"1.0\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet1.xml\"/><Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.xml\"/></Relationships>",
++            ["xl/styles.xml"] = $"<?xml version=\"1.0\"?><styleSheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><numFmts count=\"{cells.Length}\">{fmts}</numFmts><fonts count=\"1\"><font/></fonts><fills count=\"1\"><fill/></fills><borders count=\"1\"><border/></borders><cellXfs count=\"{cells.Length + 1}\">{xfs}</cellXfs></styleSheet>",
++            ["xl/worksheets/sheet1.xml"] = $"<?xml version=\"1.0\"?><worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData>{rows}</sheetData></worksheet>",
++        };
++        using var zip = ZipFile.Open(path, ZipArchiveMode.Create);
++        foreach (var (name, xml) in parts)
++        {
++            using var w = new StreamWriter(zip.CreateEntry(name).Open());
++            w.Write(xml);
++        }
++
++        return path;
++    }
++
++    [Theory]
++    [InlineData("en-IN", "12,34,567.89", "\u20B91,234.50")]
++    [InlineData("en-US", "1,234,567.89", "\u20B91,234.50")]
++    public void A_formatted_cell_shows_what_its_format_says_in_the_system_culture(string culture, string grouped, string currency)
++    {
++        var was = CultureInfo.CurrentCulture;
++        CultureInfo.CurrentCulture = new CultureInfo(culture);
++        try
++        {
++            var cells = new XlsxViewService().Load(FormattedWorkbook()).Sheets[0].Cells.ToDictionary(c => c.Row);
++            Assert.Equal(grouped, cells[1].Text);
++            Assert.Equal("12.3%", cells[2].Text);
++            Assert.Equal(currency, cells[3].Text);
++            Assert.Equal("2024-11-05 12:00", cells[4].Text);
++            Assert.Equal("-3.50", cells[5].Text);
++            Assert.Equal("zero", cells[6].Text);
++            Assert.True(cells[1].Stored is { } held && double.Parse(held, CultureInfo.CurrentCulture) == 1234567.891, "the value as held, for hover");
++
++            // General shows the full value, never shortened, and needs no hover text.
++            Assert.Equal(0.30000000000000004, double.Parse(cells[7].Text, CultureInfo.CurrentCulture));
++            Assert.Equal(1234567890123d, double.Parse(cells[8].Text, CultureInfo.CurrentCulture));
++            Assert.Null(cells[7].Stored);
++            Assert.Null(cells[8].Stored);
++        }
++        finally
++        {
++            CultureInfo.CurrentCulture = was;
++        }
++    }
+ }
