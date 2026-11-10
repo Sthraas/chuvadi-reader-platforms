@@ -18,8 +18,8 @@ _Last updated: 9 Nov 2026, 06:12 IST. **PR #11 merged into chuvadi-reader main (
 | Android | 4260ca4: AT-02, AT-07 (P-08 patch for Foundation), AT-08; rebasing onto 022b7c0 and running emulators incl. Release launch |
 | Web | Rebasing onto 022b7c0 for pdf 3.32.0 (LIB-1) and WT-17 |
 | Mobile app UI | Rebasing onto 022b7c0; checking TOOLS/Mark rails against desktop, then drop tablet Save pin |
-| Linux Test | **Linux 7595ef3 verified ready for Arun's check** (9 Nov 22:00 IST): every Linux and shared bug fixed except B-26 (deferred by D-147); open elsewhere: library B-08a, B-09a, B-27; Reader chat collapse button; Windows timings; six real-machine checks |
-| Mac Test | Long re-verify of M-01..M-16 running (~2h45m); then trimmed Release check |
+| Linux Test | **Signed off Linux d918161 (10 Nov 07:25 IST) — ready for Arun's check**; checklist in RESULTS.md; open, not blocking: B-27 (library), B-30 memory gap (Foundation), B-08a/B-09a/B-11a (library), six real-machine checks |
+| Mac Test | 812079f: M-09, M-10, M-14 verified, M-15 works; open M-08 (⌃Tab keys), M-23 (⌘1); M-06 needs a real Mac |
 | Web Test | Waiting for Web on pdf 3.32.0 (LIB-1, WT-17); staging VM items and manual checks for a person |
 | Android Test | Round 4 running (incl. same-file-opened-twice vs Windows) |
 | Web portal UI | Rebasing onto 022b7c0; standing by for WT-03..WT-06 |
