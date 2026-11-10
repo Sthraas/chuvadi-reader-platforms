@@ -200,6 +200,12 @@ internal static class MacSmoke
 
             last = now;
             Log($"tabs {tabs.Tabs.Count}: {now}");
+            if (view is not null)
+            {
+                // A raster page (D-158, large-format) takes seconds to draw: report the page again later.
+                Later(9.0, async () => Log("ui-late " + await UiTextAsync(Current(view))));
+            }
+
             Later(1.5, () =>
             {
                 ReportMenu();
@@ -287,10 +293,9 @@ internal static class MacSmoke
                 + ' keys=[' + keys + ']'
                 + ' notice=' + (document.body && document.body.innerText.indexOf('stopped unexpectedly') >= 0 ? 1 : 0)
                 + (function () {   // D-158: a raster page's image is served by address from memory (page-image hook)
-                  var img = Array.prototype.find.call(document.querySelectorAll('image, img'), function (e) {
-                    return ((e.getAttribute('href') || e.getAttribute('xlink:href') || e.getAttribute('src') || '')).indexOf('_chvd/pages/') >= 0; });
-                  if (!img) { return ''; }
-                  var href = img.getAttribute('href') || img.getAttribute('xlink:href') || img.getAttribute('src');
+                  var m = (document.body ? document.body.innerHTML : '').match(/_chvd\/pages\/[0-9a-f]{32}\.png/);
+                  if (!m) { return ''; }
+                  var href = m[0];
                   try {
                     var x = new XMLHttpRequest(); x.open('GET', href, false); x.send();
                     return ' pageimg=' + x.status + '/' + (x.getResponseHeader('content-type') || '?') + '/' + (x.responseText || '').length;
