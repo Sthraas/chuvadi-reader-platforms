@@ -26,11 +26,10 @@ on:
         options: [full, smoke, timeline]
 
 env:
-  # platform/foundation-pr (PR #13): twenty-third combined patch (AT-15, page-box drift, AT-09, AT-13, TOOLS headings).
-  FOUNDATION_REF: 15033c8466f8b5f796c2e4f6375df8113319213d
-  # platform/mobile-ui: none this round — its head (2b29227, H-21, AT-06) conflicts with 15033c8 in 7 shared files
-  # (reader.js, mobile.css, mobile.js, Reader.razor, …); Mobile UI is to merge Foundation 15033c8 first.
-  MOBILEUI_REF: none
+  # platform/foundation-pr: patch 24 (Excel number formats, CropBox, fresh-open fix) on Reader main f8971af.
+  FOUNDATION_REF: dd59362b1d82bddd6da00303e1729f518e98eb01
+  # platform/mobile-ui: Foundation 15033c8 merged, D-163 stopgap (H-22 is in mobile-ui-hooks-9.patch, Foundation's to take).
+  MOBILEUI_REF: 3ecbc75bf626033379bb7d1f73b84accad27ac18
   DOTNET_NOLOGO: '1'
   DOTNET_CLI_TELEMETRY_OPTOUT: '1'
 

@@ -778,3 +778,13 @@ same screen; no crash), smoke pass. With round 6 (API 36 phone and tablet, all c
   raises only after its awaits in series (platform attributes, SaveFolders / Profile / Theme hydration, theme apply,
   `leftbar.open`, the `shell.js` import and init). Second on the tablet: reading the document, "Opening" → pages,
   ~2 s (0.3 s on the phone). Both are in the shared Ui / Core: for Foundation, with these numbers.
+
+### 60. Foundation dd59362 + Mobile UI 3ecbc75; D-164 — coordinator, 10 Nov 20:45 IST
+- **D-164:** build settings stay as shipped, no AOT. `ChuvadiAot.targets` stays as an off-by-default test variant for the
+  timeline suite only (never in the shipped build). Both AT-14 waits are with Foundation.
+- Composition: Foundation `dd59362` (platform/foundation-pr, patch 24: Excel number formats, CropBox, fresh-open fix) +
+  Mobile UI `3ecbc75` (merged 15033c8; D-163) — clean. Mobile UI's `mobile-ui-hooks-9.patch` (H-22) applies but isn't in
+  Foundation yet; by the standing rule it isn't applied here, so H-22 isn't in this build.
+- Sandbox: Android Debug and Release `-warnaserror` 0 warnings; Release manifest 14/14; Core 292 (+3 skipped),
+  Hosting 89, MobileUi 16, WebUi 41 pass.
+- AT-01 is verified (Android Test R6); nothing of it waits on Arun.
