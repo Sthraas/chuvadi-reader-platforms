@@ -195,7 +195,7 @@ compare Foundation's B-24 "a stalled read never freezes the Reader") rather than
 Release once AT-03 lands. **Evidence:** R4 › results-phone-api36 › robust/; R4b › results-tablet-api36 › robust/ (screenshots,
 results.jsonl with PSS and `top`).
 
-## AT-14 · S3 · Android (build settings) · open — coordinator: build (a) and (b) as test-only variants (R6) — Cold "Open with" takes 3.9 s (phone) / 6.0 s (tablet) to paint page 1 on Release
+## AT-14 · S3 · Android (build settings) / Foundation (render path) · measured R6/R6b — decision needed — Cold "Open with" takes 3.9 s (phone) / 6.0 s (tablet) to paint page 1 on Release
 **Evidence:** R4e (run 42741617577), table in RESULTS §2: from the launch to page 1 painted, median 3,920 ms phone and 6,028 ms
 tablet over 12 cold runs, while the activity's first frame is ~1.2–1.5 s. The Release uses MAUI's default **profiled AOT**: the
 startup profile covers MAUI and the BCL, but Chuvadi's assemblies get 4–14 KB AOT images each (B-08), i.e. the PDF open, parse
@@ -208,7 +208,38 @@ and render path is JIT-compiled on every cold start.
 - (b) **Full AOT** (`AndroidEnableProfiledAot=false`). *Pros:* everything precompiled, no profile to maintain. *Cons:* bigger
   download (typically +30–60 %), longer build.
 - (c) **Leave as is.** *Cons:* 4–6 s first page.
-**Recommendation:** let me build (a) and (b) as test-only variants in one run and report both numbers and sizes; then decide.
+**Recommendation (first):** let me build (a) and (b) as test-only variants in one run and report both numbers and sizes; then decide.
+
+**Result of the variants (R6 run 42751641303, R6b run 42754433645; Foundation 846706e + Mobile UI c5c0b7e + Android 9ce073b;
+API 36; cold Open with → page 1 painted, ms, 10 runs each; baseline and full AOT built and measured on the same runners):**
+| | Phone median | Phone worst | Tablet median | Tablet worst | `.apk` | `.aab` |
+|---|---|---|---|---|---|---|
+| Baseline (as shipped, MAUI profile) — R6 | 3,616 | 7,172 | 7,749 | 13,272 | 42.97 MB | 42.58 MB |
+| (b) Full AOT — R6 | **2,966** (−18 %) | **3,284** | **6,873** (−11 %) | **7,196** | 64.15 MB (+49 %) | 63.76 MB (+50 %) |
+| Baseline — R6b | 4,842 | 9,051 | 8,776 | 16,120 | same | same |
+| (b) Full AOT — R6b | **4,097** (−15 %) | **4,408** | **8,489** (−3 %) | **9,460** | same | same |
+| (a) Recorded Chuvadi profile | **not built** — see below | | | | | |
+Runner speed varies a lot between runs (baseline 3.6 s vs 4.8 s on the same phone image), so compare within a run. Build time:
+baseline ~200–230 s, full AOT ~180–190 s.
+
+**(a) can't be recorded with what ships in .NET 10 for Android.** `-t:BuildAndStartAotProfiling` works, but `-t:FinishAotProfiling`
+calls `tools/Linux/aprofutil`, which isn't in the Linux SDK pack (`not found`), and the tool is in **none** of the 36.1.118 packs
+(Linux, Windows, macOS — checked the Windows and macOS `.nupkg`s: only the prebuilt `startup.aotprofile` / `dotnet.aotprofile`).
+The remaining recorder is the community `Mono.AotProfiler.Android` NuGet package (MIT), added to the project while recording.
+
+**What the numbers say:** JIT is a minority of the cold first-page time. Full AOT — the upper bound for any profile — saves
+0.3–0.9 s on the median and roughly **halves the worst case** (7.2 → 3.3 s phone, 13.3 → 7.2 s tablet in R6), at +21 MB. The other
+~3–8 s is parse + render + paint of page 1 (the tablet's bigger page costs more), i.e. Foundation/library work, not build settings.
+
+**Options now (for the coordinator):**
+- (a′) Record the Chuvadi profile with `Mono.AotProfiler.Android` in CI each release. *Pros:* most of (b)'s gain, small size cost.
+  *Cons:* a third-party tool in the release pipeline (rule 3 question: it only produces a data file, nothing of it ships); gain is
+  capped by (b)'s 0.3–0.9 s.
+- (b) Full AOT. *Pros:* no recording, steadier worst case. *Cons:* +21 MB `.apk`/`.aab` (+49 %).
+- (c) Keep MAUI's profile; put the effort on the render path (page 1 first at screen resolution, defer other pages' work).
+  *Pros:* attacks the larger 70–85 %. *Cons:* Foundation/library work.
+**Recommendation:** (c) as the main fix, plus (a′) only if Arun accepts the recorder as build tooling; (b) only if size doesn't
+matter. I'll measure any Foundation render change the same way (10 runs, phone and tablet).
 Startup trimming / work deferral in Foundation (B-29) already applies; this is about JIT on the open/render path.
 
 ## AT-15 · S2 · Foundation (routed 10 Nov, with the page drift) · **still open** R5 run 42746209649 (Foundation f88f9ef + Mobile UI c5c0b7e + Android 9ce073b, Release) — Mark › Text: a finger tap on the page makes no text box (phone and tablet)
