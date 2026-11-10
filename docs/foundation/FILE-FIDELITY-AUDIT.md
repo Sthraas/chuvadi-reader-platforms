@@ -64,6 +64,9 @@ literals, escapes, `_x` and `*x`; `[$₹-4009]` currency tags; text sections; da
 | P-06 | /UserUnit pages are drawn at the wrong size (only Measure corrects for it) | Lib PDF-L4 | Library (Windows Reader chat's item 3) |
 | P-07 | Dynamic XFA forms: only the static template shows, not the filled-in data | Lib PDF-L5 | Library (Windows Reader chat's item 2) |
 | P-08 | Outline and link jumps, layers, viewports | Windows Reader chat's 3.32.0 PR | In progress; its link rectangles must use the shown box (`ShownBox`) |
+| P-09 | A page's `/Rotate` (90, 180, 270) was ignored: the page was shown unturned (Linux Test B-32). Redaction, shapes and measuring already allowed for the turn, so on such a page they landed in the wrong place | App: the renderers are asked to apply the page's turn (`ApplyPageRotation`, in the library since before 3.32.0 and off by default); page numbers, text and pictures added in Mark, Properties' page size, image and SVG export, and the bench's crop, mask, margins, resize and imposition all follow the page as shown | **Fixed** (patch 26) |
+| P-10 | On a turned page, headers and footers run along a side and a level watermark reads sideways | Lib PDF-L7 (HeaderFooter), PDF-L8 (WatermarkStamper): honour `/Rotate` | Library |
+| P-11 | A picture placed with a quarter or half turn (one added in Mark on a turned page, or turned by 90° on any page) is missing from print and image export; it is in the file and on screen | Lib PDF-L6: `PageRasterizer` draws nothing for an image whose matrix is a quarter or half turn (it draws 45°; `SvgRenderer` draws all) | Library |
 | — | Annotations, form values and layers: drawn as a viewer shows them (AnnotationMode View; values drawn when appearances are missing; the file's default layers) | — | Matches the file |
 
 ## Word (.docx)
