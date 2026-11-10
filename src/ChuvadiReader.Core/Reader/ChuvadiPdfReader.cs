@@ -772,16 +772,31 @@ internal static class MemoryRelief
             }
 
             Interlocked.Exchange(ref _lastTicks, Environment.TickCount64);
-            GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, blocking: true, compacting: true);
-            MemoryReliefNotice.Raise();
+            Pass();
             if (FollowUp > TimeSpan.Zero)
             {
                 await Task.Delay(FollowUp).ConfigureAwait(false);
-                GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true); // the pool drops buffers idle for a minute
-                GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, blocking: true, compacting: true);
-                MemoryReliefNotice.Raise();
+                Pass(); // the pool drops buffers idle for a minute
             }
         });
+    }
+
+    /// <summary>
+    /// One relief pass (twentieth patch, D-158). The shared byte pool lets go of its idle buffers in a callback that
+    /// runs on the finalizer thread after a full collection, so the pass waits for that thread before the aggressive
+    /// collection that gives memory back. Without the wait, the buffers became garbage just after the pass and
+    /// stayed (Linux 36c: 681–807 MB; here 744 MB pooled → 248 MB left, 128 MB with the wait).
+    /// </summary>
+    internal static void Pass()
+    {
+        for (var i = 0; i < 2; i++)
+        {
+            GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true);
+            GC.WaitForPendingFinalizers();
+        }
+
+        GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, blocking: true, compacting: true);
+        MemoryReliefNotice.Raise();
     }
 
     /// <summary>Tests only: lets the next request run at once.</summary>
