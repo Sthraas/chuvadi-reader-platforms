@@ -105,8 +105,49 @@ export function scrollToLine(el, line, approxPx, center) {
 }
 
 /** Scrolls a grid's container to a vertical offset (virtualised rows: bring a row on screen first). */
-export function scrollGridTo(el, top) {
-    if (el) el.scrollTop = Math.max(0, top - el.clientHeight / 2);
+// The Excel grid is drawn as a window onto the sheet (E-05): this tells the view which part is on screen, once
+// now and then whenever it is scrolled or resized (at most once a frame). Returns true once it is on.
+export function gridWindow(el, dotnetRef) {
+    if (!el || !el.isConnected) return false;
+    if (el._chvdWindow) { el._chvdWindow(true); return true; }
+    let frame = 0, last = '';
+    const report = (force) => {
+        frame = 0;
+        const left = Math.abs(el.scrollLeft), top = el.scrollTop, w = el.clientWidth, h = el.clientHeight;
+        const key = `${left | 0},${top | 0},${w},${h}`;
+        if (!force && key === last) return;
+        last = key;
+        dotnetRef.invokeMethodAsync('OnGridWindow', left, top, w, h).catch(() => { });
+    };
+    const queue = () => { if (!frame) frame = requestAnimationFrame(() => report(false)); };
+    el.addEventListener('scroll', queue, { passive: true });
+    if (window.ResizeObserver) new ResizeObserver(queue).observe(el);
+    el._chvdWindow = report;
+    report(true);
+    return true;
+}
+
+// Another sheet starts at its top-left corner.
+export function scrollGridHome(el) {
+    if (!el) return;
+    el.scrollTop = 0;
+    el.scrollLeft = 0;
+    if (el._chvdWindow) el._chvdWindow(true);
+    // The value bar showed a cell of the sheet that was on screen before.
+    const bar = el.parentElement && el.parentElement.querySelector('.xv-valbar');
+    if (bar) bar.hidden = true;
+}
+
+// Brings a place on the sheet (x, y from the corner of the part that scrolls, in screen pixels; -1 = leave that
+// direction alone, the cell is in the frozen part) to the middle of the view. headW, headH: the part that stays put.
+export function scrollGridToCell(el, x, y, headW, headH) {
+    if (!el) return;
+    const rtl = getComputedStyle(el).direction === 'rtl';
+    if (y >= 0) el.scrollTop = Math.max(0, y - (el.clientHeight - headH) / 2);
+    if (x >= 0) {
+        const left = Math.max(0, x - (el.clientWidth - headW) / 2);
+        el.scrollLeft = rtl ? -left : left;
+    }
 }
 
 // D-161: a spreadsheet cell shows its display text; clicking or tapping it shows the value the file stores in the bar
@@ -119,14 +160,20 @@ export function gridValueBar(el) {
     if (!bar) return false;
     let sel = null;
     el._chvdValueBar = (e) => {
-        const td = e.target && e.target.closest ? e.target.closest('td.xv-cell') : null;
-        if (!td || !el.contains(td)) return;
+        const td = e.target && e.target.closest ? e.target.closest('.xv-cell') : null;
         if (sel) sel.classList.remove('sel');
-        if (!td.hasAttribute('data-a')) { sel = null; bar.hidden = true; return; }
+        // An empty cell is not an element (only cells that hold something are drawn): a click there clears the bar.
+        if (!td || !el.contains(td) || !td.hasAttribute('data-a')) { sel = null; bar.hidden = true; return; }
         sel = td;
         td.classList.add('sel');
         bar.querySelector('.xv-val-addr').textContent = td.getAttribute('data-a');
         bar.querySelector('.xv-val-text').textContent = td.getAttribute('data-v') || '';
+        // E-15: the cell's link and its comment, as the file holds them (shown, never followed).
+        const more = bar.querySelector('.xv-val-more');
+        if (more) {
+            const link = td.getAttribute('data-l'), note = td.getAttribute('data-n');
+            more.textContent = [link ? 'Link: ' + link : null, note].filter(Boolean).join('   ·   ');
+        }
         bar.hidden = false;
     };
     el.addEventListener('click', el._chvdValueBar);
