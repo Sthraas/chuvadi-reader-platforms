@@ -89,7 +89,7 @@ isn't keyed on the touch form factor here.
 **Actual:** tablet portrait shows tabs · pager · search; `Document ▾` is gone, so Properties / Export / Compress / Merge / Split
 have no entry point from the top bar in portrait. **Evidence:** `screenshots/r1/12f-vs-app.png`.
 
-## AT-06 · S3 · Mobile UI · **still open** R5 run 42746209649 (Foundation f88f9ef + Mobile UI c5c0b7e + Android 9ce073b, Release): same sizes (phone avatar 32, pager 36 high, sheet handle, library search 27.6, tag chips 32; tablet top bar 36–40, brand 22.5) — Touch targets under 44 dp (handout: 48 dp on tablet and phone)
+## AT-06 · S3 · Mobile UI · **mostly fixed** R8 run 42802779369 (Foundation 741930b + Mobile UI 2b29227 + Android 7c8e2d8, Release, API 36): every control in the original table is now ≥ 44 dp. Left under 44 — phone: desk name field 43.7 high; tablet: Home recent row 34 high, Home `Open library` link 18.8 high, Settings side list 38 high, Settings size options 24 high and switches 34 × 20, Arrange `Fetch another PDF` 32 high, shelf search button 28 × 28, desk name field 41.5 high — Touch targets under 44 dp (handout: 48 dp on tablet and phone)
 Measured in the page (CSS px = dp), every visible control, all screens, R1 API 36 (`design/*.layout.json`):
 | Form | Control | Size (dp) |
 |---|---|---|
@@ -122,7 +122,7 @@ below a dark bottom bar; Palm and Indigo show a mismatched band.
 **Fix (proposal):** `SystemBars` follows the theme (theme-changed signal → window background / `isAppearanceLightStatusBars`),
 or the WebView draws under the bars and pads with `env(safe-area-inset-*)`.
 
-## AT-09 · S3 · Mobile UI · **still open on tablet** R5 run 42746209649 (Foundation f88f9ef + Mobile UI c5c0b7e + Android 9ce073b, Release): 1/1 but the page box stays on 2; phone passes — Find reports the match but doesn't bring it into view
+## AT-09 · S3 · Mobile UI · **verified** R8 run 42802779369 (Foundation 741930b + Mobile UI 2b29227 + Android 7c8e2d8, Release, API 36): phone 1/1 on page 3; tablet now scrolls the match into view (`screenshots/r8/r8-find-shape-redact.png`). The tablet page box still says 2 while page 3 fills the screen — that is the page-box drift, tracked as AT-16 — Find reports the match but doesn't bring it into view
 **Steps:** tablet (API 36), open `doc-12p.pdf` (12 pages; the word "zephyrine" appears once, near the foot of page 3), Find,
 type `zephyrine`.
 **Expected:** 1/1, and the view moves so the highlighted match is on screen (page 3, foot).
@@ -156,7 +156,7 @@ may not save tabs at all), not at the kill timing. Anyone who switches apps on a
 **Evidence:** R3 run 42537723474 and R3b run 42539596914 › results-phone-api36 › function/results.jsonl (F-15, F-15b),
 10-after-process-death.png.
 
-## AT-12 · S3 · Android · **still open** R5 run 42746209649 (Foundation f88f9ef + Mobile UI c5c0b7e + Android 9ce073b, Release): Open with of the open file → tabs 4 → 5, phone and tablet (Android's DocumentLinks, see the analysis) — Opening a file that is already open adds a duplicate tab (Windows focuses the open tab)
+## AT-12 · S3 · Android · **verified** R8 run 42802779369 (Foundation 741930b + Mobile UI 2b29227 + Android 7c8e2d8, Release, API 36): Open with of the open file keeps 4 tabs and focuses it, phone and tablet — Opening a file that is already open adds a duplicate tab (Windows focuses the open tab)
 **Shared behaviour (chuvadi-reader main 2b8899d, PR #11):** `IncomingFiles.Receive` → `OpenDocumentService.Request(path)` →
 Reader → `TabsService.OpenAsync(path, …)`, which **focuses the existing tab when a tab with the same path is already open**
 (`TabsService.cs:123–131`, case-insensitive path match). On Windows, opening an already-open file from Explorer hands the same
@@ -181,7 +181,7 @@ full path over (`DesktopSingleInstance` → `IncomingFiles`), so it focuses that
 - (c) Leave as is. *Cons:* differs from Windows; tabs and Recent fill with duplicates.
 **Recommendation:** (a).
 
-## AT-13 · S2 · Foundation (shared Ui; library if it's the renderer) · passing: R5 1/1 each; R6 **5/5 phone** (4.0–5.0 s) and **5/5 tablet** (7.4–13.9 s) — keep repeating — A page with one large image sometimes never paints
+## AT-13 · S2 · Foundation (shared Ui; library if it's the renderer) · passing: R5 1/1 each, R6 5/5 each, R8 run 42802779369 (Foundation 741930b + Mobile UI 2b29227 + Android 7c8e2d8, Release, API 36) 5/5 phone (5.5–5.9 s) and 5/5 tablet (8.4–9.6 s) — 22 of 22 since the fix; treating as **verified** — keep repeating — A page with one large image sometimes never paints
 **Steps:** open `heavy-image.pdf` (one A4 page holding a 6000 × 6000 px JPEG; 28 MB file) with Open with; wait.
 **Expected:** page 1 painted within a few seconds (it does, when it works: 3.9 s and 4.5 s).
 **Actual:** in 2 of 4 runs the page stayed on its "page 1" placeholder for the whole wait (90 s, 120 s), app alive, CPU idle
@@ -321,7 +321,7 @@ Same trace build with finer markers (and without the Chuvadi-full AOT this time)
 **Recommendation:** (A) + (C), with (B) as the first step if (A) is too large for now; (D) for the build. Expected on these emulators:
 phone ≈ 2.5–3 s, tablet ≈ 3.5–4 s for a cold Open with; a real phone is several times faster than this software-rendered emulator.
 
-## AT-15 · S2 · Foundation (routed 10 Nov, with the page drift) · **still open** R5 run 42746209649 (Foundation f88f9ef + Mobile UI c5c0b7e + Android 9ce073b, Release) — Mark › Text: a finger tap on the page makes no text box (phone and tablet)
+## AT-15 · S2 · Foundation (routed 10 Nov, with the page drift) · **partly verified** R8 run 42802779369 (Foundation 741930b + Mobile UI 2b29227 + Android 7c8e2d8, Release, API 36): shapes by finger drag work (phone "1 shape"; tablet rectangle drawn, screenshot), the Protect redaction box draws on tablet ("1 box"), and a finger tap with Mark › Text now creates the box. Still wrong: the new text box doesn't take the caret — see AT-17 — Mark › Text: a finger tap on the page makes no text box (phone and tablet)
 **Steps:** Release (f88f9ef composition), API 36, open a PDF, Mark, choose Text (button shows as on), tap the page — quick tap, then
 a slow tap (finger held 400 ms) elsewhere on the page.
 **Expected:** a text box appears where the finger touched (`MkUpCore`: "tiny drag = a click → default-sized box"), with the caret in it.
@@ -339,6 +339,27 @@ then **all 21 `pointermove`s and the `pointerup` on `.rdesk`** (touch-action pan
 most likely the phone/tablet swipe-and-pan handling on `.rdesk` (mobile.js) capturing the pointer on `pointerdown`, which steals
 every markup gesture on touch (text, shapes, freehand, probably the Protect redaction box). Owner: whoever owns that handler
 (Mobile UI's mobile.js, or Foundation's reader.js); the markup layer should win when a markup tool is active.
+
+## AT-16 · S3 · Foundation (shared Ui) · open — Page box drifts from the page on screen (tablet, after Find)
+**Steps:** tablet API 36, open `doc-12p.pdf`, Find `zephyrine` (one match, foot of page 3).
+**Expected:** the page box says 3 — page 3 fills the screen.
+**Actual:** the match is shown and page 3 fills the screen, but the page box says **2** ("2 / 12"). Phone says "3 / 12".
+**Evidence:** R8 run 42802779369 (Foundation 741930b + Mobile UI 2b29227 + Android 7c8e2d8, Release, API 36) › results-tablet-api36 › function/04-find.png (`screenshots/r8/r8-find-shape-redact.png`, second frame);
+results.jsonl F-03. A dedicated check (`ci/drift.py`: box vs the page under the middle of the screen after a cold open, a scroll,
+a second document, a reopen, a rotation and a restart) runs from round 8b.
+
+## AT-17 · S2 · Foundation (shared Ui, markup) · open — Mark › Text: the new box doesn't take the caret; typing fires one-key shortcuts instead
+**Steps:** phone or tablet, open a PDF, Mark › Text, tap the page (a box appears — AT-15 fixed that), type `chuvadimark`.
+**Expected:** the caret is in the new box (and the on-screen keyboard opens); the letters go into the box.
+**Actual:** an editor element exists but focus stays on the page area (`DIV.rdesk`); nothing is typed into the box, and the letters
+run the shell's one-key commands — the `i` in "chuvadimark" opened the system image picker ("Images in Downloads") over the app
+(seen in R4d, R4f and R8, phone). With a hardware keyboard that is exactly what a person would hit; on glass the keyboard
+doesn't open at all until the box is tapped again (to confirm next round: second tap → focus).
+**Evidence:** R8 run 42802779369 (Foundation 741930b + Mobile UI 2b29227 + Android 7c8e2d8, Release, API 36) › results-*-api36 › function2/ (02–04 screenshots; results.jsonl F-04a: `editors: 1`,
+`active: DIV.rdesk`); `screenshots/r8/r8-find-shape-redact.png` (first frame: the picker).
+**Fix (proposal):** focus the box's editor in the same pointer-up handler that creates it (JS side, inside the user gesture, so
+Android also raises the keyboard); and don't run one-key shortcuts while a markup draft/box is selected.
+Blocks: text markup + Save, and the Mark text box part of AT-10.
 
 ## Questions for the coordinator (not filed as bugs)
 - **Q-1 Same file opened again → new tab** — answered by the coordinator (9 Nov 07:12): Windows is the reference. Checked the shared

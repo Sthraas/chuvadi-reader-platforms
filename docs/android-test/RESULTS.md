@@ -140,6 +140,21 @@ files, R-03 600 pages, R-04 provider URI, R-05 airplane, R-06 locales, R-07 fres
 F-14 phone "page moved 1 → 3 on rotation": the before-state was read while the reopened tab was still restoring its last page (3);
 test timing, not filed. Tablet print card button and F-06/F-07 saves still not reached by the tool (AT-15 blocks markup).
 
+## Round 8 — re-verification (run 42802779369; Foundation 741930b + Mobile UI 2b29227 + Android 7c8e2d8; **Release**, API 36)
+As-built Release: 0 crashes, 3/3 first frames (phone, tablet).
+| Item | Result |
+|---|---|
+| AT-06 touch targets | original table **fixed**; a second list of tablet content controls (and the desk name field) still under 44 dp — see BUGS |
+| AT-09 Find brings the match into view | **verified** phone and tablet |
+| AT-12 same file → same tab | **verified** (4 tabs stay 4) |
+| AT-13 heavy image page | **5/5 phone, 5/5 tablet** (22/22 since the fix) — verified |
+| AT-15 markup by finger | shapes **PASS** (phone + tablet), redaction box draws (tablet), text box is created; caret not in it → **AT-17** |
+| Page-box drift | tablet box says 2 with page 3 on screen after Find → **AT-16**; own check from R8b |
+| F-11 printing, phone | **PASS** again: Android dialog → PDF, 12 pages, 40,561 chars, 0 images |
+| F-11d print card → Android print dialog, tablet | **PASS** (first time the tool reached it); vector check of the tablet file in R8b |
+| AT-10 / AT-11 / F-15b ×10 / F-03b | **PASS** again |
+| F-06 forms, F-07 redacted copy saved, F-09 Save | not conclusive (tool: selection handles from my own long-press, phone Redact selector); re-run R8b |
+
 ## Blocked in CI: Reader on Android 15 (API 35)
 The API 35 image ships WebView 124, so the app correctly shows only its update screen (D-105). Updating it in CI from the API 36
 image's WebView failed twice: that WebView needs the Trichrome static library, which my donor job couldn't locate on the API 36

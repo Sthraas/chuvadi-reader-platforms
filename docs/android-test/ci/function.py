@@ -274,7 +274,7 @@ time.sleep(1.5)
 shot("print-card")
 mark_time()
 t0 = None
-pr = tap("Print", sel="section.chvd-card .footer button")
+pr = tap("Print", sel="section.chvd-card .footer button") or tap("Print", sel=".chvd-card button")
 time.sleep(5)
 shot("print-dialog")
 # Android print dialog: choose Save as PDF, then the PDF button, then Save in the picker.

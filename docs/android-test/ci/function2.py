@@ -203,9 +203,30 @@ def case_0():
         type_slow("chuvadimark")
         time.sleep(1)
         typed = cdp.js("(() => { const a = document.activeElement; return a ? (a.value ?? a.innerText ?? '') : null; })()")
+    if not (typed and "chuvadimark" in typed):
+        sh("input keyevent KEYCODE_BACK")   # leave whatever a stray shortcut opened
+        time.sleep(1.5)
+        bx = cdp.js("(() => { const e = document.querySelector('textarea, [contenteditable=true]'); if (!e) return null; const r = e.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; })()")
+        second = None
+        if bx:
+            q = to_screen(bx[0], bx[1])
+            sh(f"input tap {q[0]} {q[1]}")
+            time.sleep(1.5)
+            second = ui_state()
+            if second.get("active", "").split(".")[0] in ("TEXTAREA", "INPUT"):
+                type_slow("chuvadimark")
+                time.sleep(1)
+                typed = cdp.js("(() => { const a = document.activeElement; return a ? (a.value ?? a.innerText ?? '') : null; })()")
+        R.check("F-04d Mark › Text: a second tap on the new box puts the caret in it and typing works", bool(typed and "chuvadimark" in typed),
+                {"box": bx, "after_second_tap": second, "typed": (typed or "")[:40]})
+        typed_first = None
+    else:
+        typed_first = typed
     shot("mark-text")
+    typed_keep, typed = typed, typed_first
     R.check("F-04a Mark › Text: a finger tap on the page makes a text box; typing goes into it", bool(typed and "chuvadimark" in typed),
-            {"tool": tool, "after_tool": after_tool, "after_tap": after_tap, "events": events, "typed": typed})
+            {"tool": tool, "after_tool": after_tool, "after_tap": after_tap, "events": events, "typed": (typed or "")[:40]})
+    typed = typed_keep
     sh("input keyevent KEYCODE_BACK")  # hide the keyboard
     time.sleep(1)
     mark_time()
@@ -249,7 +270,7 @@ def case_shapes():
     plog_reset()
     sh(f"input swipe {a[0]} {a[1]} {b[0]} {b[1]} 600")
     time.sleep(1.5)
-    hdr = cdp.js("(document.querySelector('.ph-sub') || document.querySelector('.mk-count') || document.body).innerText.match(/(\\d+) shape/)")
+    hdr = cdp.js("document.body.innerText.match(/(\\d+) shapes?/) || (document.body.innerText.match(/Rectangle\\s+p\\s*\\d+\\s*·\\s*(\\d+) of/) )")
     ev = plog()
     shot("shape-drag")
     R.check("F-04c Mark › Rectangle: a finger drag draws a shape", bool(hdr and hdr[1] != "0"), {"tool": tool, "count": hdr, "events": ev})
@@ -358,7 +379,7 @@ def case_4():
     uri, ok = open_doc("doc-12p.pdf", "redact-doc.pdf")
     mode("Protect")
     time.sleep(1)
-    tool = tap("Redact box", "Redact", sel=".ph-tool, .rb, button")
+    tool = tap("Protect: Box", "Protect: Redact", "Redact box", "Box", sel=".ph-tool") if phone else tap("Redact box", sel=".rb")
     x1, y1 = page_pt_to_css(0, 50, 760)
     x2, y2 = page_pt_to_css(0, 400, 740)
     a = to_screen(x1, y1)
@@ -371,9 +392,10 @@ def case_4():
     ev1 = plog()
     shot("redact-swipe")
     plog_reset()
-    import subprocess
-    subprocess.run([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), "touch.py"), "longdrag", str(a[0]), str(a[1]), str(b[0]), str(b[1])], timeout=60)
-    time.sleep(1.5)
+    if str(after_swipe.get("boxes")) in ("0", "None"):
+        import subprocess
+        subprocess.run([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), "touch.py"), "longdrag", str(a[0]), str(a[1]), str(b[0]), str(b[1])], timeout=60)
+        time.sleep(1.5)
     after_long = ui_state()
     ev2 = plog()
     shot("redact-box")
