@@ -805,7 +805,8 @@ check("status and navigation bar areas take each theme's bar colour, light icons
 tap_el('button[title="Home"]')
 wait_for(lambda s: s.get("route") == "/", 15, "Home")
 tap_el(".rcard")   # "Pick up where you left off" opens the Reader on that tab
-k0 = wait_for(lambda s: s.get("route") == "/reader" and s.get("pages", 0) > 0 and s.get("tab"), 30, "the Reader")
+# The page counter is filled once the pages are measured: wait for it on both sides (run 42799399331 read it empty).
+k0 = wait_for(lambda s: s.get("route") == "/reader" and s.get("pages", 0) > 0 and s.get("tab") and s.get("counter"), 30, "the Reader")
 key("KEYCODE_HOME")
 time.sleep(2)
 pid_before = pid()
@@ -813,7 +814,7 @@ adb("shell", "am", "kill", PKG)          # what Android does to a background app
 time.sleep(2)
 killed = pid() in ("", None) or pid() != pid_before
 adb("shell", "monkey", "-p", PKG, "-c", "android.intent.category.LAUNCHER", "1")
-k1 = wait_for(lambda s: s.get("route") == "/reader" and s.get("pages", 0) > 0 and s.get("tab"), 45, "the Reader after the kill")
+k1 = wait_for(lambda s: s.get("route") == "/reader" and s.get("pages", 0) > 0 and s.get("tab") and s.get("counter"), 45, "the Reader after the kill")
 shot("p10d-after-background-kill")
 keep = ("route", "tab", "tabs", "counter")
 check("after Android ends the app in the background, it comes back on the same document, page and tabs (AT-11)",

@@ -134,8 +134,9 @@ jobs:
         run: |
           rm -rf src/ChuvadiReader.Android/obj/Release src/ChuvadiReader.Android/bin/Release
           start=$(date +%s)
-          dotnet publish src/ChuvadiReader.Android/ChuvadiReader.Android.csproj -c Release -f net10.0-android --no-restore \
-            -p:AndroidSdkDirectory=$ANDROID_HOME -p:ChuvadiFullAot=true
+          # Restores again: the Debug x86_64 build above restored for android-x64 only.
+          dotnet publish src/ChuvadiReader.Android/ChuvadiReader.Android.csproj -c Release -f net10.0-android \
+            -p:RestoreConfigFile=ci/nuget.config -p:AndroidSdkDirectory=$ANDROID_HOME -p:ChuvadiFullAot=true
           echo "variant build: $(( $(date +%s) - start )) s"
           find src/ChuvadiReader.Android/bin/Release -name '*-Signed.apk' -exec cp {} ../out/chuvadi-reader-release-chuvadi-aot.apk \;
           find src/ChuvadiReader.Android/bin/Release -name '*-Signed.aab' -exec cp {} ../out/chuvadi-reader-release-chuvadi-aot.aab \;

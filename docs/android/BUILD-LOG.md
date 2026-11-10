@@ -736,3 +736,9 @@ same screen; no crash), smoke pass. With round 6 (API 36 phone and tablet, all c
   ChuvadiReader.* only, without "profile-only" (MAUI and the BCL keep their profiled images). Sandbox, all four ABIs:
   .apk 43.55 → 51.21 MB (+7.7 MB, +18 %; full AOT of everything was +21 MB, +49 %), .aab 43.00 → 50.69 MB; Chuvadi's
   x86_64 AOT images 0.67 → 11.3 MB (ChuvadiReader.Core 45 KB → 1.26 MB); build 184 s.
+- **Run 42799399331** (all four, full, d387740 on 15033c8): API 35 WebView gate 4/4 on both; gestures 10/10 and 9/9;
+  Release launch pass on all four; platform 28/29 (phone) and 26/27 (tablet). The one failure on each is a test race in
+  the AT-11 check: the restore itself was right (killed, same route, tab and 5 tabs), but the page counter was read
+  before it was filled (phone after "", tablet before ""). Fixed: wait for the counter on both sides.
+- **Run 42799417097** (timeline): the variant build failed — NETSDK1047, the Debug x86_64 build had restored for
+  android-x64 only and the variant used `--no-restore`. Fixed: the variant restores.
