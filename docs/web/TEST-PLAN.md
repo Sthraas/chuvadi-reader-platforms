@@ -118,6 +118,7 @@ The Web projects aren't in `ChuvadiReader.Platforms.slnx` on purpose: that solut
 | L-6 | Soak: 40 people for 2 hours | No memory growth in the gateway; worker memory returns when people leave; no file left behind | **V-1** on staging |
 | L-7 | Large documents | Upload in chunks completes; rendering stays within the worker's cap; others unaffected | **V-3** on staging |
 | L-8 | Restart under load (planned, with the banner) | Banner shown in advance; restart ends sessions cleanly; people sign in again | M (runbook §9) |
+| L-9 | Memory back after heavy closes, many people (sixteenth to eighteenth patches, MinGap) | Each worker gives its memory back within about 10 s of a heavy close; the relief runs in that person's worker only, so the gateway and other people aren't paused; at most once per 30 s per worker | E (Web chat, 9-10 Nov: 4 people, a 5000x5000-pixel PDF, 3.5 GB → 0.87 GB in 10 s, at most 0.7 core busy, gateway 0.1 core); V (staging: 10 people on the 16 GB VM) |
 
 ## 5. Browser matrix
 
@@ -223,6 +224,11 @@ Found and fixed while running this plan:
 - `flows.py` 10/10 in Chrome, Firefox, WebKit and Chromium: split to folder gives one `sample.zip` of all 33 pages.
 - `office_limits.py` 6/6 in all four engines (Firefox 4 runs clean).
 - `check-package.sh`: pass.
+
+**10 Nov, morning (on `platform/foundation` @ `f88f9ef` plus Web portal UI `ce805d1`):**
+- Shared solution 0 warnings and its tests (Reader 233, Hosting 77, Mobile UI 16, Web UI 41); Web 166/166.
+- `flows.py` 10/10 in Chrome, Firefox, WebKit and Chromium; `office_limits.py` 6/6 in Chrome and WebKit.
+- L-9 heavy closes: 1 person 1021 → 224 MB; 4 people 3572 → 867 MB within 10 s.
 
 ## 8. Known gaps
 - The legal texts are drafts and say not to publish until counsel has reviewed them: V-7 blocks go-live until the DRAFT lines are gone.

@@ -290,3 +290,13 @@ dotnet test tests/ChuvadiReader.Web.Tests -c Release   # 123 passed, 0 warnings
 - The published portal carries `Chuvadi.Pdf/3.32.0` (checked in `deps.json`).
 - D-137 kept: the portal reports `ServerSide`, so Word files get the strict 20 MB per part and 64 MB in total (the desktop gets 100/400). New test `PortalLimitsTests` pins it. Layout's `ForUntrustedInput` is for when Layout arrives.
 - Checks: shared solution 0 warnings and its tests (Reader 212, Hosting 64, Mobile UI 16, Web UI 39); Web 165/165; package check; `flows.py` 10/10 and `office_limits.py` 6/6 in Chrome and WebKit.
+
+### 29. Patches 13 to 19 and the Web portal UI's latest — 10 Nov, morning
+- Rebased onto `platform/foundation` @ `f88f9ef` (PR #12): Linux B-24 and B-25, owner-password printing, pages drawn off the Ui thread with no render backlog, memory given back after a heavy close, Chuvadi.Sheets 2.0.4. Merged Web portal UI `ce805d1` (its docs and preview tool; no shared Ui source beyond what the Foundation carries). No host change needed.
+- **D-155:** the host never reads Excel files itself; every workbook goes through the shared `XlsxViewService`, which uses `XlsxReaderOptions.ForUntrustedInput()` with the open's cancellation (a closed tab, "Stop opening"). New test pins it from the portal side. **D-137** stays: Word files on the portal get 20 MB per part and 64 MB in total.
+- **Memory relief on a shared server (MinGap):** the relief is per process. On the portal each person has their own worker, so a heavy close collects only that person's worker; the gateway and other people are never paused, and each worker runs it at most once per 30 s (plus the 65 s follow-up). Measured through the gateway with a PDF showing a 5000×5000-pixel image:
+  - 1 person: worker 1021 MB → 224 MB within 10 s of closing the tab; at most 0.54 core busy; gateway 0.07 core.
+  - 4 people closing at the same moment: workers 3572 MB → 867 MB within 10 s; at most 0.71 core busy across all of them; gateway 0.1 core; nothing slowed for anyone else.
+  - So MinGap still protects the server: closes by different people run in parallel processes at small cost, and one person can't trigger collections back to back.
+- **Capacity note (not a relief issue):** one such page costs about 1 GB in its worker while it's open. Five open at once filled this 8 GB test machine before anyone closed. On the 16 GB launch VM that's roughly a dozen people with very heavy pages at the same moment. Recorded for the staging run (TEST-PLAN L-9).
+- Checks: shared solution 0 warnings and its tests; Web 166/166; package check; `flows.py` 10/10 in all four engines; `office_limits.py` 6/6 in Chrome and WebKit.

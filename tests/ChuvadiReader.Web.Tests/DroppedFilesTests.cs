@@ -115,4 +115,16 @@ public class PortalLimitsTests
         Assert.Equal(20L * 1024 * 1024, o.MaxPartBytes);
         Assert.Equal(64L * 1024 * 1024, o.MaxTotalUncompressedBytes);
     }
+
+    [Fact]
+    public void Excel_files_on_the_portal_are_read_as_untrusted_and_can_be_stopped()
+    {
+        // D-155: the library's untrusted-input limits, with the open's cancellation (a closed tab, "Stop opening").
+        using var stop = new CancellationTokenSource();
+        var o = ChuvadiReader.Core.Documents.XlsxViewService.ReadOptions(stop.Token);
+        var untrusted = Chuvadi.Sheets.Model.XlsxReaderOptions.ForUntrustedInput();
+        Assert.Equal(untrusted.MaxPartBytes, o.MaxPartBytes);
+        Assert.Equal(untrusted.MaxTotalUncompressedBytes, o.MaxTotalUncompressedBytes);
+        Assert.Equal(stop.Token, o.CancellationToken);
+    }
 }
