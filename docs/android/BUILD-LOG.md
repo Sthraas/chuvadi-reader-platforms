@@ -820,3 +820,8 @@ same screen; no crash), smoke pass. With round 6 (API 36 phone and tablet, all c
   runtime **10.0.15**: `setup-dotnet` adds 10.0.403 beside the runner's newer SDK and dotnet picks the newest without a
   global.json. The workflow now writes a CI-only `global.json` (10.0.403, rollForward disable) into the composed checkout
   and installs the workload under it. (A repo `global.json` is still Foundation's.)
+- **Run 42906276392** (build only): `dotnet --version` is now 10.0.403 in the build, but the runtime pack is still
+  **10.0.15**: the MAUI workload installed is the newest workload set, and that, not the SDK, decides the runtime pack
+  for a self-contained Android app. The notices still match what ships (AT-19's fix). Holding the runtime too needs the
+  workload set pinned as well (`dotnet workload install maui-android --version <workload set>`, or `workloadVersion` in
+  global.json) — for the coordinator with the repo `global.json` (Foundation).
