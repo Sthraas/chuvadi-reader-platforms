@@ -247,12 +247,19 @@ html[data-shell="tablet"] .desk-menu-size, html[data-shell="phone"] .desk-menu-s
     border-radius: 8px; background: var(--chvd-surface-hi); color: var(--chvd-ink); font: 13.5px var(--chvd-sans-display);
 }
 html[data-shell="tablet"] .srail .rtext[title="Zoom"] { display: none; }
-/* 12e: the rail's primary action (Mark: Save as new; Protect: Save redacted copy; Arrange: Bind)
-   stays at the foot of the visible rail. The Reader's rails already end with it, but a long rail
-   scrolls it out of view on a tablet; touch users have no Ctrl S. */
-html[data-shell="tablet"] .srail-tools .rb.primary {
+/* 12e, D-150: the rail's save actions stay at the foot of the visible rail (Mark: Save and Save as new
+   PDF together; Protect: Save redacted copy; Arrange: Bind). The rails already end with them, but on a
+   landscape tablet the Mark rail is taller than the screen and would scroll them out of view; touch has
+   no Ctrl S. The button right before the primary one (Mark's Save) pins just above it. */
+html[data-shell="tablet"] .srail-tools .rb.primary,
+html[data-shell="tablet"] .srail-tools .rb:has(+ .rb.primary) {
     position: sticky; bottom: 0; z-index: 1; flex: none;
     box-shadow: 0 -12px 0 0 var(--chvd-surface-hi), 0 12px 0 0 var(--chvd-surface-hi);   /* covers icons scrolling past */
+}
+/* Save sits one button (48 px) and the rail's 4 px gap above; between the pair, only the gap is covered. */
+html[data-shell="tablet"] .srail-tools .rb:has(+ .rb.primary) { bottom: 52px; box-shadow: 0 -12px 0 0 var(--chvd-surface-hi); }
+html[data-shell="tablet"] .srail-tools .rb:has(+ .rb.primary) + .rb.primary {
+    box-shadow: 0 -4px 0 0 var(--chvd-surface-hi), 0 12px 0 0 var(--chvd-surface-hi);
 }
 /* Disabled ("nothing to save") as a solid paler fill, not transparency, so nothing shows through. */
 html[data-shell="tablet"] .srail-tools .rb.primary:disabled {

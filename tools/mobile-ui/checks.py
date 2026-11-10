@@ -141,6 +141,25 @@ async def main():
         ok = bool(r) and r["desk"][0] <= r["top"] and r["bottom"] <= r["desk"][1] and r["counter"][:1] == "3"
         report("Find shows the match on screen and the counter is on its page", ok, r)
         await pg.context.close()
+        # 7. Tablet: the tools rail shows "TOOLS" and keeps the mode name for screen readers (H-20, D-151);
+        #    Mark's Save and Save as new PDF stay in view while the rail scrolls (D-150).
+        if not phone:
+            pg = await fresh()
+            await pg.locator(".lb-mode:nth-of-type(2)").first.click(); await pg.wait_for_timeout(1500)
+            r = await pg.evaluate('''async () => { const r = document.querySelector('.srail-tools'), out = [];
+                for (const top of [0, 60, 99999]) {
+                    r.scrollTop = top; await new Promise(f => setTimeout(f, 150));
+                    const rb = r.getBoundingClientRect();
+                    const seen = [...r.querySelectorAll('.rb')].filter(x => /^Save/.test(x.getAttribute('aria-label') || ''))
+                        .map(x => { const b = x.getBoundingClientRect(), mid = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+                                    return b.top >= rb.top && b.bottom <= rb.bottom + 1 && !!mid && x.contains(mid); });
+                    out.push(seen.length === 2 && seen.every(Boolean));
+                }
+                return { head: r.querySelector('.srail-h').textContent, label: r.getAttribute('aria-label'),
+                         scrolls: r.scrollHeight > r.clientHeight, bothSavesInView: out }; }''')
+            ok = r["head"] == "TOOLS" and r["label"] == "MARK" and all(r["bothSavesInView"])
+            report("tablet Mark rail: TOOLS shown, MARK announced, both Saves in view while it scrolls", ok, r)
+            await pg.context.close()
         await b.close()
     sys.exit(1 if fails else 0)
 
