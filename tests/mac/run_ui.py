@@ -1450,7 +1450,13 @@ def p25():
     launch(f"{FX}/five-pages.pdf", settle=0.5)
     ev["a_early_shot"] = shot("p25-a-cold-one-early")
     time.sleep(6)
+    drive("activate", NAME)
     t = axdump("p25-a-cold-one")
+    for _ in range(5):  # the accessibility tree of a just-launched window can be empty for a few seconds
+        if len(t.splitlines()) > 20:
+            break
+        time.sleep(2)
+        t = axdump("p25-a-cold-one")
     ev["a"] = {"tab": "five-pages.pdf" in t, "page": bool(re.search(r"page \d+ of 5|of 5", t)), "home_showing": "Open a document to begin" in t,
                "error": ui_error(), "procs": len(pids()), "shot": shot("p25-a-cold-one")}
     if not (ev["a"]["tab"] and ev["a"]["page"] and not ev["a"]["error"] and ev["a"]["procs"] == 1):
@@ -1477,11 +1483,31 @@ def p25():
                "shot": shot("p25-c-six-more")}
     if len(got) != 10 or ev["c"]["error"] or ev["c"]["procs"] != 1:
         bad.append(f"six more while running (missing {ev['c']['missing']})")
-    # the tab keys still land right with ten tabs: ⌘1 → five-pages (5 pages)
-    drive("key", "cmd+1")
-    time.sleep(2)
-    t = axdump("p25-c-cmd1")
-    ev["c"]["cmd1_first_tab"] = bool(re.search(r"of 5\b", " ".join(l for l in t.splitlines() if re.search(r"page \d+ of \d+", l))))
+    # tab order as shown (left to right), against the order the files were handed over
+    def strip_order(txt, names):
+        pos = {}
+        for l in txt.splitlines():
+            m = re.search(r'AXStaticText desc="([^"]+)" @(-?\d+),', l)
+            if m and m.group(1) in names and m.group(1) not in pos:
+                pos[m.group(1)] = int(m.group(2))
+        return sorted(pos, key=pos.get)
+    order = strip_order(t, four + six)
+    ev["c"]["order_shown"] = order
+    ev["c"]["order_given"] = four + six
+    ev["c"]["order_kept"] = order == four + six
+    # the tab keys still land right with ten tabs: ⌘n for the position of many-pages.pdf → "of 500"
+    if "many-pages.pdf" in order and order.index("many-pages.pdf") < 9:
+        n = order.index("many-pages.pdf") + 1
+        drive("key", "cmd+1" if n != 1 else "cmd+2")
+        time.sleep(1.5)
+        drive("key", f"cmd+{n}")
+        time.sleep(2)
+        t = axdump("p25-c-cmdn")
+        ev["c"]["cmd_n"] = n
+        ev["c"]["cmd_n_lands_on_many_pages"] = "of 500" in " ".join(l for l in t.splitlines() if re.search(r"page \d+ of \d+", l))
+        ev["c"]["cmd_n_shot"] = shot("p25-c-cmdn")
+        if not ev["c"]["cmd_n_lands_on_many_pages"]:
+            bad.append(f"⌘{n} with ten tabs")
     quit_app()
 
     # (d) Word file on a cold start
@@ -1494,7 +1520,7 @@ def p25():
         bad.append("Word file on a cold start")
     quit_app()
     record("P25 files from Finder (cold, several at once, Word)", "fail" if bad else "pass",
-           f"failed: {bad}" if bad else f"cold one → Reader; cold four → 4 tabs; six more → 10 tabs; ⌘1 first tab={ev['c']['cmd1_first_tab']}; Word shows its text", **ev)
+           f"failed: {bad}" if bad else f"cold one → Reader; cold four → 4 tabs; six more → 10 tabs; tab order kept={ev['c']['order_kept']}; ⌘n lands right={ev['c'].get('cmd_n_lands_on_many_pages')}; Word shows its text", **ev)
 
 
 @case("M-14 .NET message in Details")
