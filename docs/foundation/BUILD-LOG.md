@@ -359,3 +359,40 @@ Reproduced in the desktop preview, which now opens real files (`CHVD_OPEN`, test
      - New `MemoryReliefNotice.Relieved` (Core, public static event) is raised after each relief pass, so the Linux host can call `malloc_trim(0)` there. That's the Linux chat's one line.
 - 366/366 tests (2 runs); 0 warnings in both solutions; trimmed probe 54/54; find-typing 3/3.
 
+### 45. Twentieth combined patch: the relief pass waits for the finalizer thread (D-158 part 1)
+- **Linux 36c on the nineteenth patch:** 80 s after closing, the heap still held 681–807 MB that one more aggressive collection cleared.
+- **Cause:** the shared byte pool lets go of idle buffers in a callback that runs on the finalizer thread *after* a full collection. The second pass collected again at once, so the buffers it trimmed became garbage just afterwards, and an idle app ran no further collection.
+  - Reproduced with a test-only console program: buffers grown 8 → 128 MB on four pool threads (744 MB pooled), idle 62 s.
+  - Today's pass left 248 MB live, which a later collection took down to 128 MB. With the wait, 128 MB right after the pass.
+  - The pool keeps ~128 MB per long-lived thread whatever we do. D-158 part 2 (page images by address) removes the huge strings that grow these buffers in the first place.
+- **Fix:** `MemoryRelief.Pass()`, used by both passes: two full collections, each followed by `GC.WaitForPendingFinalizers()`, then the aggressive one, then `MemoryReliefNotice`.
+- **Test:** `A_relief_pass_also_frees_what_finalizers_release_during_it`. A stand-in drops a 96 MB buffer from its finalizer; after one pass, the buffer is gone. Without the waits it fails or passes depending on the race (1 of 2 runs failed). With them, 3 of 3 pass.
+- 367/367 tests; 0 warnings in both solutions.
+
+### 46. Twenty-first combined patch: page images by address (D-158 part 2)
+See `docs/foundation/PAGE-IMAGES.md` for the design, the hooks per host and the proof.
+- **Core:**
+  - `PageImages` store;
+  - `ChuvadiPdfReader(PageImages, IPageImageOwner)`: raster pages are kept in the store and drawn from `_chvd/pages/<token>.png`. The parameterless reader still draws inline, for tools and the existing tests.
+- **Platform:** `IPageImageOwner` with `LocalPageImageOwner` (`"local"`).
+- **Hosting:**
+  - `PageImageFileProvider`;
+  - registrations `Seam<IPageImageOwner, LocalPageImageOwner>` and `Shared<PageImages>` (one per process, whatever the lifetime);
+  - a reference to `Microsoft.Extensions.FileProviders.Abstractions`, already in every WebView host.
+- **Windows:** `ChuvadiWebView`.
+- **Preview:** the endpoint, with the same rules as the portal's except sign-in.
+- Pixel-identical raster page (1× and 2×, twice); preview memory 2354 → 438 MB with the same pages shown.
+- 385/385 tests (2 runs); 0 warnings in both solutions; trimmed probe 56/56.
+
+### 47. Twenty-second combined patch: H-20 (Mobile UI, platform/mobile-ui c5c0b7e; D-134, D-151)
+- Mobile UI's `H20-tools-rail-heading.patch`, unchanged: `SideRail` gains `Label` (its `aria-label` is `Label ?? Heading`). The five tools rails show **TOOLS** and keep their mode name as the label (READ, MARK, PROTECT twice, ARRANGE), so a screen reader hears what it heard before. The view-only document's rail already said TOOLS.
+- Guard: `ToolsRailHeadingTests` (all six tools rails say TOOLS; the five mode names stay as labels; the rail's aria-label reads `Label ?? Heading`).
+- **Windows behaviour change (D-134):** the tools rail heading reads TOOLS instead of READ/MARK/PROTECT/ARRANGE. Desktop before/after: only the rail heading differs (≈ 40 × 6 px at 1×, at the rail's top), plus Home's clock artefact. Every other screen identical.
+- 386/386 tests; 0 warnings in both solutions.
+
+### 48. PR #13's first Windows run: a test measured its own stack (10 Nov)
+- **The failure:** `Closing_a_heavy_document_brings_memory_back_near_where_it_was` failed once on windows-latest with 72 MB still live after the close (limit 16 MB). The re-run passed. Not H-20's (rail markup only).
+- **Found by reproducing the pattern and taking a heap dump:** `gcroot` on the 72 MB page string led to a stack slot of the test helper's own async frame (`MoveNext` of the helper that drew the page). When the drawn page's task completes, the test method can carry on inline, on top of that frame, and measures memory while the frame still holds the page. Whether it runs inline depends on timing, which is why the failure was intermittent. Nothing in the app held it.
+- **Fixed in the test:** `await Task.Yield()` after the helper and after the relief, so the measurement runs on a fresh stack. No production change.
+- 386/386 tests; 0 warnings.
+

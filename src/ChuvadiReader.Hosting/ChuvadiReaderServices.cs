@@ -102,6 +102,10 @@ public static class ChuvadiReaderServices
         Seam<IAppLifecycle, NoAppLifecycle>(services, life);
         Seam<IFileManager, NoFileManager>(services, life);
         Seam<IPathLabels, PlainPathLabels>(services, life);
+        Seam<IPageImageOwner, LocalPageImageOwner>(services, life);
+
+        // D-158: one page-image store per process, whatever the lifetime of the rest (the portal's endpoint reads it).
+        Shared<PageImages>(services);
 
         return services;
     }
@@ -112,6 +116,11 @@ public static class ChuvadiReaderServices
         where TService : class
         where TImpl : class, TService =>
         services.Add(new ServiceDescriptor(typeof(TService), typeof(TImpl), life));
+
+    /// <summary>One instance per process, whatever <see cref="AppStateLifetime"/> says (D-158: the page-image store).</summary>
+    private static void Shared<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TImpl>(IServiceCollection services)
+        where TImpl : class =>
+        services.TryAdd(new ServiceDescriptor(typeof(TImpl), typeof(TImpl), ServiceLifetime.Singleton));
 
     private static void Seam<TService, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TImpl>(
         IServiceCollection services, ServiceLifetime life)

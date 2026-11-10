@@ -21,6 +21,9 @@
     <ProjectReference Include="..\ChuvadiReader.Core\ChuvadiReader.Core.csproj" />
     <!-- Ui brings the Blazor framework package (and with it Microsoft.Extensions.DependencyInjection). -->
     <ProjectReference Include="..\ChuvadiReader.Ui\ChuvadiReader.Ui.csproj" />
+    <!-- D-158: PageImageFileProvider. Already in every WebView host (BlazorWebView depends on it) and in ASP.NET Core:
+         nothing new ships. -->
+    <PackageReference Include="Microsoft.Extensions.FileProviders.Abstractions" Version="10.0.0" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="ChuvadiReader.Hosting.Tests" />
