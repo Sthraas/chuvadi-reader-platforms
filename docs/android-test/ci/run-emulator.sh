@@ -31,8 +31,8 @@ adb logcat -d -v epoch > "$OUT/as-built-logcat.txt"
 echo "as-built Release: $(grep -c 'FATAL EXCEPTION' "$OUT/as-built-logcat.txt") crashes in 3 launches; TotalTime lines: $(grep -c TotalTime "$OUT/as-built-launch.txt")" | tee "$OUT/as-built.txt"
 adb uninstall in.chuvadi.reader >/dev/null
 
-# 2. Release with the AT-03 test-only fix (ChuvadiReader.Platform rooted), used for every suite below until AT-03 is fixed.
-REL="$PKGS/chuvadi-reader-release-at03.apk"; [ -f "$REL" ] || REL="$PKGS/chuvadi-reader-release.apk"
+# 2. The suites run on the as-built Release (inspectable on these userdebug images).
+REL="$PKGS/chuvadi-reader-release.apk"
 echo "suites run on: $(basename "$REL")" | tee "$OUT/package-under-test.txt"
 adb install -r "$REL" | tee "$OUT/install-release.txt"
 adb shell am start -W -n "$COMP" > /dev/null
@@ -83,6 +83,13 @@ if [[ $SUITES == *,gate,* ]]; then
 fi
 if [[ $SUITES == *,robust,* ]] && [ -f "$HERE/robust.py" ]; then
   python3 "$HERE/robust.py" "$OUT/robust" "$OUT/fixtures" || rc=1
+fi
+# Save suite again on the test-only build with the host's save pickers switched on (AT-18).
+if [[ $SUITES == *,saves,* ]] && [ -f "$PKGS/chuvadi-reader-release-saves-on.apk" ] && [ "${RELEASE_ONLY:-0}" != 1 ]; then
+  adb uninstall in.chuvadi.reader >/dev/null
+  adb install -r "$PKGS/chuvadi-reader-release-saves-on.apk" | tee "$OUT/install-saves-on.txt"
+  adb shell am start -W -n "$COMP" > /dev/null; sleep 5
+  python3 "$HERE/saves.py" "$OUT/saves-pickers-on" "$OUT/fixtures" || true
 fi
 adb logcat -d -v epoch > "$OUT/logcat.txt"
 adb shell dumpsys dropbox --print > "$OUT/dropbox.txt" 2>/dev/null

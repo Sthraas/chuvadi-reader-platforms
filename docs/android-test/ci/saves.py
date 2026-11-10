@@ -81,13 +81,20 @@ def labels():
 
 
 def tap(*names, sel=None):
-    """Finger tap on a control; if something covers it (a sheet), Back once and try again."""
-    for attempt in range(2):
+    """Finger tap on a control; if a sheet or card covers it, close that by its own Close control and try again."""
+    hit = None
+    for attempt in range(3):
         hit = find(*names, sel=sel)
         if not hit:
             return None
-        if hit["covered"] and attempt == 0:
-            sh("input keyevent KEYCODE_BACK")
+        if hit["covered"] and attempt < 2:
+            c = cdp.js("(() => { " + VIS + " const e = [...document.querySelectorAll('.ph-handle, .ph-sheet [aria-label=Close], .chvd-card [aria-label=Close], .mk-card [aria-label=Close]')].find(vis);"
+                       " if (!e) return null; const r = e.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; })()")
+            if c:
+                q = to_screen(c[0], c[1])
+                sh(f"input tap {q[0]} {q[1]}")
+            else:
+                cdp.js("document.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', bubbles: true}))")
             time.sleep(1.2)
             continue
         sx, sy = to_screen(hit["x"], hit["y"])
@@ -134,6 +141,18 @@ def in_picker():
 
 
 def pick_open(name):
+    r = _pick_open(name)
+    if not r["opened"]:
+        shot("pick-retry")
+        if in_picker():
+            sh("input keyevent KEYCODE_BACK")
+            time.sleep(1)
+        r = _pick_open(name)
+        r["second_try"] = True
+    return r
+
+
+def _pick_open(name):
     """Home › Open → system picker → the file. The picker's grant is read + write, as for a person."""
     cdp.js("Blazor.navigateTo('/')")
     time.sleep(1.5)
@@ -148,9 +167,11 @@ def pick_open(name):
             sh(f"input tap {(x1 + x2) // 2} {(y1 + y2) // 2}")
             ok = True
             break
-        if not ui_tap_text("Downloads"):
+        if not (ui_tap_text("Download") or ui_tap_text("Downloads")):
             ui_tap_text("Show roots")
         time.sleep(1.5)
+    if not ok and in_picker():
+        sh("input keyevent KEYCODE_BACK")
     stem = name.rsplit(".", 1)[0]
     opened = cdp.wait(f"(() => {{ const t = ((document.querySelector('.rtab.active .rtab-name') || document.querySelector('.ph-t')) || {{}}).textContent || '';"
                       f" return t.trim().startsWith('{stem}') && document.querySelectorAll('.rpage svg').length > 0; }})()", 40)
@@ -177,9 +198,9 @@ def new_pdfs():
     return [l.strip() for l in rows.splitlines() if l.strip()]
 
 
-def save_picker(as_name=None):
-    """ACTION_CREATE_DOCUMENT picker: go to Downloads if asked, accept the suggested name."""
-    for _ in range(10):
+def save_picker(as_name=None, tries=22):
+    """ACTION_CREATE_DOCUMENT picker (waits up to ~30 s for it): go to Downloads if asked, accept the suggested name."""
+    for _ in range(tries):
         xml = ui_dump()
         if "documentsui" in xml:
             m = re.search(r'(?:text|content-desc)="(SAVE|Save)"[^>]*enabled="true"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', xml)
@@ -222,7 +243,15 @@ def save_as():
     picker = save_picker()
     time.sleep(2)
     files = new_pdfs()
-    return {"button": hit, "picker": picker, "files": files}
+    return {"button": hit, "picker": picker, "files": files, "app_says": says()}
+
+
+def says():
+    """Any message the app is showing (toast / status / alert), for the record."""
+    try:
+        return cdp.js("[...document.querySelectorAll('.toast, [role=status], [role=alert], .rpage-toast, .bench-status-open')].map(e => (e.innerText || '').trim()).filter(t => t).slice(0, 4)")
+    except Exception:
+        return None
 
 
 def page_marks(reader, i=0):
@@ -277,7 +306,6 @@ def sv1_text():
     typed = cdp.js("document.activeElement && (document.activeElement.value || '')")
     sh("input keyevent KEYCODE_BACK")   # keyboard away
     time.sleep(1.2)
-    tap_xy(*page_pt(0, 80, 80))         # tap empty page: commits the box
     shot("sv1-typed")
     R.check("SV-1a text typed into the box", typed == "chuvadimark", {"typed": typed})
     # Save in place (where the form factor offers it)
@@ -309,7 +337,6 @@ def sv2_shape():
     b = to_screen(*page_pt(0, 300, 350))
     sh(f"input swipe {a[0]} {a[1]} {b[0]} {b[1]} 600")
     time.sleep(1.5)
-    tap_xy(*page_pt(0, 500, 80))
     s = save_as()
     shot("sv2-saved")
     base, _ = read("/sdcard/Download/sv-shape.pdf", "sv2-original.pdf")
@@ -384,13 +411,13 @@ def sv4_redact():
                "heading_bytes_in_file": b"Discharge summary - page 1" in raw}
     R.check("SV-4b redacted copy saved; the covered heading is gone from the text, the rest stays",
             bool(res and not res["heading_p1_in_text"] and not res["heading_bytes_in_file"] and res["p1_body_kept"] and res["heading_p2_kept"]),
-            {"button": hit, "confirm": confirm, "picker": picker, "files": files, "check": res, "controls": None if files else labels()})
+            {"button": hit, "confirm": confirm, "picker": picker, "files": files, "check": res, "app_says": says()})
     R.check("SV-4c the picked original is untouched by the redacted copy", md5("sv-redact.pdf") == ORIG["sv-redact.pdf"], None)
 
 
 BENCH = "(() => { " + VIS + r""" const rect = e => { if (!e) return null; const r = e.getBoundingClientRect(); return {x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height}; };
   const shelf = [...document.querySelectorAll('[data-shelf]')];
-  return { shelf: shelf.length, shelfVisible: shelf.filter(vis).slice(0, 4).map(e => ({...rect(e), key: e.dataset.shelf})),
+  return { shelf: shelf.length, shelfVisible: shelf.filter(vis).filter(e => { const r = e.getBoundingClientRect(); const t = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return t && (e === t || e.contains(t)); }).slice(0, 4).map(e => ({...rect(e), key: e.dataset.shelf})),
            shelfHead: rect([...document.querySelectorAll('.shelf-head')].find(vis) || null),
            desk: rect([...document.querySelectorAll('.desk-drop')].find(vis) || null),
            order: [...document.querySelectorAll('.desk-drop [data-bench-id]')].map(e => e.dataset.benchId),
@@ -398,6 +425,12 @@ BENCH = "(() => { " + VIS + r""" const rect = e => { if (!e) return null; const 
 
 
 def sv5_arrange():
+    sh(f"pm clear {PKG}")          # one tab only, so the Shelf holds just this file
+    sh(f"am start -W -n {COMP}")
+    cdp.close()
+    cdp.connect(60)
+    cdp.wait("!!(window.Blazor && Blazor.navigateTo) && document.getElementById('app').children.length > 0", 60)
+    _wv[0] = None
     pick_open("sv-arrange.pdf")
     mode("Arrange")
     cdp.wait("document.querySelectorAll('[data-shelf]').length >= 6", 40)
@@ -426,14 +459,21 @@ def sv5_arrange():
     R.check("SV-5a long-press drag puts two shelf pages on the desk", len(st["order"]) == start + 2, {"drops": dropped, "desk_before": start})
     id_p3 = dropped[0]["new_ids"][0] if dropped[0]["new_ids"] else None
     before = st["order"][:]
-    if len(st["cards"]) >= 2:
-        c0, c1 = st["cards"][0], st["cards"][-1]
-        a = to_screen(c0["x"], c0["y"])
-        b = to_screen(c1["x"] + c1["w"] * 0.45, c1["y"])
-        touch("longdrag", a[0], a[1], b[0], b[1], 800, 900)
+    tried = []
+    for way in ("first-to-end", "last-to-front"):
+        st2 = cdp.js(BENCH)
+        if len(st2["cards"]) < 2 or st2["order"] != before:
+            break
+        c0, c1 = st2["cards"][0], st2["cards"][-1]
+        if way == "first-to-end":
+            a, b = to_screen(c0["x"], c0["y"]), to_screen(c1["x"] + c1["w"] * 0.6, c1["y"])
+        else:
+            a, b = to_screen(c1["x"], c1["y"]), to_screen(c0["x"] - c0["w"] * 0.6, c0["y"])
+        touch("longdrag", a[0], a[1], b[0], b[1], 800, 1200)
+        tried.append(way)
     after = cdp.js(BENCH)["order"]
     shot("sv5-reordered")
-    R.check("SV-5b long-press drag reorders pages on the desk", after != before and sorted(after) == sorted(before), {"before": before, "after": after})
+    R.check("SV-5b long-press drag reorders pages on the desk", after != before and sorted(after) == sorted(before), {"before": before, "after": after, "tried": tried})
     mark_time()
     hit = tap("Bind all", "Bind desk", "Bind", sel=".ph-fab, .ph-pager, .rb, .bt-bind, button")
     time.sleep(2)
@@ -446,7 +486,7 @@ def sv5_arrange():
         got = [int(m.group(1)) if (m := re.search(r"- page (\d+)", t)) else None for t in pages]
     want = [3 if i == id_p3 else 1 for i in after][-2:] if id_p3 else None
     R.check("SV-5c bound PDF holds the desk's pages in the desk's order", bool(got and want and got[-len(want):] == want),
-            {"button": hit, "picker": picker, "files": files, "saved_pages": got, "desk_order_as_pages": want, "controls": None if files else labels()})
+            {"button": hit, "picker": picker, "files": files, "saved_pages": got, "desk_order_as_pages": want, "app_says": says()})
 
 
 def sv6_print():

@@ -364,6 +364,23 @@ caret in it (`TEXTAREA.mk-ta`), the keyboard opens and "chuvadimark" is typed co
 Android also raises the keyboard); and don't run one-key shortcuts while a markup draft/box is selected.
 Blocks: text markup + Save, and the Mark text box part of AT-10.
 
+## AT-18 · S1 · Android (host) · open — Nothing that saves to a new file works on Android: the host's save pickers are switched off
+**Steps:** Release, phone or tablet. Any of: Mark › draw a rectangle › **Save as new PDF**; Protect › draw a redaction box ›
+**Save redacted copy**; Arrange › pages on a desk › **Bind all**.
+**Expected:** Android's "save to" picker opens, the file is written where the person chose.
+**Actual:** nothing happens — no picker, no file, no message. The button can be tapped again and again. (Round 8c, run 42840233328,
+Foundation 741930b + Mobile UI 2b29227 + Android 7c8e2d8: 0 files from Save as ×2, Save redacted copy, Bind all, on phone and tablet,
+while print → "Save as PDF" in the same run produced its file.) So today a person can mark up, redact or arrange on Android and
+**has no way to keep the result** (phone has no in-place Save; redaction and Bind only ever save to a new file).
+**Cause:** `AndroidFilePicker.SavePickersEnabled` is hard-coded `false` (`src/ChuvadiReader.Android/Platform/AndroidFilePicker.cs:24`,
+still so at Android 8f173c9): `PickSavePdfAsync`, `PickSaveImageAsync`, `PickSaveSessionAsync` and `PickFolderAsync` return null at once.
+The comment says "switch on once the Ui's CommitAsync hooks are in (A-02 / F-1)". Those hooks **are** in Foundation now
+(`WriteBackExtensions.DeliverOrThrowAsync`, called from Reader, Bench, Redact, Split and Merge), so the switch looks simply left behind.
+The Android chat's own rounds never exercised a save to a new file, and neither had mine until the save suite.
+**Fix (Android chat):** set the switch on (or remove it), then confirm each save site delivers. Round 9 runs my save suite twice:
+on the Release as built, and on a test-only build with only this switch flipped, so the saved files are read back either way.
+**Also:** a save that can't proceed should say so; silence is the worst outcome (Foundation, low priority once the switch is on).
+
 ## Questions for the coordinator (not filed as bugs)
 - **Q-1 Same file opened again → new tab** — answered by the coordinator (9 Nov 07:12): Windows is the reference. Checked the shared
   code and filed the difference as **AT-12** (Android).
