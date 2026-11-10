@@ -369,3 +369,18 @@ Reproduced in the desktop preview, which now opens real files (`CHVD_OPEN`, test
 - **Test:** `A_relief_pass_also_frees_what_finalizers_release_during_it`. A stand-in drops a 96 MB buffer from its finalizer; after one pass, the buffer is gone. Without the waits it fails or passes depending on the race (1 of 2 runs failed). With them, 3 of 3 pass.
 - 367/367 tests; 0 warnings in both solutions.
 
+### 46. Twenty-first combined patch: page images by address (D-158 part 2)
+See `docs/foundation/PAGE-IMAGES.md` for the design, the hooks per host and the proof.
+- **Core:**
+  - `PageImages` store;
+  - `ChuvadiPdfReader(PageImages, IPageImageOwner)`: raster pages are kept in the store and drawn from `_chvd/pages/<token>.png`. The parameterless reader still draws inline, for tools and the existing tests.
+- **Platform:** `IPageImageOwner` with `LocalPageImageOwner` (`"local"`).
+- **Hosting:**
+  - `PageImageFileProvider`;
+  - registrations `Seam<IPageImageOwner, LocalPageImageOwner>` and `Shared<PageImages>` (one per process, whatever the lifetime);
+  - a reference to `Microsoft.Extensions.FileProviders.Abstractions`, already in every WebView host.
+- **Windows:** `ChuvadiWebView`.
+- **Preview:** the endpoint, with the same rules as the portal's except sign-in.
+- Pixel-identical raster page (1× and 2×, twice); preview memory 2354 → 438 MB with the same pages shown.
+- 385/385 tests (2 runs); 0 warnings in both solutions; trimmed probe 56/56.
+

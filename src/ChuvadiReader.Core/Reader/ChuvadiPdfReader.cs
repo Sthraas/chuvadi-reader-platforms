@@ -1,3 +1,4 @@
+using ChuvadiReader.Platform;
 using System.Globalization;
 using Chuvadi.Pdf.Documents;
 using Chuvadi.Pdf.Graphics;
@@ -16,6 +17,22 @@ namespace ChuvadiReader.Core.Reader;
 /// </summary>
 public sealed class ChuvadiPdfReader : IPdfReader
 {
+    private readonly PageImages? _images;
+    private readonly IPageImageOwner? _owner;
+
+    /// <summary>Raster pages carry their image inline (a data address), as before. Tests and tools use this.</summary>
+    public ChuvadiPdfReader()
+    {
+    }
+
+    /// <summary>D-158: raster pages are kept in <paramref name="images"/> and drawn from their address, for
+    /// <paramref name="owner"/>'s Ui only. The app's services use this one.</summary>
+    public ChuvadiPdfReader(PageImages images, IPageImageOwner owner)
+    {
+        _images = images;
+        _owner = owner;
+    }
+
     public async Task<IPdfSession> OpenAsync(
         string path,
         string fileName,
@@ -38,7 +55,11 @@ public sealed class ChuvadiPdfReader : IPdfReader
             IsXfaForm = IsXfaForm(document),
         };
 
-        return new ChuvadiPdfSession(document, vm, transparentBackground);
+        return new ChuvadiPdfSession(document, vm, transparentBackground)
+        {
+            Images = _images,
+            ImageOwner = _owner?.Current ?? string.Empty,
+        };
     }
 
     /// <summary>True only for XFA documents that <em>cannot</em> be displayed — i.e. pure
@@ -154,6 +175,14 @@ public sealed class ChuvadiPdfSession : IPdfSession
     private bool _draining;
     private int? _focusPage;
 
+    /// <summary>D-158: where raster pages go (null: inline, as before) and whose they are.</summary>
+    internal PageImages? Images { get; init; }
+
+    internal string ImageOwner { get; init; } = string.Empty;
+
+    // Under lock (_svgCache): the image token behind each cached raster page, freed with the page.
+    private readonly Dictionary<int, string> _imageTokens = new();
+
     /// <summary>Tests only: runs on the render's thread, inside the gate, before the page is drawn.</summary>
     internal Action<int>? BeforeRenderForTests { get; set; }
 
@@ -255,6 +284,7 @@ public sealed class ChuvadiPdfSession : IPdfSession
         lock (_svgCache)
         {
             _svgCache.Clear();
+            FreeImagesLocked();
             _renderGeneration++; // a render already running for the old layers won't be kept (D-152)
         }
 
@@ -568,19 +598,47 @@ public sealed class ChuvadiPdfSession : IPdfSession
             overrides = CurrentOverrides;
         }
 
-        var svg = RenderPage(document, renderer, overrides, pageNumber, cancellationToken);
+        string? token = null;
+        var svg = RenderPage(document, renderer, overrides, pageNumber, cancellationToken, png => token = KeepImage(png));
         lock (_svgCache)
         {
             if (generation == _renderGeneration && !_closeRequested)
             {
                 _svgCache[pageNumber] = svg;
+                if (token is not null)
+                {
+                    if (_imageTokens.Remove(pageNumber, out var old))
+                    {
+                        Images!.Remove(old);
+                    }
+
+                    _imageTokens[pageNumber] = token;
+                }
+            }
+            else if (token is not null)
+            {
+                Images!.Remove(token); // drawn for layers that changed, or for a closed document: never shown
             }
         }
 
         return svg;
     }
 
-    private string RenderPage(PdfDocument document, SvgRenderer renderer, IReadOnlyDictionary<string, bool>? overrides, int pageNumber, CancellationToken cancellationToken)
+    /// <summary>Keeps a drawn page's PNG in the store and returns its token (D-158).</summary>
+    private string KeepImage(byte[] png) => Images!.Add(ImageOwner, png);
+
+    /// <summary>Under lock (_svgCache): frees every image of this document.</summary>
+    private void FreeImagesLocked()
+    {
+        foreach (var token in _imageTokens.Values)
+        {
+            Images?.Remove(token);
+        }
+
+        _imageTokens.Clear();
+    }
+
+    private string RenderPage(PdfDocument document, SvgRenderer renderer, IReadOnlyDictionary<string, bool>? overrides, int pageNumber, CancellationToken cancellationToken, Func<byte[], string> keepImage)
     {
         BeforeRenderForTests?.Invoke(pageNumber);
         var page = document.Pages[pageNumber];
@@ -590,7 +648,7 @@ public sealed class ChuvadiPdfSession : IPdfSession
         // with a safety fallback if a normal-size page's SVG is unexpectedly huge.
         if (page.Width * page.Height > LargeFormatAreaPt)
         {
-            return RenderPageAsRasterSvg(document, page, overrides, cancellationToken);
+            return RenderPageAsRasterSvg(document, page, overrides, cancellationToken, Images is null ? null : keepImage);
         }
 
         // SvgRenderer renders at the page's natural size; zoom is applied in the
@@ -602,14 +660,14 @@ public sealed class ChuvadiPdfSession : IPdfSession
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        return RenderPageAsRasterSvg(document, page, overrides, cancellationToken);
+        return RenderPageAsRasterSvg(document, page, overrides, cancellationToken, Images is null ? null : keepImage);
     }
 
     /// <summary>Renders a page to a raster image (via the library rasteriser + PNG encoder)
     /// and wraps it in a minimal SVG carrying a single &lt;image&gt;, so the UI's SVG display
     /// path is unchanged while the WebView only has to hold one image node instead of
     /// hundreds of thousands of vector paths.</summary>
-    private static string RenderPageAsRasterSvg(PdfDocument document, PdfPage page, IReadOnlyDictionary<string, bool>? overrides, CancellationToken cancellationToken)
+    private static string RenderPageAsRasterSvg(PdfDocument document, PdfPage page, IReadOnlyDictionary<string, bool>? overrides, CancellationToken cancellationToken, Func<byte[], string>? keepImage)
     {
         var buffer = new PageRasterizer(
                 document.Objects,
@@ -627,8 +685,25 @@ public sealed class ChuvadiPdfSession : IPdfSession
 
         string w = page.Width.ToString("0.###", CultureInfo.InvariantCulture);
         string h = page.Height.ToString("0.###", CultureInfo.InvariantCulture);
+        if (keepImage is not null)
+        {
+            // D-158: the page draws from its address; the SVG around it is the same, character for character,
+            // except for the image's href.
+            return RasterSvgByAddress(w, h, PageImages.AddressOf(keepImage(ms.ToArray())));
+        }
+
         return RasterSvg(w, h, ms.GetBuffer(), (int)ms.Length);
     }
+
+    /// <summary>The same SVG as <see cref="RasterSvg"/>, with the image read from an address instead of inline.</summary>
+    internal static string RasterSvgByAddress(string w, string h, string address) =>
+        RasterSvgHead(w, h) + address + RasterSvgTail;
+
+    private static string RasterSvgHead(string w, string h) =>
+        "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"" + w + "pt\" height=\"" + h + "pt\" " +
+        "viewBox=\"0 0 " + w + " " + h + "\" preserveAspectRatio=\"xMidYMid meet\">" +
+        "<image x=\"0\" y=\"0\" width=\"" + w + "\" height=\"" + h + "\" preserveAspectRatio=\"none\" " +
+        "href=\"";
 
     /// <summary>
     /// The SVG that carries a rendered page as one PNG, written straight into its final string (sixteenth patch).
@@ -638,10 +713,7 @@ public sealed class ChuvadiPdfSession : IPdfSession
     /// </summary>
     internal static string RasterSvg(string w, string h, byte[] png, int length)
     {
-        var head = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"" + w + "pt\" height=\"" + h + "pt\" " +
-                   "viewBox=\"0 0 " + w + " " + h + "\" preserveAspectRatio=\"xMidYMid meet\">" +
-                   "<image x=\"0\" y=\"0\" width=\"" + w + "\" height=\"" + h + "\" preserveAspectRatio=\"none\" " +
-                   "href=\"data:image/png;base64,";
+        var head = RasterSvgHead(w, h) + "data:image/png;base64,";
         var base64Length = checked((length + 2) / 3 * 4);
         return string.Create(head.Length + base64Length + RasterSvgTail.Length, (head, png, length), static (span, st) =>
         {
@@ -672,6 +744,7 @@ public sealed class ChuvadiPdfSession : IPdfSession
             }
 
             _svgCache.Clear();
+            FreeImagesLocked();
             return chars;
         }
     }
