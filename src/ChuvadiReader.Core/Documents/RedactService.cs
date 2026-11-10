@@ -150,7 +150,8 @@ public sealed class RedactService
                         // chuvadi-pdf 3.14.1: RedactionRect.Bounds is BOTTOM-LEFT / y-up — the same
                         // frame the verify guard uses to compare against TextExtractor fragments — so
                         // the apply rect and the verify rect are now one and the same.
-                        var r = MapToPdf(box, rot, pdfPage.Width, pdfPage.Height);
+                        var shown = ShownBox.Of(pdfPage);   // D-160: a fraction of the box the page shows
+                        var r = Shift(MapToPdf(box, rot, shown.W, shown.H), shown);
                         opts.Rectangles.Add(new RedactionRect(pageIndex, r));
                         rects.Add(r);
                     }
@@ -219,7 +220,8 @@ public sealed class RedactService
         if (pageIndex < 0 || pageIndex >= target.PageCount) return source;
 
         var pdfPage = target.Pages[pageIndex];
-        double w = pdfPage.Width, h = pdfPage.Height;
+        var shown = ShownBox.Of(pdfPage);   // D-160: the overlay is the shown box, placed at its corner
+        double w = shown.W, h = shown.H;
         var rot = NormalizeRotation(pdfPage.Rotate + viewRotation);
 
         // Box rect in y-up content space — used as the rotation centre for the stamp transform.
@@ -244,7 +246,7 @@ public sealed class RedactService
         // text reads upright relative to how the page was shown. Negated for PDF's CCW,
         // y-up space vs the screen's CW, y-down. Rotate about the box centre.
         double eff = item.Rotation + rot;
-        var t = RotateAboutCentre(eff, rect);
+        var t = AtShown(RotateAboutCentre(eff, rect), shown);
 
         using var ms = new MemoryStream();
         PageStamper.Place(ms, target, pageIndex, overlayDoc, 0, t, StampPlacement.Overlay);
@@ -279,7 +281,8 @@ public sealed class RedactService
         using var target = PdfDocument.Open(new MemoryStream(source, writable: false));
         if (pageIndex < 0 || pageIndex >= target.PageCount) return source;
         var pdfPage = target.Pages[pageIndex];
-        double w = pdfPage.Width, h = pdfPage.Height;
+        var shown = ShownBox.Of(pdfPage);   // D-160
+        double w = shown.W, h = shown.H;
         var rot = NormalizeRotation(pdfPage.Rotate + viewRotation);
 
         var overlay = PdfDocumentBuilder.Create();
@@ -288,7 +291,7 @@ public sealed class RedactService
 
         using var overlayDoc = PdfDocument.Open(new MemoryStream(overlay.ToByteArray(), writable: false));
         var rectYUp = MapToPdf(new NormBox(item.X, item.Y, item.W, item.H), rot, w, h);
-        var t = RotateAboutCentre(item.Rotation, rectYUp);
+        var t = AtShown(RotateAboutCentre(item.Rotation, rectYUp), shown);
         var placement = item.BehindContent ? StampPlacement.Underlay : StampPlacement.Overlay;
         using var ms = new MemoryStream();
         PageStamper.Place(ms, target, pageIndex, overlayDoc, 0, t, placement);
@@ -303,7 +306,8 @@ public sealed class RedactService
         using var target = PdfDocument.Open(new MemoryStream(source, writable: false));
         if (pageIndex < 0 || pageIndex >= target.PageCount) return source;
         var pdfPage = target.Pages[pageIndex];
-        double w = pdfPage.Width, h = pdfPage.Height;
+        var shown = ShownBox.Of(pdfPage);   // D-160
+        double w = shown.W, h = shown.H;
         var rot = NormalizeRotation(pdfPage.Rotate + viewRotation);
         var rect = MapToPdfTopLeft(new NormBox(item.X, item.Y, item.W, item.H), rot, w, h);
 
@@ -315,7 +319,7 @@ public sealed class RedactService
 
         using var overlayDoc = PdfDocument.Open(new MemoryStream(overlay.ToByteArray(), writable: false));
         var rectYUp = MapToPdf(new NormBox(item.X, item.Y, item.W, item.H), rot, w, h);
-        var t = RotateAboutCentre(item.Rotation, rectYUp);
+        var t = AtShown(RotateAboutCentre(item.Rotation, rectYUp), shown);
         var placement = item.BehindContent ? StampPlacement.Underlay : StampPlacement.Overlay;
         using var ms = new MemoryStream();
         PageStamper.Place(ms, target, pageIndex, overlayDoc, 0, t, placement);
@@ -492,7 +496,8 @@ public sealed class RedactService
         {
             if (m.PageNumber < 0 || m.PageNumber >= doc.PageCount) continue;
             var page = doc.Pages[m.PageNumber];
-            double w = page.Width, h = page.Height;
+            var shown = ShownBox.Of(page);   // D-160: fractions of the box the page shows
+            double w = shown.W, h = shown.H;
             if (w <= 0 || h <= 0) continue;
 
             var boxes = new List<NormBox>(m.BoundingBoxes.Count);
@@ -501,8 +506,8 @@ public sealed class RedactService
                 // Search boxes are in PDF user space (bottom-left origin, y UP). Convert to the
                 // app's normalised top-left / y-DOWN fractions used by the overlay layer and by
                 // MapToPdf for redaction.
-                double nx = r.X / w;
-                double ny = (h - (r.Y + r.Height)) / h;
+                double nx = (r.X - shown.X0) / w;
+                double ny = (shown.Y1 - (r.Y + r.Height)) / h;
                 boxes.Add(new NormBox(nx, ny, r.Width / w, r.Height / h));
             }
             if (boxes.Count == 0) continue;
@@ -610,10 +615,11 @@ public sealed class RedactService
                 var verifyRects = new List<RectangleF>();
                 foreach (var box in boxes)
                 {
-                    var padded = Pad(box, padding, pdfPage.Width, pdfPage.Height);
+                    var shown = ShownBox.Of(pdfPage);   // D-160
+                    var padded = Pad(box, padding, shown.W, shown.H);
                     // 3.14.1: RedactionRect.Bounds is BOTTOM-LEFT / y-up, which is the same frame the
                     // verify guard uses against TextExtractor fragments — so apply == verify rect.
-                    var r = MapToPdf(padded, rot, pdfPage.Width, pdfPage.Height);
+                    var r = Shift(MapToPdf(padded, rot, shown.W, shown.H), shown);
                     opts.Rectangles.Add(new RedactionRect(pageIndex, r));
                     verifyRects.Add(r);
                 }
@@ -781,6 +787,14 @@ public sealed class RedactService
             (float)(uw * w),
             (float)(uh * h));
     }
+
+    /// <summary>D-160: a rectangle in the shown box's frame, moved into the page's user space.</summary>
+    internal static RectangleF Shift(RectangleF r, ShownBox shown) =>
+        shown.AtOrigin ? r : new RectangleF((float)(r.X + shown.X0), (float)(r.Y + shown.Y0), r.Width, r.Height);
+
+    /// <summary>D-160: an overlay drawn in the shown box's frame, placed at the box's corner (after its own transform).</summary>
+    internal static Transform AtShown(Transform t, ShownBox shown) =>
+        shown.AtOrigin ? t : t.Multiply(Transform.CreateTranslation(shown.X0, shown.Y0));
 
     private static (double X, double Y) InverseRotate(double x, double y, int rotation) => rotation switch
     {

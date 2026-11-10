@@ -1,6 +1,7 @@
 using ChuvadiReader.Platform;
 using System.Globalization;
 using Chuvadi.Pdf.Documents;
+using ChuvadiReader.Core.Documents;
 using Chuvadi.Pdf.Graphics;
 using Chuvadi.Pdf.Images;
 using Chuvadi.Pdf.Objects;
@@ -646,7 +647,8 @@ public sealed class ChuvadiPdfSession : IPdfSession
         // Large-format sheets (CAD/architectural) are rasterised up front: their vector
         // SVG is too dense for the WebView. Everything else renders as selectable-text SVG,
         // with a safety fallback if a normal-size page's SVG is unexpectedly huge.
-        if (page.Width * page.Height > LargeFormatAreaPt)
+        var shown = ShownBox.Of(page);   // D-160: the renderers draw the CropBox within the MediaBox
+        if (shown.W * shown.H > LargeFormatAreaPt)
         {
             return RenderPageAsRasterSvg(document, page, overrides, cancellationToken, Images is null ? null : keepImage);
         }
@@ -683,8 +685,10 @@ public sealed class ChuvadiPdfSession : IPdfSession
         using var ms = new MemoryStream();
         PngEncoder.Encode(new ImageFrame(buffer, ImageColorFormat.Rgba32), ms, false);
 
-        string w = page.Width.ToString("0.###", CultureInfo.InvariantCulture);
-        string h = page.Height.ToString("0.###", CultureInfo.InvariantCulture);
+        // D-160: the image is the shown box (the rasteriser draws the CropBox), so the SVG is that size, not the MediaBox's.
+        var shown = ShownBox.Of(page);
+        string w = shown.W.ToString("0.###", CultureInfo.InvariantCulture);
+        string h = shown.H.ToString("0.###", CultureInfo.InvariantCulture);
         if (keepImage is not null)
         {
             // D-158: the page draws from its address; the SVG around it is the same, character for character,
