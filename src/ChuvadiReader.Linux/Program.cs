@@ -67,6 +67,7 @@ public static class Program
 
             Mark("instance " + instance.Role);
 
+            GlibcTrim.Hook(); // after each memory relief, give freed native memory back too (nineteenth patch)
             var paths = new DesktopAppPaths(); // XDG config folder; Documents for saves (the kit's fallback)
             var storage = new FileAppStorage(paths.AppDataFolder); // B-16: the kit keeps settings in memory when home is unwritable
             var services = BuildServices(paths, storage, LinuxPlatformInfo.Create(), instance);

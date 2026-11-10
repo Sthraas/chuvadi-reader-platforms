@@ -648,3 +648,15 @@ never drawn (one-line diff; seen with 49 s sheets); (2) moving to a page while t
 two sheets on (36c waits for the page heights to hold); (3) after closing, the .NET heap still holds ~680 MB of
 garbage that one aggressive collection clears (678 → 5 MB): the relief runs before the drawing is garbage, and ~150
 MB stays outside the heap even then. 36c's memory becomes an assertion when (3) is settled.
+
+### 51. Foundation's nineteenth combined patch (f88f9ef, 10 Nov); glibc trim after each memory relief
+Merged without conflicts (the three render findings). Reader 233/233, host kit 77/77, Linux 46/46, Web Ui 41/41,
+Mobile Ui 16/16. The Linux host hooks `MemoryReliefNotice.Relieved` to glibc's `malloc_trim(0)` (`GlibcTrim`;
+`libc.so.6` only, turns itself off on another C library), so native memory freed by WebKitGTK and GLib goes back
+too. Tests: 64 MB of small freed blocks given back to the system; hooking twice is harmless.
+
+36c (memory still recorded, not asserted): every sheet draws (4.4–6.8 s), the page answers ≤ 0.41 s; 259 MB
+before, 2.1 GB with 5 sheets, 616 MB 90 s after closing. The relief runs (2 passes, trim called each time), but
+80 s after closing the .NET heap still holds 681–807 MB that one more aggressive collection clears to 3–5 MB (app
+then 330–363 MB, within 100 MB of the start). So the closed drawing's memory is still held, or made, after both
+passes. Reported to Foundation; 36c's memory becomes the assertion once that's found.

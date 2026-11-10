@@ -123,6 +123,9 @@ internal static class UiTestDriver
                 GtkHost.Post(() => Native.SetButtonLayout(arg));
                 return "true";
 
+            case "gc-count":
+                return JsonSerializer.Serialize(new { reliefPasses = Platform.GlibcTrim.Relieved });
+
             case "gc":
             {
                 // What an aggressive collection gives back (test-only; the sixteenth patch's relief runs the same call).
@@ -132,6 +135,7 @@ internal static class UiTestDriver
                 var info = GC.GetGCMemoryInfo();
                 return JsonSerializer.Serialize(new
                 {
+                    reliefPasses = Platform.GlibcTrim.Relieved,
                     residentBeforeMb = before / 1048576,
                     residentAfterMb = Environment.WorkingSet / 1048576,
                     heapBeforeMb = heapBefore / 1048576,

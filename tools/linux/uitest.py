@@ -1085,7 +1085,7 @@ step("36b-close-tab-mid-render", close_mid_render)
 def cad_drawing():
     """A 5-sheet A1 vector drawing (10,000 strokes a sheet; B-27's kind of file): the page answers while sheets
     draw, every sheet really draws (its page-sized drawing, not the loading icon: B-28), and once all five are
-    drawn, the app's memory before, with 5 sheets drawn, and up to 90 s after closing is recorded."""
+    drawn, and the app's memory before, with 5 sheets drawn and up to 90 s after closing is recorded."""
     sheet_limit = 30  # measured on 2 vCPU, no GPU: 5.5-7 s a sheet (B-27, a library item); about four times that
     baseline = memory_mb()
     t0 = time.time()
@@ -1127,10 +1127,11 @@ def cad_drawing():
         after = memory_mb()
         if int(time.time() - t_close) % 10 == 0:
             trail.append(f"{int(time.time() - t_close)}s:{after[0]}")
-    # Memory after closing is measured, not yet asserted: on fc6286a the closed drawing's ~680 MB is garbage that
-    # one aggressive collection clears (heap 678 → 5 MB), but the relief runs before it is garbage, and ~150 MB
-    # stays outside the .NET heap even then (BUILD-LOG §50; with Foundation and the coordinator).
-    kept = "" if after[0] <= baseline[0] + 100 else " — not back near the start (known, reported)"
+    # Measured, not yet asserted (BUILD-LOG §51): on f88f9ef the relief runs (two passes; the Linux host trims glibc
+    # after each), but 680-807 MB of the closed drawing's garbage is still held or made after both, and one more
+    # collection clears it (heap → 3-5 MB, app within 100 MB of the start). Becomes an assertion once that's found.
+    relief = (app.send("gc-count") or {}).get("reliefPasses", "?")
+    kept = "" if after[0] <= baseline[0] + 100 else f" — not back near the start (known; relief passes: {relief})"
     return (f"sheet 1 drawn in {first:.1f} s; sheets 2-5 in {', '.join(f'{t:.1f}' for t in times)} s; page answered in "
             f"≤ {worst:.2f} s throughout; memory app/web: {baseline[0]}/{baseline[1]} MB before, {mem[0]}/{mem[1]} MB with "
             f"5 sheets drawn, {after[0]}/{after[1]} MB {time.time() - t_close:.0f} s after closing ({' '.join(trail)}){kept}")

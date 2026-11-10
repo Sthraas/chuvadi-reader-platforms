@@ -4,6 +4,7 @@
     <IsPackable>false</IsPackable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
@@ -14,8 +15,10 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\ChuvadiReader.Platform\ChuvadiReader.Platform.csproj" />
+    <ProjectReference Include="..\..\src\ChuvadiReader.Core\ChuvadiReader.Core.csproj" />
     <!-- The Linux host's pure-.NET parts, compiled in directly (the host itself needs GTK to build). -->
     <Compile Include="..\..\src\ChuvadiReader.Linux\Platform\GtkButtonLayout.cs" Link="GtkButtonLayout.cs" />
     <Compile Include="..\..\src\ChuvadiReader.Linux\Platform\CupsServer.cs" Link="CupsServer.cs" />
+    <Compile Include="..\..\src\ChuvadiReader.Linux\Platform\GlibcTrim.cs" Link="GlibcTrim.cs" />
   </ItemGroup>
 </Project>
