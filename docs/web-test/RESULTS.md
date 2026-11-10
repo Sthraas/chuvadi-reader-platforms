@@ -231,3 +231,24 @@ After Cancel the person carries on; the next large sheet opens in the same worke
 
 ### Memory given back after close → WT-19
 PDF heavy close ✅ (1,468 → 359 MB within 2 s). Excel close and cancelled Excel open ✗ (memory kept; details in BUGS WT-19).
+
+## Security pass — page images by address (D-158), `platform/web` @ **78f7628** (10 Nov, 15:30–17:30 IST)
+Build from clean: shared solution 0 warnings — Reader **247**, Hosting **82**, Mobile UI **16**, Web UI **41**; Web + Web.Tests 0 warnings, Web **171/171**; `check-package.sh` PASS.
+
+`tests/web-test/page_image_sec.py` (gateway, Development sign-in) — **19/19 in Chromium, Firefox and WebKit**:
+| Check | Result |
+|---|---|
+| Pages drawn as images are `/_chvd/pages/<32 hex>.png`; no `data:` images left | ✅ |
+| Owner: 200 `image/png`; `Cache-Control` = `no-store, private` (both directives; order differs from the code, same meaning); `nosniff`; `Cross-Origin-Resource-Policy: same-origin`; no `Access-Control-*` | ✅ |
+| Referrer: image requests carry no `Referer`; the page sends `Referrer-Policy: no-referrer` | ✅ |
+| Another signed-in person → 404; signed-out (Development) → 404 | ✅ (Sangam mode: ❌ 302 → **WT-20**) |
+| Owner's token with `Sec-Fetch-Site: cross-site` / `same-site`, a foreign `Origin`, `Origin: null` → 404; same-origin marks → 200 | ✅ |
+| CORS preflight (`OPTIONS`, foreign Origin) → 405, no `Access-Control-Allow-*` | ✅ |
+| Malformed: upper-case hex, 31/33 chars, `.PNG`, `.png.png`, no extension, `.jpg`, `../`, `%2e%2e`, `%2f`, `%5c`, all-zero, non-hex → 404; `%00` → 400 (Kestrel); never 5xx. Note: `<token>.png/` and `<token>.png?x=1` reach the owner's own image (harmless — owner check still applies) | ✅ |
+| Tokens: 16 sampled, 128-bit lower-case hex, all distinct, one-bits 50.4 %, no shared 3-character prefix | ✅ |
+| Closed document → every token 404 right after the tab closes | ✅ |
+
+With **real Sangam rc.16** (gateway, short idle): owner with cookie 200; **the first sign-in's token under the same person's second sign-in → 404** ✅; the second sign-in's token 200; fetching the image every 2 s **does not** keep the session alive (ended at 40 s) ✅; expired session with its old cookie → **302** (WT-20); after back-channel sign-out → 302 with the token in `returnUrl` (WT-20). After session end the image is still held in the worker's memory (WT-21).
+**Logs:** at the shipped levels (`Microsoft.AspNetCore: Warning`) no token appears in the gateway or worker logs ✅. (At `Information`, which my test portals use, ASP.NET's request lines include the path — an operator choice; keep production at Warning.)
+**Pixel identity** (`page_image_pixels.py`, old build d183ea8 inline `data:` images vs new endpoint): `large-6.pdf` (6 large-format pages, 2708×2708 px) — **PNG bytes identical** on every page, Chromium and Firefox ✅. (The 5000×5000-image PDF is drawn as a vector page in both builds, so it doesn't use the endpoint.)
+**Regression:** the Web chat's `page_images.py` 6/6 × Chrome, Firefox, WebKit; `flows.py` 10/10 × 3; `office_limits.py` 6/6 × Chrome, WebKit; `sangam_signin.py` 13/13 × 3; `verify_fixes.py` all green (WT-02 … WT-10, Q-3).
