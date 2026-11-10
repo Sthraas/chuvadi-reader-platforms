@@ -23,6 +23,7 @@ RELEASE_APK="${3:-}"
 VARIANT_APK="${4:-}"
 
 if [ "${SUITE:-full}" = timeline ]; then
+    mkdir -p "$OUT"
     python3 "$HERE/make-test-pdf.py" "$OUT/cold-12p.pdf" 12 >/dev/null
     python3 "$HERE/cold_open_timeline.py" "$RELEASE_APK" shipped "$OUT/cold-12p.pdf" "$OUT/timeline" 10
     a=$?

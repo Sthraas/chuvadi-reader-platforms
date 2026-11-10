@@ -42,14 +42,23 @@ adb("install", "-r", APK, check=True)
 # The PDF in Downloads, through MediaStore, as a file manager would hand it over.
 name = "chuvadi-cold-" + os.path.basename(PDF)
 adb("push", PDF, f"/sdcard/Download/{name}", check=True)
-adb("shell", "am", "broadcast", "-a", "android.intent.action.MEDIA_SCANNER_SCAN_FILE", "-d", f"file:///sdcard/Download/{name}")
-time.sleep(3)
-row = adb("shell", "content", "query", "--uri", "content://media/external/downloads", "--projection", "_id",
-          "--where", f"\"_display_name='{name}'\"")
-ids = re.findall(r"_id=(\d+)", row)
-if not ids:
-    sys.exit(f"{name} not in MediaStore: {row!r}")
-uri = f"content://media/external/downloads/{ids[-1]}"
+uri = None
+for attempt in range(15):
+    for coll in ("downloads", "file"):
+        row = adb("shell", "content", "query", "--uri", f"content://media/external/{coll}", "--projection", "_id",
+                  "--where", f"\"_display_name='{name}'\"")
+        ids = re.findall(r"_id=(\d+)", row)
+        if ids:
+            uri = f"content://media/external/{coll}/{ids[-1]}"
+            break
+    if uri:
+        break
+    if attempt in (0, 4):
+        adb("shell", "am", "broadcast", "-a", "android.intent.action.MEDIA_SCANNER_SCAN_FILE", "-d", f"file:///sdcard/Download/{name}")
+    time.sleep(2)
+if not uri:
+    sys.exit(f"{name} not in MediaStore")
+print(f"{LABEL}: {name} as {uri}", flush=True)
 
 runs = []
 for i in range(RUNS):
@@ -58,7 +67,8 @@ for i in range(RUNS):
     adb("shell", "sync; echo 3 > /proc/sys/vm/drop_caches")
     time.sleep(2)
     adb("logcat", "-c")
-    adb("shell", "su", "2000", "am", "start", "-a", "android.intent.action.VIEW", "-d", uri, "-t", "application/pdf",
+    as_shell = ["su", "2000"] if adb("shell", "id -u").strip() == "0" else []   # a root am's URI grant doesn't reach the app
+    adb("shell", *as_shell, "am", "start", "-a", "android.intent.action.VIEW", "-d", uri, "-t", "application/pdf",
         "-p", PKG, "--grant-read-uri-permission", "--ez", "chuvadi.timing", "true")
     marks = {}
     deadline = time.time() + 60
