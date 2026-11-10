@@ -1322,13 +1322,18 @@ def m_shared():
     t = axdump("shared-reader")
     status = lambda tx: [l.strip()[:120] for l in tx.splitlines() if re.search(r"page \d+ of \d+", l)][:2]
     ev["status_before"] = status(t)
+    ev["shot_before"] = shot("tabkeys-0-before")
+    drive("activate", NAME)
+    time.sleep(0.6)
     drive("key", "ctrl+tab")
-    time.sleep(1.5)
+    time.sleep(2)
     t2 = axdump("shared-after-ctrl-tab")
     ev["status_after_ctrl_tab"] = status(t2)
+    ev["shot_ctrl_tab"] = shot("tabkeys-1-ctrl-tab")
     drive("key", "ctrl+shift+tab")
-    time.sleep(1.5)
+    time.sleep(2)
     ev["status_after_ctrl_shift_tab"] = status(axdump("shared-after-ctrl-shift-tab"))
+    ev["shot_ctrl_shift_tab"] = shot("tabkeys-2-ctrl-shift-tab")
     ev["m08_ctrl_tab_switches"] = ev["status_before"] != ev["status_after_ctrl_tab"]
     if not ev["m08_ctrl_tab_switches"]:
         # give the page the keyboard first (click the page), then try again
@@ -1341,12 +1346,13 @@ def m_shared():
         drive("key", "ctrl+tab")
         time.sleep(1.5)
         ev["status_after_click_ctrl_tab"] = status(axdump("shared-after-click-ctrl-tab"))
-        ev["ctrl_tab_shot"] = shot("shared-after-click-ctrl-tab")
+        ev["ctrl_tab_shot"] = shot("tabkeys-3-click-ctrl-tab")
         ev["m08_ctrl_tab_switches_after_click"] = ev["status_before"] != ev["status_after_click_ctrl_tab"]
         # control: the same harness keys, another tab shortcut (⌘1 = Go to tab 1)
         drive("key", "cmd+1")
-        time.sleep(1.5)
+        time.sleep(2)
         ev["status_after_cmd_1"] = status(axdump("shared-after-cmd-1"))
+        ev["shot_cmd_1"] = shot("tabkeys-4-cmd-1")
         ev["control_cmd_1_switches"] = ev["status_before"] != ev["status_after_cmd_1"]
     # M-09: every Immersive / F11 mention in the Reader (View rail included)
     ev["m09_reader_immersive"] = ax_paths(t, r"Immersive|F11")
