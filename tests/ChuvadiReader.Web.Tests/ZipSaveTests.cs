@@ -44,7 +44,7 @@ public sealed class ZipSaveTests : IAsyncDisposable
     public ZipSaveTests()
     {
         var options = Options.Create(new PortalOptions { DataRoot = SpaceLayoutTests.NewTempDir() });
-        _space = new SessionSpace(new SignedIn(), options, NullLogger<SessionSpace>.Instance);
+        _space = TestSessions.Space(new SignedIn(), options);
         _outbox = new OutboxDelivery(_space, _registry, new BrowserBridge(_js), options, TimeProvider.System, NullLogger<OutboxDelivery>.Instance);
     }
 

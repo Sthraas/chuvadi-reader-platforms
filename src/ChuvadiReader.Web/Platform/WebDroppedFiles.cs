@@ -39,7 +39,7 @@ public sealed class WebDroppedFiles : IDroppedFiles
     public async Task<IReadOnlyList<string>> ReceiveAsync(IReadOnlyList<DroppedFile> files, CancellationToken ct = default)
     {
         await _space.EnsureAsync(ct).ConfigureAwait(false);
-        var ticket = new UploadTicket("drop", _space.UserKey, _space.SessionId, _space.Uploads, PickKind.Document,
+        var ticket = new UploadTicket("drop", _space.UserKey, _space.ConnectionId, _space.Uploads, PickKind.Document,
             MaxFilesPerDrop, MaxFileBytes, DateTimeOffset.MaxValue);
         var problems = new List<string>();
         var stored = new List<string>();

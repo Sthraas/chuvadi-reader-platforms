@@ -11,6 +11,8 @@ Usage: python3 sangam_signin.py <portal base> <sangam base> <out folder> [--inse
 import re, sys, time, os, random, string
 from playwright.sync_api import sync_playwright
 
+from pdfs import large_format_pdf
+
 
 def launch(p):
     """--browser chrome (the machine's Chrome, default) | chromium | firefox | webkit (Safari's engine)."""
@@ -129,6 +131,29 @@ with sync_playwright() as p:
         check("no sign-in flow cookie left behind", not any(n.startswith("chvd.oidc.") for n in cookies))
         page.screenshot(path=os.path.join(out, "sangam-3-portal.png"))
 
+        # D-174 with the real sign-in (cookie and Sangam's sid): a document survives a reload, its page image is
+        # served to this sign-in only, and the connection before the reload lets go of what it drew.
+        TABS = "() => [...document.querySelectorAll('.rtab .rtab-name')].map(e => e.textContent.trim())"
+        IMAGE = "() => [...document.querySelectorAll('.rpage svg image')].map(i => i.getAttribute('href') || '').find(h => h.startsWith('_chvd/pages/')) || null"
+        big = os.path.join(out, "large-format.pdf")
+        large_format_pdf(big)
+        with page.expect_file_chooser(timeout=15000) as fc:
+            page.click("nav.leftbar >> text=Upload")
+        fc.value.set_files(big)
+        page.wait_for_function("() => (" + IMAGE + ")() !== null", timeout=60000)
+        drawn = portal + "/" + page.evaluate(IMAGE)
+        check("a page image is served to the signed-in person", ctx.request.get(drawn).status == 200)
+        page.wait_for_timeout(1000)
+        page.reload()
+        page.wait_for_function("() => (" + IMAGE + ")() !== null", timeout=60000)
+        check("after a reload the document is open again", page.evaluate(TABS) == ["large-format.pdf"], page.evaluate(TABS))
+        redrawn = portal + "/" + page.evaluate(IMAGE)
+        for _ in range(40):
+            if ctx.request.get(drawn).status == 404:
+                break
+            page.wait_for_timeout(500)
+        check("the connection before the reload freed its page image", ctx.request.get(drawn).status == 404 and ctx.request.get(redrawn).status == 200)
+
         # A second tab of the same sign-in, to check sign-out ends it too.
         tab2 = ctx.new_page()
         tab2.goto(portal + "/library")
@@ -159,6 +184,8 @@ with sync_playwright() as p:
         page.goto(portal + "/")
         page.wait_for_load_state("networkidle")
         check("after sign-out the portal asks to sign in again", page.url.startswith(portal + "/signin"), page.url[:120])
+        gone = ctx.request.get(redrawn, max_redirects=0)
+        check("after sign-out the page image address is a plain 404", gone.status == 404 and "location" not in gone.headers, gone.status)
         continue_with_sangam(page, "after sign-out")
 
         # Sign in again, then sign out on Sangam itself (not through the portal): Sangam's back-channel
@@ -188,6 +215,9 @@ with sync_playwright() as p:
         print("second sign-in at:", page.url[:100], "|", page.inner_text("body")[:300].replace("\n", " "))
         page.wait_for_selector("nav.leftbar", timeout=30000)
         check("signed in again with the password", page.url.startswith(portal))
+        page.wait_for_timeout(2500)
+        check("the new sign-in starts with no documents, and the old image stays gone",
+              page.evaluate(TABS) == [] and ctx.request.get(redrawn).status == 404, page.evaluate(TABS))
         other = ctx.new_page()
         other.goto(sangam + "/connect/endsession")
         other.wait_for_load_state("networkidle")

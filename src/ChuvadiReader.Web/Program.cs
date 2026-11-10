@@ -295,7 +295,7 @@ public static class Program
             return;
         }
 
-        builder.Services.AddSingleton<OpenTabs>();
+        builder.Services.AddSingleton(sp => new OpenTabs(sp.GetService<SessionStates>()));
         builder.Services.AddSingleton<ITabControl>(sp => sp.GetRequiredService<OpenTabs>());
         AddReaderHost(builder);
     }
@@ -320,7 +320,7 @@ public static class Program
         builder.Services.AddAuthentication(GatewayIdentityHandler.SchemeName)
             .AddScheme<AuthenticationSchemeOptions, GatewayIdentityHandler>(GatewayIdentityHandler.SchemeName, null);
         builder.Services.AddAuthorization(o => o.FallbackPolicy = o.DefaultPolicy);
-        builder.Services.AddSingleton<OpenTabs>();
+        builder.Services.AddSingleton(sp => new OpenTabs(sp.GetService<SessionStates>()));
         builder.Services.AddSingleton<ITabControl>(sp => sp.GetRequiredService<OpenTabs>());
         AddReaderHost(builder);
     }
@@ -345,6 +345,7 @@ public static class Program
         builder.Services.AddHostedService<PortalHousekeeping>();
 
         // ── per-session (per circuit) services ──────────────────────────────────────────
+        builder.Services.AddSingleton<SessionStates>(); // D-174: files and tabs belong to the signed-in session
         builder.Services.AddScoped<SessionSpace>();
         builder.Services.AddScoped<BrowserBridge>();
         builder.Services.AddScoped<OutboxDelivery>();

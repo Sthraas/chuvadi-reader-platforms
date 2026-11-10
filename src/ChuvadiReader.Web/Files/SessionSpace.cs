@@ -5,35 +5,42 @@ using Microsoft.Extensions.Options;
 namespace ChuvadiReader.Web.Files;
 
 /// <summary>
-/// One browser session's working folders on the server, inside the signed-in person's own space:
-/// <c>{DataRoot}/{userKey}/sessions/{sessionId}/</c> with <c>uploads</c>, <c>outbox</c> and
-/// <c>print</c>. Created on first use, deleted when the session (Blazor circuit) ends, and swept at
-/// start-up if the process stopped before it could clean up. Scoped: one per circuit.
+/// One browser connection's view of its session's working folders (D-174):
+/// <c>{DataRoot}/{userKey}/sessions/{sessionId}/</c> with <c>uploads</c>, <c>outbox</c> and <c>print</c>.
+/// The folders belong to the signed-in session (<see cref="SessionState"/>), so every connection of the same
+/// sign-in sees the same files; they are deleted when the session ends, not when a connection does, and swept
+/// at start-up if the process stopped before it could clean up. Scoped: one per connection (Blazor circuit).
 /// </summary>
 public sealed class SessionSpace : IDisposable
 {
     private readonly AuthenticationStateProvider _auth;
-    private readonly PortalOptions _options;
-    private readonly ILogger<SessionSpace> _log;
+    private readonly SessionStates _states;
+    private readonly TimeProvider _time;
     private readonly SemaphoreSlim _gate = new(1, 1);
-    private string? _userKey;
-    private string? _root;
-    private bool _deleted;
+    private SessionState? _state;
+    private bool _disposed;
 
-    public SessionSpace(AuthenticationStateProvider auth, IOptions<PortalOptions> options, ILogger<SessionSpace> log)
+    public SessionSpace(AuthenticationStateProvider auth, SessionStates states, TimeProvider time)
     {
         _auth = auth;
-        _options = options.Value;
-        _log = log;
-        SessionId = Convert.ToHexStringLower(System.Security.Cryptography.RandomNumberGenerator.GetBytes(12));
+        _states = states;
+        _time = time;
+        ConnectionId = Convert.ToHexStringLower(System.Security.Cryptography.RandomNumberGenerator.GetBytes(12));
     }
 
-    /// <summary>Random id of this session; also the folder name.</summary>
-    public string SessionId { get; }
+    /// <summary>Random id of this connection: its upload, download and print tickets carry it, and are
+    /// forgotten when it closes.</summary>
+    public string ConnectionId { get; }
 
-    public string UserKey => _userKey ?? throw new InvalidOperationException("The session space is not ready yet.");
+    /// <summary>The session this connection belongs to.</summary>
+    public SessionState State => _state ?? throw new InvalidOperationException("The session space is not ready yet.");
 
-    public string Root => _root ?? throw new InvalidOperationException("The session space is not ready yet.");
+    /// <summary>Random id of the session; also the folder name.</summary>
+    public string SessionId => State.SessionId;
+
+    public string UserKey => State.UserKey;
+
+    public string Root => State.Root;
 
     public string Uploads => Path.Combine(Root, "uploads");
 
@@ -41,10 +48,10 @@ public sealed class SessionSpace : IDisposable
 
     public string Print => Path.Combine(Root, "print");
 
-    /// <summary>Resolves the signed-in person and creates the folders (owner-only on Unix).</summary>
+    /// <summary>Resolves the signed-in person's session and creates its folders (owner-only on Unix).</summary>
     public async Task EnsureAsync(CancellationToken ct = default)
     {
-        if (_root is not null)
+        if (_state is not null)
         {
             return;
         }
@@ -52,24 +59,16 @@ public sealed class SessionSpace : IDisposable
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            if (_root is not null)
+            if (_state is not null)
             {
                 return;
             }
 
-            ObjectDisposedException.ThrowIf(_deleted, this);
-            var state = await _auth.GetAuthenticationStateAsync().ConfigureAwait(false);
-            var key = Files.UserKey.From(state.User)
-                ?? throw new UnauthorizedAccessException("Sign in to use the portal.");
-
-            var root = Path.Combine(SpaceLayout.UserFolder(_options.DataRoot, key), "sessions", SessionId);
-            foreach (var dir in new[] { root, Path.Combine(root, "uploads"), Path.Combine(root, "outbox"), Path.Combine(root, "print") })
-            {
-                SpaceLayout.CreatePrivateDirectory(dir);
-            }
-
-            _userKey = key;
-            _root = root;
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            var auth = await _auth.GetAuthenticationStateAsync().ConfigureAwait(false);
+            var state = _states.For(auth.User);
+            state.Attach();
+            _state = state;
         }
         finally
         {
@@ -79,39 +78,28 @@ public sealed class SessionSpace : IDisposable
 
     /// <summary>True when <paramref name="path"/> is inside this session's folder.</summary>
     public bool Contains(string path)
-        => _root is not null && SpaceLayout.IsInside(_root, path);
+        => _state is { Ended: false } s && SpaceLayout.IsInside(s.Root, path);
 
-    /// <summary>Deletes every file of this session. Safe to call more than once.</summary>
+    /// <summary>The session is over (sign-out, expiry): every file of it is deleted and its page images are
+    /// freed, for all its connections. Safe to call more than once.</summary>
     public void Delete()
     {
-        if (_deleted)
+        if (_state is { } s)
         {
-            return;
-        }
-
-        _deleted = true;
-        if (_root is null)
-        {
-            return;
-        }
-
-        try
-        {
-            if (Directory.Exists(_root))
-            {
-                Directory.Delete(_root, recursive: true);
-            }
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            // A file still open (e.g. a render in flight) — the start-up sweep removes it later.
-            _log.LogWarning("Could not delete session folder {Session} yet: {Message}", SessionId, ex.Message);
+            _states.End(s);
         }
     }
 
+    /// <summary>The connection is gone. The session and its files stay until the session ends.</summary>
     public void Dispose()
     {
-        Delete();
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        _state?.Detach(_time.GetUtcNow());
         _gate.Dispose();
     }
 }

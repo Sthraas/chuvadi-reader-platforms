@@ -62,6 +62,15 @@ with sync_playwright() as p:
     page.wait_for_function("() => [...document.querySelectorAll('.rpage svg image')].some(i => (i.getAttribute('href') || '').startsWith('_chvd/pages/'))", timeout=60000)
     image = base + "/" + page.evaluate("() => [...document.querySelectorAll('.rpage svg image')].map(i => i.getAttribute('href')).find(h => h.startsWith('_chvd/pages/'))")
     check("the open page's image is served to its owner", ctx.request.get(image).status == 200)
+
+    # WT-22 (D-174): a reload brings both tabs back; what the first connection drew must not outlive the session.
+    first_image = image
+    page.wait_for_timeout(1000)
+    page.reload()
+    page.wait_for_function("() => document.querySelectorAll('.rtab .rtab-name').length === 2", timeout=30000)
+    page.wait_for_function("() => [...document.querySelectorAll('.rpage svg image')].some(i => (i.getAttribute('href') || '').startsWith('_chvd/pages/'))", timeout=60000)
+    image = base + "/" + page.evaluate("() => [...document.querySelectorAll('.rpage svg image')].map(i => i.getAttribute('href')).find(h => h.startsWith('_chvd/pages/'))")
+    check("after a reload both documents are open again", image != first_image and ctx.request.get(image).status == 200)
     if data_root:
         check("the person's file is on the server", any(f.endswith(os.path.basename(pdf)) for f in files_under(data_root)))
 
@@ -97,6 +106,7 @@ with sync_playwright() as p:
     check("the session ends on the signed-out page", page.url.endswith("/signed-out"))
     # Development sign-in signs the same person straight back in, so only freeing the image makes this a 404.
     check("the ended session's page image is freed at once", ctx.request.get(image).status == 404)
+    check("and so is the one drawn before the reload", ctx.request.get(first_image).status == 404)
     if data_root:
         page.wait_for_timeout(3000)
         left = [f for f in files_under(data_root) if f.endswith(".pdf")]

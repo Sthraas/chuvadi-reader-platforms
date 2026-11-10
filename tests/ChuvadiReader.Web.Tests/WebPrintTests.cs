@@ -43,7 +43,7 @@ public class WebPrintTests
 
     private (WebPrintService Service, RecordingJs Js, TransferRegistry Registry, SessionSpace Space) Make()
     {
-        var space = new SessionSpace(new SignedIn(), Options.Create(new PortalOptions { DataRoot = _root }), NullLogger<SessionSpace>.Instance);
+        var space = TestSessions.Space(new SignedIn(), Options.Create(new PortalOptions { DataRoot = _root }));
         var js = new RecordingJs();
         var registry = new TransferRegistry(TimeProvider.System);
         return (new WebPrintService(space, registry, new BrowserBridge(js)), js, registry, space);

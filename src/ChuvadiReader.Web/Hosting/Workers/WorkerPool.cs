@@ -484,13 +484,15 @@ public sealed class WorkerPool : ITabControl, IAsyncDisposable
             return;
         }
 
-        if (health is { Circuits: 0 } && DateTimeOffset.UtcNow - worker.LastUsed > _options.IdleStop)
+        // D-174: a worker that still holds a signed-in session's documents stays, even with no connection (the
+        // person may reload or come back); the session clock ends the session, and then the worker goes.
+        if (health is { Circuits: 0, Sessions: 0 } && DateTimeOffset.UtcNow - worker.LastUsed > _options.IdleStop)
         {
             await StopAsync(worker.Key).ConfigureAwait(false);
         }
     }
 
-    private sealed record Health(int Tabs, int Circuits);
+    private sealed record Health(int Tabs, int Circuits, int Sessions);
 
     // ── ITabControl: tabs live in the worker ──────────────────────────────────────────
 

@@ -152,7 +152,8 @@ public static class WorkerHost
     public static IEndpointRouteBuilder MapWorkerControl(this IEndpointRouteBuilder app)
     {
         var g = app.MapGroup(ControlPrefix).RequireAuthorization().DisableAntiforgery();
-        g.MapGet("/health", (OpenTabs tabs, CircuitCounter circuits) => Results.Json(new { tabs = tabs.Count, circuits = circuits.Count, maintenance = tabs.Maintenance?.At }));
+        g.MapGet("/health", (OpenTabs tabs, CircuitCounter circuits, Files.SessionStates sessions)
+            => Results.Json(new { tabs = tabs.Count, circuits = circuits.Count, sessions = sessions.Count, maintenance = tabs.Maintenance?.At }));
         g.MapPost("/end", async (EndRequest r, OpenTabs tabs) => Results.Json(new { ended = await tabs.EndAsync(r.Sub, r.Sid).ConfigureAwait(false) }));
         g.MapPost("/notice", async (NoticeRequest r, OpenTabs tabs) =>
         {

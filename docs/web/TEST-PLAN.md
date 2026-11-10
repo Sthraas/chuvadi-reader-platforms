@@ -63,6 +63,8 @@ The Web projects aren't in `ChuvadiReader.Platforms.slnx` on purpose: that solut
 | F-23 | Privacy link on the sign-in page and account menu (D-86, D-97) | "Terms of use · Privacy" on 12a and in the account menu footer; `/privacy` opens before sign-in | U `SangamSignInTests`; E (Web Test) |
 | F-24 | Save that writes several files (D-129, WT-16): "Split to folder", Scatter, export pages | One `.zip` download, named after what the files share ("report.zip"), holding every file byte for byte with its folder path; one file goes as itself; committing again sends nothing new; no multi-download prompt, nothing for Safari to block | U `ZipSaveTests`; E `flows.py` (split: one .zip of every page, 4 engines); M Safari on Mac and iPhone (§5a) |
 | F-25 | Word and Excel limits (D-136, D-137: the portal keeps the strict Word limits) | A normal .docx opens as in the file; a .docx showing a picture over 20 MB, or unpacking to more than 64 MB (a zip bomb), says "too large to open"; the worker stays up | E `office_limits.py` (4 engines); Foundation `OfficeViewTests` pin the figures |
+| F-26 | Open tabs belong to the signed-in session (D-174, WT-22) | A reload, the portal's address opened again, a dropped connection or a second browser tab of the same sign-in shows the same tabs (order, active tab, page); the active document is drawn again from the same working copy; settings and recents survive too. A tab closed before a reload stays closed. Closing the browser tab without signing out and coming back within the session shows the documents again. Another person, or the same person's other sign-in, sees none of it. Not kept across a reload: marks not yet saved into the file, and a typed password (asked again) | U `SessionKeepsTabsTests`; E `reload.py` (4 engines), `comeback.py`, `sangam_signin.py` (real cookie and sid, 3 engines); M on a phone: lock the screen for a minute, unlock |
+| F-27 | What a connection and a session let go of (WT-22, WT-21) | A connection that ends (reload, tab closed) closes the documents it had open at once: their page images answer 404 within seconds and their memory is freed; the saved tab list is untouched. When the session ends (sign-out, expiry, a Sangam sign-out), with any number of connections or none: every page image of that sign-in is freed (`PageImages.RemoveOwner`), its folder is deleted, its settings dropped, and its worker stops | U `SessionKeepsTabsTests`; E `reload.py`, `expiry.py` (a reload, then expiry: both images 404, files gone), `comeback.py` (expiry with no tab open: worker and files gone) |
 
 ## 2. Security checks
 
@@ -239,7 +241,13 @@ Found and fixed while running this plan:
 - Web 172/172; shared solution 0 warnings and its tests.
 - `page_images.py` 7/7 and `flows.py` 10/10 in Chrome, Firefox, WebKit and Chromium; `expiry.py` 10/10 in Chrome, Firefox and WebKit (short limits).
 
+**11 Nov, early (Foundation `742a5da` merged; D-174, RemoveOwner):**
+- Shared solution 0 warnings and its tests (Reader 305 with 3 skipped by the Foundation, Hosting 91, Mobile UI 16, Web UI 41); Web 178/178; package check.
+- `reload.py` 11/11 in Chrome, Firefox, WebKit and Chromium; `expiry.py` 12/12 in Chrome, Firefox and WebKit; `comeback.py` 5/5 in Chrome and WebKit; `sangam_signin.py` 18/18 in Chrome, Firefox and WebKit.
+- `flows.py` 10/10, `page_images.py` 7/7 and `office_limits.py` 6/6 in all four engines; `load.py` 3/3.
+
 ## 8. Known gaps
+- **Browser tests and the Development sign-in:** name the person with the `chvd-dev-user` cookie, not only the `X-Dev-User` header. A closing page's "disconnect" call is a beacon: it carries cookies (as the real sign-in does) but not a test tool's extra headers, so with the header alone it reaches the default person's worker and the old connection lingers for 3 minutes. That made WT-22's leak look larger in Development than it is with the real cookie.
 - The legal texts are drafts and say not to publish until counsel has reviewed them: V-7 blocks go-live until the DRAFT lines are gone.
 - F-23 (a Privacy link on 12a) waits for a decision. A real drag from the desktop (F-21, F-22) can only be run by hand: browser automation can't carry an OS file drag.
 - Manual runs M-1 to M-4 (§5a) need real devices; staging runs V-1 to V-7 (§5b) need the VM, which comes last by Arun's decision. G-12 needs a Sangam test person in two organisations.

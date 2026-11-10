@@ -31,7 +31,7 @@ public class DroppedFilesTests
     public DroppedFilesTests()
     {
         var options = Options.Create(new PortalOptions { DataRoot = _root, MaxUploadBytes = 64 * 1024 });
-        _space = new SessionSpace(new SignedIn(), options, NullLogger<SessionSpace>.Instance);
+        _space = TestSessions.Space(new SignedIn(), options);
         var ready = new AppReadySignal();
         ready.SignalReady();
         var incoming = new IncomingFiles(new BenchDropService(), _open, ready, new NoAppInstance());

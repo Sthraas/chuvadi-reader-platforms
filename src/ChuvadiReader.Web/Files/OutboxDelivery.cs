@@ -261,7 +261,7 @@ public sealed class OutboxDelivery : IAsyncDisposable
     private async Task<bool> SendAsync(string file, CancellationToken ct)
     {
         var name = Path.GetFileName(file);
-        var ticket = _registry.CreateDownload(_space.UserKey, _space.SessionId, file, name, _options.DownloadLinkLifetime, deleteAfter: false);
+        var ticket = _registry.CreateDownload(_space.UserKey, _space.ConnectionId, file, name, _options.DownloadLinkLifetime, deleteAfter: false);
         try
         {
             await _browser.DownloadAsync($"{FileEndpoints.Prefix}/download/{ticket.Id}", name, ct).ConfigureAwait(false);

@@ -4,9 +4,10 @@ using Microsoft.AspNetCore.Components.Server.Circuits;
 namespace ChuvadiReader.Web.Hosting;
 
 /// <summary>
-/// Starts and ends a session. When the Blazor circuit closes (tab closed and the reconnect window passed,
-/// or sign-out), its tickets are forgotten and its folder is deleted. The scoped services' own
-/// <c>Dispose</c> does the same as a second line of defence.
+/// Starts and ends a connection (Blazor circuit). When it closes (a reload, the tab closed and the reconnect
+/// window passed, or sign-out), its tickets are forgotten and the documents it had open are closed, so their
+/// memory and page images are freed at once (WT-22). The session's files and its tab list stay (D-174): the
+/// next connection of the same sign-in shows the same tabs again.
 /// </summary>
 public sealed class SessionLifetime : CircuitHandler
 {
@@ -14,9 +15,14 @@ public sealed class SessionLifetime : CircuitHandler
     private readonly TransferRegistry _registry;
     private readonly Platform.WebAccount _account;
     private readonly Workers.CircuitCounter _circuits;
+    private readonly ChuvadiReader.Core.Reader.TabsService _tabs;
+    private readonly ILogger<SessionLifetime> _log;
 
-    public SessionLifetime(SessionSpace space, TransferRegistry registry, Platform.WebAccount account, Workers.CircuitCounter circuits)
+    public SessionLifetime(SessionSpace space, TransferRegistry registry, Platform.WebAccount account, Workers.CircuitCounter circuits,
+        ChuvadiReader.Core.Reader.TabsService tabs, ILogger<SessionLifetime> log)
     {
+        _tabs = tabs;
+        _log = log;
         _space = space;
         _registry = registry;
         _account = account;
@@ -35,9 +41,28 @@ public sealed class SessionLifetime : CircuitHandler
     public override Task OnCircuitClosedAsync(Circuit circuit, CancellationToken cancellationToken)
     {
         _circuits.Closed();
-        _registry.ForgetSession(_space.SessionId);
-        _space.Delete();
+        _registry.ForgetSession(_space.ConnectionId);
+        var closed = CloseDocuments(_tabs);
+        _log.LogInformation("Connection {Connection} closed; {Documents} open document(s) closed", _space.ConnectionId[..8], closed);
         return Task.CompletedTask;
+    }
+
+    /// <summary>Closes the documents a connection has open, without touching the session's saved tab list
+    /// (closing them through the tab strip would save "no tabs", and a reload would then find nothing).</summary>
+    internal static int CloseDocuments(ChuvadiReader.Core.Reader.TabsService tabs)
+    {
+        var closed = 0;
+        foreach (var tab in tabs.Tabs.ToArray())
+        {
+            if (tab.Session is { } open)
+            {
+                tab.Session = null;
+                open.Dispose();
+                closed++;
+            }
+        }
+
+        return closed;
     }
 }
 
@@ -47,9 +72,12 @@ public sealed class PortalHousekeeping : BackgroundService
     private readonly TransferRegistry _registry;
     private readonly Microsoft.Extensions.Options.IOptions<PortalOptions> _options;
     private readonly ILogger<PortalHousekeeping> _log;
+    private readonly SessionStates? _sessions;
 
-    public PortalHousekeeping(TransferRegistry registry, Microsoft.Extensions.Options.IOptions<PortalOptions> options, ILogger<PortalHousekeeping> log)
+    public PortalHousekeeping(TransferRegistry registry, Microsoft.Extensions.Options.IOptions<PortalOptions> options, ILogger<PortalHousekeeping> log,
+        SessionStates? sessions = null)
     {
+        _sessions = sessions;
         _registry = registry;
         _options = options;
         _log = log;
@@ -75,6 +103,8 @@ public sealed class PortalHousekeeping : BackgroundService
             while (await timer.WaitForNextTickAsync(stoppingToken).ConfigureAwait(false))
             {
                 _registry.Prune();
+                // A safety net behind the session clock: a session nobody is connected to, well past the idle limit.
+                _sessions?.EndAbandoned(_options.Value.IdleTimeout + TimeSpan.FromMinutes(5));
             }
         }
         catch (OperationCanceledException)

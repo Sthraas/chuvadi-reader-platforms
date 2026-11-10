@@ -94,6 +94,20 @@ public class PageImageEndpointTests(PortalFixture portal) : IClassFixture<Portal
         Assert.Equal(HttpStatusCode.OK, (await own.GetAsync(address)).StatusCode);
     }
 
+    [Fact]
+    public async Task The_development_sign_in_also_takes_the_person_from_its_cookie()
+    {
+        // Browser tests name the person by cookie, so a closing page's "disconnect" beacon (cookies only)
+        // reaches the same person's worker (WT-22).
+        var (_, address) = Draw("img-cookie");
+        using var byCookie = new HttpClient(new HttpClientHandler { UseCookies = false }) { BaseAddress = portal.Base };
+        byCookie.DefaultRequestHeaders.Add("Cookie", ChuvadiReader.Web.Hosting.DevelopmentSignInHandler.CookieName + "=img-cookie");
+        Assert.Equal(HttpStatusCode.OK, (await byCookie.GetAsync(address)).StatusCode);
+
+        byCookie.DefaultRequestHeaders.Add("X-Dev-User", "img-someone-else"); // the header wins
+        Assert.Equal(HttpStatusCode.NotFound, (await byCookie.GetAsync(address)).StatusCode);
+    }
+
     private sealed class FixedAuth(ClaimsPrincipal user) : AuthenticationStateProvider
     {
         public override Task<AuthenticationState> GetAuthenticationStateAsync() => Task.FromResult(new AuthenticationState(user));

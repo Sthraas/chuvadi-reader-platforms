@@ -88,7 +88,7 @@ public sealed class WebFilePicker : IFilePicker
     private async Task<IReadOnlyList<string>> PickAsync(PickKind kind, bool multiple, string title, CancellationToken ct)
     {
         await _space.EnsureAsync(ct).ConfigureAwait(false);
-        var ticket = _registry.CreateUpload(_space.UserKey, _space.SessionId, _space.Uploads, kind, multiple,
+        var ticket = _registry.CreateUpload(_space.UserKey, _space.ConnectionId, _space.Uploads, kind, multiple,
             _options.MaxFilesPerPick, _options.MaxUploadBytes, _options.PickTimeout + TimeSpan.FromMinutes(5));
         try
         {

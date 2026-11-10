@@ -46,7 +46,7 @@ public sealed class WebPrintService : IPrintService
             }
 
             copy = prepared.CopyPath;
-            var ticket = _registry.CreatePrint(_space.UserKey, _space.SessionId, prepared.CopyPath ?? pdfPath, title, TimeSpan.FromMinutes(30));
+            var ticket = _registry.CreatePrint(_space.UserKey, _space.ConnectionId, prepared.CopyPath ?? pdfPath, title, TimeSpan.FromMinutes(30));
             var shown = await _browser.PrintAsync($"{FileEndpoints.Prefix}/print/{ticket.Id}", ct).ConfigureAwait(false);
             var n = prepared.PageCount;
             var pages = n == 1 ? "1 page" : $"{n} pages";

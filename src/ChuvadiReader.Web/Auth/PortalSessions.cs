@@ -45,6 +45,11 @@ public sealed class OpenTabs : ITabControl
 
     private sealed record Tab(string Sub, string? Sid, Func<Task> End, Func<ExpiryNotice?, Task> Notice);
 
+    private readonly Files.SessionStates? _sessions;
+
+    /// <param name="sessions">The sessions this process holds (D-174); null where no Reader runs (the gateway, tests).</param>
+    public OpenTabs(Files.SessionStates? sessions = null) => _sessions = sessions;
+
     /// <summary>Registers an open tab. Dispose the result when the tab's session ends. A warning already
     /// showing for the sign-in is shown in the new tab too.</summary>
     public IDisposable Open(string sub, string? sid, Func<Task> end, Func<ExpiryNotice?, Task> notice)
@@ -95,10 +100,13 @@ public sealed class OpenTabs : ITabControl
             }
             catch (Exception ex) when (ex is ObjectDisposedException or InvalidOperationException or Microsoft.JSInterop.JSDisconnectedException or TaskCanceledException)
             {
-                // The tab was already going away; its files go with its session as usual.
+                // The tab was already going away; its files go with its session, just below.
             }
         }
 
+        // D-174: the session itself ends, whichever connection is open or none: its page images are freed and
+        // its files deleted, including what an earlier connection (before a reload) left behind.
+        _sessions?.End(sub, sid);
         return ending.Count;
     }
 

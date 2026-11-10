@@ -113,7 +113,8 @@ public sealed class WorkerOptions
     /// <summary>How long a worker may take to start.</summary>
     public TimeSpan StartTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
-    /// <summary>A worker with no open tab and no request for this long is stopped (its files go with it).</summary>
+    /// <summary>A worker with no connection, no signed-in session's documents (D-174) and no request for this
+    /// long is stopped (its files go with it).</summary>
     public TimeSpan IdleStop { get; set; } = TimeSpan.FromMinutes(2);
 
     /// <summary>How often the gateway checks its workers.</summary>

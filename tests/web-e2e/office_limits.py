@@ -88,7 +88,7 @@ with sync_playwright() as p:
         page.goto(base + "/")
         page.wait_for_selector("nav.leftbar >> text=Upload", timeout=30000)
         with page.expect_file_chooser(timeout=15000) as fc:
-            page.click("text=Upload a file")
+            page.click("nav.leftbar >> text=Upload")  # Home shows "Upload a file" only while nothing is open (D-174)
         fc.value.set_files(path)
 
     open_file(normal)
