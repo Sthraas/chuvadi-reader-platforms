@@ -1,6 +1,6 @@
 # Mac Test — results
 
-Subject: `platform/mac` **7a65178** → c6d7705 → 00a5975 → 83207af → b790370 → dd67166 → **812079f** (current). Harness: `tests/mac/` + `.github/workflows/mac-test.yml` on `platform/mac-test`.
+Subject: `platform/mac` **7a65178** → c6d7705 → 00a5975 → 83207af → b790370 → dd67166 → 812079f → **0ea9f09** (current). Harness: `tests/mac/` + `.github/workflows/mac-test.yml` on `platform/mac-test`.
 Runs (one each, read before the next — no retries):
 
 | Round | Run | What changed in the harness |
@@ -10,6 +10,15 @@ Runs (one each, read before the next — no retries):
 | 2 | 42490785792 | menu bar and `open -a` found broken (M-01, M-02) → drive through ⌘O / ⌘K instead; quit-crash capture |
 | 3 | 42494662734 | ⌘O found not to open a panel → the Open button; app stdout per launch; diagnostic exception build |
 | 4 | 42517758923 | panel path set through Accessibility (typing into the Go-to field was lossy) → documents open; timing sets skipped |
+
+## Re-test on platform/mac 0ea9f09 (10 Nov) — not signed off
+
+Runs **42747197649** (full suite, all runners) and **42747105294**, **42749295189**, **42754603463** (shared suite, all runners).
+**Regression is clean**. The only failures in the full suite are my two known test-side items (T4.6 typing on macOS 26
+in the long run, T4.9 xlsx marker on sheet 2). M-03, M-09, M-10, M-14, M-15, M-18 recovery, M-21, T1.10, print and
+robustness all pass. **M-08 and M-23 are not confirmed**: on every runner the tab strip doesn't change after ⌃Tab, ⌃⇧Tab
+or ⌘1 (screenshots per key). The Mac smoke reports the opposite on the same code, so the two set-ups differ somewhere;
+details in BUGS. Sign-off waits for that.
 
 ## Re-test on platform/mac 812079f (10 Nov, Foundation fc6286a) — current state
 
