@@ -144,8 +144,10 @@ public sealed class StampService
         }
 
         // D-160: the number sits inside the box the page shows (its CropBox), not in a part the file hides.
+        // B-32: and at the foot (or head) of the page as shown, whichever way the page is turned.
         var shown = ShownBox.Of(target.Pages[pageIndex]);
-        double pw = shown.W, ph = shown.H;
+        int turn = ShownBox.TurnOf(target.Pages[pageIndex]);
+        var (pw, ph) = shown.ShownSize(turn);
         const double margin = 24;
         var lineH = num.FontSize * 1.4;
         var boxW = Math.Max(1, pw - 2 * margin);
@@ -165,7 +167,7 @@ public sealed class StampService
 
         using var overlayDoc = PdfDocument.Open(new MemoryStream(overlay.ToByteArray(), writable: false));
         using var ms = new MemoryStream();
-        PageStamper.Place(ms, target, pageIndex, overlayDoc, 0, RedactService.AtShown(Transform.Identity, shown), StampPlacement.Overlay);
+        PageStamper.Place(ms, target, pageIndex, overlayDoc, 0, shown.FromShown(turn), StampPlacement.Overlay);
         return ms.ToArray();
     }
 

@@ -271,8 +271,13 @@ public class ViewerTests
         Assert.Equal("UTF-16 BE", e3);
         Assert.Equal("வணக்கம்", Decode(Encoding.UTF8.GetBytes("வணக்கம்"), out var e4));
         Assert.Equal("UTF-8", e4);
-        Assert.Equal("café", Decode([0x63, 0x61, 0x66, 0xE9], out var e5)); // invalid UTF-8 → Latin-1
-        Assert.Equal("Latin-1", e5);
+        Assert.Equal("café", Decode([0x63, 0x61, 0x66, 0xE9], out var e5)); // invalid UTF-8 → Windows-1252
+        Assert.Equal("Windows-1252", e5);
+        // T-01: curly quotes, a dash, the euro and the trade mark sign, which Latin-1 reads as control codes.
+        Assert.Equal("\u201Cq\u201D \u2013 \u20AC5 \u2122 \u2019", Decode([0x93, 0x71, 0x94, 0x20, 0x96, 0x20, 0x80, 0x35, 0x20, 0x99, 0x20, 0x92], out _));
+        // Every byte comes back as one character, none dropped or merged: the file's bytes are all still there.
+        var all = Enumerable.Range(1, 255).Select(i => (byte)i).ToArray();
+        Assert.Equal(255, Decode(all, out _).Length);
         Assert.Throws<DocumentViewException>(() => Decode([0x50, 0x4B, 0x03, 0x04, 0x00, 0x00], out _));
     }
 

@@ -52,10 +52,10 @@ public sealed class ExportService
             var multi = allPages && pageCount > 1;
 
             SvgRenderer? svg = format == ExportFormat.Svg
-                ? new SvgRenderer(new SvgExportOptions { TextStrategy = SvgTextStrategy.Selectable })
+                ? new SvgRenderer(new SvgExportOptions { TextStrategy = SvgTextStrategy.Selectable, ApplyPageRotation = true })   // B-32: as shown
                 : null;
             PageRasterizer? raster = format != ExportFormat.Svg
-                ? new PageRasterizer(doc.Objects, new RenderOptions { Dpi = dpi, Background = Chuvadi.Pdf.Graphics.ColorF.White, AntiAlias = true })
+                ? new PageRasterizer(doc.Objects, new RenderOptions { Dpi = dpi, Background = Chuvadi.Pdf.Graphics.ColorF.White, AntiAlias = true, ApplyPageRotation = true })
                 : null;
 
             var written = 0;
