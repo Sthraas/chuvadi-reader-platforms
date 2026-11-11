@@ -11,6 +11,30 @@ Runs (one each, read before the next — no retries):
 | 3 | 42494662734 | ⌘O found not to open a panel → the Open button; app stdout per launch; diagnostic exception build |
 | 4 | 42517758923 | panel path set through Accessibility (typing into the Go-to field was lossy) → documents open; timing sets skipped |
 
+## Re-test on platform/mac cf17eff (11 Nov, Foundation patch 26) — NOT signed off
+
+**The sign-off stays on e2a1cc8.** cf17eff has two S1s and a regression. Runs **42937512173**, **42939932567**,
+**42946887069** (shared suite + patch-26 case, all runners) and **42937653368** (full suite, all runners).
+
+| Check | macOS 26 | macOS 15 | 15 Intel | Note / bug |
+|---|---|---|---|---|
+| M-24 several files at once, in name order | ❌ crash | ❌ crash | ❌ crash | the sort throws (HybridGlobalization) and the app ends — S1 |
+| Tab keys ⌃Tab, ⌃⇧Tab, ⌘1, ⌘2 with no first responder | ✅ | ✅ | ✅ | |
+| Tab keys after a click on the page | ❌ 3/3 | ❌ 1/3 | ❌ 2/2 | M-08 / M-23 regressed |
+| Rotated page on screen (/Rotate 90) | ✅ | ✅ | ✅ | landscape, every mark follows (`screenshots/P26-cf17eff-rotated-view-macos15.png`) |
+| Rotated page: mark saved where it is shown | ✅ | ✅ | ✅ | file and screen agree |
+| Mark lands under the pointer (rotated and unrotated) | ❌ | ❌ | ❌ | **M-27**, S1 |
+| Rotated page: print | ❌ clipped | ❌ | ❌ | **M-26**; still vector |
+| Excel grid as the file holds it (₹1,234.50, date, merged title, 3.14159) | ✅ | ✅ | ✅ | |
+| Excel hidden sheet dimmed, marked "hidden", opens | ✅ | ✅ | ✅ | `screenshots/P26-cf17eff-xlsx-hidden-sheet-macos15.png` |
+| Excel Find on a value ("1234" → 1 found; "7777" → 0 found) | ✅ | ✅ | ✅ | |
+| Excel Find on shown text | ⏳ | ⏳ | ⏳ | my search word was wrong; corrected for the next run |
+| ⌘F opens Find straight after opening a file | ❌ | ❌ | ❌ | **M-28**; the Find button works |
+| Pinch: synthetic trackpad gesture zooms the page | – | ✅ 54→87→52 % | ✅ 54→87→54 % | on 26 my synthetic gesture doesn't arrive, so no result there; a real trackpad is still Arun's check |
+| Cold start with one PDF, Word on a cold start | ✅ | ✅ | ✅ | |
+| ⌘O in five states, Immersive/Esc, labels, Details | ✅ | ✅ | ✅ | |
+| Full regression | T4.14 ❌ (the M-24 crash) | same | same | otherwise as e2a1cc8 |
+
 ## SIGN-OFF moved to platform/mac e2a1cc8 (11 Nov 2026, Foundation patch 25)
 
 **Verdict: still ready for Arun's check**, now on e2a1cc8. Runs **42903578048** and **42906361892** (shared suite plus

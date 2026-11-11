@@ -1675,7 +1675,7 @@ def p26():
     x["cmd_f_key_shot"] = shot("p26-xlsx-cmdf")
     drive("key", "escape")
     time.sleep(0.8)
-    for tag, needle in (("value", "1234"), ("shown", "2026"), ("absent", "7777")):
+    for tag, needle in (("value", "1234"), ("shown", "50"), ("absent", "7777")):  # "50" is only in the shown text ₹1,234.50
         rc, o = press("Find ⌘F", role="AXButton", click=True)
         time.sleep(1.5)
         ft0 = axdump(f"p26-xlsx-find-{tag}-open")
