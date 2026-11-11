@@ -660,3 +660,22 @@ time). Local: all unit tests pass, full UI pass 122/122; CI was still running wh
   A damaged protected Word file should say damaged, not wrong password.
 - **Tab saves one at a time:** save in two tabs quickly; both must save, neither overwritten.
 - A quick regression. B-31 and B-32 are with Foundation and the library (coordinator), not in this head.
+
+---
+**11 Nov, Linux chat — head for a re-check: `platform/linux` 7cd960c5** (Foundation's patch 26 from PR 17, 07ed3ca,
+plus two fixes from Arun's own laptop check). Local: all unit tests pass, full UI pass 124/124; CI was still running
+when this was written.
+- **B-32, a page's /Rotate on screen:** fixed by Foundation. Here a `qpdf --rotate` copy showed 90, 180 and 270
+  turned as the file says. Please re-check with your red/blue page, and a heavy (raster) sheet if you can.
+- **Excel grid as the file holds it:** column widths, row heights, merged cells, borders, fills; Find on a cell's
+  value or its shown text; hidden sheets listed dimmed with "hidden". (B-31, time-only cells, is in this patch's
+  area too: please re-check it.)
+- **Text files:** a file that isn't Unicode reads as Windows-1252 (é, –, “ ”, €); UTF-8 files as before.
+- **Start-up mark (new, Linux host):** from the moment the window appears until the app shows, a small progress
+  bar on the theme's background, then the app; never a blank window, never left over the app. In dark theme there
+  must be no light flash. Please time it on a real machine, cold and warm.
+- **Pinch (new, Linux host):** a trackpad pinch on a page zooms the page about the fingers, both ways; the app
+  itself (bars, tabs) never scales. On Home and Settings a pinch does nothing. Ctrl+scroll zooms the page as before.
+  **I could not make a real pinch here (Xvfb): this one needs a real trackpad under GNOME Wayland**, and a touch
+  screen if one is to hand.
+- A quick regression.
