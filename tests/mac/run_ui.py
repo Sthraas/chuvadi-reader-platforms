@@ -1641,18 +1641,30 @@ def p26():
          "sheet_tabs": [re.sub(r"\s*@.*$", "", l.strip())[:120] for l in t.splitlines() if re.search(r"Charges|Second sheet|Hidden notes|sheets\"", l)][:8]}
     x["hidden_sheet_listed"] = "Hidden notes" in t
     x["currency_as_file_holds"] = bool(re.search(r"₹1,234\.50", t))
-    for tag, needle in (("value", "1234"), ("shown", "2026")):
-        drive("key", "cmd+f")
-        time.sleep(1.2)
+    fields = lambda tx: [re.sub(r"\s*@.*$", "", l.strip())[:120] for l in tx.splitlines() if "AXTextField" in l or "AXSearchField" in l]
+    base_fields = fields(t)
+    # does the ⌘F key open Find here (no click on the page first)?
+    drive("key", "cmd+f")
+    time.sleep(1.5)
+    kt = axdump("p26-xlsx-cmdf")
+    x["cmd_f_key_new_fields"] = [f for f in fields(kt) if f not in base_fields]
+    x["cmd_f_key_shot"] = shot("p26-xlsx-cmdf")
+    drive("key", "escape")
+    time.sleep(0.8)
+    for tag, needle in (("value", "1234"), ("shown", "2026"), ("absent", "7777")):
+        rc, o = press("Find ⌘F", role="AXButton")
+        time.sleep(1.5)
+        ft0 = axdump(f"p26-xlsx-find-{tag}-open")
+        x[f"find_{tag}_fields"] = [f for f in fields(ft0) if f not in base_fields]
         drive("key", "cmd+a")
         for ch in needle:
             drive("key", ch)
             time.sleep(0.08)
+        time.sleep(0.5)
         drive("key", "return")
         time.sleep(2)
         ft = axdump(f"p26-xlsx-find-{tag}")
-        x[f"find_{tag}"] = [re.sub(r"\s*@.*$", "", l.strip())[:140] for l in ft.splitlines()
-                            if re.search(r"match|result|found|no .*" + needle + r"|\b\d+ of \d+\b|\d+ hit", l, re.I)][:6]
+        x[f"find_{tag}"] = [re.sub(r"\s*@.*$", "", l.strip())[:140] for l in ft.splitlines() if l not in t and "AXStaticText" in l][:8]
         x[f"find_{tag}_shot"] = shot(f"p26-xlsx-find-{tag}")
         drive("key", "escape")
         time.sleep(0.8)
@@ -1691,7 +1703,7 @@ def p26():
     ev["zoom"] = z
     record("P26 rotated page, Excel grid, pinch", "fail" if bad else "pass",
            (f"failed: {bad}; " if bad else "") + f"rotated: squares {r.get('squares')}, print {r.get('print_info')}; xlsx tabs hidden listed={x['hidden_sheet_listed']}, "
-           f"find value={x['find_value']}, find shown={x['find_shown']}; zoom {z['start']}→{z['after_ctrl_wheel_up']}→{z['after_ctrl_wheel_down']} (wheel+Ctrl), "
+           f"⌘F key opens Find={bool(x['cmd_f_key_new_fields'])}, find value={x['find_value'][:3]}, find shown={x['find_shown'][:3]}, find absent={x['find_absent'][:3]}; zoom {z['start']}→{z['after_ctrl_wheel_up']}→{z['after_ctrl_wheel_down']} (wheel+Ctrl), "
            f"→{z['after_pinch_in_gesture']}→{z['after_pinch_out_gesture']} (synthetic pinch)", **ev)
 
 
