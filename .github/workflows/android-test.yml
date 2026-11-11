@@ -150,7 +150,7 @@ jobs:
         run: mkdir -p audit && (bash test/docs/android-test/ci/audit.sh reader out audit 2>&1 | tee audit/run.txt) || true
       - name: Keep build evidence
         if: always()
-        run: mkdir -p audit && cp compose.txt restore.txt publish-release.txt publish-release-saves-on.txt saves-switch.txt build-debug.txt sdk.txt release.binlog audit/ 2>/dev/null; git -C reader log -1 --format='foundation %H' >> audit/refs.txt; echo "mobileui ${{ steps.plan.outputs.mobileui_ref }} android ${{ steps.plan.outputs.android_ref }}" >> audit/refs.txt
+        run: mkdir -p audit && cp compose.txt restore.txt publish-release.txt publish-release-saves-on.txt saves-switch.txt build-debug.txt sdk.txt release.binlog reader/global.json audit/ 2>/dev/null || true; git -C reader log -1 --format='foundation %H' >> audit/refs.txt; echo "mobileui ${{ steps.plan.outputs.mobileui_ref }} android ${{ steps.plan.outputs.android_ref }}" >> audit/refs.txt
       - name: Shipped assembly list beside the packages
         run: cp audit/assemblies.txt out/ 2>/dev/null || true
       - uses: actions/upload-artifact@v4
