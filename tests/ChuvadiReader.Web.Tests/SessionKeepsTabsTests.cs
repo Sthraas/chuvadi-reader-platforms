@@ -69,7 +69,7 @@ public sealed class SessionKeepsTabsTests : IDisposable
         /// <summary>What the portal does when a connection closes (a reload, the tab closed).</summary>
         public async ValueTask DisposeAsync()
         {
-            SessionLifetime.CloseDocuments(Tabs);
+            Tabs.Dispose(); // the shared Core closes the connection's documents and leaves the saved list alone
             Space.Dispose();
             await _outbox.DisposeAsync();
         }
@@ -138,7 +138,7 @@ public sealed class SessionKeepsTabsTests : IDisposable
         // The reload: a new connection of the same sign-in starts, the old one closes.
         var second = new Connection(_states, _images, _options, alice);
         await first.DisposeAsync();
-        Assert.All(first.Tabs.Tabs, t => Assert.Null(t.Session)); // WT-22: the old connection's documents are closed
+        Assert.Empty(first.Tabs.Tabs); // WT-22: the old connection's documents are closed
 
         await second.Tabs.RestoreAsync(); // what the Dashboard and the Reader do when they start
         Assert.Equal(["a.pdf", "b.pdf"], second.Tabs.Tabs.Select(t => t.FileName));

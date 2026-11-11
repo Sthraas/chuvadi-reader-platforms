@@ -15,3 +15,16 @@ def large_format_pdf(path):
     data += b"xref\n0 %d\n0000000000 65535 f \n" % (len(objs) + 1) + b"".join(b"%010d 00000 n \n" % o for o in offsets)
     data += b"trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n" % (len(objs) + 1, xref)
     open(path, "wb").write(data)
+
+
+def sign_in_as(ctx, base, name):
+    """Development sign-in for a browser context: a person of this run only, named by cookie.
+
+    By cookie, because a closing page's "disconnect" beacon carries cookies but not a test tool's extra headers.
+    Of this run only (a time stamp), because a signed-in session now keeps its tabs (D-174): the same name in
+    the next run would start with the last run's documents open.
+    """
+    import time
+    who = "%s-%d" % (name, int(time.time() * 1000) % 100000000)
+    ctx.add_cookies([{"name": "chvd-dev-user", "value": who, "url": base}])
+    return who

@@ -11,7 +11,7 @@ import sys
 
 from playwright.sync_api import sync_playwright
 
-from pdfs import large_format_pdf
+from pdfs import large_format_pdf, sign_in_as
 
 base, out = sys.argv[1].rstrip("/"), sys.argv[2]
 engine = sys.argv[sys.argv.index("--browser") + 1] if "--browser" in sys.argv else "chrome"
@@ -32,8 +32,10 @@ with sync_playwright() as p:
         b = p.chromium.launch(channel="chrome", args=["--no-sandbox"])
     else:
         b = getattr(p, "chromium" if engine == "chromium" else engine).launch()
-    owner = b.new_context(extra_http_headers={"X-Dev-User": "img-owner-" + engine}, viewport={"width": 1400, "height": 900})
-    other = b.new_context(extra_http_headers={"X-Dev-User": "img-other-" + engine})
+    owner = b.new_context(viewport={"width": 1400, "height": 900})
+    other = b.new_context()
+    sign_in_as(owner, base, "img-owner-" + engine)
+    sign_in_as(other, base, "img-other-" + engine)
     page = owner.new_page()
     seen = []
     page.on("response", lambda r: seen.append(r) if "/_chvd/pages/" in r.url else None)

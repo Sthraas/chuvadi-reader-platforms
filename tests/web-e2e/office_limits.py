@@ -14,6 +14,8 @@ import zipfile
 
 from playwright.sync_api import sync_playwright
 
+from pdfs import sign_in_as
+
 base, out = sys.argv[1].rstrip("/"), sys.argv[2]
 engine = sys.argv[sys.argv.index("--browser") + 1] if "--browser" in sys.argv else "chrome"
 os.makedirs(out, exist_ok=True)
@@ -77,7 +79,8 @@ with sync_playwright() as p:
         b = p.chromium.launch(channel="chrome", args=["--no-sandbox"])
     else:
         b = getattr(p, "chromium" if engine == "chromium" else engine).launch()
-    ctx = b.new_context(extra_http_headers={"X-Dev-User": "limits-" + engine}, viewport={"width": 1400, "height": 900})
+    ctx = b.new_context(viewport={"width": 1400, "height": 900})
+    sign_in_as(ctx, base, "limits-" + engine)
     page = ctx.new_page()
     errors = []
     page.on("pageerror", lambda e: errors.append(str(e)))

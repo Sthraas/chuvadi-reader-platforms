@@ -1,6 +1,6 @@
 """Concurrency and load through the gateway (D-24), with real browsers. Test tool only (Playwright +
 the machine's Chrome); run against a gateway with the Development sign-in, where each simulated
-person is told apart by the X-Dev-User header.
+person is told apart by the chvd-dev-user cookie.
 
 Each person, all at once: opens the portal (their worker starts), uploads the PDF, waits for page 1 to
 be drawn, pages through it (each step timed until the next page is drawn and in view, no fixed waits),
@@ -19,6 +19,7 @@ from playwright.async_api import async_playwright
 base, pdf, out, people = sys.argv[1].rstrip('/'), sys.argv[2], sys.argv[3], int(sys.argv[4])
 server_dir = sys.argv[sys.argv.index("--server-dir") + 1] if "--server-dir" in sys.argv else None
 browsers = int(sys.argv[sys.argv.index("--browsers") + 1]) if "--browsers" in sys.argv else people
+RUN = int(time.time()) % 1000000
 os.makedirs(out, exist_ok=True)  # WT-13: the results file and failure screenshots go here
 
 # Page i (0-based) is drawn (its SVG has content) and at least partly in view.
@@ -81,7 +82,9 @@ async def sampler(stop):
 async def person(browser, n, results):
     r = {"person": n, "steps": {}, "error": None}
     results.append(r)
-    ctx = await browser.new_context(viewport={"width": 1440, "height": 900}, extra_http_headers={"X-Dev-User": f"load-{n:03d}"})
+    ctx = await browser.new_context(viewport={"width": 1440, "height": 900})
+    # By cookie (a closing page's beacon carries cookies only) and of this run only (a session keeps its tabs, D-174).
+    await ctx.add_cookies([{"name": "chvd-dev-user", "value": f"load-{RUN}-{n:03d}", "url": base}])
     page = await ctx.new_page()
     page_errors = []
     page.on("pageerror", lambda e: page_errors.append(str(e)))

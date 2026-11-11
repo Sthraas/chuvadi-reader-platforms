@@ -11,7 +11,7 @@ Usage: python3 expiry.py <portal base> <some.pdf> <out folder> [--data-root <Por
 import os, sys, time, zipfile
 from playwright.sync_api import sync_playwright
 
-from pdfs import large_format_pdf
+from pdfs import large_format_pdf, sign_in_as
 
 
 def launch(p):
@@ -39,6 +39,7 @@ def files_under(root):
 with sync_playwright() as p:
     b = launch(p)
     ctx = b.new_context(viewport={"width": 1440, "height": 900}, accept_downloads=True)
+    sign_in_as(ctx, base, "expiry")
     page = ctx.new_page()
     errors = []
     page.on("pageerror", lambda e: errors.append(str(e)))

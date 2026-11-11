@@ -5,8 +5,8 @@ namespace ChuvadiReader.Web.Hosting;
 
 /// <summary>
 /// Starts and ends a connection (Blazor circuit). When it closes (a reload, the tab closed and the reconnect
-/// window passed, or sign-out), its tickets are forgotten and the documents it had open are closed, so their
-/// memory and page images are freed at once (WT-22). The session's files and its tab list stay (D-174): the
+/// window passed, or sign-out), its tickets are forgotten, and the shared Core closes the documents it had open as
+/// its services are disposed, so their memory and page images are freed at once (WT-22). The session's files and its tab list stay (D-174): the
 /// next connection of the same sign-in shows the same tabs again.
 /// </summary>
 public sealed class SessionLifetime : CircuitHandler
@@ -42,27 +42,10 @@ public sealed class SessionLifetime : CircuitHandler
     {
         _circuits.Closed();
         _registry.ForgetSession(_space.ConnectionId);
-        var closed = CloseDocuments(_tabs);
-        _log.LogInformation("Connection {Connection} closed; {Documents} open document(s) closed", _space.ConnectionId[..8], closed);
+        // The documents it had open are closed by the shared Core when the connection's services are disposed,
+        // right after this (patch 26: TabsService.Dispose, which leaves the saved tab list alone).
+        _log.LogInformation("Connection {Connection} closed with {Documents} tab(s) open", _space.ConnectionId[..8], _tabs.Tabs.Count);
         return Task.CompletedTask;
-    }
-
-    /// <summary>Closes the documents a connection has open, without touching the session's saved tab list
-    /// (closing them through the tab strip would save "no tabs", and a reload would then find nothing).</summary>
-    internal static int CloseDocuments(ChuvadiReader.Core.Reader.TabsService tabs)
-    {
-        var closed = 0;
-        foreach (var tab in tabs.Tabs.ToArray())
-        {
-            if (tab.Session is { } open)
-            {
-                tab.Session = null;
-                open.Dispose();
-                closed++;
-            }
-        }
-
-        return closed;
     }
 }
 

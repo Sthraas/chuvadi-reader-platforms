@@ -246,7 +246,12 @@ Found and fixed while running this plan:
 - `reload.py` 11/11 in Chrome, Firefox, WebKit and Chromium; `expiry.py` 12/12 in Chrome, Firefox and WebKit; `comeback.py` 5/5 in Chrome and WebKit; `sangam_signin.py` 18/18 in Chrome, Firefox and WebKit.
 - `flows.py` 10/10, `page_images.py` 7/7 and `office_limits.py` 6/6 in all four engines; `load.py` 3/3.
 
+**11 Nov, morning (Foundation `07ed3ca`, patch 26, merged):**
+- Shared solution 0 warnings and its tests (Reader 374 with 6 skipped by the Foundation, Hosting 91, Mobile UI 16, Web UI 41); Web 178/178; package check.
+- `flows.py` 10/10, `page_images.py` 7/7, `reload.py` 11/11 and `office_limits.py` 6/6 in Chrome, Firefox, WebKit and Chromium; `expiry.py` 12/12 and `sangam_signin.py` 18/18 in Chrome, Firefox and WebKit; `comeback.py` 5/5 in Chrome and WebKit; `load.py` 3/3.
+
 ## 8. Known gaps
+- **Browser tests need a person of their own per run** (`sign_in_as` in `tests/web-e2e/pdfs.py`). A signed-in session now keeps its tabs (D-174), so a fixed test name starts each run with the last run's documents open, tabs pile up, and that person's worker stays for the whole session. The first re-run after patch 26 showed it as three one-off failures; with a person per run everything passed.
 - **Browser tests and the Development sign-in:** name the person with the `chvd-dev-user` cookie, not only the `X-Dev-User` header. A closing page's "disconnect" call is a beacon: it carries cookies (as the real sign-in does) but not a test tool's extra headers, so with the header alone it reaches the default person's worker and the old connection lingers for 3 minutes. That made WT-22's leak look larger in Development than it is with the real cookie.
 - The legal texts are drafts and say not to publish until counsel has reviewed them: V-7 blocks go-live until the DRAFT lines are gone.
 - F-23 (a Privacy link on 12a) waits for a decision. A real drag from the desktop (F-21, F-22) can only be run by hand: browser automation can't carry an OS file drag.

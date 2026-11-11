@@ -3,6 +3,8 @@ Test tool only (Playwright + the machine's Chrome)."""
 import sys, time, os
 from playwright.sync_api import sync_playwright
 
+from pdfs import sign_in_as
+
 base, pdf, out, serverlog = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
 # --browser chrome (the machine's Chrome, default) | chromium | firefox | webkit (Safari's engine)
 browser = sys.argv[sys.argv.index("--browser") + 1] if "--browser" in sys.argv else "chrome"
@@ -23,6 +25,7 @@ with sync_playwright() as p:
     else:
         b = getattr(p, browser).launch()
     ctx = b.new_context(viewport={"width": 1440, "height": 900}, accept_downloads=True)
+    sign_in_as(ctx, base, "flows-" + browser)
     # Headless Chrome can't show a print dialog (print() on a PDF frame crashes the page there), so
     # print() is recorded instead of run; what's tested is that the PDF reached the frame and print was called.
     ctx.add_init_script("window.print = function () { try { window.top.__chvdPrinted = (window.top.__chvdPrinted || 0) + 1; } catch (e) {} };")
@@ -30,10 +33,11 @@ with sync_playwright() as p:
     errors = []
     # Firefox closes a live circuit's socket when the page is left ("was interrupted while the page was
     # loading", then Blazor's "closed with status code: 1006"); that is the browser leaving, not a portal error.
-    leaving = ("was interrupted while the page was loading", "WebSocket closed with status code: 1006")
+    leaving = ("was interrupted while the page was loading", "WebSocket closed with status code: 1006",
+               "WebSocket is not in the OPEN state", "Cannot send data if the connection is not in the 'Connected' State")
     page.on("console", lambda m: errors.append(m.text) if m.type == "error" and "favicon" not in m.text
             and not (browser == "firefox" and any(x in m.text for x in leaving)) else None)
-    page.on("pageerror", lambda e: errors.append(str(e)))
+    page.on("pageerror", lambda e: errors.append(str(e)) if not (browser == "firefox" and any(x in str(e) for x in leaving)) else None)
     prints = []
     ctx.on("response", lambda r: prints.append((r.url, r.status, r.headers.get("content-type"))) if "/portal/print/" in r.url else None)
 
@@ -69,6 +73,7 @@ with sync_playwright() as p:
         check("a dropped PDF opens in the Reader", True)
     except Exception as ex:
         check("a dropped PDF opens in the Reader", False, str(ex))
+    page.wait_for_timeout(1500)  # let the Reader settle before leaving it
     page.goto(base + "/")
     page.wait_for_selector("nav.leftbar >> text=Upload", timeout=30000)
 

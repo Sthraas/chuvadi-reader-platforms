@@ -13,7 +13,7 @@ import time
 
 from playwright.sync_api import sync_playwright
 
-from pdfs import large_format_pdf
+from pdfs import large_format_pdf, sign_in_as
 
 base, pdf, out = sys.argv[1].rstrip("/"), sys.argv[2], sys.argv[3]
 engine = sys.argv[sys.argv.index("--browser") + 1] if "--browser" in sys.argv else "chrome"
@@ -60,7 +60,7 @@ with sync_playwright() as p:
         b = getattr(p, "chromium" if engine == "chromium" else engine).launch()
     # The person is named by cookie, not header: a closing page's "disconnect" beacon carries cookies only.
     ctx = b.new_context(viewport={"width": 1400, "height": 900})
-    ctx.add_cookies([{"name": "chvd-dev-user", "value": "reload-" + engine + "-" + str(int(time.time())), "url": base}])
+    sign_in_as(ctx, base, "reload-" + engine)
     page = ctx.new_page()
     errors = []
     page.on("pageerror", lambda e: errors.append(str(e)))
@@ -121,7 +121,7 @@ with sync_playwright() as p:
 
     # 5. Someone else sees none of it.
     other = b.new_context()
-    other.add_cookies([{"name": "chvd-dev-user", "value": "reload-other-" + engine, "url": base}])
+    sign_in_as(other, base, "reload-other-" + engine)
     op = other.new_page()
     op.goto(base + "/")
     op.wait_for_selector("nav.leftbar >> text=Upload", timeout=30000)
