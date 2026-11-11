@@ -22,6 +22,7 @@
 #include <webkit/webkit.h>
 #include <gtk/gtkunixprint.h>
 #include <string.h>
+#include <math.h>
 
 #define CHVD_EXPORT __attribute__((visibility("default")))
 
@@ -59,6 +60,12 @@ static struct
     GtkWindow *window;
     WebKitWebView *view;
     GtkCssProvider *css;
+
+    /* The start-up mark: an opaque cover over the web view, from the window's first frame until the app's
+     * first render (chvd_ready), or the fallback time. */
+    GtkWidget *cover;
+    guint cover_fallback;
+    double pinch_scale; /* the pinch's scale at the last change sent to the page */
 
     /* The last pointer press inside the view, for begin-move from the HTML title bar. */
     GdkDevice *press_device;
@@ -428,6 +435,8 @@ static void on_maximized(GObject *obj, GParamSpec *pspec, gpointer data)
  * (solid-csd: GTK can't draw transparent corners there). The child (the web view) is clipped
  * to the rounded box by overflow: hidden on the window. */
 static char S_background[16] = "#F2EAD6";
+static char S_mark[16] = "#8A3A1C";            /* the theme's accent */
+static char S_mark_rule[40] = "rgba(26,19,16,0.45)";
 
 static void apply_window_css(void)
 {
@@ -435,8 +444,16 @@ static void apply_window_css(void)
         "window.chvd { background-color: %s; border-radius: 12px; }"
         "window.chvd.maximized, window.chvd.fullscreen, window.chvd.tiled,"
         "window.chvd.tiled-top, window.chvd.tiled-bottom, window.chvd.tiled-left, window.chvd.tiled-right,"
-        "window.chvd.solid-csd { border-radius: 0; }",
-        S_background);
+        "window.chvd.solid-csd { border-radius: 0; }"
+        /* The start-up mark: the splash's own 230 x 6 progress bar (Brand Assets), alone on the pre-paint
+         * colour. GTK stops the animation itself when the desktop's animations are off. */
+        ".chvd-cover { background-color: %s; transition: opacity 140ms ease-out; }"
+        ".chvd-cover.done { opacity: 0; }"
+        ".chvd-bar { min-width: 228px; min-height: 4px; border: 1px solid %s; }"
+        ".chvd-bar-fill { min-width: 87px; min-height: 4px; background-color: %s;"
+        "  animation: chvd-boot 1.2s ease-in-out infinite alternate; }"
+        "@keyframes chvd-boot { from { transform: translateX(-9px); } to { transform: translateX(152px); } }",
+        S_background, S_background, S_mark_rule, S_mark);
     gtk_css_provider_load_from_string(S.css, css);
     g_free(css);
 }
@@ -459,13 +476,175 @@ static void apply_background(const char *hex)
     apply_window_css();
 }
 
+/* ── the start-up mark ───────────────────────────────────────────────────── */
+
+CHVD_EXPORT void chvd_ready(void);
+
+static gboolean remove_cover(gpointer data)
+{
+    (void)data;
+    if (S.cover)
+    {
+        GtkWidget *overlay = gtk_widget_get_parent(S.cover);
+        if (overlay && GTK_IS_OVERLAY(overlay))
+        {
+            gtk_overlay_remove_overlay(GTK_OVERLAY(overlay), S.cover);
+        }
+
+        S.cover = NULL;
+    }
+
+    return G_SOURCE_REMOVE;
+}
+
+static gboolean on_cover_fallback(gpointer data)
+{
+    (void)data;
+    S.cover_fallback = 0;
+    chvd_ready();
+    return G_SOURCE_REMOVE;
+}
+
+static GtkWidget *make_cover(void)
+{
+    GtkWidget *cover = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+    gtk_widget_add_css_class(cover, "chvd-cover");
+    gtk_widget_set_hexpand(cover, TRUE);
+    gtk_widget_set_vexpand(cover, TRUE);
+
+    GtkWidget *bar = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+    gtk_widget_add_css_class(bar, "chvd-bar");
+    gtk_widget_set_halign(bar, GTK_ALIGN_CENTER);
+    gtk_widget_set_valign(bar, GTK_ALIGN_CENTER);
+    gtk_widget_set_hexpand(bar, TRUE);
+    gtk_widget_set_vexpand(bar, TRUE);
+    gtk_widget_set_overflow(bar, GTK_OVERFLOW_HIDDEN);
+
+    GtkWidget *fill = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+    gtk_widget_add_css_class(fill, "chvd-bar-fill");
+    gtk_widget_set_halign(fill, GTK_ALIGN_START);
+    gtk_box_append(GTK_BOX(bar), fill);
+    gtk_box_append(GTK_BOX(cover), bar);
+    return cover;
+}
+
+/* The mark's colours for the saved theme: accent "#RRGGBB" and the bar's outline (any CSS colour). Before chvd_show. */
+CHVD_EXPORT void chvd_start_mark(const char *accent, const char *rule)
+{
+    GdkRGBA rgba;
+    if (accent && strlen(accent) == 7 && gdk_rgba_parse(&rgba, accent))
+    {
+        g_strlcpy(S_mark, accent, sizeof S_mark);
+    }
+
+    if (rule && strlen(rule) < sizeof S_mark_rule && gdk_rgba_parse(&rgba, rule))
+    {
+        g_strlcpy(S_mark_rule, rule, sizeof S_mark_rule);
+    }
+
+    if (S.css)
+    {
+        apply_window_css();
+    }
+}
+
+/* The app has drawn itself: the start-up mark fades out and goes. Safe to call more than once. Main thread. */
+CHVD_EXPORT void chvd_ready(void)
+{
+    if (S.cover_fallback)
+    {
+        g_source_remove(S.cover_fallback);
+        S.cover_fallback = 0;
+    }
+
+    if (S.cover && !gtk_widget_has_css_class(S.cover, "done"))
+    {
+        gtk_widget_add_css_class(S.cover, "done");
+        gtk_widget_set_can_target(S.cover, FALSE);
+        g_timeout_add(170, remove_cover, NULL);
+    }
+}
+
+/* 1 while the start-up mark is still over the page (UI tests). */
+CHVD_EXPORT int chvd_start_mark_shown(void)
+{
+    return S.cover ? 1 : 0;
+}
+
+/* ── pinch ───────────────────────────────────────────────────────────────── */
+
+/* Sends a pinch step to the page as the event the Reader already zooms on: a wheel event with Ctrl held, at
+ * the pinch's place (reader.js: "trackpad pinch and Ctrl+wheel both arrive as wheel+ctrlKey", zoom multiplied
+ * by exp(-deltaY * 0.0015)). WebKitGTK doesn't send that for a pinch; it zooms the whole web page instead,
+ * which the claim below stops. Where the page has no zoom of its own (Home, Settings) nothing listens, and
+ * nothing moves. x, y: view coordinates; ratio: this step's scale change (1.1 = 10 % larger). */
+static void forward_pinch(double x, double y, double ratio)
+{
+    if (!S.view || !(ratio > 0) || !isfinite(ratio))
+    {
+        return;
+    }
+
+    double level = webkit_web_view_get_zoom_level(S.view);
+    if (level > 0)
+    {
+        x /= level;
+        y /= level;
+    }
+
+    char bx[G_ASCII_DTOSTR_BUF_SIZE], by[G_ASCII_DTOSTR_BUF_SIZE], bd[G_ASCII_DTOSTR_BUF_SIZE];
+    g_ascii_formatd(bx, sizeof bx, "%.2f", x);
+    g_ascii_formatd(by, sizeof by, "%.2f", y);
+    g_ascii_formatd(bd, sizeof bd, "%.4f", -log(ratio) / 0.0015);
+    char *script = g_strdup_printf(
+        "(function(x,y,d){var t=document.elementFromPoint(x,y)||document.body;"
+        "t.dispatchEvent(new WheelEvent('wheel',{bubbles:true,cancelable:true,composed:true,view:window,"
+        "ctrlKey:true,deltaMode:0,deltaY:d,clientX:x,clientY:y}));})(%s,%s,%s);",
+        bx, by, bd);
+    webkit_web_view_evaluate_javascript(S.view, script, -1, NULL, NULL, NULL, NULL, NULL);
+    g_free(script);
+}
+
 /* Pinch-to-zoom (touchpad or touch screen) would zoom the whole page; the Reader zooms its own
  * canvas. Claim the gesture before WebKit sees it, as the Windows host turns off pinch zoom. */
 static void on_zoom_begin(GtkGesture *gesture, GdkEventSequence *sequence, gpointer data)
 {
     (void)data;
     gtk_gesture_set_state(gesture, GTK_EVENT_SEQUENCE_CLAIMED);
+    S.pinch_scale = 1.0;
     (void)sequence;
+}
+
+/* scale: the pinch so far, 1.0 at its start. Each change goes to the page as a step from the last one sent. */
+static void on_zoom_scale_changed(GtkGestureZoom *gesture, double scale, gpointer data)
+{
+    (void)data;
+    if (!(scale > 0) || !(S.pinch_scale > 0))
+    {
+        return;
+    }
+
+    double ratio = scale / S.pinch_scale;
+    if (fabs(ratio - 1.0) < 0.004)
+    {
+        return; /* too small to see; it adds up into the next step */
+    }
+
+    double x, y;
+    if (!gtk_gesture_get_bounding_box_center(GTK_GESTURE(gesture), &x, &y))
+    {
+        x = gtk_widget_get_width(GTK_WIDGET(S.view)) / 2.0;
+        y = gtk_widget_get_height(GTK_WIDGET(S.view)) / 2.0;
+    }
+
+    S.pinch_scale = scale;
+    forward_pinch(x, y, ratio);
+}
+
+/* A pinch step at a place in the view, as the gesture sends it (UI tests: a pinch can't be made under Xvfb). */
+CHVD_EXPORT void chvd_pinch(double x, double y, double ratio)
+{
+    forward_pinch(x, y, ratio);
 }
 
 /*
@@ -560,9 +739,15 @@ CHVD_EXPORT int chvd_create_window(const char *title, const char *app_id, int wi
     GtkGesture *zoom = gtk_gesture_zoom_new();
     gtk_event_controller_set_propagation_phase(GTK_EVENT_CONTROLLER(zoom), GTK_PHASE_CAPTURE);
     g_signal_connect(zoom, "begin", G_CALLBACK(on_zoom_begin), NULL);
+    g_signal_connect(zoom, "scale-changed", G_CALLBACK(on_zoom_scale_changed), NULL);
     gtk_widget_add_controller(GTK_WIDGET(S.view), GTK_EVENT_CONTROLLER(zoom));
 
-    gtk_window_set_child(S.window, GTK_WIDGET(S.view));
+    /* The web view under the start-up mark (make_cover), which goes at the app's first render. */
+    GtkWidget *overlay = gtk_overlay_new();
+    gtk_overlay_set_child(GTK_OVERLAY(overlay), GTK_WIDGET(S.view));
+    S.cover = make_cover();
+    gtk_overlay_add_overlay(GTK_OVERLAY(overlay), S.cover);
+    gtk_window_set_child(S.window, overlay);
     gtk_widget_set_overflow(window, GTK_OVERFLOW_HIDDEN);
     apply_background(background);
 
@@ -582,6 +767,12 @@ CHVD_EXPORT void chvd_show(int maximized)
     if (maximized)
     {
         gtk_window_maximize(S.window);
+    }
+
+    /* If the app never reports its first render, the page (and whatever it says) still shows: as the Windows splash. */
+    if (S.cover && !S.cover_fallback)
+    {
+        S.cover_fallback = g_timeout_add_seconds(20, on_cover_fallback, NULL);
     }
 
     gtk_window_present(S.window);

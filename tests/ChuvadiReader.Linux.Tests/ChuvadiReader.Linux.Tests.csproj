@@ -20,5 +20,9 @@
     <Compile Include="..\..\src\ChuvadiReader.Linux\Platform\GtkButtonLayout.cs" Link="GtkButtonLayout.cs" />
     <Compile Include="..\..\src\ChuvadiReader.Linux\Platform\CupsServer.cs" Link="CupsServer.cs" />
     <Compile Include="..\..\src\ChuvadiReader.Linux\Platform\GlibcTrim.cs" Link="GlibcTrim.cs" />
+    <Compile Include="..\..\src\ChuvadiReader.Linux\Platform\HostPageTheme.cs" Link="HostPageTheme.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\src\ChuvadiReader.Linux\wwwroot\index.html" Link="index.html" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

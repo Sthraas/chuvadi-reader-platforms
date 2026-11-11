@@ -24,4 +24,4 @@ mkdir -p "$(dirname "$out")"
     -Wall -Wextra -Werror -Wno-unused-parameter \
     -Wl,--as-needed -Wl,-z,relro,-z,now -Wl,-soname,libchvdhost.so \
     -o "$out" "$here/chvdhost.c" \
-    $(pkg-config --cflags --libs gtk4 gtk4-unix-print webkitgtk-6.0)
+    $(pkg-config --cflags --libs gtk4 gtk4-unix-print webkitgtk-6.0) -lm

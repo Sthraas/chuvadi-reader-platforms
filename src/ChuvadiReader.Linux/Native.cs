@@ -49,6 +49,22 @@ internal static unsafe partial class Native
     [LibraryImport(Lib, EntryPoint = "chvd_show")]
     public static partial void Show(int maximized);
 
+    /// <summary>The start-up mark's colours for the saved theme (accent "#RRGGBB", the bar's outline). Before <see cref="Show"/>.</summary>
+    [LibraryImport(Lib, EntryPoint = "chvd_start_mark", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial void StartMark(string accent, string rule);
+
+    /// <summary>The app has drawn itself: the start-up mark over the page goes.</summary>
+    [LibraryImport(Lib, EntryPoint = "chvd_ready")]
+    public static partial void Ready();
+
+    /// <summary>1 while the start-up mark is still over the page (UI tests).</summary>
+    [LibraryImport(Lib, EntryPoint = "chvd_start_mark_shown")]
+    public static partial int StartMarkShown();
+
+    /// <summary>A pinch step at a place in the view, as the pinch gesture sends it (UI tests).</summary>
+    [LibraryImport(Lib, EntryPoint = "chvd_pinch")]
+    public static partial void Pinch(double x, double y, double ratio);
+
     [LibraryImport(Lib, EntryPoint = "chvd_navigate", StringMarshalling = StringMarshalling.Utf8)]
     public static partial void Navigate(string uri);
 

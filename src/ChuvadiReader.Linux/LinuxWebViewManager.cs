@@ -63,8 +63,18 @@ internal sealed class LinuxWebViewManager : WebViewManager
         var isHostPage = path == "/" || path.EndsWith(".html", StringComparison.OrdinalIgnoreCase);
         // A drawn page image (D-158) is large and freed with its page: never kept in the web view's cache.
         cacheControl = isPageImage ? "private, no-store" : isHostPage ? "no-cache" : "max-age=31536000, immutable";
+        if (isHostPage)
+        {
+            body = Platform.HostPageTheme.Apply(body, StartTheme);
+        }
+
         return true;
     }
+
+    /// <summary>The saved theme ("dark", "palm", …), set before the first navigation. The host page is served with
+    /// it already on its root element, so its first paint is in that theme: without it the page painted light
+    /// parchment between the window's own pre-paint colour and the app's first render (a light flash in dark).</summary>
+    public string? StartTheme { get; set; }
 
     /// <summary>Main thread (from the script message handler).</summary>
     public void Receive(string message) => MessageReceived(AppBase, message);

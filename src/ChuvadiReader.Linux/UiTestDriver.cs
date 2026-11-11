@@ -123,6 +123,18 @@ internal static class UiTestDriver
                 GtkHost.Post(() => Native.SetButtonLayout(arg));
                 return "true";
 
+            case "pinch":
+            {
+                // "x y ratio": one pinch step at a place in the view, sent as the gesture sends it (no pinch under Xvfb).
+                var parts = arg.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(v => double.Parse(v, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
+                GtkHost.Post(() => Native.Pinch(parts[0], parts[1], parts[2]));
+                return "true";
+            }
+
+            case "start-mark":
+                return await GtkHost.InvokeAsync(() => Native.StartMarkShown() != 0) ? "true" : "false";
+
             case "gc-count":
                 return JsonSerializer.Serialize(new { reliefPasses = Platform.GlibcTrim.Relieved });
 

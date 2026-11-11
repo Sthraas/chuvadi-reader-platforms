@@ -211,6 +211,16 @@ app.launch()
 results.append({"step": "launch", "ok": True, "detail": f"first render after {time.time() - t_launch:.1f} s (cold, fresh profile)", "s": 0})
 app.shot("01-home")
 
+
+def start_mark_gone():
+    """The start-up mark covers the page from the window's first frame to the app's first render, then goes:
+    it must never be left over the app."""
+    app.wait(lambda: app.send("start-mark") is False, 3, "the start-up mark to go after the first render")
+    return "gone after the first render"
+
+
+step("01b-start-mark-gone", start_mark_gone, shot=False)
+
 # ── chrome ───────────────────────────────────────────────────────────────────
 step("02-theme-toggle", lambda: (app.click(".tb-icon"), time.sleep(1),
                                  f"data-theme={app.js('return document.documentElement.dataset.theme')}")[-1])
@@ -1177,6 +1187,110 @@ def page_images_by_address():
 
 
 step("36d-page-images-by-address", page_images_by_address)
+
+
+def zoom_now():
+    return float(app.js("var d=document.querySelector('.rdesk'); return d ? parseFloat(getComputedStyle(d).getPropertyValue('--rpage-zoom')) || 1 : 0"))
+
+
+def page_point():
+    """A point over the page in view (client coordinates) and where on that page it is (fractions of its box)."""
+    return app.js("var w=[...document.querySelectorAll('.rpage-wrap')].find(e => { var r=e.getBoundingClientRect(); return r.bottom > 200 && r.top < innerHeight - 200; }); "
+                  "var p=w.querySelector('.rpage') || w, r=p.getBoundingClientRect(); "
+                  "var x=Math.round(r.left + r.width * 0.3), y=Math.round(Math.max(r.top, 160) + 120); "
+                  "return [x, y, (x - r.left) / r.width, (y - r.top) / r.height, w.getAttribute('data-page')]")
+
+
+def where_on_page(x, y, page):
+    return app.js(f"var w=document.querySelector('.rpage-wrap[data-page=\"{page}\"]'); var p=w.querySelector('.rpage') || w, r=p.getBoundingClientRect(); "
+                  f"return [({x} - r.left) / r.width, ({y} - r.top) / r.height]")
+
+
+def pinch_and_ctrl_scroll():
+    """Arun's laptop check (11 Nov): a trackpad pinch did nothing. The host takes the pinch (so WebKit doesn't zoom
+    the whole app) and now hands each step to the Reader as the wheel-with-Ctrl event it zooms on. A pinch can't
+    be made under Xvfb, so the steps are sent through the host's own forwarding (the gesture's signal calls the
+    same function); Ctrl+scroll is real input. On Home, which has no zoom, neither changes anything."""
+    open_tab(PDF)
+    app.wait(lambda: rendered(0), 20, "page 1 drawn")
+    time.sleep(0.5)
+    scale = "return [window.visualViewport ? visualViewport.scale : 1, innerWidth]"
+    whole = app.js(scale)
+    z0 = zoom_now()
+    x, y, fx, fy, page = page_point()
+    for _ in range(5):  # spread: five steps of 10 %
+        app.send(f"pinch {x} {y} 1.1")
+    app.wait(lambda: abs(zoom_now() - z0 * 1.1 ** 5) < 0.03 * z0, 5, f"zoom {z0 * 1.1 ** 5:.2f} after a spread from {z0:.2f} (now {zoom_now():.2f})")
+    z1 = zoom_now()
+    app.shot("37-pinch-spread")
+    # About the fingers: checked once the page is wider than the view (a narrower page stays centred, as with
+    # Ctrl+scroll), so the point can hold still both ways.
+    wider = ("var d=document.querySelector('.rdesk'), w=document.querySelector('.rpage-wrap[data-page=\"%s\"]'); "
+             "var p=w.querySelector('.rpage') || w; return p.getBoundingClientRect().width > d.clientWidth + 40") % page
+    for _ in range(14):
+        if app.js(wider):
+            break
+        app.send(f"pinch {x} {y} 1.1")
+        time.sleep(0.15)
+    time.sleep(0.5)
+    x, y, fx, fy, page = page_point()
+    za = zoom_now()
+    for _ in range(3):
+        app.send(f"pinch {x} {y} 1.1")
+    app.wait(lambda: abs(zoom_now() - za * 1.1 ** 3) < 0.03 * za, 5, f"zoom {za * 1.1 ** 3:.2f} after a second spread (now {zoom_now():.2f})")
+    time.sleep(0.4)
+    ax, ay = where_on_page(x, y, page)
+    if abs(ax - fx) > 0.02 or abs(ay - fy) > 0.02:
+        raise AssertionError(f"the spread didn't zoom about the fingers: the point was at ({fx:.2f}, {fy:.2f}) of the page, now ({ax:.2f}, {ay:.2f})")
+    zb = zoom_now()
+    for _ in range(40):  # pinch back in, 10 % a step
+        if zoom_now() <= z0 * 1.05:
+            break
+        app.send(f"pinch {x} {y} {max(1 / 1.1, z0 / zoom_now())}")
+        time.sleep(0.1)
+    app.wait(lambda: abs(zoom_now() - z0) < 0.03 * z0, 5, f"zoom back to {z0:.2f} after pinching in (now {zoom_now():.2f})")
+    time.sleep(0.5)
+    x, y, fx, fy, page = page_point()
+
+    # Ctrl + scroll wheel, real input, pointer over the page.
+    focus_main()
+    gx, gy = (int(v) for v in window_geometry()[0].split(","))
+    app.xdo("mousemove", str(gx + x), str(gy + y))
+    app.xdo("keydown", "ctrl")
+    try:
+        app.xdo("click", "--repeat", "3", "--delay", "60", "4")
+        app.wait(lambda: zoom_now() > z0 * 1.05, 5, f"zoom above {z0:.2f} after Ctrl+scroll up (now {zoom_now():.2f})")
+        z2 = zoom_now()
+        app.xdo("click", "--repeat", "6", "--delay", "60", "5")
+        app.wait(lambda: zoom_now() < z2 * 0.95, 5, f"zoom below {z2:.2f} after Ctrl+scroll down (now {zoom_now():.2f})")
+        z3 = zoom_now()
+    finally:
+        app.xdo("keyup", "ctrl")
+    if app.js(scale) != whole:
+        raise AssertionError(f"the whole app was zoomed: {whole} -> {app.js(scale)}")
+    close_active_tab()
+
+    go_home()
+    time.sleep(0.5)
+    before = app.js(scale + ".concat([document.body.scrollWidth, document.body.scrollHeight])")
+    for _ in range(4):
+        app.send("pinch 900 500 1.2")
+    app.xdo("mousemove", str(gx + 900), str(gy + 500))
+    app.xdo("keydown", "ctrl")
+    try:
+        app.xdo("click", "--repeat", "3", "--delay", "60", "4")
+    finally:
+        app.xdo("keyup", "ctrl")
+    time.sleep(0.6)
+    after = app.js(scale + ".concat([document.body.scrollWidth, document.body.scrollHeight])")
+    if after != before:
+        raise AssertionError(f"Home changed size on a pinch or Ctrl+scroll: {before} -> {after}")
+    return (f"spread x1.1 five times: zoom {z0:.2f} -> {z1:.2f}; at {za:.2f} -> {zb:.2f} the point under the fingers stayed put; "
+            f"pinched back to {z0:.2f}; "
+            f"Ctrl+scroll up -> {z2:.2f}, down -> {z3:.2f}; the app itself never scaled; Home unchanged by both")
+
+
+step("37-pinch-and-ctrl-scroll", pinch_and_ctrl_scroll)
 
 # The desktop's window-button layout, followed exactly (any subset, any order, either end) — the
 # setting GNOME (button-layout) and KDE hand to GTK, written to GTK's settings file for a fresh launch.

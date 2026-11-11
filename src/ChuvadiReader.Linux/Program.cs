@@ -97,6 +97,12 @@ public static class Program
                 return 1;
             }
 
+            // The start-up mark shows with the window's first frame and goes at the app's first render: without it
+            // the window stood blank in its background colour for about a second (Arun's laptop check, 11 Nov).
+            var (accent, rule) = StartMarkColours(theme);
+            Native.StartMark(accent, rule);
+            services.GetRequiredService<IAppReadySignal>().Ready += () => GtkHost.Post(Native.Ready);
+
             Mark("window + web view");
 
             var wwwroot = Path.Combine(AppContext.BaseDirectory, "wwwroot");
@@ -104,7 +110,10 @@ public static class Program
             // static-web-assets manifest beside the app, which WebViewManager reads itself.
             IFileProvider files = Directory.Exists(wwwroot) ? new PhysicalFileProvider(wwwroot) : new NullFileProvider();
             // Drawn page images are served from memory by address (D-158), in process, no server.
-            var manager = new LinuxWebViewManager(services, new PageImageFileProvider(files, services));
+            var manager = new LinuxWebViewManager(services, new PageImageFileProvider(files, services))
+            {
+                StartTheme = theme.Length == 0 ? "light" : theme, // the host page's first paint is in the saved theme
+            };
             GtkHost.Attach(manager);
             var incoming = services.GetRequiredService<IncomingFiles>();
             WireWindow(services, incoming, instance);
@@ -189,6 +198,16 @@ public static class Program
         "indigo" => "#EDF0F6",
         "contrast" => "#F5F5F2",
         _ => "#F2EAD6",
+    };
+
+    /// <summary>The start-up mark's bar: the theme's accent (tokens.css) and its outline, ink at 45 %.</summary>
+    private static (string Accent, string Rule) StartMarkColours(string theme) => theme switch
+    {
+        "dark" => ("#E08A52", "rgba(242,234,214,0.45)"),
+        "palm" => ("#4A6624", "rgba(26,19,16,0.45)"),
+        "indigo" => ("#2C3E8C", "rgba(26,19,16,0.45)"),
+        "contrast" => ("#7A240C", "#000000"),
+        _ => ("#8A3A1C", "rgba(26,19,16,0.45)"),
     };
 
     // Same list as the Open dialog (Core: DocumentFormatExtensions.OpenableExtensions), as on Windows.
