@@ -177,3 +177,21 @@ Landed on `platform/foundation` (be4498a) during this session; `platform/web-ui`
 
 ## ✔ decided (c) — Q-3 / D-119 Home wording on the portal (coordinator 02:30, confirmed 03:07)
 "Files in this session" for the Storage map heading, and "Nothing shelved this session — open the Library" for the empty shelf. The example line, "Your shelves for this session are empty — …", wraps to two lines, which would be a layout change, so I used the shorter line that keeps the "this session" wording and the layout. The diff went to the Foundation (HOOKS). The hide-on-Web version was prepared and then dropped.
+
+## U-18 "Sign with certificate" is live on the portal since patch 26 (found 11 Nov) — D-27 says "off now"
+**What changed.** Windows PR 15 (chuvadi-pdf 3.32.0, real signing) removed `DisabledReason = CertificateSignService.WaitingReason` from the three places the action appears: the Reader's Protect rail, Redact's Tools rail, and the Ctrl K command "Sign with certificate". Until then it was greyed out on every platform only because the library wasn't ready. No capability flag covers signing, and the 12c `SangamGate` was never hooked (`EDITS-FOR-APPROVAL.md` line 82).
+
+**What a portal user sees now** (preview, Web profile; `screenshots/chromium-portal-sign-with-certificate.png`): an enabled "Sign with certificate" button, and a card with "Choose certificate (.pfx)…", "Certificate password" and "Save signed copy". On the real Web host the picker returns nothing (`PortalOptions.AllowCertificateUpload` is false by default, W-08), so no private key reaches the server and the security side of D-27 (a) holds. But the button looks live and does nothing.
+
+**Options** (shared Ui files, so whichever is chosen goes to the Foundation as a diff):
+- **(a) Hide it on the portal**: no rail button, no Ctrl K command, and the Sign card's note "For a certificate signature use Protect › Sign with certificate" dropped when `Kind == Web`. Pros: "off" means off; nothing dead on screen; works on touch. Cons: the Protect and Redact rails are one button shorter than the handout's; nobody learns that the desktop app can do it.
+- **(b) Keep it, greyed out, with the reason "Certificate signing is in the desktop app. Your private key never leaves your computer."**: the same `DisabledReason` mechanism as before. Pros: the rails stay as the handout draws them; it explains why and points to the desktop app ("Get the desktop app" is in the account menu). Cons: on touch the reason is a tooltip that can't be seen (the WT-09 problem), unless the card opens with that sentence in place of the fields.
+- **(c) Open the 12c Sangam gate from it.** Pros: it is the handout's design for signing. Cons: D-27 (c) puts Sangam's e-signature ceremony later; today the gate would lead nowhere, since the person is already signed in with Sangam.
+
+**Recommendation: (b), with the card showing the sentence in place of the fields on touch**, so the reason is readable everywhere. If you would rather have the smallest change, (a).
+
+## Observations for the Foundation from the patch 26 re-check (not portal-only; no decision needed from me)
+- **Find box in Excel and Word doesn't take the cursor.** With a PDF, Find (button or Ctrl F) focuses the box (`_findBoxRef.FocusAsync()` in `OpenFind`). The Office box (`Reader.razor` line 371, `_viewerFindOpen`) has no `@ref` and no focus call, so focus stays on the button (or the page) and the person has to click into the box. The same in Chromium, Firefox and WebKit, and on a phone the keyboard doesn't come up. It has been so since the v3 revamp (d8f32d9), not from patch 26. I can send a small diff if wanted.
+- **Find hits in hidden rows and columns can't be seen.** `layout.xlsx`, Find "hidden": "4 found", tab badges Layout 2 · Secret 1 · Deep 1. The two Layout hits are A5 (hidden row) and C6 (hidden column), so the sheet shows no outlined cell. The tests say hidden cells stay findable (D-171); this is only to note that the person gets a count with nothing to look at.
+- **Phone:** "4 found" wraps onto two lines in the Find box (390 px), and the hit badges of sheets further along the tab strip are off-screen until the strip is scrolled.
+- **Declared already** (audit E-07): a merged range that crosses the frozen line is cut at it. `layout.xlsx` A1:B2 shows "Title merge", and the yellow fill stops at column A.

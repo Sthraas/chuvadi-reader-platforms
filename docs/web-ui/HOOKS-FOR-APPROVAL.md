@@ -1,6 +1,8 @@
 # Web portal UI — existing-file hooks
 
-## Still to apply — the Word "left out" note is wider than the page on tablet and phone (found 11 Nov, re-checking patch 25 part 4 / D-168)
+## Applied by the Foundation (patch 26; checked on 37bd4a0) — the Word "left out" note is wider than the page on tablet and phone (D-168)
+In exactly as sent (`git apply -R --check` succeeds). Re-measured on 37bd4a0: the note and the page share the same edges at desktop, tablet and phone sizes in all three browsers.
+
 **`proposal/web-ui-docx-leftout-margins.patch`**, against foundation **382aada** (= foundation-pr 742a5da for `src`; applies cleanly). One of the Foundation's files, `Components/Viewers/DocxView.razor.css`, one rule:
 `.dv-leftout { max-width: 794px; … }` → `max-width: min(794px, calc(100% - 48px));`. The sheet is `width: 794px; max-width: calc(100% - 48px)`, so on a narrow stage the note was wider than the page. The colours and text are untouched.
 
@@ -14,7 +16,9 @@ Measured (preview, `leftout-header.docx` = the tests' damaged-header copy of `di
 
 Screenshots: `screenshots/chromium-docx-leftout-phone-before-after.png`, `screenshots/chromium-docx-leftout-desktop.png`. Not a portal-only matter: Android phones and tablets get the same rule.
 
-## Still to apply — the Excel value bar often never turns on in the portal (found 10 Nov, re-checking patch 24 / D-161)
+## Applied by the Foundation (patch 26, reconciled with Mobile UI H-23; checked on 37bd4a0) — the Excel value bar often never turned on in the portal (D-161)
+The retry is in `XlsxView.OnAfterRenderAsync` (`JsAsync<bool>("gridValueBar")`, guarded by `_version`). Re-measured on 37bd4a0: the bar shows on the first click in 12 of 12 opens in each of Chromium, Firefox and WebKit (Web profile) and 3 of 3 in each on the Windows profile. It was 4 of 10, then 6 of 18.
+
 **`proposal/web-ui-xlsx-value-bar-race.patch`**, against foundation **ec09f4f** (= foundation-pr dd59362 for `src`; applies cleanly). Two of the Foundation's files, 12 lines added and 4 removed:
 - `Components/Viewers/XlsxView.razor`: `OnAfterRenderAsync` set `_valueBarOn = true` before calling the script. That call can belong to a render from before the grid was drawn: the workbook finishes loading while the "busy" render is on its way to the browser, which is the normal case on Blazor Server. The script then finds no grid and does nothing, and it is never asked again. Now the flag is set only when the script says the listener is on (`JsAsync<bool>`), and only if no reload happened meanwhile (`_version`).
 - `wwwroot/js/viewers.js` `gridValueBar`: returns `true` when the listener is on (already or newly) and `false` when the grid isn't connected or the bar isn't there. The behaviour is otherwise unchanged.

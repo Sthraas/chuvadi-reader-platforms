@@ -352,3 +352,28 @@ I made damaged copies as the tests do: a broken `word/header1.xml` in `discharge
 
 ### 5. Excel value bar
 Not in yet (it goes into the Foundation's part 5); `proposal/web-ui-xlsx-value-bar-race.patch` still applies to 382aada. Measured again on this build: the bar came up in 6 of 18 opens.
+
+## 2026-11-11 — session 21 (coordinator 06:35: merge the latest Foundation, patch 26; Excel grid with hidden sheets and Find)
+
+### 1. Branches and merge
+Checked all: `platform/foundation-pr` 07ed3ca, `platform/foundation` 37bd4a0, `main` a06697d, `platform/web` d6b86ac, `platform/web-test` aa25188, `platform/mobile-ui` 8699719. Merged **`platform/foundation` 37bd4a0** (its `src`, `tests`, `tools` and `ci` are identical to foundation-pr 07ed3ca; the merge is clean). After the merge `src` equals foundation-pr's.
+
+### 2. Build and tests
+Build `-warnaserror` 0 warnings. Tests 374 + 16 + 41 + 91 = **522 pass**, 0 fail, 6 skipped (the Foundation's).
+
+### 3. My two diffs
+- Word note margins: in exactly as sent. The note and the page share the same edges at all sizes in three browsers.
+- Excel value bar: in, reconciled with H-23. First click shows the bar in 36 of 36 opens (12 per browser); Windows profile 9 of 9.
+
+### 4. Excel grid in the portal (`layout.xlsx`; Chromium / Firefox / WebKit × desktop / tablet / phone)
+- The grid is as the file holds it: hidden column C and hidden row 5 take no room (headers A B D E…, rows 1–4, 6…), column A and rows 1–2 are frozen, and merged title, tall and wrapped rows, borders, rich text, data bars, icons and the comment mark all show. The page never scrolls sideways.
+- Hidden sheets: four tabs, with "Secret" and "Deep" dimmed and carrying a "hidden" pill and the title "This sheet is hidden in the workbook". Clicking or tapping one shows it ("in a hidden sheet"). On the phone the tab strip scrolls.
+- Find (desktop and tablet: the left bar's Find; phone: ⋮ › Find): "hidden" → "4 found", tab badges 2 / – / 1 / 1. "7654321" (stored) and "7,654,321" (shown) each give "1 found" (D-171). "pattern" → A14 is outlined. "zzzq" → "0 found". The same in all nine cases.
+- Value bar: A17 → "A17 1234567" on the first click or tap in all nine cases.
+- Screenshots: `screenshots/chromium-xlsx-grid-find-hidden.png`, `screenshots/webkit-xlsx-phone-grid-hidden-find.png`.
+
+### 5. Portal surfaces against c3e3f1c
+63 screenshots: the text is identical in all of them. Pixels are identical apart from the known flaky Chromium chip sliver, and **Redact's Tools rail at desktop and tablet sizes: "Sign with certificate" is no longer greyed out** (Windows PR 15). That is live on the portal against D-27 → OPTIONS **U-18**. Drop overlay 6 of 6.
+
+### 6. Observations passed to the Foundation (OPTIONS)
+The Office Find box doesn't take the cursor (old, all platforms); Find hits in hidden rows and columns can't be seen; on the phone "4 found" wraps and far tab badges are off-screen; merged range cut at the frozen line (already declared, E-07).
