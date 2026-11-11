@@ -279,7 +279,7 @@ S_NS = 'xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"'
 R_NS = 'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"'
 
 
-def xlsx(path, far_cell=False):
+def xlsx(path, far_cell=False, hidden=False):
     sheet1_rows = (
         '<row r="1"><c r="A1" t="inlineStr"><is><t>Item</t></is></c><c r="B1" t="inlineStr"><is><t>Amount</t></is></c>'
         '<c r="C1" t="inlineStr"><is><t>Date</t></is></c></row>'
@@ -296,6 +296,7 @@ def xlsx(path, far_cell=False):
                    '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
                    '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
                    '<Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+                   + ('<Override PartName="/xl/worksheets/sheet3.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' if hidden else '') +
                    '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
                    '</Types>')
         z.writestr("_rels/.rels",
@@ -303,12 +304,15 @@ def xlsx(path, far_cell=False):
                    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>')
         z.writestr("xl/workbook.xml",
                    f'<?xml version="1.0" encoding="UTF-8"?><workbook {S_NS} {R_NS}><sheets>'
-                   '<sheet name="Charges" sheetId="1" r:id="rId1"/><sheet name="Second sheet" sheetId="2" r:id="rId2"/></sheets></workbook>')
+                   '<sheet name="Charges" sheetId="1" r:id="rId1"/><sheet name="Second sheet" sheetId="2" r:id="rId2"/>'
+                   + ('<sheet name="Hidden notes" sheetId="3" state="hidden" r:id="rId4"/>' if hidden else '') + '</sheets></workbook>')
         z.writestr("xl/_rels/workbook.xml.rels",
                    '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
                    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
                    '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/>'
-                   '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>')
+                   '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
+                   + ('<Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet3.xml"/>' if hidden else '')
+                   + '</Relationships>')
         z.writestr("xl/styles.xml",
                    f'<?xml version="1.0" encoding="UTF-8"?><styleSheet {S_NS}>'
                    '<numFmts count="1"><numFmt numFmtId="164" formatCode="&quot;₹&quot;#,##0.00"/></numFmts>'
@@ -323,6 +327,10 @@ def xlsx(path, far_cell=False):
         z.writestr("xl/worksheets/sheet2.xml",
                    f'<?xml version="1.0" encoding="UTF-8"?><worksheet {S_NS}><sheetData>'
                    '<row r="1"><c r="A1" t="inlineStr"><is><t>marker-xlsx sheet two</t></is></c></row></sheetData></worksheet>')
+        if hidden:
+            z.writestr("xl/worksheets/sheet3.xml",
+                       f'<?xml version="1.0" encoding="UTF-8"?><worksheet {S_NS}><sheetData>'
+                       '<row r="1"><c r="A1" t="inlineStr"><is><t>marker-hidden sheet</t></is></c></row></sheetData></worksheet>')
 
 
 def main():
@@ -355,6 +363,7 @@ def main():
     bomb_docx(os.path.join(out, "bomb.docx"))
     xlsx(os.path.join(out, "sample.xlsx"))
     xlsx(os.path.join(out, "far-cell.xlsx"), far_cell=True)
+    xlsx(os.path.join(out, "formats.xlsx"), hidden=True)
     w("notes.md", "# Notes\n\nSome **bold** and *italic* text, marker-md.\n\n- one\n- two\n\n| a | b |\n|---|---|\n| 1 | 2 |\n".encode())
     w("notes.txt", "Plain text file, marker-txt.\nSecond line.\n".encode())
     w("page.html", b"<html><body><h1>HTML page</h1><p>marker-html</p><script>document.title='x'</script>"

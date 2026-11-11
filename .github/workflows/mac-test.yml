@@ -218,6 +218,7 @@ jobs:
           qpdf --allow-weak-crypto --encrypt user1 own1 40 -- five-pages.pdf rc4.pdf
           qpdf --encrypt "" own1 256 --modify=none -- five-pages.pdf owner-only.pdf
           qpdf --encrypt "" own1 256 --print=none -- annotated.pdf noprint.pdf
+          qpdf --rotate=+90 annotated.pdf rotated.pdf && cp rotated.pdf rotated-work.pdf
           ls -la
       - name: Test printer (CUPS queue, paused so jobs stay in the spool)
         run: |

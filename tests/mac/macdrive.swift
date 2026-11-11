@@ -558,12 +558,36 @@ case "scroll":
     let at = CGPoint(x: Double(arg(0))!, y: Double(arg(1))!)
     CGEvent(mouseEventSource: nil, mouseType: .mouseMoved, mouseCursorPosition: at, mouseButton: .left)?.post(tap: .cghidEventTap)
     usleep(80_000)
+    let withCtrl = flag("--ctrl")
     let lines = Int32(arg(2)) ?? 10
     for _ in 0..<abs(lines) {
-        CGEvent(scrollWheelEvent2Source: nil, units: .line, wheelCount: 1, wheel1: lines > 0 ? -3 : 3, wheel2: 0, wheel3: 0)?.post(tap: .cghidEventTap)
+        let e = CGEvent(scrollWheelEvent2Source: nil, units: .line, wheelCount: 1, wheel1: lines > 0 ? -3 : 3, wheel2: 0, wheel3: 0)
+        if withCtrl { e?.flags = .maskControl }   // wheel + Ctrl
+        e?.post(tap: .cghidEventTap)
         usleep(20_000)
     }
     print("scrolled \(lines) at \(at)")
+case "pinch":
+    // pinch x y total — a synthetic trackpad magnify gesture at a screen point (total > 0 zooms in).
+    // Uses the undocumented gesture fields of CGEvent; testing only, and it may not reach every app.
+    let at = CGPoint(x: Double(arg(0))!, y: Double(arg(1))!)
+    CGEvent(mouseEventSource: nil, mouseType: .mouseMoved, mouseCursorPosition: at, mouseButton: .left)?.post(tap: .cghidEventTap)
+    usleep(150_000)
+    let total = Double(arg(2)) ?? 0.5
+    func gesture(_ phase: Int64, _ mag: Double) {
+        guard let e = CGEvent(source: nil) else { return }
+        e.type = CGEventType(rawValue: 29)!                                   // NSEventTypeGesture
+        e.setIntegerValueField(CGEventField(rawValue: 110)!, value: 8)        // gesture kind: zoom
+        e.setDoubleValueField(CGEventField(rawValue: 113)!, value: mag)       // magnification step
+        e.setIntegerValueField(CGEventField(rawValue: 132)!, value: phase)    // 1 began, 2 changed, 4 ended
+        e.location = at
+        e.post(tap: .cghidEventTap)
+        usleep(30_000)
+    }
+    gesture(1, 0)
+    for _ in 0..<10 { gesture(2, total / 10) }
+    gesture(4, 0)
+    print("pinched \(total) at \(at)")
 case "click":
     clickAt(CGPoint(x: Double(arg(0))!, y: Double(arg(1))!), double: flag("--double"))
 case "drag":

@@ -1493,8 +1493,12 @@ def p25():
         return sorted(pos, key=pos.get)
     order = strip_order(t, four + six)
     ev["c"]["order_shown"] = order
+    name_key = lambda n: (os.path.splitext(n)[0].lower(), os.path.splitext(n)[1].lower())
     ev["c"]["order_given"] = four + six
-    ev["c"]["order_kept"] = order == four + six
+    ev["c"]["order_expected_m24"] = sorted(four, key=name_key) + sorted(six, key=name_key)  # each batch in Finder's Name order
+    ev["c"]["order_kept"] = order == ev["c"]["order_expected_m24"]
+    if not ev["c"]["order_kept"]:
+        bad.append(f"M-24 tab order: shown {order}")
     # the tab keys still land right with ten tabs: ⌘n for the position of many-pages.pdf → "of 500"
     if "many-pages.pdf" in order and order.index("many-pages.pdf") < 9:
         n = order.index("many-pages.pdf") + 1
@@ -1520,7 +1524,159 @@ def p25():
         bad.append("Word file on a cold start")
     quit_app()
     record("P25 files from Finder (cold, several at once, Word)", "fail" if bad else "pass",
-           f"failed: {bad}" if bad else f"cold one → Reader; cold four → 4 tabs; six more → 10 tabs; tab order kept={ev['c']['order_kept']}; ⌘n lands right={ev['c'].get('cmd_n_lands_on_many_pages')}; Word shows its text", **ev)
+           f"failed: {bad}" if bad else f"cold one → Reader; cold four → 4 tabs; six more → 10 tabs; each batch in name order (M-24)={ev['c']['order_kept']}; ⌘n lands right={ev['c'].get('cmd_n_lands_on_many_pages')}; Word shows its text", **ev)
+
+
+def zoom_percent(tag):
+    t = axdump(tag)
+    L = t.splitlines()
+    for i, l in enumerate(L):
+        if 'AXStaticText desc="%"' in l:
+            for j in range(i - 1, max(0, i - 4), -1):
+                m = re.search(r'desc="(\d+)"', L[j])
+                if m:
+                    return int(m.group(1))
+    return None
+
+
+def main_centre():
+    rc, o = find("main", timeout=3)
+    w = window_up(3)
+    m = re.search(r"\t(\d+),(\d+) (\d+)x(\d+)", w or "")
+    x, y, wd, ht = map(int, m.groups())
+    return x + wd // 2 - 20, y + ht // 2, (x, y, wd, ht)
+
+
+@case("P26 rotated page, Excel grid, pinch")
+def p26():
+    ev, bad = {}, []
+    # ── a /Rotate 90 page: view, mark, save, print ────────────────────────────────────────────
+    work = f"{FX}/rotated-work.pdf"
+    shutil.copy(f"{FX}/rotated.pdf", work)
+    reset_state({"theme": "light"})
+    launch(settle=4)
+    ok, _ = open_doc(work, settle=4)
+    r = {"opened": ok, "view_shot": shot("p26-rotated-view")}
+    t = axdump("p26-rotated-view")
+    r["error"] = ui_error()
+    press("Mark 2")
+    time.sleep(1.5)
+    press("Rectangle", role="AXButton", click=True)
+    time.sleep(1)
+    cx, cy, win = main_centre()
+    r["window"] = win
+    r["drag_screen"] = [cx - 150, cy - 110, cx + 30, cy + 10]
+    drive("drag", *r["drag_screen"])
+    time.sleep(1.5)
+    r["marked_shot"] = shot("p26-rotated-marked")
+    rc, o = press("Save", role="AXButton", click=True)
+    r["save_press"] = o[:100]
+    time.sleep(4)
+    r["after_save_shot"] = shot("p26-rotated-after-save")
+    r["after_save_windows"] = [l for l in drive("windows")[1].splitlines() if l.startswith(NAME)]
+    shutil.copy(work, f"{OUT}/p26-rotated-saved.pdf")
+    _, js = sh(f"qpdf --json '{work}'", timeout=60)
+    try:
+        objs = json.loads(js)["qpdf"][1]
+        sq = [v["value"] for v in objs.values() if isinstance(v.get("value"), dict) and v["value"].get("/Subtype") == "/Square"]
+        r["squares"] = [{"Rect": q.get("/Rect"), "has_AP": "/AP" in q} for q in sq]
+        pages = [v["value"] for v in objs.values() if isinstance(v.get("value"), dict) and v["value"].get("/Type") == "/Page"]
+        r["page_rotate"] = [pg.get("/Rotate") for pg in pages]
+    except Exception as e:  # noqa
+        r["qpdf_error"] = str(e)[:200]
+    r["new_square_saved"] = len(r.get("squares", [])) >= 2  # the fixture has one Square already
+    # print it
+    before = spool_files()
+    drive("key", "cmd+p")
+    time.sleep(2)
+    r["print_card"] = shot("p26-rotated-print-card")
+    rc, r["card_press"] = press("Print 2 pages", contains=True)
+    time.sleep(4)
+    r["panel"] = screen("p26-rotated-print-panel")
+    press("Print", role="AXButton", index=-1)
+    time.sleep(3)
+    press("Add to Printer", role="AXButton")
+    time.sleep(10)
+    new = sorted(spool_files() - before)
+    r["spool_new"] = new
+    if new:
+        f = f"{OUT}/p26-rotated-printed.pdf"
+        sh(f"sudo cp /var/spool/cups/{new[-1]} '{f}' && sudo chmod 644 '{f}'")
+        pr = {}
+        r["print_vector"] = check_printed(f, pr, "marker-1")
+        r["print_info"] = [l for l in pr.get("info", "").splitlines() if re.search(r"Page size|Page rot|Pages", l)]
+        r["print_images"] = pr.get("images", "")[:300]
+        r["print_live_annots"] = pr.get("live_annots")
+        sh(f"pdftoppm -r 50 -png '{f}' '{OUT}/shots/p26-rotated-printed'")
+    else:
+        r["print_vector"] = False
+    quit_app()
+    ev["rotated"] = r
+    if not (ok and not r["error"] and r["new_square_saved"] and r["print_vector"]):
+        bad.append(f"rotated page (mark saved={r['new_square_saved']}, print vector={r['print_vector']})")
+
+    # ── Excel: formats, Find on value and on shown text, hidden sheet ─────────────────────────
+    reset_state({"theme": "light"})
+    launch(settle=4)
+    ok, _ = open_doc(f"{FX}/formats.xlsx", settle=5)
+    t = axdump("p26-xlsx")
+    x = {"opened": ok, "shot": shot("p26-xlsx"), "error": ui_error(),
+         "cells": [l.strip()[:110] for l in t.splitlines() if re.search(r"1234|1,234|₹|3\.14|6\.28|Merged|2026|46334|A4\*2", l)][:14],
+         "sheet_tabs": [re.sub(r"\s*@.*$", "", l.strip())[:120] for l in t.splitlines() if re.search(r"Charges|Second sheet|Hidden notes|sheets\"", l)][:8]}
+    x["hidden_sheet_listed"] = "Hidden notes" in t
+    x["currency_as_file_holds"] = bool(re.search(r"₹1,234\.50", t))
+    for tag, needle in (("value", "1234"), ("shown", "2026")):
+        drive("key", "cmd+f")
+        time.sleep(1.2)
+        drive("key", "cmd+a")
+        for ch in needle:
+            drive("key", ch)
+            time.sleep(0.08)
+        drive("key", "return")
+        time.sleep(2)
+        ft = axdump(f"p26-xlsx-find-{tag}")
+        x[f"find_{tag}"] = [re.sub(r"\s*@.*$", "", l.strip())[:140] for l in ft.splitlines()
+                            if re.search(r"match|result|found|no .*" + needle + r"|\b\d+ of \d+\b|\d+ hit", l, re.I)][:6]
+        x[f"find_{tag}_shot"] = shot(f"p26-xlsx-find-{tag}")
+        drive("key", "escape")
+        time.sleep(0.8)
+    rc, o = press("Hidden notes", contains=True, click=True)
+    time.sleep(1.5)
+    ht = axdump("p26-xlsx-hidden")
+    x["hidden_sheet_opens"] = "marker-hidden" in ht
+    x["hidden_shot"] = shot("p26-xlsx-hidden")
+    quit_app()
+    ev["xlsx"] = x
+    if not (ok and not x["error"] and x["currency_as_file_holds"] and x["hidden_sheet_listed"]):
+        bad.append(f"Excel (currency shown={x['currency_as_file_holds']}, hidden sheet listed={x['hidden_sheet_listed']})")
+
+    # ── zoom by wheel + Ctrl (real events), and a synthetic trackpad pinch ────────────────────
+    reset_state({"theme": "light"})
+    launch(settle=4)
+    open_doc(f"{FX}/five-pages.pdf", settle=4)
+    cx, cy, _ = main_centre()
+    z = {"start": zoom_percent("p26-zoom-0")}
+    drive("scroll", cx, cy, -4, "--ctrl")
+    time.sleep(1.5)
+    z["after_ctrl_wheel_up"] = zoom_percent("p26-zoom-1")
+    drive("scroll", cx, cy, 4, "--ctrl")
+    time.sleep(1.5)
+    z["after_ctrl_wheel_down"] = zoom_percent("p26-zoom-2")
+    _, z["pinch_out"] = drive("pinch", cx, cy, 0.6)
+    time.sleep(1.5)
+    z["after_pinch_in_gesture"] = zoom_percent("p26-zoom-3")
+    drive("pinch", cx, cy, -0.4)
+    time.sleep(1.5)
+    z["after_pinch_out_gesture"] = zoom_percent("p26-zoom-4")
+    z["shot"] = shot("p26-zoom")
+    z["ctrl_wheel_zooms"] = None not in (z["start"], z["after_ctrl_wheel_up"]) and z["after_ctrl_wheel_up"] != z["start"]
+    z["synthetic_pinch_zooms"] = None not in (z["after_ctrl_wheel_down"], z["after_pinch_in_gesture"]) and z["after_pinch_in_gesture"] != z["after_ctrl_wheel_down"]
+    quit_app()
+    ev["zoom"] = z
+    record("P26 rotated page, Excel grid, pinch", "fail" if bad else "pass",
+           (f"failed: {bad}; " if bad else "") + f"rotated: squares {r.get('squares')}, print {r.get('print_info')}; xlsx tabs hidden listed={x['hidden_sheet_listed']}, "
+           f"find value={x['find_value']}, find shown={x['find_shown']}; zoom {z['start']}→{z['after_ctrl_wheel_up']}→{z['after_ctrl_wheel_down']} (wheel+Ctrl), "
+           f"→{z['after_pinch_in_gesture']}→{z['after_pinch_out_gesture']} (synthetic pinch)", **ev)
 
 
 @case("M-14 .NET message in Details")
@@ -1558,6 +1714,7 @@ def main():
         m18()
         return
     if A.suite == "shared":
+        p26()
         p25()
         t4_0()
         t4_0d()
