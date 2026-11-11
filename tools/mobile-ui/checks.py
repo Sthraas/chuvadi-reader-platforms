@@ -228,12 +228,12 @@ async def main():
         xlsx = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "tests", "ChuvadiReader.Tests", "Fixtures", "Office", "formats.xlsx"))
         urllib.request.urlopen(urllib.request.Request(url + "/__preview/open?path=" + urllib.parse.quote(xlsx), method="POST")).read()
         pg = await fresh()
-        await pg.evaluate("document.querySelector('td.xv-cell[data-a=\"B9\"]')?.scrollIntoView({block: 'center', inline: 'center'})")
+        await pg.evaluate("document.querySelector('.xv-cell[data-a=\"B9\"]')?.scrollIntoView({block: 'center', inline: 'center'})")
         await pg.wait_for_timeout(500)
-        c = await pg.locator('td.xv-cell[data-a="B9"]').bounding_box()
+        c = await pg.locator('.xv-cell[data-a="B9"]').bounding_box()
         if c:
             await pg.touchscreen.tap(c["x"] + c["width"] / 2, c["y"] + c["height"] / 2); await pg.wait_for_timeout(700)
-        r = await pg.evaluate('''() => { const b = document.querySelector('.xv-valbar'), c = document.querySelector('td.xv-cell[data-a="B9"]');
+        r = await pg.evaluate('''() => { const b = document.querySelector('.xv-valbar'), c = document.querySelector('.xv-cell[data-a="B9"]');
             if (!b || !c) return null; const q = b.getBoundingClientRect(), t = document.elementFromPoint(q.left + 30, q.top + q.height / 2);
             return { shown: c.textContent.trim(), bar: b.hidden ? null : b.querySelector('.xv-val-addr').textContent + ' = ' + b.querySelector('.xv-val-text').textContent,
                      onScreen: !b.hidden && !!t && b.contains(t) && q.right <= innerWidth, overflow: document.documentElement.scrollWidth - innerWidth }; }''')

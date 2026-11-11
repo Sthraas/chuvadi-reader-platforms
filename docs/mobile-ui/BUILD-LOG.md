@@ -533,3 +533,30 @@ Evidence:
 - Results: 453 tests pass, 3 skipped by Foundation as library items: 305 + 16 + 91 + 41 on the patched tree; 78
   touch checks pass and the box audit is clean at 4 sizes; desktop before/after identical apart from the clock
   (the bar clock, and the time in Home's greeting line); 0 console errors.
+
+## 11 Nov, 06:35: Foundation 07ed3ca (patch 26) merged; no hooks left; Excel grid and turned pages on touch
+- Merged platform/foundation-pr 07ed3ca: no conflicts. H-23 is covered by Foundation's own fix; hooks-9 and
+  the H-23 diff moved to `proposal/landed/`. **No outstanding hooks patch.**
+- **Excel grid** (`Fixtures/Office/layout.xlsx`), Foundation's own proof run with touch at 412×915, 915×412,
+  800×1280 and 1280×800: 19 of 19 at each size — merged cells, hidden row and column, text running over, rich
+  text, data bars, borders, comment mark, hidden sheets shown dimmed, value bar with its link (on the phone
+  too, with no hooks patch), a far cell, frozen panes, windowing, Find on shown and stored value, a
+  right-to-left sheet, 150 %, no script errors. Find for a workbook opens from the rail (tablet) and ⋮ (phone).
+  - The sheet tabs (27 px) and Grid / As printed (24 px) are now 44 px boxes on touch, drawn as before (3
+    antialiasing pixels differ at the selected tab's corner); the bottom bar keeps its 37 px.
+  - mobile.js and checks.py follow the new grid markup (`.xv-cell` is no longer a `td`).
+  - boxes.py opens the workbook and measures the Excel view too.
+- **Turned pages** (a 4-page PDF with /Rotate 0, 90, 180, 270) at the same four sizes: pages are shown
+  turned; a ×2 pinch on the /Rotate 90 page gives exactly 2.00, the page stays turned and the page box stays
+  on 2; no console errors. A double tap after a pinch zooms further (Foundation's design: a pinch ends the
+  double-tap toggle).
+  - For Foundation (FOR-FOUNDATION.md): F-1 Find's highlight on a turned page is drawn unturned and Find
+    scrolls to the wrong spot; F-2 Fit page lets a turned page overflow sideways in portrait (137 px on the
+    phone).
+- Results: 522 tests pass, 6 skipped by Foundation: 374 + 91 + 41 + 16, with no hooks patch; 78 touch checks
+  pass and the box audit is clean at 4 sizes; 0 console errors.
+- Desktop before (07ed3ca) / after at 1440×900: Read, Mark, Arrange, the desk menu and the Excel view
+  identical apart from the clock. Home: identical apart from the clocks in one run of three; in the other
+  two, 4 pixels differ by 1 or 2 colour levels — and the same 4 pixels differ between two runs of the
+  "after" build itself, so it is drawing noise, not a change. (The first pass showed the same kind of
+  1-level pixels on Arrange and the Excel view; a repeat on fresh hosts was clean.)

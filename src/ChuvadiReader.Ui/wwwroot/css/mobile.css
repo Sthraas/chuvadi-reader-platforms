@@ -760,3 +760,21 @@ html[data-shell="phone"] .modal input[type="range"], html[data-shell="tablet"] .
    touch; the actions are in the desk's ··· menu for the selected pages (H-22). */
 html[data-shell="phone"] .bpage-acts,
 html[data-shell="tablet"] .bpage-acts { display: none; }
+
+/* Excel view (patches 24 to 26): the sheet tabs and Grid / As printed are 27 and 24 px high. On touch each is a
+   44 px box of its own, drawn as before (transparent bands, the background clipped inside); the tab strip takes
+   the bands in its own negative margins, so the bottom bar keeps its height. */
+html[data-shell="phone"] .xv-tabs,
+html[data-shell="tablet"] .xv-tabs { margin-block: -9px -8px; }
+html[data-shell="phone"] .xv-tab,
+html[data-shell="tablet"] .xv-tab { box-sizing: border-box; min-height: 44px; border-style: solid; border-width: 9px 0 8px; border-color: transparent; padding-top: 6px; padding-inline: 15px; background-clip: padding-box; border-radius: 6px 6px 0 0 / 15px 15px 0 0; }
+html[data-shell="phone"] .xv-tab.on,
+html[data-shell="phone"] .xv-tab:hover,
+html[data-shell="tablet"] .xv-tab.on,
+html[data-shell="tablet"] .xv-tab:hover { background-clip: padding-box; }
+html[data-shell="phone"] .xv-tab.on,
+html[data-shell="tablet"] .xv-tab.on { border-color: transparent; box-shadow: inset 0 var(--mu-line) 0 var(--chvd-border), inset var(--mu-line) 0 0 var(--chvd-border), inset calc(-1 * var(--mu-line)) 0 0 var(--chvd-border); }
+html[data-shell="phone"] .xv-mode-btn,
+html[data-shell="tablet"] .xv-mode-btn { margin-block: -10px -11px; border-block: 10px solid transparent; border-bottom-width: 11px; background-clip: padding-box; border-radius: 6px / 16px; }
+html[data-shell="phone"] .xv-mode-btn.on,
+html[data-shell="tablet"] .xv-mode-btn.on { background-clip: padding-box; box-shadow: none; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.08)); }

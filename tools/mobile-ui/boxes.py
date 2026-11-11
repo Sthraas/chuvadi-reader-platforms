@@ -2,6 +2,7 @@
 # TESTING ONLY. Box-size audit, as Android Test measures AT-06 (and as TalkBack and the Accessibility Scanner
 # do): every visible, enabled control's own box, on each main screen, should be at least 44 x 44 CSS px.
 #   boxes.py <url> <W> <H>     → one line per control class under 44 px, exit 1 if any
+#   (it opens tests/…/Fixtures/Office/layout.xlsx for the Excel view and closes that tab again)
 import asyncio, sys
 from playwright.async_api import async_playwright
 url, W, H = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
@@ -45,7 +46,22 @@ async def main():
         await screen("deskmenu", "/reader", [mode(3), ".desk-more"])
         await screen("protect", "/reader", [mode(4)])
         await screen("menu", "/reader", [mode(1), '.ph-bar button[aria-label="More"], .tb-doc'])
-        await pg_done() if False else None
+        # The Excel view: open a workbook, measure, and close its tab again.
+        import os, urllib.parse, urllib.request
+        xlsx = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "tests", "ChuvadiReader.Tests", "Fixtures", "Office", "layout.xlsx"))
+        urllib.request.urlopen(urllib.request.Request(url + "/__preview/open?path=" + urllib.parse.quote(xlsx), method="POST")).read()
+        await screen("excel", "/reader")
+        ctx = await b.new_context(viewport={"width": W, "height": H}, has_touch=True, is_mobile=True)
+        pg = await ctx.new_page(); await pg.goto(url + "/reader"); await pg.wait_for_timeout(3000)
+        if await pg.locator(".xv").count():
+            if await pg.locator('.ph-bar button[aria-label="More"]').count():
+                await pg.locator('.ph-bar button[aria-label="More"]').click(); await pg.wait_for_timeout(500)
+                await pg.locator(".ph-row", has_text="Close").first.click()
+            else:
+                await pg.locator(".tb-doc").click(); await pg.wait_for_timeout(400)
+                await pg.locator(".pop-item", has_text="Close").first.click()
+            await pg.wait_for_timeout(1200)
+        await ctx.close()
         await b.close()
     print(f"{W}x{H}: {bad} control classes under 44 px")
     sys.exit(1 if bad else 0)

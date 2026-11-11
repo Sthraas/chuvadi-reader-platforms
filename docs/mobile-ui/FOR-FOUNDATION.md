@@ -1,26 +1,29 @@
-# Mobile app UI → Foundation: hooks and hand-off (updated 10 Nov)
+# Mobile app UI → Foundation: hooks and hand-off (updated 11 Nov)
 
-## Outstanding for Foundation: H-23 (`proposal/mobile-ui-hooks-9.patch`)
-H-22 landed in the twenty-fifth combined patch (67823ad), exactly as written. `mobile-ui-hooks-9.patch` is now
-H-23 alone, regenerated against foundation-pr 742a5da (the same change; XlsxView's lines had moved). It is to go
-into Foundation's part 5 with the Web portal UI value-bar diff. H-21 is withdrawn (below).
+## Outstanding for Foundation: nothing
+There is no outstanding hooks patch. Everything in `proposal/` is under `proposal/landed/`; with Foundation
+07ed3ca (patch 26) this branch builds and runs with no shared-file diff at all. Android's `compose.sh` has
+nothing to apply for round 10.
 
-### H-23: the Excel value bar's tap listener is added once the grid exists (D-161; found on the phone)
-(`Ui/Components/Viewers/XlsxView.razor`, +8 / −5)
-- Patch 24 arms the grid's click listener in `OnAfterRenderAsync` the first time `_wb` is set, behind a
-  flag. On the phone shell that after-render runs when the workbook has just arrived but the grid isn't
-  drawn yet: `_scroll` is still an empty `ElementReference` (`{"__internalId":null}` reaches
-  `gridValueBar`), no listener is added, and the flag says it was. Result on the phone, every time, portrait
-  and landscape: tapping a cell selects nothing and the value bar never shows. Tablet and desktop win the
-  race today.
-- The flag becomes the id of the grid element the listener is on: armed when `_scroll.Id` exists and differs
-  from the last one armed (so a re-created grid is armed again; `gridValueBar` already ignores a second
-  call on the same element). `LoadAsync` clears it as it cleared the flag.
-- **For:** fixes the phone; removes the race for every shell; no JS change.
-- **Against:** none found.
-- Checked at 412×915, 915×412, 800×1280 and 1280×800 with `Fixtures/Office/formats.xlsx`: B7, B9, B13 and B16
-  show `-1,234,567.89`, `($1,235)`, `25.60%`, `03-15-23`; a tap shows `B7 = -1234567.891`, `B9 = -1234.5`,
-  `B13 = 0.256`, `B16 = 45000` in the bar, on screen, no sideways page overflow.
+## Two things seen while checking patch 26 on touch (Foundation's files; not changed here)
+Both are in Reader code, on every platform, so they're reported, not patched.
+
+### F-1: Find's highlight on a page with /Rotate is drawn where the text would be on the unturned page
+- File: a 4-page PDF with /Rotate 0, 90, 180, 270 and one word on each page (`rotmark0` … `rotmark270`).
+- Find `rotmark90`: the page is shown turned (right), but the highlight is a horizontal box near the page's
+  top-left, not on the vertical word. Find then scrolls to that box, so in phone portrait the real word is
+  off screen. Same on desktop at 1440×900.
+- Looks like the match rectangle isn't taken through the page's rotation the way the page image now is.
+
+### F-2: Fit page uses the upright page's shape for a turned (landscape) page
+- Phone portrait 412×915, Fit page, the /Rotate 90 page: the page is 549 px wide in a 412 px desk (137 px
+  off to the side). Tablet portrait 800×1280: 187 px over. Landscape sizes fit.
+- Fit page seems to take width and height from the page before the turn.
+
+## Superseded: H-23 — Foundation's own fix is in patch 26
+Patch 26 makes `gridValueBar` answer whether it added the listener and sets the flag only then. Checked on
+the phone with no hooks patch: a tap on a cell shows the value bar at 412×915 and 915×412 (and both tablet
+sizes). `mobile-ui-hooks-9.patch` and the single H-23 diff are in `proposal/landed/` for the record.
 
 ## Withdrawn: H-21 (AT-09 round 5) — covered by Foundation's twenty-third patch
 Patch 23 (741930b / 15033c8) has H-21's two effective parts in its own form: Find anchors the match itself,
