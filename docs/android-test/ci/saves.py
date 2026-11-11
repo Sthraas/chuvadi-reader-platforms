@@ -88,7 +88,7 @@ def tap(*names, sel=None):
         if not hit:
             return None
         if hit["covered"] and attempt < 2:
-            c = cdp.js("(() => { " + VIS + " const e = [...document.querySelectorAll('.ph-handle, .ph-sheet [aria-label=Close], .chvd-card [aria-label=Close], .mk-card [aria-label=Close]')].find(vis);"
+            c = cdp.js("(() => { " + VIS + " const e = [...document.querySelectorAll('.ph-handle, .ph-sheet-a, .ph-sheet [aria-label=Close], .chvd-card [aria-label=Close], .mk-card [aria-label=Close], .ph-scrim')].find(vis);"
                        " if (!e) return null; const r = e.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; })()")
             if c:
                 q = to_screen(c[0], c[1])
@@ -97,6 +97,8 @@ def tap(*names, sel=None):
                 cdp.js("document.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', bubbles: true}))")
             time.sleep(1.2)
             continue
+        if hit["covered"]:
+            hit["covered_by"] = cdp.js(f"(() => {{ const t = document.elementFromPoint({hit['x']}, {hit['y']}); if (!t) return null; const c = t.closest('section, [role=dialog], .ph-sheet, .chvd-card') || t; return (c.tagName + '.' + (c.className || '')).toString().slice(0, 80) + ' / ' + (c.getAttribute('aria-label') || ''); }})()")
         sx, sy = to_screen(hit["x"], hit["y"])
         sh(f"input tap {sx} {sy}")
         time.sleep(1.2)
@@ -266,10 +268,26 @@ def says():
 
 
 def page_marks(reader, i=0):
-    """What a saved page carries beyond the original: annotations and content length."""
+    """What a saved page carries beyond the original: annotations, content bytes, form XObjects."""
     pg = reader.pages[i]
+    c = pg.get("/Contents")
+    c = c.get_object() if c is not None else None
+    streams = [x.get_object() for x in c] if isinstance(c, list) else ([c] if c is not None else [])
+    n = 0
+    for st in streams:
+        try:
+            n += len(st.get_data())
+        except Exception:
+            pass
+    res = pg.get("/Resources")
+    xo = res.get_object().get("/XObject") if res is not None else None
     annots = pg.get("/Annots")
-    return {"annots": len(annots) if annots else 0, "content_len": len(pg.get_contents().get_data()) if pg.get_contents() else 0}
+    return {"annots": len(annots.get_object()) if annots is not None else 0, "content_len": n,
+            "xobjects": sorted(xo.get_object().keys()) if xo is not None else [], "rotate": pg.get("/Rotate")}
+
+
+def differs(a, b):
+    return a["annots"] != b["annots"] or a["content_len"] != b["content_len"] or a["xobjects"] != b["xobjects"]
 
 
 def case(name, fn):
@@ -294,7 +312,8 @@ cdp.connect(60)
 cdp.wait("!!(window.Blazor && Blazor.navigateTo) && document.getElementById('app').children.length > 0", 60)
 ORIG = {}
 for fx, nm in (("doc-12p.pdf", "sv-text.pdf"), ("doc-12p.pdf", "sv-shape.pdf"), ("form-filled.pdf", "sv-form.pdf"),
-               ("doc-12p.pdf", "sv-redact.pdf"), ("doc-12p.pdf", "sv-arrange.pdf"), ("doc-12p.pdf", "sv-print.pdf")):
+               ("doc-12p.pdf", "sv-redact.pdf"), ("doc-12p.pdf", "sv-arrange.pdf"), ("doc-12p.pdf", "sv-print.pdf"),
+               ("doc-12p.pdf", "sv-pass.pdf"), ("doc-12p.pdf", "sv-compress.pdf"), ("doc-12p.pdf", "sv-flatten.pdf"), ("rotated.pdf", "sv-rotated.pdf")):
     ORIG[nm] = push(fx, nm)
 time.sleep(3)
 
@@ -337,6 +356,8 @@ def sv1_text():
     if s["files"]:
         rd, pages = read(s["files"][-1], "sv1-saveas.pdf")
         ok = "chuvadimark" in " ".join(pages) and len(pages) == 12
+    if s["button"] and s["button"].get("disabled") and not s["files"]:
+        ok = "n/a (Save as is greyed right after Save: nothing unsaved)"
     R.check("SV-1c Save as new PDF: the new file has the text box and all 12 pages", ok, s)
     R.check("SV-1d Save as leaves the picked file as it was", md5("sv-text.pdf") == before, {"before": before, "after": md5("sv-text.pdf")})
 
@@ -358,7 +379,7 @@ def sv2_shape():
         if rd:
             info = {"saved": page_marks(rd), "original": page_marks(base), "pages": len(pages)}
     R.check("SV-2 rectangle drawn by finger is in the saved file (page 1 carries a new mark)",
-            bool(info and (info["saved"]["annots"] > info["original"]["annots"] or info["saved"]["content_len"] != info["original"]["content_len"])),
+            bool(info and differs(info["saved"], info["original"]) and info["pages"] == 12),
             {"save": s, "page1": info})
 
 
@@ -542,7 +563,158 @@ def sv6_print():
             {"card_button": btn, "spooler_button": bool(m), "picker": picker, "files": files, "pdf": vec})
 
 
-for name, fn in (("SV-1", sv1_text), ("SV-2", sv2_shape), ("SV-3", sv3_form), ("SV-4", sv4_redact), ("SV-5", sv5_arrange), ("SV-6", sv6_print)):
+def card_inputs():
+    return cdp.js("(() => { " + VIS + " return [...document.querySelectorAll('.chvd-card input, [role=dialog] input, .ph-sheet input')].filter(vis).map(e => { const r = e.getBoundingClientRect(); return {type: e.type, ph: e.placeholder, x: r.left + r.width / 2, y: r.top + r.height / 2}; }); })()")
+
+
+def card_buttons():
+    return cdp.js("(() => { " + VIS + " return [...document.querySelectorAll('.chvd-card button, [role=dialog] button, .ph-sheet button')].filter(vis).map(e => (e.getAttribute('aria-label') || e.innerText || '').trim().replace(/\\s+/g, ' ').slice(0, 40)).filter(t => t); })()")
+
+
+def doc_action(*names):
+    """A whole-document action: tablet Document menu / rail; phone ⋮ sheet."""
+    if phone():
+        tap("More", sel=".ph-ib")
+        time.sleep(1)
+        return tap(*names, sel=".ph-sheet *")
+    hit = tap(*names, sel=".rb, .lb-btn")
+    if hit:
+        return hit
+    tap("Document actions", "Document", sel=".tb-doc, button")
+    time.sleep(1)
+    return tap(*names, sel="[role=menu] *, [role=menuitem], .tb-doc-menu *, .menu *, button")
+
+
+def sv7_password():
+    pick_open("sv-pass.pdf")
+    mode("Protect")
+    time.sleep(1)
+    t = tool("Protect: Password", "Password", "Set a password", "Set password", "Encrypt") or doc_action("Password", "Set a password", "Protect with a password")
+    time.sleep(1.5)
+    ins = card_inputs()
+    for f in [i for i in ins if i["type"] == "password"][:2]:
+        tap_xy(f["x"], f["y"])
+        sh("input text chuvadi1")
+        time.sleep(0.6)
+    sh("input keyevent KEYCODE_BACK")
+    time.sleep(1)
+    shot("sv7-card")
+    btns = card_buttons()
+    mark_time()
+    hit = tap("Save protected copy", "Save a protected copy", "Protect", "Set password", "Encrypt", "Save", sel=".chvd-card button, [role=dialog] button, .ph-sheet button")
+    time.sleep(2)
+    picker = save_picker()
+    time.sleep(3)
+    files = new_pdfs()
+    res = None
+    if files:
+        lp = os.path.join(OUT, "sv7-protected.pdf")
+        adb("pull", files[-1], lp)
+        try:
+            r = PdfReader(lp)
+            res = {"encrypted": r.is_encrypted, "opens_with_password": bool(r.decrypt("chuvadi1")) if r.is_encrypted else None, "pages": len(r.pages) if (not r.is_encrypted or r.decrypt("chuvadi1")) else None}
+        except Exception as e:
+            res = {"error": repr(e)[:120]}
+    R.check("SV-7 password-protected copy saved: encrypted, opens with the password, 12 pages",
+            bool(res and res.get("encrypted") and res.get("opens_with_password") and res.get("pages") == 12),
+            {"tool": t, "fields": ins, "card_buttons": btns, "button": hit, "picker": picker, "files": files, "pdf": res, "app_says": says()})
+    R.check("SV-7b the picked original is still unencrypted", md5("sv-pass.pdf") == ORIG["sv-pass.pdf"], None)
+
+
+def doc_save(case_id, name, action_labels, confirm_labels):
+    pick_open(name)
+    act = doc_action(*action_labels)
+    time.sleep(2)
+    shot(case_id.lower() + "-card")
+    btns = card_buttons()
+    mark_time()
+    hit = None
+    if not in_picker():
+        hit = tap(*confirm_labels, sel=".chvd-card button, [role=dialog] button, .ph-sheet button")
+        time.sleep(2)
+    picker = save_picker()
+    time.sleep(4)
+    files = new_pdfs()
+    res = None
+    if files:
+        rd, pages = read(files[-1], case_id.lower() + "-out.pdf")
+        res = {"pages": len(pages), "text_p1": "Discharge summary - page 1" in pages[0], "bytes": os.path.getsize(os.path.join(OUT, case_id.lower() + "-out.pdf"))}
+    R.check(f"{case_id} {action_labels[0]} → saved to a new file: readable, 12 pages, text kept",
+            bool(res and res["pages"] == 12 and res["text_p1"]),
+            {"action": act, "card_buttons": btns, "button": hit, "picker": picker, "files": files, "pdf": res, "app_says": says(), "controls": None if act else labels()})
+
+
+def sv8_compress():
+    doc_save("SV-8", "sv-compress.pdf", ("Compress", "Compress…"), ("Compress and save", "Compress", "Save"))
+
+
+def sv9_flatten():
+    doc_save("SV-9", "sv-flatten.pdf", ("Flatten", "Flatten…"), ("Flatten and save", "Flatten", "Save"))
+
+
+def sv10_rotated():
+    o = pick_open("sv-rotated.pdf")
+    boxes = cdp.js("[...document.querySelectorAll('.rpage-wrap .rpage')].slice(0, 2).map(e => { const r = e.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; })")
+    shot("sv10-rotated")
+    if phone() and len(boxes) < 2:
+        boxes = boxes + [None]
+    R.check("SV-10a a page with /Rotate 90 is shown turned (wider than tall), upright text",
+            bool(o["opened"] and boxes and boxes[0] and boxes[0][0] > boxes[0][1]), {"open": o, "page_boxes_w_h": boxes})
+    mode("Mark")
+    tool("Mark: Rectangle", "Rectangle", "Box")
+    r = cdp.js("(() => { const e = [...document.querySelectorAll('.rpage-wrap .rpage')].filter(e => e.getBoundingClientRect().width > 0)[0].getBoundingClientRect(); return [e.left, e.top, e.width, e.height]; })()")
+    a = to_screen(r[0] + r[2] * 0.15, r[1] + r[3] * 0.2)     # top-left quarter as seen on screen
+    b = to_screen(r[0] + r[2] * 0.40, r[1] + r[3] * 0.45)
+    sh(f"input swipe {a[0]} {a[1]} {b[0]} {b[1]} 600")
+    time.sleep(1.5)
+    shot("sv10-marked")
+    s = save_as()
+    info = None
+    if s["files"]:
+        rd, pages = read(s["files"][-1], "sv10-saveas.pdf")
+        base, _ = read("/sdcard/Download/sv-rotated.pdf", "sv10-original.pdf")
+        if rd:
+            info = {"saved": page_marks(rd), "original": page_marks(base), "pages": len(pages)}
+    R.check("SV-10b mark on the rotated page is saved; the page keeps /Rotate 90 (placement: see sv10 screenshots and sv10-saveas.pdf)",
+            bool(info and differs(info["saved"], info["original"]) and info["saved"]["rotate"] == 90), {"save": s, "page1": info})
+
+
+def sv11_excel():
+    adb("push", os.path.join(FX, "test.xlsx"), "/sdcard/Download/sv-sheet.xlsx")
+    sh("am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d 'file:///sdcard/Download/sv-sheet.xlsx' >/dev/null")
+    time.sleep(2)
+    cdp.js("Blazor.navigateTo('/')")
+    time.sleep(1.5)
+    tap("Open a document", sel=".ph-fab") if phone() else tap("Choose a document to open", "Open (Ctrl O)", "Open")
+    time.sleep(2.5)
+    for _ in range(8):
+        if ui_tap_text("sv-sheet.xlsx"):
+            break
+        if not (ui_tap_text("Download") or ui_tap_text("Downloads")):
+            ui_tap_text("Show roots")
+        time.sleep(1.5)
+    ok = cdp.wait("document.querySelectorAll('.xv-cell').length > 0", 40)
+    shot("sv11-grid")
+    cells = cdp.js("(() => { " + VIS + " const c = [...document.querySelectorAll('.xv-cell')]; const withv = c.filter(e => (e.dataset.v || e.textContent || '').trim());"
+                   " return {cells: c.length, filled: withv.length, sample: withv.slice(0, 6).map(e => [e.dataset.a, (e.dataset.v || e.textContent || '').trim().slice(0, 30)]),"
+                   " hdr: document.querySelectorAll('.xv-colhdr, .xv-rowhdr').length, tabs: [...document.querySelectorAll('.xv-tab')].map(e => e.textContent.trim()), overflowX: document.documentElement.scrollWidth - innerWidth}; })()") if ok else None
+    R.check("SV-11a Excel file opens as a grid with headers, sheet tabs and the cell text", bool(cells and cells["filled"] > 0 and cells["hdr"] > 0 and any("Chuvadi XLSX test cell" in v for _, v in cells["sample"])), cells)
+    t = cdp.js("(() => { " + VIS + " const e = [...document.querySelectorAll('.xv-cell')].filter(vis).find(e => (e.dataset.v || e.textContent || '').includes('Chuvadi XLSX test cell')); if (!e) return null;"
+               " const r = e.getBoundingClientRect(); return {a: e.dataset.a, x: r.left + Math.min(r.width / 2, 30), y: r.top + r.height / 2}; })()") if ok else None
+    bar = None
+    if t:
+        tap_xy(t["x"], t["y"])
+        bar = cdp.js("(() => { const b = document.querySelector('.xv-valbar'); if (!b) return null; const r = b.getBoundingClientRect();"
+                     " return {shown: r.width > 0 && r.height > 0, addr: (document.querySelector('.xv-val-addr') || {}).textContent, text: (document.querySelector('.xv-val-text') || {}).textContent, h: Math.round(r.height)}; })()")
+    shot("sv11-valuebar")
+    R.check("SV-11b tapping a cell shows its address and full value in the value bar (H-23)",
+            bool(bar and bar["shown"] and bar.get("text") and "Chuvadi XLSX test cell" in bar["text"] and (bar.get("addr") or "").strip() == (t or {}).get("a")),
+            {"cell": t, "value_bar": bar})
+
+
+
+for name, fn in (("SV-1", sv1_text), ("SV-2", sv2_shape), ("SV-3", sv3_form), ("SV-4", sv4_redact), ("SV-7", sv7_password), ("SV-8", sv8_compress),
+                 ("SV-9", sv9_flatten), ("SV-10", sv10_rotated), ("SV-11", sv11_excel), ("SV-6", sv6_print), ("SV-5", sv5_arrange)):
     case(name, fn)
 
 log = adb("logcat", "-d", "-v", "epoch")

@@ -117,6 +117,16 @@ encrypt(p("doc-12p.pdf"), p("enc-user.pdf"), user="chuvadi")
 no_print = P.all() & ~P.PRINT & ~P.PRINT_TO_REPRESENTATION
 encrypt(p("doc-12p.pdf"), p("enc-noprint-owner.pdf"), user="", perms=no_print)
 image_doc(p("heavy-image.pdf"))
+# A 3-page document whose first page carries /Rotate 90 (a scanned-sideways page).
+_r = PdfReader(p("doc-12p.pdf"))
+_w = PdfWriter()
+for _i in range(3):
+    _w.add_page(_r.pages[_i])
+_w.pages[0].rotate(90)
+with open(p("rotated.pdf"), "wb") as _f:
+    _w.write(_f)
+import subprocess as _sp
+_sp.run([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), "make-test-office.py"), p("test.docx"), p("test.xlsx")], check=False)
 data = open(p("doc-12p.pdf"), "rb").read()
 open(p("damaged-truncated.pdf"), "wb").write(data[: len(data) // 2])
 i = data.rfind(b"startxref")

@@ -99,6 +99,34 @@ wait_doc("drift-doc")
 s = watch(6)
 R.check("DR-4 back on the first document: box agrees with the page on screen and stays", steady(s), {"(box, on screen)": brief(s)})
 
+# 4b. AT-16: jump by Find to the one match on page 3 — the box must say 3 with page 3 on screen.
+def tap_el(js_expr):
+    c = cdp.js("(() => { const e = " + js_expr + "; if (!e) return null; const r = e.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; })()")
+    if c:
+        bb = wv(); dp = cdp.js("devicePixelRatio")
+        sh(f"input tap {int(bb[0] + c[0] * dp)} {int(bb[1] + c[1] * dp)}")
+        time.sleep(1.2)
+    return c
+VISQ = "(sel, starts) => [...document.querySelectorAll(sel)].find(e => e.getBoundingClientRect().width > 0 && [e.getAttribute('aria-label'), e.getAttribute('title'), e.innerText].some(t => t && t.trim().toLowerCase().startsWith(starts)))"
+if phone:
+    tap_el("(" + VISQ + ")('.ph-ib', 'more')")
+    f_ = tap_el("(" + VISQ + ")('.ph-sheet *', 'find')")
+else:
+    f_ = tap_el("(" + VISQ + ")('.rb, .lb-btn, .tb-cmd, button', 'find')")
+time.sleep(1)
+for ch in "zephyrine":
+    sh(f"input text {ch}")
+    time.sleep(0.25)
+sh("input keyevent KEYCODE_ENTER")
+time.sleep(2)
+s = watch(6)
+screencap(os.path.join(OUT, "after-find.png"))
+R.check("DR-7 (AT-16) after Find jumps to the match on page 3: box says 3, page 3 on screen, steady", steady(s, 3), {"find_control": f_, "(box, on screen)": brief(s)})
+sh("input keyevent KEYCODE_BACK")
+time.sleep(1)
+cdp.js("document.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', bubbles: true}))")
+time.sleep(1)
+
 # 5. Rotate: box still agrees.
 set_rotation(1 - portrait_rotation())
 s = watch(6)

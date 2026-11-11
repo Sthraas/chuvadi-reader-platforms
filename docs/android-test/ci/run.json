@@ -1,8 +1,9 @@
 {
-  "round": "9b (save suite only)",
+  "round": 10,
   "emulators": "phone-36,tablet-36",
-  "suites": "saves",
-  "foundation_ref": "dd59362b1d82bddd6da00303e1729f518e98eb01",
-  "mobileui_ref": "3ecbc75bf626033379bb7d1f73b84accad27ac18",
-  "android_ref": "8f173c9a7359e4b1fab8a22357041cd858cd89fb"
+  "suites": "saves,drift,function,design,at13,aot",
+  "variants": "baseline trace",
+  "foundation_ref": "07ed3ca834a8d21b20e5176f54852ac0ee52cd79",
+  "mobileui_ref": "86997198419f51b9fc74fdac5d95236c1120fcd3",
+  "android_ref": "ce890a6f1b1c355fff56b9304ecfc0863050d4c7"
 }
