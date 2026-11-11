@@ -1631,6 +1631,30 @@ def p26():
     if not (ok and not r["error"] and r["new_square_saved"] and r["print_vector"]):
         bad.append(f"rotated page (mark saved={r['new_square_saved']} where drawn={r.get('new_square_where_expected')}, print vector={r['print_vector']})")
 
+    # ── control: the same mark on an unrotated page (does a mark land under the pointer at all?) ──
+    ctl = f"{FX}/mark-control.pdf"
+    shutil.copy(f"{FX}/five-pages.pdf", ctl)
+    reset_state({"theme": "light"})
+    launch(settle=4)
+    open_doc(ctl, settle=4)
+    press("Mark 2")
+    time.sleep(1.5)
+    press("Rectangle", role="AXButton")
+    time.sleep(1)
+    _, _, win = main_centre()
+    k = {"window": win, "drag_window": [450, 200, 570, 300], "zoom": zoom_percent("p26-control-zoom")}
+    drive("drag", win[0] + 450, win[1] + 200, win[0] + 570, win[1] + 300)
+    time.sleep(1.5)
+    k["marked_shot"] = shot("p26-control-marked")
+    press("Save", role="AXButton")
+    time.sleep(4)
+    k["saved_shot"] = shot("p26-control-saved")
+    shutil.copy(ctl, f"{OUT}/p26-control-saved.pdf")
+    _, q = sh(f"qpdf --qdf --object-streams=disable '{ctl}' - | strings | grep -E ' re$' | tail -3", timeout=60)
+    k["rects_in_file"] = q.strip().splitlines()
+    quit_app()
+    ev["mark_control"] = k
+
     # ── Excel: formats, Find on value and on shown text, hidden sheet ─────────────────────────
     reset_state({"theme": "light"})
     launch(settle=4)
@@ -1652,10 +1676,15 @@ def p26():
     drive("key", "escape")
     time.sleep(0.8)
     for tag, needle in (("value", "1234"), ("shown", "2026"), ("absent", "7777")):
-        rc, o = press("Find ⌘F", role="AXButton")
+        rc, o = press("Find ⌘F", role="AXButton", click=True)
         time.sleep(1.5)
         ft0 = axdump(f"p26-xlsx-find-{tag}-open")
         x[f"find_{tag}_fields"] = [f for f in fields(ft0) if f not in base_fields]
+        m = re.search(r'AXTextField value="Find in Excel…" @(-?\d+),(-?\d+) (\d+)x(\d+)', ft0)
+        if m:
+            fx, fy, fw, fh = map(int, m.groups())
+            drive("click", fx + fw // 2, fy + fh // 2)
+            time.sleep(0.5)
         drive("key", "cmd+a")
         for ch in needle:
             drive("key", ch)
