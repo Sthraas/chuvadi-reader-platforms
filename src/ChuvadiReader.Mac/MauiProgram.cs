@@ -115,8 +115,15 @@ public static class MauiProgram
         if (list.Length > 1)
         {
             // M-24: macOS hands a batch over as an unordered set; open it in Finder's Name order.
-            var order = FileBatchOrder.Sort(list.Select(u => u.Path ?? string.Empty)).ToList();
-            list = list.OrderBy(u => order.IndexOf(u.Path ?? string.Empty)).ToArray();
+            try
+            {
+                var order = FileBatchOrder.Sort(list.Select(u => u.Path ?? string.Empty)).ToList();
+                list = list.OrderBy(u => order.IndexOf(u.Path ?? string.Empty)).ToArray();
+            }
+            catch (Exception ex)
+            {
+                MacSmoke.Log("files-order failed: " + ex.Message); // ordering must never stop the files opening
+            }
         }
 
         MacSmoke.Log("files-arrived " + string.Join(" ", list.Select(u => Path.GetFileName(u.Path ?? string.Empty))));
