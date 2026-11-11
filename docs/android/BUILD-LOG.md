@@ -837,3 +837,6 @@ same screen; no crash), smoke pass. With round 6 (API 36 phone and tablet, all c
   anything else; the workload is installed under it.
 - Sandbox, under that global.json: SDK 10.0.403, workload set 10.0.403, runtime 10.0.14 in the notices; Android Debug and
   Release `-warnaserror` 0 warnings; Release manifest 14/14; Core 374 (+6 skipped), Hosting 91, MobileUi 16, WebUi 41.
+- **Run 42935783457** (all four, full, ce890a6): **all green** — SDK 10.0.403, workload set 10.0.403, **runtime 10.0.14**
+  on the runner (was 10.0.15: the pin holds); API 35 WebView gate 4/4 on both; gestures 10/10 and 9/9; platform 29/29
+  and 27/27; Release launch pass on all four. Head for Android Test round 10: ce890a6.
