@@ -89,7 +89,7 @@ isn't keyed on the touch form factor here.
 **Actual:** tablet portrait shows tabs · pager · search; `Document ▾` is gone, so Properties / Export / Compress / Merge / Split
 have no entry point from the top bar in portrait. **Evidence:** `screenshots/r1/12f-vs-app.png`.
 
-## AT-06 · S3 · Mobile UI · **mostly fixed** R8 run 42802779369 (Foundation 741930b + Mobile UI 2b29227 + Android 7c8e2d8, Release, API 36): every control in the original table is now ≥ 44 dp. Left under 44 — phone: desk name field 43.7 high; tablet: Home recent row 34 high, Home `Open library` link 18.8 high, Settings side list 38 high, Settings size options 24 high and switches 34 × 20, Arrange `Fetch another PDF` 32 high, shelf search button 28 × 28, desk name field 41.5 high — Touch targets under 44 dp (handout: 48 dp on tablet and phone)
+## AT-06 · S3 · Mobile UI · **verified** R10 run 42938865447 (Android ce890a6 + Foundation 07ed3ca + Mobile UI 8699719, Release, API 36): every control measured is ≥ 44 dp — phone 42 of 42, tablet 30 of 30, including the leftovers listed in round 8 — Touch targets under 44 dp (handout: 48 dp on tablet and phone)
 Measured in the page (CSS px = dp), every visible control, all screens, R1 API 36 (`design/*.layout.json`):
 | Form | Control | Size (dp) |
 |---|---|---|
@@ -181,7 +181,7 @@ full path over (`DesktopSingleInstance` → `IncomingFiles`), so it focuses that
 - (c) Leave as is. *Cons:* differs from Windows; tabs and Recent fill with duplicates.
 **Recommendation:** (a).
 
-## AT-13 · S2 · Foundation (shared Ui; library if it's the renderer) · passing: R5 1/1 each, R6 5/5 each, R8 run 42802779369 (Foundation 741930b + Mobile UI 2b29227 + Android 7c8e2d8, Release, API 36) 5/5 phone (5.5–5.9 s) and 5/5 tablet (8.4–9.6 s) — 22 of 22 since the fix; treating as **verified** — keep repeating — A page with one large image sometimes never paints
+## AT-13 · S2 · Foundation (shared Ui; library if it's the renderer) · **verified**, still repeating: R10 run 42938865447 5/5 phone (5.6–6.3 s) and 5/5 tablet (8.1–8.5 s); no blank page in any run since the fix — A page with one large image sometimes never paints
 **Steps:** open `heavy-image.pdf` (one A4 page holding a 6000 × 6000 px JPEG; 28 MB file) with Open with; wait.
 **Expected:** page 1 painted within a few seconds (it does, when it works: 3.9 s and 4.5 s).
 **Actual:** in 2 of 4 runs the page stayed on its "page 1" placeholder for the whole wait (90 s, 120 s), app alive, CPU idle
@@ -195,7 +195,7 @@ compare Foundation's B-24 "a stalled read never freezes the Reader") rather than
 Release once AT-03 lands. **Evidence:** R4 › results-phone-api36 › robust/; R4b › results-tablet-api36 › robust/ (screenshots,
 results.jsonl with PSS and `top`).
 
-## AT-14 · S3 · Foundation (open sequencing) · **decided D-164 (10 Nov): (A) + (C) to Foundation, (B) folded into (A), (D) build settings stay as shipped (no AOT change)** — this chat measures the result the same way — Cold "Open with" takes 3.9 s (phone) / 6.0 s (tablet) to paint page 1 on Release
+## AT-14 · S3 · Foundation (open sequencing) · **partly fixed** R10 (D-164 A landed and works; C not achieved): cold Open-with to page 1 — phone 5,150 → 4,074 ms, tablet 7,572 → 9,149 ms (trace build, medians of 10). See the round 10 table below — Cold "Open with" takes 3.9 s (phone) / 6.0 s (tablet) to paint page 1 on Release
 **Evidence:** R4e (run 42741617577), table in RESULTS §2: from the launch to page 1 painted, median 3,920 ms phone and 6,028 ms
 tablet over 12 cold runs, while the activity's first frame is ~1.2–1.5 s. The Release uses MAUI's default **profiled AOT**: the
 startup profile covers MAUI and the BCL, but Chuvadi's assemblies get 4–14 KB AOT images each (B-08), i.e. the PDF open, parse
@@ -320,6 +320,29 @@ Same trace build with finer markers (and without the Chuvadi-full AOT this time)
 - (D) Leave the build settings as shipped; no AOT change (Chuvadi-only full AOT: +9 % size for no median gain, only a steadier worst case).
 **Recommendation:** (A) + (C), with (B) as the first step if (A) is too large for now; (D) for the build. Expected on these emulators:
 phone ≈ 2.5–3 s, tablet ≈ 3.5–4 s for a cold Open with; a real phone is several times faster than this software-rendered emulator.
+### AT-14 round 10 (run 42938865447; Android ce890a6 + Foundation 07ed3ca + Mobile UI 8699719, Release, API 36) — after D-164 (A)
+Measured the same way as round 7b (test-only trace build, cold Open with, 10 runs, median ms from process start).
+
+| Milestone | Phone R7b | Phone R10 | Tablet R7b | Tablet R10 |
+|---|---|---|---|---|
+| open request reaches the shared code | 4,268 | **976** | 5,087 | **2,334** |
+| PDF opened (library) | — | 1,857 | — | 3,766 |
+| first paint of the shell | — | 2,836 | — | 5,764 |
+| page boxes laid out | — | 3,253 | — | 6,022 |
+| shell script imported | — | 3,563 | — | 7,498 |
+| Ready signal | — | 3,751 | — | 8,618 |
+| page 1 render requested | — | 3,778 | — | 8,702 |
+| **page 1 painted** | **5,150** | **4,074** | **7,572** | **9,149** |
+
+As-built Release, same intent, `startup.py` (10 runs): phone median 4,862 ms (worst 7,725) against 5,028 (11,878) in round 7;
+tablet 9,398 (15,510) against 9,031 (15,997).
+**Reading:** (A) did what it was meant to: the file is being opened 3.3 s (phone) / 2.8 s (tablet) earlier, and the phone gains
+about 1.1 s. **(C) is not there yet:** the first page render is still requested only just after the Ready signal (27 ms after on
+the phone, 84 ms on the tablet), so the early open is waiting for the shell. On the tablet the page boxes are laid out at 6.0 s
+and the render is not asked for until 8.7 s — 2.7 s of pure waiting (0.5 s on the phone). The tablet emulator run was also slower
+overall in this round (runtime start 1,216 → 1,456 ms), so its absolute numbers are not a like-for-like regression; the 2.7 s gap is.
+**Remaining fix (Foundation):** ask for page 1's render as soon as the PDF is open and the page boxes exist, not on Ready; and
+look at why first paint is at 2.8 s / 5.8 s. Expected gain if the render follows the page boxes: about 0.5 s phone, 2.5 s tablet.
 
 ## AT-15 · S2 · Foundation (routed 10 Nov, with the page drift) · **partly verified** R8 run 42802779369 (Foundation 741930b + Mobile UI 2b29227 + Android 7c8e2d8, Release, API 36): shapes by finger drag work (phone "1 shape"; tablet rectangle drawn, screenshot), the Protect redaction box draws on tablet ("1 box"), and a finger tap with Mark › Text now creates the box. Still wrong: the new text box doesn't take the caret — see AT-17 — Mark › Text: a finger tap on the page makes no text box (phone and tablet)
 **Steps:** Release (f88f9ef composition), API 36, open a PDF, Mark, choose Text (button shows as on), tap the page — quick tap, then
@@ -340,7 +363,7 @@ most likely the phone/tablet swipe-and-pan handling on `.rdesk` (mobile.js) capt
 every markup gesture on touch (text, shapes, freehand, probably the Protect redaction box). Owner: whoever owns that handler
 (Mobile UI's mobile.js, or Foundation's reader.js); the markup layer should win when a markup tool is active.
 
-## AT-16 · S3 · Foundation (shared Ui) · open (with Foundation; still there in R9 on dd59362) — Page box drifts from the page on screen (tablet, after Find)
+## AT-16 · S3 · Foundation (shared Ui) · **verified** R10 run 42938865447 (Android ce890a6 + Foundation 07ed3ca + Mobile UI 8699719, Release, API 36): its own check (`ci/drift.py` DR-7: Find jump, then the page box against the page under the middle of the screen) passes on phone and tablet; the other six drift checks pass too (7 of 7 each) — Page box drifts from the page on screen (tablet, after Find)
 **Steps:** tablet API 36, open `doc-12p.pdf`, Find `zephyrine` (one match, foot of page 3).
 **Expected:** the page box says 3 — page 3 fills the screen.
 **Actual:** the match is shown and page 3 fills the screen, but the page box says **2** ("2 / 12"). Phone says "3 / 12".
@@ -349,8 +372,9 @@ results.jsonl F-03. **Seen again in R8b (run 42807280851): 2 of 2 on tablet.** A
 a second document, a reopen, a rotation and a restart) ran in R8b: cold open, second document, reopen and rotation agree on phone and
 tablet (box = page on screen, steady for 6–8 s). Its "move to page 5" and "restart" steps were wrong in my script (it scrolled the page
 from script, and a plain launch opens on Home); corrected for round 9. So the only drift seen so far is the tablet one after Find.
+**Round 10:** fixed — see the heading. Kept in the drift suite for every round.
 
-## AT-17 · S2 · Foundation (shared Ui, markup) · open (with Foundation; still there in R9/R9b on dd59362) — Mark › Text: the new box doesn't take the caret; typing fires one-key shortcuts instead
+## AT-17 · S2 · Foundation (shared Ui, markup) · **verified** R10/10b (Android ce890a6 + Foundation 07ed3ca + Mobile UI 8699719, Release, API 36): the caret is in the new box after the first tap (`TEXTAREA` focused) and "chuvadimark" types into it — tablet runs 42938865447, 42948523807, 42951440189; phone run 42948523807 — Mark › Text: the new box doesn't take the caret; typing fires one-key shortcuts instead
 **Steps:** phone or tablet, open a PDF, Mark › Text, tap the page (a box appears — AT-15 fixed that), type `chuvadimark`.
 **Expected:** the caret is in the new box (and the on-screen keyboard opens); the letters go into the box.
 **Actual:** an editor element exists but focus stays on the page area (`DIV.rdesk`); nothing is typed into the box, and the letters
@@ -363,8 +387,9 @@ caret in it (`TEXTAREA.mk-ta`), the keyboard opens and "chuvadimark" is typed co
 **Fix (proposal):** focus the box's editor in the same pointer-up handler that creates it (JS side, inside the user gesture, so
 Android also raises the keyboard); and don't run one-key shortcuts while a markup draft/box is selected.
 Blocks: text markup + Save, and the Mark text box part of AT-10.
+**Round 10:** fixed — see the heading. This also clears the Mark text box part of AT-10 (a burst of 11 keys all arrive).
 
-## AT-18 · S1 · Android (host) · open — Nothing that saves to a new file works on Android: the host's save pickers are switched off
+## AT-18 · S1 · Android (host) · **fixed; verified on tablet for 8 paths, on phone for 3; phone Save as new PDF still unproven (AT-22)** — R10/10b/10c, table below — Nothing that saves to a new file works on Android: the host's save pickers are switched off
 **Steps:** Release, phone or tablet. Any of: Mark › draw a rectangle › **Save as new PDF**; Protect › draw a redaction box ›
 **Save redacted copy**; Arrange › pages on a desk › **Bind all**.
 **Expected:** Android's "save to" picker opens, the file is written where the person chose.
@@ -385,8 +410,26 @@ build as handed over — Save as new PDF, Save redacted copy and Bind all open n
 On the **test-only build with only this switch turned on** (tablet): Save as new PDF wrote `sv-shape-edited.pdf` with the rectangle on
 page 1 and `sv-form-edited.pdf` with the form values intact; Save redacted copy wrote `sv-redact-redacted.pdf` with the covered heading
 gone from the page content and everything else kept. So the shared code behind the switch works; the switch is the fault.
+**Round 10 / 10b / 10c (runs 42938865447, 42948523807, 42951440189; Android ce890a6 + Foundation 07ed3ca + Mobile UI 8699719, Release, API 36, the build as handed over).**
+Each saved file was pulled off the device and read back with a separate PDF reader.
 
-## AT-19 · S2 · Android (build) · open — The clean build breaks on the .NET SDK patch released 10 Nov (10.0.404): the toolchain isn't pinned
+| Path | Tablet | Phone |
+|---|---|---|
+| Save (in place, text box) | PASS — text in the picked file | (phone has no in-place Save) |
+| Mark › Save as new PDF (rectangle) | PASS — `sv-shape-edited.pdf`, mark on page 1, 12 pages, original untouched | **not saved — AT-22** |
+| Save as after markup on a filled form | PASS — patient "Ravi", ward "Cardiac" still in the file | not saved — AT-22 |
+| Protect › Save redacted copy | PASS — heading gone from text and bytes, rest kept, original untouched | PASS — same checks |
+| Protect › Password › Save protected copy | PASS — encrypted, opens with the password, 12 pages, original still open | not proven: the Confirm field stayed empty in my run, so the button was (rightly) disabled; script fixed in 10c, phone leg of 10c hung |
+| Document › Flatten forms & marks | PASS — `sv-flatten (flattened).pdf`, 12 pages, text kept | PASS |
+| Document › Reduce file size (Press) | not proven — the Press card opens; my script did not press its `Press →` button | not proven (same) |
+| Save as on a /Rotate 90 page | PASS — mark where it was drawn, `/Rotate 90` kept | not saved — AT-22 |
+| Arrange › Bind all (folder picker) | PASS (10c) — folder chosen, 2 desks → 2 PDFs with the right pages; but see AT-21 | not proven — 10b used the wrong picker steps (Bind asks for a folder); fixed in 10c, phone leg hung |
+| Print › Save as PDF (vector) | PASS — 12 pages, text kept, no page images | PASS |
+
+Not exercised by anyone yet: snapshot image, desk session file, Split, Merge, Export pages as images, Lift, Combine.
+No crash or ANR in any save run.
+
+## AT-19 · S2 · Android (build) · **verified in CI** R10 (clean build on the pinned SDK and workload set: 0 errors, 0 warnings, three runs) — one leftover: the pin exists only inside the workflows, see the note at the end — The clean build breaks on the .NET SDK patch released 10 Nov (10.0.404): the toolchain isn't pinned
 **Steps:** clean runner, `actions/setup-dotnet` with `10.0.x` (what the Android workflow and mine use), `dotnet workload install
 maui-android`, publish Release (run 42863203546, 10 Nov 17:16 UTC; Android 8f173c9 + Foundation dd59362 + Mobile UI 3ecbc75).
 **Expected:** builds, as it did earlier the same day on SDK 10.0.403.
@@ -404,8 +447,16 @@ one tested. Nothing in the repo fixes the SDK version (no `global.json`).
   path. *Pros:* survives SDK patches. *Cons:* alone, builds still float with the SDK.
 - **Recommendation: both** — (b) so the target is correct, (a) so releases are reproducible.
 My workflow is pinned to 10.0.403 from round 9 on (and now fails the step when publish fails; it used to carry on).
+**Round 10:** the workflows pin SDK 10.0.403 and workload set 10.0.403 (D-178) and the clean build is clean.
+**Leftover (small, Foundation + Android):** there is no `global.json` in the repo at Android ce890a6 or Foundation 07ed3ca — the
+Android workflow writes one into the composed checkout at build time, and `docs/android/README.md` still says ".NET SDK 10.0.x".
+So a release built by hand from the repo (not through the workflow) is not pinned and can pick up 10.0.404 or later.
+- (a) **Check `global.json` into the repo root (Foundation)** and correct the README. *Pros:* every build, anywhere, is the tested
+  toolchain. *Cons:* one more file to bump on purpose.
+- (b) Leave it CI-only and state "release builds come only from the workflow". *Pros:* nothing to change. *Cons:* relies on habit.
+- **Recommendation: (a).**
 
-## AT-20 · S2 · Android / Mobile UI · open, needs a second look — Tablet: long-press drag from the Shelf doesn't put a page on a desk
+## AT-20 · S2 · Android / Mobile UI · open, still unproven after R10c — needs the Android chat's gesture check or a real tablet — Tablet: long-press drag from the Shelf doesn't put a page on a desk
 **Steps:** tablet API 36 portrait, one PDF open, Arrange (Shelf sheet shows pages 1–12, Desk 1 says "Drag pages here"); long-press
 shelf page 3 and drag it onto the desk.
 **Expected:** the page lands on the desk (it does on the phone: two pages dragged, then reordered by long-press drag, R9b).
@@ -414,7 +465,43 @@ touch script, twice each per run, in R9 and R9b: 0 of 8. `Bind all` therefore st
 **Caveat:** this is the one result here that rests on synthetic gestures only, and the raw script is known not to follow the tablet's
 rotation; the Android chat's own gesture check covers this drag — please say whether it passes on the tablet in portrait. If it
 does, this is my tooling and I'll close it.
+**Round 10b / 10c (tablet, portrait):** still 0 of 4 shelf → desk drags, and now also 0 of 2 desk reorders by long-press drag, with
+both synthetic gestures. The same script moves and reorders pages on the phone (2 of 2 and 1 of 1, run 42948523807). The tablet is
+not stuck without it: Reader › "Send this page to a desk in Arrange" put two pages on desks and Bind all then wrote them (10c).
+Still the same caveat — synthetic gestures only. **Question stands:** does the Android chat's gesture check pass shelf drag and
+desk reorder on the tablet in portrait?
+
+## AT-21 · S4 · Android (host) · open — After Bind all, the message shows the app's internal working path instead of the folder the person chose
+**Steps:** tablet API 36, Arrange with pages on desks › **Bind all** › choose `Download/at-bind` in Android's folder picker › Allow.
+**Expected:** "Bound 2 desks into at-bind" (the folder's own name), as AT-07 settled for tabs and recents.
+**Actual:** "Bound 2 desks into /data/user/0/in.chuvadi.reader/cache/work/folder/b7b7ff383d02410990fcbf082bdd5ba6". The files
+themselves are in the chosen folder and correct. (Run 42951440189, Android ce890a6 + Foundation 07ed3ca + Mobile UI 8699719, Release, API 36; `screenshots/r10/r10c-tablet-press-desks-bind.png`, third frame.)
+**Cause:** the host hands the shared code a working folder and copies out afterwards; the shared message prints the path it was given.
+**Fix (Android chat):** give the message the picked folder's display name (the same display-name route used for AT-07). Any other
+"saved to …" message that prints a path (Export, Scatter, Press) should be checked the same way.
+
+## AT-22 · S2 · Mobile UI (phone look) / Foundation if the card is shared · open, needs one confirming look — Phone: after drawing a mark, its property card covers **Save as new PDF**, and the card has no close control
+**Steps:** phone API 36, open a PDF, Mark › Rectangle (or Text), draw on the page. The mark's card ("Rectangle" / "Text box":
+stroke, fill, rotation, Duplicate, Delete) slides up over the lower half of the screen.
+**Expected:** the person can still reach Save as new PDF, or the card has an obvious way to be put away.
+**Actual:** the Save as new PDF button sits underneath the card (`SECTION.fcard` is the element at the button's position). The card's
+only buttons are its property controls, **Duplicate** and **Delete** — no Close, no handle. 4 of 4 Save-as attempts on the phone ended
+with no file for this reason (text box, rectangle, form, rotated page; run 42948523807, `screenshots/r10/r10b-phone-saves.png`,
+frames 1–3 and 6). On the tablet the card sits beside the page and Save as works.
+**What I have not shown:** whether a swipe down on the card or a tap on an empty part of the page puts it away — round 10c tried
+exactly those, but its phone leg hung and was cancelled (see RESULTS.md). So this is S2 "blocks saving on the phone unless the person
+discovers a gesture", pending that one look.
+**Fix options (Mobile UI):**
+- (a) Give the card a visible handle / Close, like the other phone sheets. *Pros:* discoverable, consistent. *Cons:* one more control.
+- (b) Keep the Save button above the card (float it over the card's top edge) while there are unsaved marks. *Pros:* saving never
+  hides. *Cons:* crowds a small screen.
+- (c) Make the card a short peek (title row only) that expands on tap. *Pros:* page stays visible while marking. *Cons:* more work.
+- **Recommendation: (a) now, (c) when there is time.**
 
 ## Questions for the coordinator (not filed as bugs)
 - **Q-1 Same file opened again → new tab** — answered by the coordinator (9 Nov 07:12): Windows is the reference. Checked the shared
   code and filed the difference as **AT-12** (Android).
+- **Q-R10-1 Form filling:** the Reader has no Fill form tool on any platform (greyed "until built", PHASE1-PARITY). Is form filling
+  by touch expected in this release? If yes it is a feature gap for Foundation, not an Android bug; if no I'll stop listing it.
+- **Q-R10-2 Tablet drag (AT-20):** does the Android chat's gesture check pass shelf → desk drag and desk reorder on the tablet in portrait?
+- **Q-R10-3 `global.json` (AT-19 leftover):** check it into the repo root — recommended (a) above. Who owns it, Foundation?

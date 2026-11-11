@@ -187,6 +187,28 @@ Other suites (R9): page-box check 6/6 phone; tablet 5/6 — the box always match
 moved three pages (twice now; looking at whether a tap is dropped). Function 19/19 phone; tablet fails only AT-16 (box 2 after Find)
 and my old print script. AT-13 5/5 phone (5.5–5.7 s), 5/5 tablet (10.0–11.2 s). Touch targets: unchanged from round 8.
 
+## Round 10 / 10b / 10c (runs 42938865447, 42948523807, 42951440189; Android ce890a6 + Foundation 07ed3ca + Mobile UI 8699719, Release, API 36)
+Build from clean on SDK 10.0.403 + workload set 10.0.403: 0 errors, 0 warnings; `.aab` 42.75 MB, `.apk` 43.13 MB; as-built Release
+launches with 0 crashes on phone and tablet.
+
+| Area | Phone | Tablet |
+|---|---|---|
+| Save suite (files read back) — see the AT-18 table in BUGS.md | redacted copy, Flatten, print PASS; Save as new PDF blocked (AT-22); password, Bind, Reduce not proven | Save, Save as, form values, redacted, password, Flatten, rotated, print, Bind all PASS; Reduce not proven |
+| AT-17 caret in a new text box | PASS (10b) | PASS (10, 10b, 10c) |
+| AT-16 own check + drift suite | 7 of 7 | 7 of 7 |
+| Rotated page (/Rotate 90) | shown turned, 1123 × 794 | shown turned, 596 × 421; mark saved in place, rotation kept |
+| Excel grid + value bar (H-23) | 4 cells, headers, tab "Data"; A2 → "Chuvadi XLSX test cell" | same |
+| Arrange drag / reorder | 2 of 2 dragged, reorder 1 of 1 | 0 — AT-20 (other route works) |
+| Touch targets (AT-06) | 42 of 42 | 30 of 30 |
+| Regression: function | 19 of 19 | 17 of 19 (the two are my old print step; print is covered and passes in the save suite) |
+| Regression: design | all pass | all pass |
+| AT-13 large image page | 5 of 5 (5.6–6.3 s) | 5 of 5 (8.1–8.5 s) |
+| Cold Open with → page 1 (trace build, median) | 5,150 → 4,074 ms | 7,572 → 9,149 ms (AT-14) |
+
+**Round 10c phone leg:** hung inside the emulator step for over an hour (the 10b phone leg took 20 minutes) and I cancelled it;
+no results came back. The 10c changes it carried (putting the mark card away, password fields one at a time, folder picker for
+Bind) are therefore unproven on the phone. One run, read, not retried.
+
 ## Blocked in CI: Reader on Android 15 (API 35)
 The API 35 image ships WebView 124, so the app correctly shows only its update screen (D-105). Updating it in CI from the API 36
 image's WebView failed twice: that WebView needs the Trichrome static library, which my donor job couldn't locate on the API 36
@@ -200,3 +222,5 @@ WebView through Play. Recommendation: (c) now, (b) when such an image appears; (
   update failed (`INSTALL_FAILED_MISSING_SHARED_LIBRARY`) and API 35 stayed on 124. Donor now pulls the library too.
 - R1: the "is Release inspectable" check matched any DevTools socket when the app wasn't running (empty pid); fixed.
 - R1: the audit's dex listing ran with a relative path from another folder; fixed. Startup stops a mode after three failed launches.
+- Round 10: the picker did not scroll to files below the fold (fixed 10b); Bind all asks for a folder, not a file name (fixed 10c);
+  "Compress" is labelled "Reduce file size (Press)" and its card's `Press →` button is outside my card selector (still to fix).
