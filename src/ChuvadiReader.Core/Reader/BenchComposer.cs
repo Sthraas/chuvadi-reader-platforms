@@ -138,9 +138,11 @@ public sealed class BenchComposer
     /// to the origin, then scaled and centred.</summary>
     private static Transform FitShown(PdfPage page, double boxX, double boxBottom, double boxW, double boxH)
     {
+        // B-32: and turned as its /Rotate says, so a turned page is upright in its cell.
         var shown = ShownBox.Of(page);
-        var fit = FitCentered(shown.W, shown.H, boxX, boxBottom, boxW, boxH);
-        return shown.AtOrigin ? fit : Transform.CreateTranslation(-shown.X0, -shown.Y0).Multiply(fit);
+        int turn = ShownBox.TurnOf(page);
+        var (sw, sh) = shown.ShownSize(turn);
+        return shown.ToShown(turn).Multiply(FitCentered(sw, sh, boxX, boxBottom, boxW, boxH));
     }
 
     public async Task<byte[]> ComposeAsync(IReadOnlyList<BenchPage> pages, CancellationToken ct = default, string? normalizeSize = null)
@@ -412,8 +414,11 @@ public sealed class BenchComposer
             for (var i = 0; i < src.PageCount; i++)
             {
                 // D-160: the crop is a fraction of the box the page shows; windows below are in that box's frame.
+                // B-32: a turned page is cut as it is shown; the rebuilt page carries no /Rotate, it is drawn turned.
                 var shown = ShownBox.Of(src.Pages[i]);
-                double pw = shown.W, ph = shown.H;
+                int turn = ShownBox.TurnOf(src.Pages[i]);
+                var asShown = shown.ToShown(turn);
+                var (pw, ph) = shown.ShownSize(turn);
                 origSizes.Add((pw, ph));
                 shownAt.Add(shown);
                 var page = i < pages.Count ? pages[i] : null;
@@ -428,11 +433,20 @@ public sealed class BenchComposer
                 var w = win.Value;
                 if (mode == CropFit.ToSize)
                 {
-                    pc.AddPage(w.W, w.H).PlacePage(src, i, Transform.CreateTranslation(-(w.X + shown.X0), -(w.Bottom + shown.Y0)));
+                    pc.AddPage(w.W, w.H).PlacePage(src, i, asShown.Multiply(Transform.CreateTranslation(-w.X, -w.Bottom)));
                 }
                 else if (mode == CropFit.Mask)
                 {
-                    pc.AddPageMatching(src, i).PlacePage(src, i, Transform.Identity);
+                    if (turn == 0)
+                    {
+                        pc.AddPageMatching(src, i).PlacePage(src, i, Transform.Identity);
+                    }
+                    else
+                    {
+                        pc.AddPage(pw, ph).PlacePage(src, i, asShown);   // B-32: the mask is drawn on the page as shown
+                        shownAt[i] = new ShownBox(0, 0, pw, ph);
+                    }
+
                     maskRects[i] = w; // kept region = the crop window on the full page
                 }
                 else // FitPage / FitMargin: map the crop rect into a centered box, mask the rest.
@@ -444,7 +458,7 @@ public sealed class BenchComposer
                     double cw = w.W * s, ch = w.H * s;
                     double destX = boxX + (boxW - cw) / 2.0;
                     double destBottom = boxBottom + (boxH - ch) / 2.0;
-                    var t = Transform.CreateTranslation(-(w.X + shown.X0), -(w.Bottom + shown.Y0))
+                    var t = asShown.Multiply(Transform.CreateTranslation(-w.X, -w.Bottom))
                         .Multiply(Transform.CreateScale(s, s))
                         .Multiply(Transform.CreateTranslation(destX, destBottom));
                     pc.AddPage(pw, ph).PlacePage(src, i, t);
@@ -484,7 +498,8 @@ public sealed class BenchComposer
             for (var i = 0; i < src.PageCount; i++)
             {
                 var shown = ShownBox.Of(src.Pages[i]);   // D-160: the page as shown is what gets inset
-                double pw = shown.W, ph = shown.H;
+                int turn = ShownBox.TurnOf(src.Pages[i]);   // B-32: turned as shown
+                var (pw, ph) = shown.ShownSize(turn);
                 var m = i < pages.Count ? pages[i].Margins : null;
                 if (m == null)
                 {
@@ -494,7 +509,7 @@ public sealed class BenchComposer
                 double iw = Math.Max(1, pw - m.Left - m.Right);
                 double ih = Math.Max(1, ph - m.Top - m.Bottom);
                 // inner box in y-up page coords: left=Left, bottom=Bottom.
-                pc.AddPage(pw, ph).PlacePage(src, i, Transform.CreateTranslation(-shown.X0, -shown.Y0).Multiply(FitCentered(pw, ph, m.Left, m.Bottom, iw, ih)));
+                pc.AddPage(pw, ph).PlacePage(src, i, shown.ToShown(turn).Multiply(FitCentered(pw, ph, m.Left, m.Bottom, iw, ih)));
             }
             using var ms = new MemoryStream();
             pc.Write(ms);
@@ -520,7 +535,9 @@ public sealed class BenchComposer
             for (var i = 0; i < src.PageCount; i++)
             {
                 var shown = ShownBox.Of(src.Pages[i]);   // D-160: the page as shown is what gets resized
-                pc.AddPage(tw, th).PlacePage(src, i, Transform.CreateTranslation(-shown.X0, -shown.Y0).Multiply(Placement.ScaleToFit(shown.W, shown.H, tw, th)));
+                int turn = ShownBox.TurnOf(src.Pages[i]);   // B-32: turned as shown
+                var (sw, sh) = shown.ShownSize(turn);
+                pc.AddPage(tw, th).PlacePage(src, i, shown.ToShown(turn).Multiply(Placement.ScaleToFit(sw, sh, tw, th)));
             }
             using var ms = new MemoryStream();
             pc.Write(ms);

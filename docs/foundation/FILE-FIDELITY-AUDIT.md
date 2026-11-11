@@ -17,19 +17,19 @@ chuvadi-pdf 3.32.0; the Windows Reader chat's list of 10 Nov (items it found) fo
 | E-01 | Cells showed the raw value: no currency, separators, decimals, percentages, date or time formats | App: Chuvadi.Sheets' display text in the system culture; the value stays underneath (copy, Find, the value bar) | **Fixed** (D-161) |
 | E-02 | Colour sections (`[Red]`, `[Color10]`), conditional formats' number format, fill and font, and `*` fills were ignored | App: from the library (FormatDetailed, the conditional-format evaluator); accounting fills keep the symbol at the left | **Fixed**; colour for ids 6 and 8 waits for SH-L3 |
 | E-03 | Dates were left-aligned and booleans left-aligned | App: numbers and dates right, TRUE/FALSE centred (Excel's General alignment) | **Fixed** |
-| E-04 | Copy and Find used the shown text | App: on the stored value (D-161) | **Fixed** (see question Q-1) |
-| E-05 | Rows past 5,000 and columns past 256 are not in the grid (copy all and Find still see them) | App: virtualise columns as rows are; drop the row cap | Next patch |
-| E-06 | Hidden rows and columns are shown | App: hide them as Excel does (`Rows[r].Hidden`, `Columns[c].Hidden`), with the row and column numbers skipping | Next patch |
-| E-07 | Merged cells show unmerged | App: span them (`Sheet.MergeRanges`) | Next patch |
-| E-08 | Row heights ignored (every row 22 px); column widths approximated (width × 7 px) | App: the file's heights; Excel's width-to-pixel rule for the default font | Next patch |
-| E-09 | Text doesn't run into empty neighbouring cells; long text is cut with "…" at 360 px | App: overflow into empty neighbours as Excel does; no ellipsis | Next patch |
-| E-10 | Frozen header rows are drawn bold whatever the file says | App: drop the forced bold | Next patch (one line) |
-| E-11 | Cell borders, pattern and gradient fills, strikethrough, super/subscript, underline kinds, indent, rotation, shrink-to-fit are not drawn | App: the library has them (`CellStyle`) | Next patch |
-| E-12 | Rich text inside a cell shows as plain text | App: draw `Cell.RichText` runs | Next patch |
-| E-13 | Conditional-format data bars and icon sets are not drawn | App: the library gives bar length, colours and icon index | Next patch |
-| E-14 | Hidden and very hidden sheets show as tabs | App: leave them out of the tabs (or mark them; Arun's call, Q-2) | Next patch |
-| E-15 | Comments, hyperlinks, pictures, shapes and charts are not shown | App: comments and hyperlinks; Lib/Layout: pictures and charts | Comments, links next patch; drawings wait for Layout |
-| E-16 | Gridlines always shown; right-to-left sheets shown left-to-right; the sheet's zoom ignored | App: `ShowGridLines`, `RightToLeft`, `ZoomScale` | Next patch |
+| E-04 | Copy and Find used the shown text | App: copy on the stored value; Find on the stored value **and** the shown text (D-171) | **Fixed** |
+| E-05 | Rows past 5,000 and columns past 256 were not in the grid | App: the grid is a window onto the sheet, any row and column | **Fixed** (patch 26) |
+| E-06 | Hidden rows and columns were shown | App: they take no room and the numbers and letters skip them (their cells are still in copy and Find) | **Fixed** (patch 26) |
+| E-07 | Merged cells showed unmerged | App: one box over the range (`Sheet.MergeRanges`). A range that crosses the frozen line is cut at it | **Fixed** (patch 26) |
+| E-08 | Row heights ignored; column widths approximated | App: the file's heights; Excel's width-to-pixel rule (default column 64 px) | **Fixed** (patch 26). A row with no height in the file is the default height, not auto-fitted to its text (needs text measuring: Layout) |
+| E-09 | Text didn't run into empty neighbours; long text was cut with "…" at 360 px | App: text runs over the empty cells beside it up to the next filled one, no ellipsis. It stops at the frozen line | **Fixed** (patch 26). A number too wide for its cell is cut, where Excel shows ##### (SH-L7) |
+| E-10 | Frozen header rows were drawn bold whatever the file says | App: removed | **Fixed** (patch 26) |
+| E-11 | Cell borders, pattern and gradient fills, strikethrough, super/subscript, double underline, indent, rotation were not drawn | App: from `CellStyle`, on empty cells too | **Fixed** (patch 26). Not yet: shrink-to-fit and room for turned text (need text measuring), diagonal borders, the exact dash patterns (13 styles are drawn as solid, dashed, dotted or double in three widths) |
+| E-12 | Rich text inside a cell showed as plain text | App: `Cell.RichText` runs | **Fixed** (patch 26) |
+| E-13 | Conditional-format data bars and icon sets were not drawn | App: bars from the library's length and colours; icons drawn as shapes in the set's colours (arrows, lights, flags, ticks, ratings), not Excel's own pictures | **Fixed** (patch 26); the icons are a likeness |
+| E-14 | Hidden and very hidden sheets showed as ordinary tabs | App: shown, dimmed and marked "hidden" (D-172) | **Fixed** (patch 26) |
+| E-15 | Comments, hyperlinks, pictures, shapes and charts were not shown | App: a comment marks its cell and shows on hover and in the value bar; a link's target shows in the value bar (it is not followed); the bar under the grid says how many pictures or charts a sheet has | Comments and links **fixed** (patch 26); drawings wait for Layout |
+| E-16 | Gridlines always shown; right-to-left sheets shown left-to-right; the sheet's zoom ignored | App: `ShowGridLines`, `RightToLeft`, `ZoomScale` | **Fixed** (patch 26) |
 | E-17 | "As printed" (page setup, print areas, headers and footers) not shown | Lib: Layout.Sheets via Layout.Pdf | Blocked: no Layout.Pdf release, no checksums |
 
 ### Sheets library items (urgent, D-161)
@@ -64,6 +64,9 @@ literals, escapes, `_x` and `*x`; `[$₹-4009]` currency tags; text sections; da
 | P-06 | /UserUnit pages are drawn at the wrong size (only Measure corrects for it) | Lib PDF-L4 | Library (Windows Reader chat's item 3) |
 | P-07 | Dynamic XFA forms: only the static template shows, not the filled-in data | Lib PDF-L5 | Library (Windows Reader chat's item 2) |
 | P-08 | Outline and link jumps, layers, viewports | Windows Reader chat's 3.32.0 PR | In progress; its link rectangles must use the shown box (`ShownBox`) |
+| P-09 | A page's `/Rotate` (90, 180, 270) was ignored: the page was shown unturned (Linux Test B-32). Redaction, shapes and measuring already allowed for the turn, so on such a page they landed in the wrong place | App: the renderers are asked to apply the page's turn (`ApplyPageRotation`, in the library since before 3.32.0 and off by default); page numbers, text and pictures added in Mark, Properties' page size, image and SVG export, and the bench's crop, mask, margins, resize and imposition all follow the page as shown | **Fixed** (patch 26) |
+| P-10 | On a turned page, headers and footers run along a side and a level watermark reads sideways | Lib PDF-L7 (HeaderFooter), PDF-L8 (WatermarkStamper): honour `/Rotate` | Library |
+| P-11 | A picture placed with a quarter or half turn (one added in Mark on a turned page, or turned by 90° on any page) is missing from print and image export; it is in the file and on screen | Lib PDF-L6: `PageRasterizer` draws nothing for an image whose matrix is a quarter or half turn (it draws 45°; `SvgRenderer` draws all) | Library |
 | — | Annotations, form values and layers: drawn as a viewer shows them (AnnotationMode View; values drawn when appearances are missing; the file's default layers) | — | Matches the file |
 
 ## Word (.docx)
@@ -82,7 +85,7 @@ literals, escapes, `_x` and `*x`; `[$₹-4009]` currency tags; text sections; da
 |---|---|---|---|
 | M-01 | Raw HTML inside Markdown is shown as text, not rendered | Safety (nothing in a file runs); Arun's call, Q-3 | Open |
 | M-02 | Footnotes, definition lists, maths and diagrams in Markdown aren't rendered | App (CommonMark/GFM extensions) | Later |
-| T-01 | A text file that isn't UTF-8 or UTF-16 is read as Latin-1, so Windows-1252 quotes and dashes (0x80–0x9F) show as control characters, and other code pages (ISCII, Shift-JIS) are wrong | App: Windows-1252 instead of Latin-1 (the .NET code-page provider is part of .NET) | Next patch |
+| T-01 | A text file that isn't UTF-8 or UTF-16 was read as Latin-1, so Windows-1252 quotes and dashes (0x80–0x9F) showed as control characters | App: Windows-1252 | **Fixed** (patch 26). Other code pages (ISCII, Shift-JIS) are still read as Western |
 | H-01 | Scripts, forms, frames, media, SVG and maths are removed; stylesheets and styles with `url(` are dropped, so web fonts and background images don't show; remote images wait for "Load images" | Safety; Arun's call, Q-3 (the Windows Reader chat's item 5) | Open |
 
 ## Display-only changes that don't alter the file

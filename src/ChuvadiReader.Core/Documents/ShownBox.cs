@@ -19,6 +19,43 @@ public readonly record struct ShownBox(double X0, double Y0, double W, double H)
     /// <summary>True when the box starts at the user-space origin (most files); the mapping is then the one before D-160.</summary>
     public bool AtOrigin => X0 == 0 && Y0 == 0;
 
+    /// <summary>B-32: the page's /Rotate as a quarter turn clockwise (0, 90, 180 or 270): how far the page is turned
+    /// when it is shown.</summary>
+    public static int TurnOf(PdfPage page) => (((page.Rotate % 360) + 360) % 360) / 90 * 90;
+
+    /// <summary>The size of the box as shown with the page turned by <paramref name="turn"/>: on its side for a
+    /// quarter turn either way.</summary>
+    public (double W, double H) ShownSize(int turn) => turn is 90 or 270 ? (H, W) : (W, H);
+
+    /// <summary>Places something drawn on the page as shown (a page of <see cref="ShownSize"/>, origin bottom-left,
+    /// y up) onto the page's own space, for a page turned clockwise by <paramref name="turn"/>.</summary>
+    public Chuvadi.Pdf.Graphics.Transform FromShown(int turn)
+    {
+        var t = turn switch
+        {
+            90 => Chuvadi.Pdf.Graphics.Transform.CreateRotationDegrees(90).Multiply(Chuvadi.Pdf.Graphics.Transform.CreateTranslation(W, 0)),
+            180 => Chuvadi.Pdf.Graphics.Transform.CreateRotationDegrees(180).Multiply(Chuvadi.Pdf.Graphics.Transform.CreateTranslation(W, H)),
+            270 => Chuvadi.Pdf.Graphics.Transform.CreateRotationDegrees(-90).Multiply(Chuvadi.Pdf.Graphics.Transform.CreateTranslation(0, H)),
+            _ => Chuvadi.Pdf.Graphics.Transform.Identity,
+        };
+        return AtOrigin ? t : t.Multiply(Chuvadi.Pdf.Graphics.Transform.CreateTranslation(X0, Y0));
+    }
+
+    /// <summary>The other way from <see cref="FromShown"/>: places the page's own content as it is shown, on a page of
+    /// <see cref="ShownSize"/> with its origin at the bottom-left. Used where a page is rebuilt (the bench's crop,
+    /// margins, resize and imposition), so a turned page stays as it was shown.</summary>
+    public Chuvadi.Pdf.Graphics.Transform ToShown(int turn)
+    {
+        var t = turn switch
+        {
+            90 => Chuvadi.Pdf.Graphics.Transform.CreateRotationDegrees(-90).Multiply(Chuvadi.Pdf.Graphics.Transform.CreateTranslation(0, W)),
+            180 => Chuvadi.Pdf.Graphics.Transform.CreateRotationDegrees(180).Multiply(Chuvadi.Pdf.Graphics.Transform.CreateTranslation(W, H)),
+            270 => Chuvadi.Pdf.Graphics.Transform.CreateRotationDegrees(90).Multiply(Chuvadi.Pdf.Graphics.Transform.CreateTranslation(H, 0)),
+            _ => Chuvadi.Pdf.Graphics.Transform.Identity,
+        };
+        return AtOrigin ? t : Chuvadi.Pdf.Graphics.Transform.CreateTranslation(-X0, -Y0).Multiply(t);
+    }
+
     public static ShownBox Of(PdfPage page)
     {
         var m = page.MediaBox;

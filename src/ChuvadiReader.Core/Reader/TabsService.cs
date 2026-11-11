@@ -97,7 +97,7 @@ public sealed class ReaderTab
 /// immediately), and background tabs keep their handle open but drop their render
 /// cache. Everything here is host-agnostic; persistence goes through IAppStorage.
 /// </summary>
-public sealed class TabsService
+public sealed class TabsService : IDisposable
 {
     private const string TabsKey = "tabs";
     private const string ActiveKey = "tabs-active";
@@ -467,6 +467,34 @@ public sealed class TabsService
 
         tab.Session?.Dispose();
     }
+
+    /// <summary>WT-22: when the tabs' owner goes (on the Web portal a page reload or a dropped connection ends the
+    /// scope; on a desktop the app is closing), every document they hold is closed, with its page images and memory.
+    /// Before, the documents stayed open with nothing pointing at them. The saved tab list is left as it is, so the
+    /// next start or page load brings the same tabs back.</summary>
+    public void Dispose()
+    {
+        ReaderTab[] tabs;
+        lock (_tabsGate)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _disposed = true;
+            tabs = _tabs.ToArray();
+            _tabs.Clear();
+        }
+
+        Active = null;
+        foreach (var tab in tabs)
+        {
+            Release(tab);
+        }
+    }
+
+    private bool _disposed;
 
     /// <summary>An abandoned open may still complete later; its document is closed then, never shown.</summary>
     private static void DisposeWhenDone(Task<IPdfSession> open) =>

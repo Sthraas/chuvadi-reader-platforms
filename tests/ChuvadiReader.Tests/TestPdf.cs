@@ -43,7 +43,10 @@ internal static class TestPdf
         Path.Combine(Path.GetTempPath(), "chuvadi-test-out-" + Guid.NewGuid().ToString("N") + ".pdf");
 
     /// <summary>A minimal solid-colour RGBA PNG (no external imaging libraries).</summary>
-    public static byte[] SolidPng(int w, int h, byte r, byte g, byte b)
+    public static byte[] SolidPng(int w, int h, byte r, byte g, byte b) => Png(w, h, (_, _) => (r, g, b));
+
+    /// <summary>A minimal RGBA PNG with each pixel from <paramref name="pixel"/> (x, y from the top-left).</summary>
+    public static byte[] Png(int w, int h, Func<int, int, (byte R, byte G, byte B)> pixel)
     {
         byte[] Chunk(string type, byte[] data)
         {
@@ -71,7 +74,7 @@ internal static class TestPdf
         for (int y = 0; y < h; y++)
         {
             raw.WriteByte(0); // filter: none
-            for (int x = 0; x < w; x++) { raw.WriteByte(r); raw.WriteByte(g); raw.WriteByte(b); raw.WriteByte(255); }
+            for (int x = 0; x < w; x++) { var (r, g, b) = pixel(x, y); raw.WriteByte(r); raw.WriteByte(g); raw.WriteByte(b); raw.WriteByte(255); }
         }
         var idatData = ZlibCompress(raw.ToArray());
 
