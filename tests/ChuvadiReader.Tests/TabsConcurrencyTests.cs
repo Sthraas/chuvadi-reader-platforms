@@ -148,4 +148,64 @@ public sealed class TabsConcurrencyTests
             }
         }
     }
+
+    private sealed class CountingReader : IPdfReader
+    {
+        public int Open;
+
+        public async Task<IPdfSession> OpenAsync(string path, string fileName, string? password = null, CancellationToken cancellationToken = default, bool transparentBackground = false)
+        {
+            var inner = await new ChuvadiPdfReader().OpenAsync(path, fileName, password, cancellationToken, transparentBackground);
+            Interlocked.Increment(ref Open);
+            return new CountedSession(inner, this);
+        }
+    }
+
+    private sealed class CountedSession(IPdfSession inner, CountingReader owner) : IPdfSession
+    {
+        private int _closed;
+
+        public PdfDocumentVm Document => inner.Document;
+
+        public bool TryGetRenderedSvg(int pageNumber, out string svg) => inner.TryGetRenderedSvg(pageNumber, out svg);
+
+        public Task<string> RenderPageSvgAsync(int pageNumber, CancellationToken cancellationToken = default) => inner.RenderPageSvgAsync(pageNumber, cancellationToken);
+
+        public void DropRenderCache() => inner.DropRenderCache();
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _closed, 1) == 0)
+            {
+                Interlocked.Decrement(ref owner.Open);
+            }
+
+            inner.Dispose();
+        }
+    }
+
+    /// <summary>WT-22: a page reload on the Web portal ends the tabs' scope. Their documents must close with it, and
+    /// the saved tab list must stay so the same tabs come back.</summary>
+    [Fact]
+    public async Task When_the_tabs_owner_goes_every_document_closes_and_the_saved_list_stays()
+    {
+        var reader = new CountingReader();
+        var storage = new MemoryStorage();
+        var tabs = new TabsService(reader, storage);
+        for (var i = 0; i < 3; i++)
+        {
+            await tabs.OpenAsync(TestPdf.TextPage($"Kept {i}"), $"kept{i}.pdf", DocumentFormat.Pdf);
+        }
+
+        Assert.True(reader.Open >= 1);
+        var saved = storage.Values["tabs"];
+
+        tabs.Dispose();
+        tabs.Dispose();   // twice is harmless
+
+        Assert.Equal(0, reader.Open);
+        Assert.Empty(tabs.Tabs);
+        Assert.Equal(saved, storage.Values["tabs"]);
+        Assert.Contains("kept2.pdf", saved);
+    }
 }

@@ -14,7 +14,7 @@ public sealed record TextDocument(
     long SizeBytes);
 
 /// <summary>Loads Markdown, plain-text and HTML files for the view-only viewers (D-09): size limit,
-/// encoding detection (BOM, then strict UTF-8, then Latin-1) and line splitting. Pure BCL.</summary>
+/// encoding detection (BOM, then strict UTF-8, then Windows-1252) and line splitting. Pure BCL.</summary>
 public sealed class TextViewService
 {
     /// <summary>20 MB — beyond this the WebView becomes unusable for a rendered view.</summary>
@@ -67,7 +67,7 @@ public sealed class TextViewService
                 size / (1024.0 * 1024.0), MaxBytes / (1024.0 * 1024.0)));
 
     /// <summary>Decodes file bytes: a BOM (UTF-8, UTF-16 LE/BE, UTF-32 LE/BE) wins; otherwise
-    /// strict UTF-8, falling back to Latin-1. Throws <see cref="DocumentViewException"/>
+    /// strict UTF-8, falling back to Windows-1252. Throws <see cref="DocumentViewException"/>
     /// (<see cref="ViewErrorReason.BadFormat"/>) for BOM-less content that looks binary.</summary>
     public static string Decode(ReadOnlySpan<byte> bytes, out string encodingName)
     {
@@ -109,10 +109,28 @@ public sealed class TextViewService
         }
         catch (DecoderFallbackException)
         {
-            encodingName = "Latin-1";
-            return Encoding.Latin1.GetString(bytes);
+            // T-01: a file that isn't Unicode is read as Windows-1252, the Western code page such files are written
+            // in. It is Latin-1 with printable characters (curly quotes, dashes, €, ™) where Latin-1 has control codes.
+            encodingName = "Windows-1252";
+            return Windows1252(bytes);
         }
     }
+
+    /// <summary>Windows-1252's characters for bytes 0x80 to 0x9F; every other byte is its Latin-1 character. The five
+    /// bytes the code page leaves undefined (81, 8D, 8F, 90, 9D) stay the control codes they are, as Windows reads them.</summary>
+    private const string Windows1252High =
+        "\u20AC\u0081\u201A\u0192\u201E\u2026\u2020\u2021\u02C6\u2030\u0160\u2039\u0152\u008D\u017D\u008F" +
+        "\u0090\u2018\u2019\u201C\u201D\u2022\u2013\u2014\u02DC\u2122\u0161\u203A\u0153\u009D\u017E\u0178";
+
+    internal static string Windows1252(ReadOnlySpan<byte> bytes) =>
+        string.Create(bytes.Length, bytes.ToArray(), static (chars, source) =>
+        {
+            for (int i = 0; i < source.Length; i++)
+            {
+                byte b = source[i];
+                chars[i] = b is >= 0x80 and <= 0x9F ? Windows1252High[b - 0x80] : (char)b;
+            }
+        });
 
     /// <summary>Splits on CRLF, LF or CR. A final line break does not add an empty last line;
     /// empty text is one empty line.</summary>

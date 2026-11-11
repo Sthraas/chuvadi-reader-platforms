@@ -220,12 +220,14 @@ public sealed class RedactService
         if (pageIndex < 0 || pageIndex >= target.PageCount) return source;
 
         var pdfPage = target.Pages[pageIndex];
-        var shown = ShownBox.Of(pdfPage);   // D-160: the overlay is the shown box, placed at its corner
-        double w = shown.W, h = shown.H;
+        var shown = ShownBox.Of(pdfPage);   // D-160: the overlay covers the shown box
         var rot = NormalizeRotation(pdfPage.Rotate + viewRotation);
 
-        // Box rect in y-up content space — used as the rotation centre for the stamp transform.
-        var rect = MapToPdf(new NormBox(item.X, item.Y, item.W, item.H), rot, w, h);
+        // B-32: the text is laid out on the page as it was shown (turned by the page's /Rotate and the view), in
+        // the box as it was drawn, and that page is then placed on the page's own space. So the text keeps its
+        // box's width and reads upright on screen whichever way the page is turned.
+        var (w, h) = shown.ShownSize(rot);
+        double x = item.X * w, yTop = item.Y * h, bw = item.W * w, bh = item.H * h;
 
         var overlay = PdfDocumentBuilder.Create();
         var pb = overlay.AddPage(new PageSize(w, h));
@@ -233,20 +235,15 @@ public sealed class RedactService
         var color = SafeColor(item.ColorHex);
         var align = ParseAlign(item.Align);
         var lineHeight = item.LineHeight <= 0 ? 1.2 : item.LineHeight;
-        // DrawTextBlock uses the same TOP-LEFT / y-down frame as the other authoring primitives:
-        // its y is the block's TOP edge measured from the page top. Passing the y-up top edge
-        // (rect.Y + rect.Height) vertically MIRRORS the text, so convert to the top-down top edge.
-        double yTop = h - (rect.Y + rect.Height);
-
-        pb.DrawTextBlock(item.Text, rect.X, yTop, rect.Width, rect.Height, font, item.FontSizePt, color, align, lineHeight);
+        // DrawTextBlock uses the TOP-LEFT / y-down frame of the other authoring primitives: its y is the block's
+        // top edge measured from the page top.
+        pb.DrawTextBlock(item.Text, x, yTop, bw, bh, font, item.FontSizePt, color, align, lineHeight);
 
         using var overlayDoc = PdfDocument.Open(new MemoryStream(overlay.ToByteArray(), writable: false));
 
-        // Effective rotation = the text's own angle plus the page's view rotation so the
-        // text reads upright relative to how the page was shown. Negated for PDF's CCW,
-        // y-up space vs the screen's CW, y-down. Rotate about the box centre.
-        double eff = item.Rotation + rot;
-        var t = AtShown(RotateAboutCentre(eff, rect), shown);
+        // The text's own angle (clockwise on screen) about its box's centre, in the shown page's y-up space.
+        var rect = new RectangleF((float)x, (float)(h - yTop - bh), (float)bw, (float)bh);
+        var t = RotateAboutCentre(item.Rotation, rect).Multiply(shown.FromShown(rot));
 
         using var ms = new MemoryStream();
         PageStamper.Place(ms, target, pageIndex, overlayDoc, 0, t, StampPlacement.Overlay);
@@ -307,19 +304,22 @@ public sealed class RedactService
         if (pageIndex < 0 || pageIndex >= target.PageCount) return source;
         var pdfPage = target.Pages[pageIndex];
         var shown = ShownBox.Of(pdfPage);   // D-160
-        double w = shown.W, h = shown.H;
         var rot = NormalizeRotation(pdfPage.Rotate + viewRotation);
-        var rect = MapToPdfTopLeft(new NormBox(item.X, item.Y, item.W, item.H), rot, w, h);
+
+        // B-32: drawn on the page as it was shown and then placed on the page's own space (see StampText), so the
+        // picture keeps its shape and stays upright on screen whichever way the page is turned.
+        var (w, h) = shown.ShownSize(rot);
+        double x = item.X * w, yTop = item.Y * h, bw = item.W * w, bh = item.H * h;
 
         var overlay = PdfDocumentBuilder.Create();
         var pb = overlay.AddPage(new PageSize(w, h));
         // Opacity 0–1; treat a non-positive value as "unset" → fully opaque.
         double op = item.Opacity <= 0 ? 1.0 : Math.Clamp(item.Opacity, 0.0, 1.0);
-        pb.DrawImage(item.ImageBytes, rect.X, rect.Y, rect.Width, rect.Height, op);
+        pb.DrawImage(item.ImageBytes, x, yTop, bw, bh, op);
 
         using var overlayDoc = PdfDocument.Open(new MemoryStream(overlay.ToByteArray(), writable: false));
-        var rectYUp = MapToPdf(new NormBox(item.X, item.Y, item.W, item.H), rot, w, h);
-        var t = AtShown(RotateAboutCentre(item.Rotation, rectYUp), shown);
+        var rectYUp = new RectangleF((float)x, (float)(h - yTop - bh), (float)bw, (float)bh);
+        var t = RotateAboutCentre(item.Rotation, rectYUp).Multiply(shown.FromShown(rot));
         var placement = item.BehindContent ? StampPlacement.Underlay : StampPlacement.Overlay;
         using var ms = new MemoryStream();
         PageStamper.Place(ms, target, pageIndex, overlayDoc, 0, t, placement);

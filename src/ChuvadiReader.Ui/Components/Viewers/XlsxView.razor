@@ -1,6 +1,7 @@
 @*
-    Excel (.xlsx), view-only (D-07). XlsxViewService's sheets as a grid: column letters, row numbers,
-    column widths, cell styles, frozen header rows, sheet tabs along the bottom, and the Grid / As
+    Excel (.xlsx), view-only (D-07). XlsxViewService's sheets as a grid: column letters, row numbers, the
+    file's column widths and row heights, hidden rows and columns, merged cells, borders and fills, rich text,
+    data bars and icons, frozen rows and columns, sheet tabs along the bottom (hidden sheets dimmed), and the Grid / As
     printed toggle (As printed waits for the Layout library). Password-protected workbooks show the
     unlock card; the password lives only in this component. Counter unit: sheet.
     D-161: every cell shows its display text (its number format, by Chuvadi.Sheets, in the system culture);
@@ -25,33 +26,46 @@
     else
     {
         var s = _wb.Sheets[_active];
-        var lastRow = Math.Min(Math.Max(s.LastRow + 2, 24), 5000);
-        var lastCol = Math.Min(Math.Max(s.LastCol + 1, 12), 256);
-        <div class="xv-valbar" hidden aria-live="polite"><span class="xv-val-addr"></span><span class="xv-val-text"></span></div>
-        <div class="xv-gridwrap" @ref="_scroll">
-            <table class="xv-grid" style="zoom:@Css(Scale)">
-                <thead>
-                    <tr>
-                        <th class="xv-corner"></th>
-                        @for (int c = 1; c <= lastCol; c++)
-                        {
-                            <th class="xv-colhdr" style="@ColWidthStyle(s, c)">@ColLetter(c)</th>
-                        }
-                    </tr>
-                </thead>
-                <tbody>
-                    @* B-09/B-10: only the rows on screen are drawn (frozen header rows always), so a sheet's size
-                       — 5,000 rows × 256 columns is 1.28 million cells — can't stall the web view. *@
-                    @{ var frozen = Math.Min(s.FreezeRows, lastRow); }
-                    @for (int r = 1; r <= frozen; r++)
-                    {
-                        @Row(s, r, lastCol)
-                    }
-                    <Virtualize Items="@RowsAfter(frozen, lastRow)" Context="r" ItemSize="RowPx" OverscanCount="30" SpacerElement="tr">
-                        @Row(s, r, lastCol)
-                    </Virtualize>
-                </tbody>
-            </table>
+        var g = _grid!;
+        var zoom = Zoom(s);
+        <div class="xv-valbar" hidden aria-live="polite"><span class="xv-val-addr"></span><span class="xv-val-text"></span><span class="xv-val-more"></span></div>
+        @* The grid is drawn as a window onto the sheet: only the rows and columns on screen exist as elements
+           (B-09/B-10, E-05), each cell placed at the offset its row heights and column widths give (E-06 to E-08),
+           so a sheet of any size, with hidden rows, merged cells and its own sizes, is shown as the file holds it. *@
+        <div class="xv-gridwrap @(s.ShowGridLines ? null : "nolines")" @ref="_scroll" dir="@(s.RightToLeft ? "rtl" : "ltr")">
+            <div class="xv-canvas" style="width:@Px(g.HeadW + g.TotalW);height:@Px(HeadH + g.TotalH);zoom:@Css(zoom)">
+                <div class="xv-top" style="height:@Px(HeadH + g.FrozenH)">
+                    <div class="xv-pane" style="inset-inline-start:@Px(g.HeadW + g.FrozenW);top:0;width:@Px(g.TotalW - g.FrozenW);height:@Px(HeadH + g.FrozenH)">
+                        @ColHeaders(g, _c0, _c1, g.FrozenW)
+                        <div class="xv-pane" style="inset-inline-start:0;top:@Px(HeadH);width:100%;height:@Px(g.FrozenH)">
+                            @Pane(s, g, 1, g.FrozenRows, _c0, _c1, g.FrozenW, 0)
+                        </div>
+                    </div>
+                    <div class="xv-top-left" style="width:@Px(g.HeadW + g.FrozenW);height:@Px(HeadH + g.FrozenH)">
+                        <div class="xv-corner" style="width:@Px(g.HeadW);height:@Px(HeadH)"></div>
+                        <div class="xv-pane" style="inset-inline-start:@Px(g.HeadW);top:0;width:@Px(g.FrozenW);height:@Px(HeadH + g.FrozenH)">
+                            @ColHeaders(g, 1, g.FrozenCols, 0)
+                            <div class="xv-pane" style="inset-inline-start:0;top:@Px(HeadH);width:100%;height:@Px(g.FrozenH)">
+                                @Pane(s, g, 1, g.FrozenRows, 1, g.FrozenCols, 0, 0)
+                            </div>
+                        </div>
+                        <div class="xv-pane" style="inset-inline-start:0;top:@Px(HeadH);width:@Px(g.HeadW);height:@Px(g.FrozenH)">
+                            @RowHeaders(g, 1, g.FrozenRows, 0)
+                        </div>
+                    </div>
+                </div>
+                <div class="xv-left" style="width:@Px(g.HeadW + g.FrozenW);height:@Px(g.TotalH - g.FrozenH)">
+                    <div class="xv-pane" style="inset-inline-start:0;top:0;width:@Px(g.HeadW);height:100%">
+                        @RowHeaders(g, _r0, _r1, g.FrozenH)
+                    </div>
+                    <div class="xv-pane" style="inset-inline-start:@Px(g.HeadW);top:0;width:@Px(g.FrozenW);height:100%">
+                        @Pane(s, g, _r0, _r1, 1, g.FrozenCols, 0, g.FrozenH)
+                    </div>
+                </div>
+                <div class="xv-pane xv-body" style="inset-inline-start:@Px(g.HeadW + g.FrozenW);top:@Px(HeadH + g.FrozenH);width:@Px(g.TotalW - g.FrozenW);height:@Px(g.TotalH - g.FrozenH)">
+                    @Pane(s, g, _r0, _r1, _c0, _c1, g.FrozenW, g.FrozenH)
+                </div>
+            </div>
         </div>
 
         <div class="xv-bar">
@@ -60,8 +74,13 @@
                 {
                     var idx = i;
                     <button type="button" role="tab" aria-selected="@(idx == _active ? "true" : "false")"
-                            class="xv-tab @(idx == _active ? "on" : null)" @onclick="() => SelectAsync(idx)">
+                            class="xv-tab @(idx == _active ? "on" : null) @(_wb.Sheets[idx].Hidden ? "hidden-sheet" : null)"
+                            title="@(_wb.Sheets[idx].Hidden ? "This sheet is hidden in the workbook" : null)" @onclick="() => SelectAsync(idx)">
                         @_wb.Sheets[idx].Name
+                        @if (_wb.Sheets[idx].Hidden)
+                        {
+                            <span class="xv-tab-hidden">hidden</span>
+                        }
                         @if (_sheetHits.Length > idx && _sheetHits[idx] > 0)
                         {
                             <span class="xv-tab-hits" title="@_sheetHits[idx] matching cells">@_sheetHits[idx]</span>
@@ -69,6 +88,10 @@
                     </button>
                 }
             </div>
+            @if (s.Drawings > 0)
+            {
+                <span class="xv-drawings" title="Pictures, shapes and charts are part of this sheet. Chuvadi can't draw them yet.">@(s.Drawings == 1 ? "1 picture or chart isn't shown" : $"{s.Drawings} pictures or charts aren't shown")</span>
+            }
             <div class="xv-mode" role="group" aria-label="View">
                 <button type="button" class="xv-mode-btn on" aria-pressed="true"><Icon Name="grid-view" Size="13" /> Grid</button>
                 <span title="Coming with the Layout library">
@@ -140,6 +163,8 @@
         var v = ++_version;
         Release();
         _valueBarOn = false;
+        _windowOn = false;
+        _grid = null;
         _error = null; _errorDetail = null;
         _index = new();
         _hits = new();
@@ -247,7 +272,7 @@
             {
                 int n = 0;
                 foreach (var c in _wb.Sheets[i].Cells)
-                    if (c.Value.Contains(_query, StringComparison.OrdinalIgnoreCase)) n++;
+                    if (Matches(c, _query)) n++;
                 _sheetHits[i] = n;
                 total += n;
             }
@@ -268,33 +293,88 @@
         _hits = new();
         if (_wb is null || _query is null) return;
         foreach (var c in _wb.Sheets[_active].Cells)
-            if (c.Value.Contains(_query, StringComparison.OrdinalIgnoreCase)) _hits.Add((c.Row, c.Col));
+            if (Matches(c, _query)) _hits.Add((c.Row, c.Col));
     }
+
+    /// <summary>D-171: Find looks in the value the file stores and in the text the cell shows, so both 1234567 and
+    /// 12,34,567 find the cell, and "March" finds a date shown as 15 March 2023.</summary>
+    internal static bool Matches(SheetCell c, string query) =>
+        c.Value.Contains(query, StringComparison.OrdinalIgnoreCase) || c.Text.Contains(query, StringComparison.OrdinalIgnoreCase);
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (_wb is not null && !_valueBarOn)
         {
-            _valueBarOn = true;
-            await JsVoidAsync("gridValueBar", _scroll);   // D-161: click or tap a cell to see the value it stores
+            // D-161: click or tap a cell to see the value it stores. This can run for a render from before the
+            // grid was drawn (the workbook finished loading while that render was on its way to the browser,
+            // which is the usual case on the Web portal), so the flag is set only once the script says the
+            // listener is on; otherwise the next render asks again. A reload in between starts over.
+            var v = _version;
+            var on = await JsAsync<bool>("gridValueBar", _scroll);
+            if (v == _version && on) _valueBarOn = true;
         }
 
-        if (_scrollToHit && _wb is not null)
+        if (_wb is not null && !_windowOn)
+        {
+            // The script tells us which part of the sheet is on screen (scrolling, resizing); asked for until it is on.
+            var v = _version;
+            var on = await JsAsync<bool>("gridWindow", _scroll, Self);
+            if (v == _version && on) _windowOn = true;
+        }
+
+        if (_goHome && _wb is not null)
+        {
+            _goHome = false;
+            await JsVoidAsync("scrollGridHome", _scroll);
+        }
+
+        if (_scrollToHit && _wb is not null && _grid is { } g)
         {
             _scrollToHit = false;
-            // The hit's row may not be drawn yet (rows are virtualised): bring its row on screen first, then
-            // centre the cell once it is.
-            var first = _hits.Count == 0 ? 0 : _hits.Min(h => h.Item1);
-            var sheet = _wb.Sheets[_active];
-            if (first > sheet.FreezeRows)
+            // Bring the first hit (top-most, then left-most) to the middle; the window follows the scroll.
+            var (row, col) = _hits.Count == 0 ? (0, 0) : _hits.OrderBy(h => h.Item1).ThenBy(h => h.Item2).First();
+            if (row > 0 && row <= g.LastRow && col <= g.LastCol)
             {
-                await JsVoidAsync("scrollGridTo", _scroll, (first - sheet.FreezeRows - 1) * RowPx * Scale);
-                await Task.Delay(50);
+                double zoom = Zoom(_wb.Sheets[_active]);
+                double x = row > 0 && col > g.FrozenCols ? (g.ColLeft[col] - g.FrozenW + g.ColWidth(col) / 2) * zoom : -1;
+                double y = row > g.FrozenRows ? (g.RowTop[row] - g.FrozenH + g.RowHeight(row) / 2) * zoom : -1;
+                await JsVoidAsync("scrollGridToCell", _scroll, x, y, (g.HeadW + g.FrozenW) * zoom, (HeadH + g.FrozenH) * zoom);
             }
-
-            await JsVoidAsync("scrollToSelector", _scroll, "td.hit");
         }
     }
+
+    /// <summary>The part of the sheet on screen, from the script (scroll offsets and the view's size, in screen
+    /// pixels). The drawn window moves only when the view nears its edge, so most scrolling draws nothing new.</summary>
+    [JSInvokable]
+    public Task OnGridWindow(double left, double top, double width, double height)
+    {
+        if (_wb is null || _grid is not { } g || Disposed) return Task.CompletedTask;
+        double zoom = Zoom(_wb.Sheets[_active]);
+        _view = (left / zoom, top / zoom, width / zoom, height / zoom);
+        if (PlaceWindow(g, force: false)) StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private (double Left, double Top, double W, double H) _view = (0, 0, 1600, 1000);
+
+    /// <summary>Sets the drawn rows and columns from what is on screen; true when they changed.</summary>
+    private bool PlaceWindow(GridLayout g, bool force)
+    {
+        double bodyW = Math.Max(50, _view.W - g.HeadW - g.FrozenW), bodyH = Math.Max(50, _view.H - HeadH - g.FrozenH);
+        int vr0 = g.RowAt(g.FrozenH + _view.Top), vr1 = g.RowAt(g.FrozenH + _view.Top + bodyH);
+        int vc0 = g.ColAt(g.FrozenW + _view.Left), vc1 = g.ColAt(g.FrozenW + _view.Left + bodyW);
+        if (!force && vr0 - 4 >= _r0 && vr1 + 4 <= _r1 && vc0 - 2 >= _c0 && vc1 + 2 <= _c1) return false;
+        int r0 = Math.Max(g.FrozenRows + 1, vr0 - RowsBeyond), r1 = Math.Min(g.LastRow, vr1 + RowsBeyond);
+        int c0 = Math.Max(g.FrozenCols + 1, vc0 - ColsBeyond), c1 = Math.Min(g.LastCol, vc1 + ColsBeyond);
+        // At the sheet's edges the window can't reach past them; that is not a change.
+        if (!force && r0 == _r0 && r1 == _r1 && c0 == _c0 && c1 == _c1) return false;
+        (_r0, _r1, _c0, _c1) = (r0, r1, c0, c1);
+        return true;
+    }
+
+    private const int RowsBeyond = 30, ColsBeyond = 8;
+    private int _r0 = 1, _r1, _c0 = 1, _c1;
+    private bool _windowOn, _goHome;
 
     public override Task GoToAsync(int index) => SelectAsync(index - 1);
 
@@ -341,45 +421,285 @@
     private void Reindex()
     {
         _index = new();
+        _grid = null;
         if (_wb is null) return;
-        foreach (var c in _wb.Sheets[_active].Cells) _index[(c.Row, c.Col)] = c;
+        var sheet = _wb.Sheets[_active];
+        foreach (var c in sheet.Cells) _index[(c.Row, c.Col)] = c;
+        _grid = new GridLayout(sheet);
+        _view = (0, 0, _view.W, _view.H);
+        _goHome = true;
+        PlaceWindow(_grid, force: true);
+    }
+
+    private GridLayout? _grid;
+
+    /// <summary>The column header's height at 100 %.</summary>
+    private const double HeadH = 20;
+
+    /// <summary>E-16: the sheet opens at the zoom the file stores for it, times the reader's own text size.</summary>
+    private double Zoom(SheetView s) => Scale * s.Zoom / 100.0;
+
+    private static string Px(double v) => v.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + "px";
+
+    /// <summary>Where every row and column of one sheet is, at 100 %: offsets from the file's own heights and widths
+    /// (hidden ones take no room), the frozen part, merged ranges and the cells of each row in column order.</summary>
+    private sealed class GridLayout
+    {
+        public readonly int LastRow, LastCol, FrozenRows, FrozenCols;
+        public readonly double[] RowTop, ColLeft;     // [n] = where row or column n starts; [last + 1] = the total
+        public readonly double HeadW, FrozenW, FrozenH;
+        public readonly Dictionary<int, SheetCell[]> Rows = new();
+        public readonly Dictionary<(int, int), SheetMerge> MergeAt = new();   // by top-left cell
+        public readonly HashSet<(int, int)> Covered = new();                  // inside a merge, not its top-left
+        public readonly IReadOnlyList<SheetMerge> Merges;
+
+        public double TotalW => ColLeft[LastCol + 1];
+        public double TotalH => RowTop[LastRow + 1];
+
+        public GridLayout(SheetView s)
+        {
+            int lastRow = s.LastRow, lastCol = s.LastCol;
+            foreach (var c in s.Cells)
+            {
+                if (c.Row > lastRow) lastRow = c.Row;
+                if (c.Col > lastCol) lastCol = c.Col;
+            }
+
+            foreach (var m in s.Merges)
+            {
+                if (m.LastRow > lastRow) lastRow = Math.Min(m.LastRow, lastRow + 1000);
+                if (m.LastCol > lastCol) lastCol = Math.Min(m.LastCol, lastCol + 100);
+            }
+
+            // A little empty grid after the last cell, as a sheet has; never fewer rows and columns than fill a window.
+            LastRow = Math.Min(1048576, Math.Max(lastRow + 2, 40));
+            LastCol = Math.Min(16384, Math.Max(lastCol + 1, 20));
+            FrozenRows = Math.Clamp(s.FreezeRows, 0, LastRow - 1);
+            FrozenCols = Math.Clamp(s.FreezeCols, 0, LastCol - 1);
+
+            RowTop = new double[LastRow + 2];
+            for (int r = 1; r <= LastRow; r++) RowTop[r + 1] = RowTop[r] + s.RowHeightPx(r);
+            ColLeft = new double[LastCol + 2];
+            for (int c = 1; c <= LastCol; c++) ColLeft[c + 1] = ColLeft[c] + s.ColWidthPx(c);
+            FrozenH = RowTop[FrozenRows + 1];
+            FrozenW = ColLeft[FrozenCols + 1];
+            HeadW = Math.Max(36, 14 + 7 * LastRow.ToString(System.Globalization.CultureInfo.InvariantCulture).Length);
+
+            foreach (var row in s.Cells.GroupBy(c => c.Row))
+            {
+                Rows[row.Key] = row.OrderBy(c => c.Col).ToArray();
+            }
+
+            Merges = s.Merges;
+            foreach (var m in s.Merges)
+            {
+                MergeAt[(m.Row, m.Col)] = m;
+                // Very large merges are rare; the covered cells are only looked up for cells that exist.
+                if ((long)(m.LastRow - m.Row + 1) * (m.LastCol - m.Col + 1) <= 100_000)
+                {
+                    for (int r = m.Row; r <= m.LastRow; r++)
+                        for (int c = m.Col; c <= m.LastCol; c++)
+                            if (r != m.Row || c != m.Col) Covered.Add((r, c));
+                }
+            }
+        }
+
+        public double RowHeight(int r) => RowTop[r + 1] - RowTop[r];
+
+        public double ColWidth(int c) => ColLeft[c + 1] - ColLeft[c];
+
+        /// <summary>The row at an offset from the sheet's top (the last one before it when between rows).</summary>
+        public int RowAt(double y) => At(RowTop, LastRow, y);
+
+        public int ColAt(double x) => At(ColLeft, LastCol, x);
+
+        private static int At(double[] starts, int last, double offset)
+        {
+            int lo = 1, hi = last;
+            while (lo < hi)
+            {
+                int mid = (lo + hi + 1) / 2;
+                if (starts[mid] <= offset) lo = mid; else hi = mid - 1;
+            }
+
+            return lo;
+        }
     }
 
     private SheetCell? Cell(int r, int c) => _index.TryGetValue((r, c), out var v) ? v : null;
 
-    /// <summary>A body row's height at 100 % (padding 3 + line 15 + padding 3 + border 1), for virtualising.</summary>
-    private const float RowPx = 22f;
-
-    private int[] _rowsAfter = [];
-    private int _rowsFrom = -1, _rowsTo = -1;
-
-    /// <summary>Rows after the frozen ones (the same array while the range is the same, so Virtualize keeps its place).</summary>
-    private int[] RowsAfter(int frozen, int lastRow)
-    {
-        if (frozen != _rowsFrom || lastRow != _rowsTo)
+    private RenderFragment ColHeaders(GridLayout g, int c0, int c1, double originX) => @<text>
+        @for (int c = c0; c <= c1; c++)
         {
-            _rowsFrom = frozen;
-            _rowsTo = lastRow;
-            _rowsAfter = lastRow > frozen ? Enumerable.Range(frozen + 1, lastRow - frozen).ToArray() : [];
+            double w = g.ColWidth(c);
+            if (w <= 0) continue;   // E-06: a hidden column has no header; the letters skip it, as in Excel
+            <div class="xv-colhdr" style="inset-inline-start:@Px(g.ColLeft[c] - originX);width:@Px(w);height:@Px(HeadH)">@ColLetter(c)</div>
+        }
+    </text>;
+
+    private RenderFragment RowHeaders(GridLayout g, int r0, int r1, double originY) => @<text>
+        @for (int r = r0; r <= r1; r++)
+        {
+            double h = g.RowHeight(r);
+            if (h <= 0) continue;
+            <div class="xv-rowhdr" style="top:@Px(g.RowTop[r] - originY);height:@Px(h);width:@Px(g.HeadW)">@r</div>
+        }
+    </text>;
+
+    /// <summary>How far past the window a cell is still drawn, so text that runs over from a cell just off screen
+    /// (and a merged range that starts there) is not missing.</summary>
+    private const int SpillCols = 20;
+
+    /// <summary>One part of the grid (the body, or a frozen part): its gridlines and its cells, placed from the
+    /// part's own corner (<paramref name="ox"/>, <paramref name="oy"/> are where that corner is on the sheet).</summary>
+    private RenderFragment Pane(SheetView s, GridLayout g, int r0, int r1, int c0, int c1, double ox, double oy) => @<text>
+        @if (r1 >= r0 && c1 >= c0)
+        {
+            @if (s.ShowGridLines)
+            {
+                @for (int r = r0; r <= r1; r++)
+                {
+                    if (g.RowHeight(r) <= 0) continue;
+                    <div class="xv-hl" style="top:@Px(g.RowTop[r + 1] - oy - 1)"></div>
+                }
+                @for (int c = c0; c <= c1; c++)
+                {
+                    if (g.ColWidth(c) <= 0) continue;
+                    <div class="xv-vl" style="inset-inline-start:@Px(g.ColLeft[c + 1] - ox - 1)"></div>
+                }
+            }
+            @for (int r = r0; r <= r1; r++)
+            {
+                if (!g.Rows.TryGetValue(r, out var cells)) continue;
+                // A cell belongs to one part only: the frozen columns, or the columns that scroll.
+                int colMin = c0 > g.FrozenCols ? g.FrozenCols + 1 : 1, colMax = c0 > g.FrozenCols ? g.LastCol : g.FrozenCols;
+                foreach (var cell in cells)
+                {
+                    if (cell.Col < Math.Max(colMin, c0 - SpillCols)) continue;
+                    if (cell.Col > Math.Min(colMax, c1 + SpillCols)) break;
+                    if (g.Covered.Contains((r, cell.Col))) continue;
+                    @CellBox(s, g, cells, cell, ox, oy)
+                }
+            }
+            @* A merged range that starts above or before the window but reaches into it. *@
+            @foreach (var m in g.Merges)
+            {
+                if (m.LastRow < r0 || m.Row > r1 || m.LastCol < c0 || m.Col > c1) continue;
+                if (m.Row >= r0 && m.Col >= c0 - SpillCols) continue;   // drawn above, with its row
+                // Its top-left cell must be in this part (frozen or scrolling), or it is that part's to draw.
+                if ((m.Row <= g.FrozenRows) != (r0 <= g.FrozenRows) || (m.Col <= g.FrozenCols) != (c0 <= g.FrozenCols)) continue;
+                if (Cell(m.Row, m.Col) is { } anchor && g.Rows.TryGetValue(m.Row, out var row))
+                {
+                    @CellBox(s, g, row, anchor, ox, oy)
+                }
+            }
+        }
+    </text>;
+
+    private RenderFragment? CellBox(SheetView sheet, GridLayout g, SheetCell[] row, SheetCell cell, double ox, double oy)
+    {
+        bool rtl = sheet.RightToLeft;
+        int r = cell.Row, c = cell.Col, lastR = r, lastC = c;
+        bool merged = g.MergeAt.TryGetValue((r, c), out var m);
+        if (merged)
+        {
+            lastR = Math.Min(m.LastRow, g.LastRow);
+            lastC = Math.Min(m.LastCol, g.LastCol);
         }
 
-        return _rowsAfter;
+        double x = g.ColLeft[c], w = g.ColLeft[lastC + 1] - x, y = g.RowTop[r], h = g.RowTop[lastR + 1] - y;
+        if (w <= 0 || h <= 0) return null;   // E-06: in a hidden row or column
+
+        // E-09: text that doesn't fit runs over the empty cells beside it, up to the next cell that holds something
+        // (to the right for left-aligned text, to the left for right-aligned, both ways when centred). Numbers,
+        // wrapped text and merged cells stay inside their cell.
+        double textX = x, textW = w;
+        bool spills = !merged && !cell.Wrap && !cell.IsNumber && cell.Rotation == 0 && cell.Text.Length > 0 && cell.Bar is null;
+        if (spills)
+        {
+            // Left and right are sides of the screen. On a right-to-left sheet the columns run the other way, so text
+            // that starts at a cell's left edge runs towards the lower columns.
+            string align = cell.Align.ToLowerInvariant();
+            if (rtl) align = align switch { "left" => "right", "right" => "left", _ => align };
+            int at = Array.IndexOf(row, cell);
+            if (align is "left" or "center")
+            {
+                int stop = Math.Min(g.LastCol + 1, c + SpillCols + 1);
+                for (int i = at + 1; i < row.Length; i++)
+                {
+                    if (!Blocks(g, row[i])) continue;
+                    stop = Math.Min(stop, row[i].Col);
+                    break;
+                }
+
+                textW = g.ColLeft[stop] - textX;
+            }
+
+            if (align is "right" or "center")
+            {
+                int stop = Math.Max(0, c - SpillCols - 1);
+                for (int i = at - 1; i >= 0; i--)
+                {
+                    if (!Blocks(g, row[i])) continue;
+                    stop = Math.Max(stop, row[i].Col);
+                    break;
+                }
+
+                double left = g.ColLeft[stop + 1];
+                textW += textX - left;
+                textX = left;
+            }
+
+            if (align == "center")
+            {
+                // Centred text spreads evenly: as far as the nearer blocking cell allows on both sides.
+                double reach = Math.Min(x - textX, textX + textW - (x + w));
+                textX = x - reach;
+                textW = w + 2 * reach;
+            }
+
+            spills = textW > w + 0.5;
+        }
+
+        string address = ColLetter(c) + r.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        string? title = cell.StyleOnly && cell.Note is null && cell.Link is null ? null
+            : cell.Value + (cell.Link is null ? null : "\n\nLink: " + cell.Link) + (cell.Note is null ? null : "\n\n" + cell.Note);
+        // The box sits on the gridlines around the cell (one pixel up and to the start), where Excel draws borders.
+        return @<div class="xv-cell @(merged ? "merged" : null) @(cell.StyleOnly ? "empty" : null) @(r <= g.FrozenRows ? "frozen-row" : null) @(!cell.StyleOnly && _hits.Contains((r, c)) ? "hit" : null) @(cell.Link is null ? null : "link")"
+                    style="inset-inline-start:@Px(x - ox - 1);top:@Px(y - oy - 1);width:@Px(w + 1);height:@Px(h + 1);@BoxStyle(cell)"
+                    title="@title" data-a="@(cell.StyleOnly ? null : address)" data-v="@(cell.StyleOnly ? null : cell.Value)" data-n="@cell.Note" data-l="@cell.Link">
+            @if (cell.Bar is { } bar)
+            {
+                <div class="xv-databar @(bar.FromRight ? "end" : null)" style="width:calc(@Css(bar.Percent)% - 4px);@BarStyle(bar)"></div>
+            }
+            @if (cell.Icon is { } icon)
+            {
+                <span class="xv-icon" aria-hidden="true">@IconGlyph(icon)</span>
+            }
+            @if (cell.Note is not null)
+            {
+                <span class="xv-note" aria-hidden="true"></span>
+            }
+            @if (cell.Text.Length > 0 && cell.Bar is not { ShowValue: false } && cell.Icon is not { ShowValue: false })
+            {
+                <div class="xv-t @(spills ? (cell.Fill is null && cell.FillCss is null ? "spill" : "spill filled") : null) @(cell.Wrap ? "wrap" : null) @(cell.Rotation == 255 ? "stacked" : null)"
+                     style="inset-inline-start:@Px(textX - x);width:@Px(textW + 1);@TextStyle(cell, rtl)">
+                    <span class="xv-s" style="@(cell.Rotation is not 0 and not 255 ? $"transform:rotate({-cell.Rotation}deg);" : null)">@CellText(cell)</span>
+                </div>
+            }
+        </div>;
     }
 
-    private RenderFragment Row(SheetView s, int r, int lastCol) => @<tr>
-        <th class="xv-rowhdr">@r</th>
-        @for (int c = 1; c <= lastCol; c++)
-        {
-            var cell = Cell(r, c);
-            <td class="xv-cell @(cell is null ? "empty" : null) @(s.FreezeRows > 0 && r <= s.FreezeRows ? "frozen-row" : null) @(cell is not null && _hits.Contains((r, c)) ? "hit" : null)"
-                style="@CellStyle(cell)" title="@cell?.Value" data-a="@(cell is null ? null : ColLetter(c) + r.ToString(System.Globalization.CultureInfo.InvariantCulture))" data-v="@cell?.Value">@CellText(cell)</td>
-        }
-    </tr>;
+    /// <summary>A cell stops its neighbour's text from running over it when it holds something or is part of a merge.</summary>
+    private static bool Blocks(GridLayout g, SheetCell c) =>
+        c.Text.Length > 0 || g.MergeAt.ContainsKey((c.Row, c.Col)) || g.Covered.Contains((c.Row, c.Col));
 
-    /// <summary>The display text; a "*x" format repeats x to fill the cell where the library says (FillIndex).</summary>
+    /// <summary>The display text: rich-text runs with their own fonts (E-12); a "*x" format repeats x to fill the cell
+    /// where the library says (FillIndex).</summary>
     private static RenderFragment? CellText(SheetCell? cell) => cell switch
     {
         null => null,
+        { Runs: { Count: > 0 } runs } => @<text>@foreach (var run in runs) { <span style="@RunStyle(run)">@run.Text</span> }</text>,
         { FillCharacter: char fill, FillIndex: int at } when at >= 0 && at <= cell.Text.Length => @<span class="xv-fill"><span>@cell.Text[..at]</span><span class="xv-rep" aria-hidden="true">@(new string(fill, 256))</span><span>@cell.Text[at..]</span></span>,
         _ => @<text>@cell.Text</text>,
     };
@@ -397,23 +717,121 @@
         return sb.ToString();
     }
 
-    private static string? ColWidthStyle(SheetView s, int col) =>
-        s.ColWidths.TryGetValue(col, out var w) ? $"width:{(w * 7).ToString(System.Globalization.CultureInfo.InvariantCulture)}px" : null;
+    private static string Inv(double v) => v.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
 
-    private static string? CellStyle(SheetCell? c)
+    /// <summary>The cell's own box: its fill and its borders (E-11).</summary>
+    private static string BoxStyle(SheetCell c)
     {
-        if (c is null) return null;
         var sb = new System.Text.StringBuilder();
-        sb.Append("text-align:").Append(c.Align.ToLowerInvariant() switch { "center" => "center", "right" => "right", _ => "left" }).Append(';');
-        sb.Append("vertical-align:").Append(c.VAlign.ToLowerInvariant() switch { "top" => "top", "center" or "middle" => "middle", _ => "bottom" }).Append(';');
+        if (c.Fill is { } fill) sb.Append("background-color:").Append(fill).Append(';');
+        if (c.FillCss is { } css) sb.Append("background:").Append(css).Append(';');
+        if (c.BorderTop is { } t) sb.Append("border-top:").Append(t).Append(';');
+        if (c.BorderBottom is { } b) sb.Append("border-bottom:").Append(b).Append(';');
+        if (c.BorderLeft is { } l) sb.Append("border-inline-start:").Append(l).Append(';');
+        if (c.BorderRight is { } r) sb.Append("border-inline-end:").Append(r).Append(';');
+        return sb.ToString();
+    }
+
+    /// <summary>The cell's text: alignment both ways, font, colour, indent (E-11).</summary>
+    private static string TextStyle(SheetCell c, bool rtl)
+    {
+        var sb = new System.Text.StringBuilder();
+        string h = c.Align.ToLowerInvariant() switch { "center" or "centercontinuous" => "center", "right" => "right", _ => "left" };
+        // Left and right are sides of the screen (as in Excel), also on a right-to-left sheet, where the row runs
+        // from the right: there the start of the row is the right side.
+        bool atRowStart = h == (rtl ? "right" : "left");
+        sb.Append("justify-content:").Append(h == "center" ? "center" : atRowStart ? "flex-start" : "flex-end").Append(';');
+        sb.Append("text-align:").Append(c.Align.ToLowerInvariant() is "justify" or "distributed" ? "justify" : h).Append(';');
+        sb.Append("align-items:").Append(c.VAlign.ToLowerInvariant() switch { "top" => "flex-start", "center" or "middle" => "center", _ => "flex-end" }).Append(';');
         if (c.Bold) sb.Append("font-weight:700;");
         if (c.Italic) sb.Append("font-style:italic;");
-        if (c.Underline) sb.Append("text-decoration:underline;");
-        if (c.FontName is { } fn) sb.Append($"font-family:'{fn}';");
-        if (c.FontSizePt is { } fz) sb.Append($"font-size:{fz.ToString(System.Globalization.CultureInfo.InvariantCulture)}pt;");
-        if (c.Wrap) sb.Append("white-space:pre-wrap;");
-        if (c.Color is { } col) sb.Append($"color:{col};");
-        if (c.Fill is { } fill) sb.Append($"background-color:{fill};");
+        if (c.Underline || c.Strike)
+        {
+            sb.Append("text-decoration:").Append(c.Underline ? "underline " : null).Append(c.Strike ? "line-through " : null)
+              .Append(c.DoubleUnderline ? "double" : null).Append(';');
+        }
+
+        if (c.FontName is { } fn) sb.Append("font-family:'").Append(fn.Replace("'", "", StringComparison.Ordinal)).Append("';");
+        double? size = c.FontSizePt;
+        if (c.VPos is { } pos)
+        {
+            sb.Append("vertical-align:").Append(pos).Append(';');
+            size = (size ?? 11) * 0.7;
+        }
+
+        if (size is { } fz) sb.Append("font-size:").Append(Inv(fz)).Append("pt;");
+        if (c.Color is { } col) sb.Append("color:").Append(col).Append(';');
+        if (c.Indent > 0) sb.Append(h == "right" ? "padding-right:" : "padding-left:").Append(Inv(3 + c.Indent * 9)).Append("px;");
+        if (c.Icon is not null && atRowStart) sb.Append("padding-inline-start:20px;");
         return sb.ToString();
+    }
+
+    private static string RunStyle(SheetRun r)
+    {
+        var sb = new System.Text.StringBuilder();
+        if (r.Bold is { } bold) sb.Append(bold ? "font-weight:700;" : "font-weight:400;");
+        if (r.Italic is { } italic) sb.Append(italic ? "font-style:italic;" : "font-style:normal;");
+        if (r.Underline == true || r.Strike == true)
+        {
+            sb.Append("text-decoration:").Append(r.Underline == true ? "underline " : null).Append(r.Strike == true ? "line-through" : null).Append(';');
+        }
+
+        if (r.FontName is { } fn) sb.Append("font-family:'").Append(fn.Replace("'", "", StringComparison.Ordinal)).Append("';");
+        double? size = r.FontSizePt;
+        if (r.VPos is { } pos)
+        {
+            sb.Append("vertical-align:").Append(pos).Append(';');
+            size = (size ?? 11) * 0.7;
+        }
+
+        if (size is { } fz) sb.Append("font-size:").Append(Inv(fz)).Append("pt;");
+        if (r.Color is { } col) sb.Append("color:").Append(col).Append(';');
+        return sb.ToString();
+    }
+
+    /// <summary>E-13: a data bar, solid or fading to white as Excel's gradient bars do.</summary>
+    private static string BarStyle(SheetBar bar)
+    {
+        string fill = bar.Gradient
+            ? $"background:linear-gradient(to {(bar.FromRight ? "left" : "right")}, {bar.Color}, #FFFFFF);"
+            : $"background:{bar.Color};";
+        return fill + (bar.Border is { } b ? $"border:1px solid {b};" : null);
+    }
+
+    /// <summary>E-13: an icon from a conditional format's set, drawn as a shape in the set's colours: arrows, traffic
+    /// lights and signs, flags, ticks and crosses, and ratings (bars filled to the icon's rank). Index 0 is the lowest.</summary>
+    private static RenderFragment IconGlyph(SheetIcon icon)
+    {
+        string set = icon.Set;
+        int n = Math.Max(2, icon.Count), i = Math.Clamp(icon.Index, 0, n - 1);
+        double rank = (double)i / (n - 1);   // 0 lowest … 1 highest
+        bool grey = set.Contains("Gray", StringComparison.OrdinalIgnoreCase);
+        string colour = grey ? "#6B6B6B" : rank >= 0.75 ? "#2E9E4F" : rank <= 0.25 ? "#D9372B" : "#E3A21A";
+        if (set.Contains("Arrow", StringComparison.OrdinalIgnoreCase) || set.Contains("Triangle", StringComparison.OrdinalIgnoreCase))
+        {
+            // Up for the highest, down for the lowest, level (or slanted, in the 4 and 5 sets) between.
+            double turn = 180 - rank * 180;   // 0° = up
+            return @<svg viewBox="0 0 16 16" width="14" height="14"><path d="M8 2 L13 8 H10 V14 H6 V8 H3 Z" fill="@colour" transform="rotate(@Inv(turn) 8 8)" /></svg>;
+        }
+
+        if (set.Contains("Symbol", StringComparison.OrdinalIgnoreCase))
+        {
+            string d = rank >= 0.75 ? "M3 8.5 L6.5 12 L13 4.5" : rank <= 0.25 ? "M4 4 L12 12 M12 4 L4 12" : "M8 3.5 V9.5 M8 12 V12.5";
+            return @<svg viewBox="0 0 16 16" width="14" height="14"><circle cx="8" cy="8" r="7.5" fill="@colour" /><path d="@d" stroke="#FFFFFF" stroke-width="2" fill="none" stroke-linecap="round" /></svg>;
+        }
+
+        if (set.Contains("Flag", StringComparison.OrdinalIgnoreCase))
+        {
+            return @<svg viewBox="0 0 16 16" width="14" height="14"><path d="M4 1.5 V14.5" stroke="#555555" stroke-width="1.5" /><path d="M4.5 2 H13 L10.5 5.5 L13 9 H4.5 Z" fill="@colour" /></svg>;
+        }
+
+        if (set.Contains("Rating", StringComparison.OrdinalIgnoreCase) || set.Contains("Quarters", StringComparison.OrdinalIgnoreCase) || set.Contains("Boxes", StringComparison.OrdinalIgnoreCase))
+        {
+            int bars = n - 1, lit = i;
+            return @<svg viewBox="0 0 16 16" width="14" height="14">@for (int b = 0; b < bars; b++) { double bw = 14.0 / bars - 1, bh = 4 + 9.0 * (b + 1) / bars; <rect x="@Inv(1 + b * (bw + 1))" y="@Inv(15 - bh)" width="@Inv(bw)" height="@Inv(bh)" fill="@(b < lit ? "#3F6FB5" : "#C9CED6")" /> }</svg>;
+        }
+
+        // Traffic lights, signs and anything else: a disc in the rank's colour.
+        return @<svg viewBox="0 0 16 16" width="14" height="14"><circle cx="8" cy="8" r="6.5" fill="@colour" stroke="rgba(0,0,0,.25)" /></svg>;
     }
 }

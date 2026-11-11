@@ -335,6 +335,7 @@ public sealed class ChuvadiPdfSession : IPdfSession
         new(new SvgExportOptions
         {
             TextStrategy = SvgTextStrategy.Selectable,
+            ApplyPageRotation = true,   // B-32: the page is shown turned as its /Rotate says, as PDF viewers show it
             Background = _transparentBackground ? (ColorF?)null : ColorF.White,
             LayerVisibility = CurrentOverrides?.ByName,
             LayerVisibilityById = CurrentOverrides?.ById,
@@ -696,6 +697,7 @@ public sealed class ChuvadiPdfSession : IPdfSession
                 new RenderOptions
                 {
                     Dpi = RasterDpi,
+                    ApplyPageRotation = true,   // B-32
                     Background = ColorF.White,
                     AntiAlias = true,
                     LayerVisibility = overrides?.ByName,
@@ -707,9 +709,11 @@ public sealed class ChuvadiPdfSession : IPdfSession
         PngEncoder.Encode(new ImageFrame(buffer, ImageColorFormat.Rgba32), ms, false);
 
         // D-160: the image is the shown box (the rasteriser draws the CropBox), so the SVG is that size, not the MediaBox's.
+        // B-32: turned a quarter either way, the image is the shown box on its side.
         var shown = ShownBox.Of(page);
-        string w = shown.W.ToString("0.###", CultureInfo.InvariantCulture);
-        string h = shown.H.ToString("0.###", CultureInfo.InvariantCulture);
+        bool sideways = (((page.Rotate % 180) + 180) % 180) == 90;
+        string w = (sideways ? shown.H : shown.W).ToString("0.###", CultureInfo.InvariantCulture);
+        string h = (sideways ? shown.W : shown.H).ToString("0.###", CultureInfo.InvariantCulture);
         if (keepImage is not null)
         {
             // D-158: the page draws from its address; the SVG around it is the same, character for character,
