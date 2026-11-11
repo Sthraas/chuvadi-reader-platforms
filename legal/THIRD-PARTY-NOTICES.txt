@@ -16,46 +16,46 @@ COMPONENTS
 ============================================================================================
 
 * Apache-2.0  -  Copyright © 2025 Chuvadi Contributors  -  https://github.com/arunshivab/chuvadi-pdf
-    Chuvadi.Cryptography 3.32.0
-    Chuvadi.Pdf 3.32.0
-    Chuvadi.Pdf.Annotations 3.32.0
-    Chuvadi.Pdf.Authoring 3.32.0
-    Chuvadi.Pdf.Color 3.32.0
-    Chuvadi.Pdf.Content 3.32.0
-    Chuvadi.Pdf.Documents 3.32.0
-    Chuvadi.Pdf.Encryption 3.32.0
-    Chuvadi.Pdf.Filters 3.32.0
-    Chuvadi.Pdf.Fonts 3.32.0
-    Chuvadi.Pdf.Fonts.Bundled 3.32.0
-    Chuvadi.Pdf.Fonts.Rendering 3.32.0
-    Chuvadi.Pdf.Fonts.Woff2 3.32.0
-    Chuvadi.Pdf.Forms 3.32.0
-    Chuvadi.Pdf.Graphics 3.32.0
-    Chuvadi.Pdf.IO 3.32.0
-    Chuvadi.Pdf.Images 3.32.0
-    Chuvadi.Pdf.Objects 3.32.0
-    Chuvadi.Pdf.Operations 3.32.0
-    Chuvadi.Pdf.PdfA 3.32.0
-    Chuvadi.Pdf.Primitives 3.32.0
-    Chuvadi.Pdf.Reader 3.32.0
-    Chuvadi.Pdf.Redaction 3.32.0
-    Chuvadi.Pdf.Rendering 3.32.0
-    Chuvadi.Pdf.Rendering.DisplayList 3.32.0
-    Chuvadi.Pdf.Rendering.Raster 3.32.0
-    Chuvadi.Pdf.Rendering.Walking 3.32.0
-    Chuvadi.Pdf.Rendering.Wpf 3.32.0
-    Chuvadi.Pdf.Signatures 3.32.0
-    Chuvadi.Pdf.Svg 3.32.0
-    Chuvadi.Pdf.Text 3.32.0
-    Chuvadi.Pdf.Text.Shaping 3.32.0
-    Chuvadi.Pdf.Watermark 3.32.0
-    Chuvadi.Pdf.Xfa 3.32.0
+    Chuvadi.Cryptography 3.33.0
+    Chuvadi.Pdf 3.33.0
+    Chuvadi.Pdf.Annotations 3.33.0
+    Chuvadi.Pdf.Authoring 3.33.0
+    Chuvadi.Pdf.Color 3.33.0
+    Chuvadi.Pdf.Content 3.33.0
+    Chuvadi.Pdf.Documents 3.33.0
+    Chuvadi.Pdf.Encryption 3.33.0
+    Chuvadi.Pdf.Filters 3.33.0
+    Chuvadi.Pdf.Fonts 3.33.0
+    Chuvadi.Pdf.Fonts.Bundled 3.33.0
+    Chuvadi.Pdf.Fonts.Rendering 3.33.0
+    Chuvadi.Pdf.Fonts.Woff2 3.33.0
+    Chuvadi.Pdf.Forms 3.33.0
+    Chuvadi.Pdf.Graphics 3.33.0
+    Chuvadi.Pdf.IO 3.33.0
+    Chuvadi.Pdf.Images 3.33.0
+    Chuvadi.Pdf.Objects 3.33.0
+    Chuvadi.Pdf.Operations 3.33.0
+    Chuvadi.Pdf.PdfA 3.33.0
+    Chuvadi.Pdf.Primitives 3.33.0
+    Chuvadi.Pdf.Reader 3.33.0
+    Chuvadi.Pdf.Redaction 3.33.0
+    Chuvadi.Pdf.Rendering 3.33.0
+    Chuvadi.Pdf.Rendering.DisplayList 3.33.0
+    Chuvadi.Pdf.Rendering.Raster 3.33.0
+    Chuvadi.Pdf.Rendering.Walking 3.33.0
+    Chuvadi.Pdf.Rendering.Wpf 3.33.0
+    Chuvadi.Pdf.Signatures 3.33.0
+    Chuvadi.Pdf.Svg 3.33.0
+    Chuvadi.Pdf.Text 3.33.0
+    Chuvadi.Pdf.Text.Shaping 3.33.0
+    Chuvadi.Pdf.Watermark 3.33.0
+    Chuvadi.Pdf.Xfa 3.33.0
 
 * MIT  -  Arun  -  https://github.com/arunshivab/chuvadi
     Chuvadi.Docs 2.1.0
     Chuvadi.Print 1.0.0-rc.2
     Chuvadi.Print.Ipp 1.0.0-rc.2
-    Chuvadi.Sheets 2.0.4
+    Chuvadi.Sheets 2.0.5
     Chuvadi.Zip 1.0.0
 
 * MIT AND OFL-1.1  -  Arun  -  https://github.com/arunshivab/chuvadi
