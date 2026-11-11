@@ -700,3 +700,32 @@ as errors; Reader 305/305 (3 skipped), host kit 91/91, Linux 46/46, Web Ui 41/41
 - **Word:** `discharge.docx` and `landscape.docx` show all their text with no notice (the 4 x 4 px picture at 4 pt
   is drawn at that size, as the file says); a copy of `discharge.docx` with its header part damaged opens with its
   text and "Part of this document is damaged and is left out: a header."
+
+### 55. Patch 26 merged (07ed3ca); start-up mark; pinch zooms the page (11 Nov)
+- **Merge of `platform/foundation-pr` 07ed3ca** (PR 17, Reader main 0cd4915): clean; shared `src` and `tests`
+  identical to 07ed3ca. Unit tests: Reader 374 passed / 6 skipped, host kit 91, Linux 61, Web Ui 41, Mobile Ui 16.
+  Full UI pass under Xvfb: **124/124** (two new steps, below). Checked by hand on this build: a page's `/Rotate`
+  90, 180 and 270 is followed on screen (B-32); Foundation's `layout.xlsx` shows as a grid with the two hidden
+  sheets dimmed and marked "hidden"; a Windows-1252 text file reads "Café résumé – “quoted” €5, naïve".
+- **Start-up gap** (Arun's laptop check: blank for about 1.3 s, then everything at once). Measured here: window
+  shown at 0.3 to 0.7 s in its pre-paint colour, host page loaded at 0.9 s, first render at 1.3 to 1.6 s; nothing
+  drawn in between. Now the host draws the splash's 230 x 6 progress bar (theme accent) on the pre-paint colour
+  over the web view from the window's first frame, and removes it (140 ms fade) at `IAppReadySignal.Ready`;
+  after 20 s it goes anyway, as the Windows splash does. GTK widgets and CSS only (`chvdhost.c`: `make_cover`,
+  `chvd_start_mark`, `chvd_ready`). Frames captured through start-up show the bar from the first frame the window
+  is on screen until the app appears.
+- **Dark theme flashed light** in the same gap: the host page painted light parchment until `theme.js` ran. The
+  host page is now served with the saved theme on its root element (`HostPageTheme`), and its dark background is
+  the window's own (#1b1410, was #100b08). Tests: `HostPageThemeTests`.
+- **Pinch did nothing.** Cause: the host claims GTK's zoom gesture so WebKit doesn't zoom the whole app, and
+  sent it nowhere; WebKitGTK doesn't turn a pinch into a wheel event with Ctrl, as the other engines do. Now
+  each change of the gesture's scale goes to the page as that event (`forward_pinch`: a `WheelEvent` with
+  `ctrlKey`, at the pinch's place, `deltaY = -ln(step) / 0.0015` to match reader.js). No shared file changed. The
+  0.0015 is reader.js's own constant: if Foundation changes it, pinch speed on Linux drifts (not direction or
+  anchoring). Ctrl+scroll already worked. Home and Settings have no zoom; nothing moves there.
+- **UI steps:** 01b (the mark is gone after the first render), 37 (pinch steps zoom 0.86 → 1.39 and back, the
+  point under the fingers stays put once the page is wider than the view; real Ctrl+scroll up and down; the app
+  itself never scales; Home unchanged). A real pinch can't be made under Xvfb: step 37 calls the host's
+  forwarding with the values the gesture would send. **Not checked here:** a real trackpad, GNOME Wayland, a GPU.
+- **Not done, for a decision:** Settings → "Splash screen on launch" does nothing on Linux (Windows shows the
+  designed splash window when it's on).
