@@ -255,6 +255,7 @@ def tool(*names):
 def save_as():
     """Save as new PDF → picker → the new file's path."""
     mark_time()
+    put_away = card_away() if phone() else None
     hit = tap("Save as new PDF", "Save as", sel=".ph-fab, .rb, .ph-row, button")
     if not hit and phone():
         tap("More", sel=".ph-ib")
@@ -263,7 +264,30 @@ def save_as():
     picker = save_picker()
     time.sleep(2)
     files = new_pdfs()
-    return {"button": hit, "picker": picker, "files": files, "app_says": says()}
+    return {"button": hit, "picker": picker, "files": files, "app_says": says(), "mark_card_put_away_by": put_away}
+
+
+FCARD = "(() => { " + VIS + " const e = [...document.querySelectorAll('.fcard')].find(vis); if (!e) return null; const r = e.getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; })()"
+
+
+def card_away():
+    """Phone: a selected mark's property card sits over the Save button. Put it away the ways a person would try."""
+    c = cdp.js(FCARD)
+    if not c:
+        return "no card"
+    a = to_screen(c[0] + c[2] / 2, c[1] + 14)
+    b = to_screen(c[0] + c[2] / 2, c[1] + c[3] - 10)
+    sh(f"input swipe {a[0]} {a[1]} {b[0]} {b[1]} 300")
+    time.sleep(1.2)
+    if not cdp.js(FCARD):
+        return "swipe down on the card"
+    r = cdp.js("(() => { const e = [...document.querySelectorAll('.rpage-wrap .rpage')].filter(e => e.getBoundingClientRect().width > 0)[0].getBoundingClientRect(); return [e.left, e.top, e.width, e.height]; })()")
+    q = to_screen(r[0] + r[2] * 0.92, max(r[1], 0) + 70)
+    sh(f"input tap {q[0]} {q[1]}")
+    time.sleep(1.2)
+    if not cdp.js(FCARD):
+        return "tap on an empty part of the page"
+    return "nothing put it away (swipe down on it, tap on the page)"
 
 
 def says():
@@ -464,7 +488,30 @@ BENCH = "(() => { " + VIS + r""" const rect = e => { if (!e) return null; const 
            cards: [...document.querySelectorAll('.desk-drop [data-bench-id]')].filter(vis).map(rect) }; })()"""
 
 
+def folder_picker(sub, tries=24):
+    """ACTION_OPEN_DOCUMENT_TREE picker: Downloads › sub › USE THIS FOLDER › ALLOW."""
+    inside = False
+    for _ in range(tries):
+        xml = ui_dump()
+        if ui_tap_text("ALLOW", "Allow"):
+            time.sleep(3)
+            return True
+        if "documentsui" in xml:
+            if inside and ui_tap_text("USE THIS FOLDER", "Use this folder"):
+                time.sleep(1.5)
+                continue
+            if not inside and ui_tap_text(sub):
+                inside = True
+                time.sleep(1.5)
+                continue
+            if not inside:
+                ui_tap_text("Downloads", "Download") or ui_tap_text("Show roots")
+        time.sleep(1.2)
+    return False
+
+
 def sv5_arrange():
+    sh("mkdir -p /sdcard/Download/at-bind")
     sh(f"pm clear {PKG}")          # one tab only, so the Shelf holds just this file
     sh(f"am start -W -n {COMP}")
     cdp.close()
@@ -505,6 +552,25 @@ def sv5_arrange():
     shot("sv5-two-on-desk")
     R.check("SV-5a long-press drag puts two shelf pages on the desk", len(st["order"]) == start + 2, {"drops": dropped, "desk_before": start})
     id_p3 = dropped[0]["new_ids"][0] if dropped[0]["new_ids"] else None
+    sent = None
+    if len(st["order"]) == start:
+        # no drag landed: use the Reader's own "Send this page to a desk" so Bind is still exercised
+        mode("Read")
+        time.sleep(1)
+        s1 = tap("Send this page to a desk", sel="button")
+        time.sleep(1.5)
+        pick1 = tap("Desk 1", "New desk", sel="[role=menu] *, .menu *, .chvd-card button, button")
+        tap("Next page", sel="button")
+        time.sleep(1)
+        s2 = tap("Send this page to a desk", sel="button")
+        time.sleep(1.5)
+        tap("Desk 1", "New desk", sel="[role=menu] *, .menu *, .chvd-card button, button")
+        mode("Arrange")
+        time.sleep(1.5)
+        st = cdp.js(BENCH)
+        sent = {"send": s1, "desk_choice": pick1, "second": s2, "desk_now": len(st["order"]), "controls": labels() if len(st["order"]) == start else None}
+        shot("sv5-sent-from-reader")
+        R.check("SV-5a2 (tablet, other way) Reader › Send this page to a desk puts pages on the desk", len(st["order"]) >= start + 1, sent)
     before = st["order"][:]
     tried = []
     for way in ("first-to-end", "last-to-front"):
@@ -524,15 +590,16 @@ def sv5_arrange():
     mark_time()
     hit = tap("Bind all", "Bind desk", "Bind", sel=".ph-fab, .ph-pager, .rb, .bt-bind, button")
     time.sleep(2)
-    picker = save_picker()
-    time.sleep(3)
+    picker = folder_picker("at-bind")
+    time.sleep(5)
     files = new_pdfs()
+    shot("sv5-bound")
     got = None
     if files:
         rd, pages = read(files[-1], "sv5-bound.pdf")
         got = [int(m.group(1)) if (m := re.search(r"- page (\d+)", t)) else None for t in pages]
-    want = [3 if i == id_p3 else 1 for i in after][-2:] if id_p3 else None
-    R.check("SV-5c bound PDF holds the desk's pages in the desk's order", bool(got and want and got[-len(want):] == want),
+    want = [3 if i == id_p3 else 1 for i in after][-2:] if id_p3 else ([1, 2][:len(after)] if sent and after else None)
+    R.check("SV-5c Bind all → folder chosen → bound PDF holds the desk's pages in the desk's order", bool(got and want and got[-len(want):] == want),
             {"button": hit, "picker": picker, "files": files, "saved_pages": got, "desk_order_as_pages": want, "app_says": says()})
 
 
@@ -610,12 +677,18 @@ def sv7_password():
     t = tool("Protect: Password", "Password", "Set a password", "Set password", "Encrypt") or doc_action("Password", "Set a password", "Protect with a password")
     time.sleep(1.5)
     ins = card_inputs()
-    for f in [i for i in ins if i["type"] == "password"][:2]:
-        tap_xy(f["x"], f["y"])
+    for n in range(2):
+        now = [i for i in card_inputs() if i["type"] == "password"]
+        if len(now) <= n:
+            break
+        tap_xy(now[n]["x"], now[n]["y"])
+        time.sleep(0.8)
         sh("input text chuvadi1")
-        time.sleep(0.6)
-    sh("input keyevent KEYCODE_BACK")
-    time.sleep(1)
+        time.sleep(0.8)
+        if "mInputShown=true" in sh("dumpsys input_method | grep mInputShown"):
+            sh("input keyevent KEYCODE_BACK")
+            time.sleep(1)
+    pw_state = cdp.js("[...document.querySelectorAll('.chvd-card input[type=password], [role=dialog] input[type=password], .ph-sheet input[type=password]')].map(e => e.value.length)")
     shot("sv7-card")
     btns = card_buttons()
     mark_time()
@@ -635,7 +708,7 @@ def sv7_password():
             res = {"error": repr(e)[:120]}
     R.check("SV-7 password-protected copy saved: encrypted, opens with the password, 12 pages",
             bool(res and res.get("encrypted") and res.get("opens_with_password") and res.get("pages") == 12),
-            {"tool": t, "fields": ins, "card_buttons": btns, "button": hit, "picker": picker, "files": files, "pdf": res, "app_says": says()})
+            {"tool": t, "fields": ins, "typed_lengths": pw_state, "card_buttons": btns, "button": hit, "picker": picker, "files": files, "pdf": res, "app_says": says()})
     R.check("SV-7b the picked original is still unencrypted", md5("sv-pass.pdf") == ORIG["sv-pass.pdf"], None)
 
 
@@ -665,7 +738,7 @@ def doc_save(case_id, name, action_labels, confirm_labels):
 
 
 def sv8_compress():
-    doc_save("SV-8", "sv-compress.pdf", ("Compress", "Compress…"), ("Compress and save", "Compress", "Save"))
+    doc_save("SV-8", "sv-compress.pdf", ("Reduce file size", "Compress", "Compress…"), ("Reduce and save", "Save smaller copy", "Save a smaller copy", "Press and save", "Press", "Reduce", "Compress and save", "Compress", "Save"))
 
 
 def sv9_flatten():
