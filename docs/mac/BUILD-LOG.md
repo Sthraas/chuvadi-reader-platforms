@@ -580,3 +580,15 @@ the TabsService lock from `docs/mac/foundation/TabsService-overlapping-opens.pat
 record) and Docs 2.1.0. New smoke phase: four files handed over at launch and six more at once while running — all ten
 become tabs, one process, no error bar, nothing logged as an error. The tab-key phase hands its two files over together
 again.
+
+### 2026-11-11 (06:45) — rebased onto foundation-pr 07ed3ca (patch 26); M-24; trackpad pinch
+- **M-24 (tab order), Mac only:** the smoke log shows tabs follow the order files *arrive* in exactly; macOS hands a
+  batch over as an unordered set (`NSSet<UIOpenURLContext>`), so the given order cannot be recovered. A batch now opens
+  in Finder's Name order (name without extension, case ignored, numbers by value; then extension, then path) —
+  `Platform/FileBatchOrder.cs`, 3 unit tests; smoke checks both batches (four at launch, six while running).
+  Not chosen: keep macOS's order (shuffled, differs from what people see in Finder); sort by date (surprising).
+- **Trackpad pinch:** the Ui zooms on wheel + Ctrl — how Chromium reports a pinch. WebKit does not; on Mac a pinch is a
+  UIKit gesture and the WebView's own zoom is locked at 1, so pinch did nothing here either. `Platform/MacPinch.cs`
+  watches the pinch and hands each step to the page as the wheel + Ctrl event it expects, at the pointer; reader.js
+  zooms around the pointer as on Windows. No shared change. Smoke checks the page half (a 1.5× step zooms in, a 0.5×
+  step out); the gesture itself needs a real trackpad — added to REAL-MAC-CHECKS §11.

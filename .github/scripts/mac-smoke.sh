@@ -262,16 +262,24 @@ sleep 2
 MANY="$RUNNER_TEMP/smoke-many"; rm -rf "$MANY"; mkdir -p "$MANY"
 for i in 01 02 03 04 05 06 07 08 09 10; do cp "$DOCS/five-pages.pdf" "$MANY/many$i.pdf"; done
 rm -f "$LOG"
-open -n --env CHUVADI_SMOKE=1 --env "CHUVADI_SMOKE_STEPS=wait;wait;wait;wait;wait;wait" --stdout "$LOG" --stderr "$LOG" \
+open -n --env CHUVADI_SMOKE=1 --env "CHUVADI_SMOKE_STEPS=wait;wait;wait;wait;wait;wait;pinch:1.5;pinch:0.5" --stdout "$LOG" --stderr "$LOG" \
   -a "$APP" "$MANY/many01.pdf" "$MANY/many02.pdf" "$MANY/many03.pdf" "$MANY/many04.pdf"
 all_tabs() { local last; last=$(grep -E "CHUVADI tabs [0-9]+: " "$LOG" | tail -1); for i in "$@"; do [[ "$last" == *"many$i.pdf"* ]] || return 1; done; }
 end=$((SECONDS + 90)); until all_tabs 01 02 03 04 || [ $SECONDS -ge $end ]; do sleep 0.5; done
+ord() { grep -E "CHUVADI tabs [0-9]+: " "$LOG" | tail -1 | grep -oE "many[0-9]+" | tr '\n' ' ' | sed 's/ $//'; }
 all_tabs 01 02 03 04 && pass "four files at launch all become tabs" || fail "four files at launch: $(grep -E 'CHUVADI tabs' "$LOG" | tail -1 | sed -E 's/.*CHUVADI //')"
 open -a "$APP" "$MANY/many05.pdf" "$MANY/many06.pdf" "$MANY/many07.pdf" "$MANY/many08.pdf" "$MANY/many09.pdf" "$MANY/many10.pdf"
 end=$((SECONDS + 90)); until all_tabs 01 02 03 04 05 06 07 08 09 10 || [ $SECONDS -ge $end ]; do sleep 0.5; done
 all_tabs 01 02 03 04 05 06 07 08 09 10 && pass "six more files at once while running all become tabs (ten in all)" \
   || fail "six more at once: $(grep -E 'CHUVADI tabs' "$LOG" | tail -1 | sed -E 's/.*CHUVADI //')"
+o=$(ord)
+[ "$o" = "many01 many02 many03 many04 many05 many06 many07 many08 many09 many10" ] && pass "M-24 each batch becomes tabs in name order" || fail "M-24 tab order: $o"
+grep -E "CHUVADI files-arrived" "$LOG" | sed -E 's/.*CHUVADI //'
 wait_for 'CHUVADI steps done' 60 || true
+z() { grep -E "CHUVADI step $1 [a-z]+: route=" "$LOG" | tail -1 | sed -E 's/.* zoom=([0-9.]+).*/\1/'; }
+z6=$(z 6); z7=$(z 7); z8=$(z 8); echo "page zoom: before=$z6 after a 1.5× pinch step=$z7 after a 0.5× step=$z8"
+python3 -c 'import sys; a,b,c=map(float,sys.argv[1:4]); sys.exit(0 if b>a*1.2 and c<b*0.7 else 1)' "${z6:-0}" "${z7:-0}" "${z8:-0}" 2>/dev/null \
+  && pass "a pinch step zooms the page in and out (the page half; the gesture needs a real trackpad)" || fail "pinch: zoom $z6 → $z7 → $z8"
 s=$(grep -E "CHUVADI step [0-9]+ wait: route=" "$LOG" | tail -1)
 [[ "$s" == *"reader=1"* && "$s" == *"errorbar=none"* ]] && pass "after ten overlapping opens the Ui lives" || fail "after overlapping opens: ${s:-no report}"
 grep -qE 'CHUVADI log (Error|Critical)|Collection was modified' "$LOG" && { fail "overlapping opens logged an error"; grep -E 'CHUVADI log (Error|Critical)' "$LOG" | head -2 | cut -c1-600; } \
