@@ -1,0 +1,23 @@
+2026-11-11 01:24:18.488 ChuvadiReader.Mac[5914:22224] CHUVADI_STARTUP window 696ms
+2026-11-11 01:24:18.588 ChuvadiReader.Mac[5914:22224] CHUVADI_STARTUP webview-ready 795ms
+2026-11-11 01:24:18.594 ChuvadiReader.Mac[5914:22224] CHUVADI_STARTUP wk-ui-loaded 801ms
+2026-11-11 01:24:18.621 ChuvadiReader.Mac[5914:22224] CHUVADI_STARTUP wk-ui-loading 829ms
+*** Terminating app due to uncaught exception 'System.InvalidOperationException', reason: 'Failed to compare two elements in the array. (System.InvalidOperationException)
+   at System.Collections.Generic.ArraySortHelper`1[[System.Int32, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]].Sort(Span`1 , Comparison`1 )
+   at System.MemoryExtensions.Sort[Int32](Span`1 , Comparison`1 )
+   at System.Linq.Enumerable.EnumerableSorter`2[[System.String, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e],[System.String, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea779
+   at System.Linq.Enumerable.EnumerableSorter`1[[System.String, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]].Sort(String[] , Int32 )
+   at System.Linq.Enumerable.OrderedIterator`1[[System.String, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]].SortedMap(String[] )
+   at System.Linq.Enumerable.OrderedIterator`2[[System.String, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e],[System.String, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798
+   at System.Linq.Enumerable.<ToArray>g__EnumerableToArray|324_0[String](IEnumerable`1 )
+   at System.Linq.Enumerable.ToArray[String](IEnumerable`1 )
+   at ChuvadiReader.Mac.Platform.FileBatchOrder.Sort(IEnumerable`1 paths)
+   at ChuvadiReader.Mac.MauiProgram.Incoming(IEnumerable`1 urls)
+   at ChuvadiReader.Mac.MauiProgram.<>c.<CreateMauiApp>b__0_5(UIScene _, NSSet`1 contexts)
+   at Microsoft.Maui.MauiUISceneDelegate.<>c__DisplayClass12_0.<OpenUrl>b__0(SceneOpenUrl del)
+   at Microsoft.Maui.LifecycleEvents.LifecycleEventServiceExtensions.InvokeLifecycleEvents[SceneOpenUrl](IServiceProvider services, Action`1 action)
+   at Microsoft.Maui.MauiUISceneDelegate.OpenUrl(UIScene scene, NSSet`1 urlContexts)
+   at Microsoft.Maui.MauiUISceneDelegate.__Registrar_Callbacks__.callback_454_Microsoft_Maui_MauiUISceneDelegate_OpenUrl(IntPtr pobj, IntPtr sel, IntPtr p0, IntPtr p1, IntPtr* exception_gchandle)
+CompareOptions = IgnoreCase, NumericOrdering are not supported when HybridGlobalization=true on this platform. Disable it to load larger ICU bundle, then use this option. (System.PlatformNotSupportedException)
+   at System.Globalization.CompareInfo.AssertComparisonSupported(CompareOptions )
+   at System.Globalization.CompareInfo.CompareStringNative(ReadOnlySpan`1 , ReadOnlySpan`1 , CompareOptions )

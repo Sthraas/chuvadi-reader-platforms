@@ -1561,15 +1561,22 @@ def p26():
     r["error"] = ui_error()
     press("Mark 2")
     time.sleep(1.5)
-    press("Rectangle", role="AXButton", click=True)
+    rc, o = press("Rectangle", role="AXButton")  # Accessibility press: the collapsed rail's frames don't match the screen
+    r["tool_press"] = o[:100]
     time.sleep(1)
     cx, cy, win = main_centre()
     r["window"] = win
-    r["drag_screen"] = [cx - 150, cy - 110, cx + 30, cy + 10]
+    # In Mark mode at this window size the page sits at window (378,213)–(812,520). Drag well inside it.
+    r["drag_window"] = [480, 300, 600, 400]
+    r["drag_screen"] = [win[0] + 480, win[1] + 300, win[0] + 600, win[1] + 400]
+    # /Rotate 90: across the screen = up the page's y (842), down the screen = along its x (595)
+    r["expected_rect_approx"] = [round((300 - 213) / 307 * 595), round((480 - 378) / 434 * 842),
+                                 round((400 - 213) / 307 * 595), round((600 - 378) / 434 * 842)]
     drive("drag", *r["drag_screen"])
     time.sleep(1.5)
     r["marked_shot"] = shot("p26-rotated-marked")
-    rc, o = press("Save", role="AXButton", click=True)
+    r["status_after_mark"] = [re.sub(r"\s*@.*$", "", l.strip())[:120] for l in axdump("p26-rotated-marked").splitlines() if re.search(r"shape|unsaved", l)][:3]
+    rc, o = press("Save", role="AXButton")
     r["save_press"] = o[:100]
     time.sleep(4)
     r["after_save_shot"] = shot("p26-rotated-after-save")
@@ -1585,6 +1592,13 @@ def p26():
     except Exception as e:  # noqa
         r["qpdf_error"] = str(e)[:200]
     r["new_square_saved"] = len(r.get("squares", [])) >= 2  # the fixture has one Square already
+    exp = r["expected_rect_approx"]
+    r["new_square_where_expected"] = any(
+        q["Rect"] and all(abs(float(a) - b) <= 25 for a, b in zip(sorted(map(float, q["Rect"][0::2])) + sorted(map(float, q["Rect"][1::2])),
+                                                                 sorted(exp[0::2]) + sorted(exp[1::2])))
+        for q in r.get("squares", []) if q["Rect"] != [100, 600, 260, 680])
+    # reopen-free check on screen: the saved mark must still sit where it was drawn
+    r["after_save_status"] = [re.sub(r"\s*@.*$", "", l.strip())[:120] for l in axdump("p26-rotated-saved").splitlines() if re.search(r"shape|saved", l)][:3]
     # print it
     before = spool_files()
     drive("key", "cmd+p")
@@ -1604,6 +1618,8 @@ def p26():
         sh(f"sudo cp /var/spool/cups/{new[-1]} '{f}' && sudo chmod 644 '{f}'")
         pr = {}
         r["print_vector"] = check_printed(f, pr, "marker-1")
+        r["print_text"] = pr.get("text", "")[:200]
+        r["print_has_page_text"] = "marker-1" in pr.get("text", "")
         r["print_info"] = [l for l in pr.get("info", "").splitlines() if re.search(r"Page size|Page rot|Pages", l)]
         r["print_images"] = pr.get("images", "")[:300]
         r["print_live_annots"] = pr.get("live_annots")
@@ -1613,7 +1629,7 @@ def p26():
     quit_app()
     ev["rotated"] = r
     if not (ok and not r["error"] and r["new_square_saved"] and r["print_vector"]):
-        bad.append(f"rotated page (mark saved={r['new_square_saved']}, print vector={r['print_vector']})")
+        bad.append(f"rotated page (mark saved={r['new_square_saved']} where drawn={r.get('new_square_where_expected')}, print vector={r['print_vector']})")
 
     # ── Excel: formats, Find on value and on shown text, hidden sheet ─────────────────────────
     reset_state({"theme": "light"})
