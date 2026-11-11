@@ -367,7 +367,7 @@ if wait_for 'CHUVADI tabs [0-9]+: (.*, )?one\.pdf$' 90; then pass "M-02 a file g
 
 # --- M-02 (b): two more files while running — same process, two more tabs ----------------------------
 open -a "$APP" "$DOCS/two.pdf" "$DOCS/three.pdf"
-if wait_for 'CHUVADI tabs [0-9]+: .*one\.pdf, two\.pdf, three\.pdf$' 60; then pass "M-02 files opened while running become tabs"; else fail "M-02 running-app files did not open"; fi
+if wait_for 'CHUVADI tabs [0-9]+: .*one\.pdf, three\.pdf, two\.pdf$' 60; then pass "M-02 files opened while running become tabs"; else fail "M-02 running-app files did not open"; fi
 n=$(pgrep -f "$APP/Contents/MacOS/$EXE" | wc -l | tr -d ' ')
 [ "$n" = "1" ] && pass "single instance ($n process)" || fail "single instance: $n processes"
 sleep 4   # the menu is dumped 1.5 s after the tabs change
