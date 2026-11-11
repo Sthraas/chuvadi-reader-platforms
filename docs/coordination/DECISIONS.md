@@ -470,5 +470,11 @@ The account's weekly usage limit was reached ("Resets Nov 16 at 12:30 PM"). All 
 ## D-177 — Part 5 is one large PR (Arun; replaces D-176's option A)
 11 Nov 2026. Arun: "let's have one large PR". B-32 (/Rotate on screen), the two small fixes, the Word note margins and the whole Excel work (audit fixes, D-171, D-172, H-23 + Web UI value-bar diff, text encoding) go in a single PR, as separate commits, on current main.
 
+## D-178 — Android pins the workload version as well as the SDK
+11 Nov 2026. Every build uses the same runtime; Android and Foundation agree the exact global.json lines.
+
+## D-179 — PR #17 merged on Arun's word; desk-menu entries show on every app
+11 Nov 2026. Reader main 0cd4915 (patch 26: /Rotate on screen B-32, Excel grid as the file holds it with D-171/D-172, H-23, text encoding T-01, Word note margins, tabs close with their owner WT-22). Windows Reader asked whether the Arrange desk-menu entries (Duplicate, Rotate, Split, Crop, Margins) are meant on Windows too: yes, same labelled actions on every app (D-163). Arun's real-machine Linux check (Ubuntu 26.04.1, .deb 90895ef): install clean; start 1.57 s cold / ~1.35 s warm with the window blank ~1.3 s; trackpad pinch-zoom does nothing - both routed to Linux and Foundation. A later Bus error was the live USB failing, not the app.
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).
