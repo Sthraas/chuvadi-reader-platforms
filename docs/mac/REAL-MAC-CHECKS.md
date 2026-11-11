@@ -120,3 +120,5 @@ version and the Mac model, and attach a screenshot where it says so.
 - [ ] Quit ten times with ⌘Q, some with documents open: never "quit unexpectedly" (M-03).
 - [ ] Startup: launch to the first painted Home, cold ______ ms, warm ______ ms (M-06; the CI VM is ~2.5 s warm, most of it WebKit starting).
 - [ ] After using it for a while: ~/Library/Logs/Chuvadi exists, Console.app shows it, and nothing in it names a document or shows its text (D-132).
+- [ ] Trackpad: pinch on a page zooms in and out around the pointer; the bars and rails never scale (MacPinch).
+- [ ] Select several files in Finder and open them together: they become tabs in name order (M-24).

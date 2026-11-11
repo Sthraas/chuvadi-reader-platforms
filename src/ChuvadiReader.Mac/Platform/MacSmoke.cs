@@ -51,6 +51,20 @@ internal static class MacSmoke
             var colon = step.IndexOf(':');
             var kind = colon < 0 ? step : step[..colon];
             var arg = colon < 0 ? string.Empty : step[(colon + 1)..];
+            if (kind == "pinch")
+            {
+                // The page half of a trackpad pinch: one 1.5× step at the middle of the page area (the gesture itself
+                // needs a real trackpad — REAL-MAC-CHECKS).
+                var v = Current(view);
+                MacPinch.Forward(v, double.Parse(arg, System.Globalization.CultureInfo.InvariantCulture), new CoreGraphics.CGPoint(v.Bounds.Width / 2, v.Bounds.Height / 2));
+                Later(2.0, async () =>
+                {
+                    Log($"step {index + 1} pinch: " + await UiTextAsync(Current(view)));
+                    RunSteps(view, index + 1);
+                });
+                return;
+            }
+
             if (kind == "unfocus")
             {
                 // M-08 / M-23: the state Mac Test saw — the window has no first responder (focus on its content group).
@@ -308,6 +322,10 @@ internal static class MacSmoke
                     var x = new XMLHttpRequest(); x.open('GET', href, false); x.send();
                     return ' pageimg=' + x.status + '/' + (x.getResponseHeader('content-type') || '?') + '/' + (x.responseText || '').length;
                   } catch (err) { return ' pageimg=error:' + err.message; }
+                })()
+                + (function () {   // the page zoom as the page holds it
+                  var d = document.querySelector('.rdesk');
+                  return d ? ' zoom=' + (parseFloat(getComputedStyle(d).getPropertyValue('--rpage-zoom')) || 1).toFixed(3) : '';
                 })()
                 + (function () {   // M-08 / M-23: the tab strip as shown — the active tab and the first tab
                   var a = document.querySelector('.rtab.active'), f = document.querySelector('.rtab');
