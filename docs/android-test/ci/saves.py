@@ -88,7 +88,7 @@ def tap(*names, sel=None):
         if not hit:
             return None
         if hit["covered"] and attempt < 2:
-            c = cdp.js("(() => { " + VIS + " const e = [...document.querySelectorAll('.ph-handle, .ph-sheet-a, .ph-sheet [aria-label=Close], .chvd-card [aria-label=Close], .mk-card [aria-label=Close], .ph-scrim')].find(vis);"
+            c = cdp.js("(() => { " + VIS + " const e = [...document.querySelectorAll('.fcard [aria-label^=Close], .fcard [title^=Close], .fcard .fcard-x, .ph-handle, .ph-sheet-a, .ph-sheet [aria-label=Close], .chvd-card [aria-label=Close], .mk-card [aria-label=Close], .ph-scrim')].find(vis);"
                        " if (!e) return null; const r = e.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; })()")
             if c:
                 q = to_screen(c[0], c[1])
@@ -98,6 +98,7 @@ def tap(*names, sel=None):
             time.sleep(1.2)
             continue
         if hit["covered"]:
+            hit["cover_controls"] = cdp.js(f"(() => {{ const t = document.elementFromPoint({hit['x']}, {hit['y']}); const c = t && t.closest('section, [role=dialog]'); return c ? [...c.querySelectorAll('button')].map(b => (b.getAttribute('aria-label') || b.title || b.innerText || '').trim().slice(0, 24)) : null; }})()")
             hit["covered_by"] = cdp.js(f"(() => {{ const t = document.elementFromPoint({hit['x']}, {hit['y']}); if (!t) return null; const c = t.closest('section, [role=dialog], .ph-sheet, .chvd-card') || t; return (c.tagName + '.' + (c.className || '')).toString().slice(0, 80) + ' / ' + (c.getAttribute('aria-label') || ''); }})()")
         sx, sy = to_screen(hit["x"], hit["y"])
         sh(f"input tap {sx} {sy}")
@@ -172,7 +173,7 @@ def _pick_open(name):
     hit = tap("Open a document", sel=".ph-fab") if phone() else tap("Choose a document to open", "Open (Ctrl O)", "Open")
     time.sleep(2.5)
     ok = False
-    for _ in range(10):
+    for _ in range(14):
         xml = ui_dump()
         m = re.search(r'text="%s"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"' % re.escape(name), xml)
         if m:
@@ -180,7 +181,13 @@ def _pick_open(name):
             sh(f"input tap {(x1 + x2) // 2} {(y1 + y2) // 2}")
             ok = True
             break
-        if not (ui_tap_text("Download") or ui_tap_text("Downloads")):
+        if "documentsui" in xml and re.search(r'text="sv-[a-z]+\.(pdf|xlsx)"', xml):
+            # in the right folder, the file is further down the list: scroll
+            w, h = map(int, re.findall(r"(\d+)x(\d+)", sh("wm size"))[-1])
+            if h < w and portrait_rotation() == 1:
+                w, h = h, w
+            sh(f"input swipe {w // 2} {int(h * 0.75)} {w // 2} {int(h * 0.35)} 300")
+        elif not (ui_tap_text("Download") or ui_tap_text("Downloads")):
             ui_tap_text("Show roots")
         time.sleep(1.5)
     if not ok and in_picker():
@@ -468,8 +475,11 @@ def sv5_arrange():
     mode("Arrange")
     cdp.wait("document.querySelectorAll('[data-shelf]').length >= 6", 40)
     st = cdp.js(BENCH)
-    if not st["shelfVisible"] and st["shelfHead"]:
-        tap_xy(st["shelfHead"]["x"], st["shelfHead"]["y"])
+    if not st["shelfVisible"]:
+        if st["shelfHead"]:
+            tap_xy(st["shelfHead"]["x"], st["shelfHead"]["y"])
+        else:
+            tap("Shelf", sel=".rb, button")
         time.sleep(1.5)
         st = cdp.js(BENCH)
     ours = [s for s in st["shelfVisible"]]
@@ -477,9 +487,13 @@ def sv5_arrange():
     dropped = []
     for idx in (2, 0):          # shelf page 3, then page 1
         st = cdp.js(BENCH)
-        if not st["shelfVisible"] and st["shelfHead"]:
-            tap_xy(st["shelfHead"]["x"], st["shelfHead"]["y"])
+        if not st["shelfVisible"]:
+            tap_xy(st["shelfHead"]["x"], st["shelfHead"]["y"]) if st["shelfHead"] else tap("Shelf", sel=".rb, button")
+            time.sleep(1.5)
             st = cdp.js(BENCH)
+        if len(st["shelfVisible"]) <= idx:
+            R.check("SV-5 shelf pages reachable", False, {"bench": st, "controls": labels()})
+            return
         src = st["shelfVisible"][idx]
         a = to_screen(src["x"], src["y"])
         d = to_screen(st["desk"]["x"], st["desk"]["y"] + st["desk"]["h"] * 0.3)
@@ -523,7 +537,9 @@ def sv5_arrange():
 
 
 def sv6_print():
-    pick_open("sv-print.pdf")
+    if not pick_open("sv-print.pdf")["opened"]:
+        R.check("SV-6 file opened through the picker", False, None)
+        return
     if phone():
         tap("More", sel=".ph-ib")
         tap("Print", sel=".ph-sheet *")
@@ -586,7 +602,9 @@ def doc_action(*names):
 
 
 def sv7_password():
-    pick_open("sv-pass.pdf")
+    if not pick_open("sv-pass.pdf")["opened"]:
+        R.check("SV-7 file opened through the picker", False, None)
+        return
     mode("Protect")
     time.sleep(1)
     t = tool("Protect: Password", "Password", "Set a password", "Set password", "Encrypt") or doc_action("Password", "Set a password", "Protect with a password")
@@ -622,7 +640,9 @@ def sv7_password():
 
 
 def doc_save(case_id, name, action_labels, confirm_labels):
-    pick_open(name)
+    if not pick_open(name)["opened"]:
+        R.check(f"{case_id} file opened through the picker", False, None)
+        return
     act = doc_action(*action_labels)
     time.sleep(2)
     shot(case_id.lower() + "-card")

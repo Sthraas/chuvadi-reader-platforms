@@ -1,8 +1,7 @@
 {
-  "round": "10 (second start)",
+  "round": "10b (save suite again: picker list scrolled)",
   "emulators": "phone-36,tablet-36",
-  "suites": "saves,drift,function,design,at13,aot",
-  "variants": "baseline trace",
+  "suites": "saves",
   "foundation_ref": "07ed3ca834a8d21b20e5176f54852ac0ee52cd79",
   "mobileui_ref": "86997198419f51b9fc74fdac5d95236c1120fcd3",
   "android_ref": "ce890a6f1b1c355fff56b9304ecfc0863050d4c7"
