@@ -39,13 +39,13 @@ public sealed class DocumentPropertiesService
             foreach (var p in doc.Pages)
             {
                 first ??= p;
-                var shown = ShownBox.Of(p);
+                var shown = ShownBox.Of(p).ShownSize(ShownBox.TurnOf(p));   // B-32: turned as shown
                 seen.Add($"{Math.Round(shown.W)}x{Math.Round(shown.H)}");
             }
 
             if (first is not null)
             {
-                var size1 = ShownBox.Of(first);
+                var size1 = ShownBox.Of(first).ShownSize(ShownBox.TurnOf(first));
                 var wmm = size1.W * 25.4 / 72.0;
                 var hmm = size1.H * 25.4 / 72.0;
                 size = $"{wmm:0} × {hmm:0} mm{PaperName(wmm, hmm)}";
