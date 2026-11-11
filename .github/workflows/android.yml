@@ -26,10 +26,10 @@ on:
         options: [full, smoke, timeline]
 
 env:
-  # platform/foundation-pr: patch 25 parts 1-4 (AT-17, AT-16, D-164 cold open, H-22, Docs 2.1.0) on Reader main 4b724b0.
-  FOUNDATION_REF: 742a5daef7084f4e41052bcfbfa0e714c93f38eb
-  # platform/mobile-ui: patch 24 merged, H-23 Excel value bar proposal (in mobile-ui-hooks-9, Foundation's to take).
-  MOBILEUI_REF: 5c66f1a4ae5f2c36e06e9830f89c18d72b569e91
+  # platform/foundation-pr: patch 26 (page /Rotate, Excel grid as the file holds it, H-23, text encoding, tabs close with their owner) on Reader main 0cd4915.
+  FOUNDATION_REF: 07ed3ca834a8d21b20e5176f54852ac0ee52cd79
+  # platform/mobile-ui: foundation-pr 742a5da merged; AT-06 leftovers 44 px.
+  MOBILEUI_REF: 86997198419f51b9fc74fdac5d95236c1120fcd3
   DOTNET_NOLOGO: '1'
   DOTNET_CLI_TELEMETRY_OPTOUT: '1'
 
@@ -77,13 +77,19 @@ jobs:
           # Pinned (AT-19): what is tested is what ships; move it deliberately. Same as Android Test's workflow.
           dotnet-version: '10.0.403'
 
-      # setup-dotnet only adds 10.0.403 beside the runner's own newer SDK, and dotnet picks the newest unless a
-      # global.json says otherwise (run 42903642195 still resolved runtime 10.0.15). The composed checkout gets one
-      # (CI only; a global.json in the repo is Foundation's to add).
-      - name: Hold the build to SDK 10.0.403
+      # D-178: every build uses the same SDK *and* the same workload set, so the same .NET runtime (the workload
+      # set, not the SDK, picks an Android app's runtime pack: run 42906276392 had SDK 10.0.403 but runtime 10.0.15).
+      # The repo-level global.json (Foundation's) is these exact lines; until it lands, the composed checkout gets
+      # them here, and if it has one it must say the same.
+      - name: Pin the SDK and the workload set (global.json)
         working-directory: reader
         run: |
-          echo '{ "sdk": { "version": "10.0.403", "rollForward": "disable" } }' > global.json
+          want='{ "sdk": { "version": "10.0.403", "workloadVersion": "10.0.403", "rollForward": "disable" } }'
+          if [ -f global.json ]; then
+            python3 -c "import json,sys; a=json.load(open('global.json'))['sdk']; b=json.loads(sys.argv[1])['sdk']; sys.exit(0 if all(a.get(k)==v for k,v in b.items()) else 'global.json differs from D-178: '+str(a))" "$want"
+          else
+            echo "$want" > global.json
+          fi
           dotnet --version
 
       - uses: actions/setup-java@v4
@@ -92,8 +98,10 @@ jobs:
           java-version: '21'
 
       - name: Install the MAUI Android workload
-        working-directory: reader   # under the pinned SDK, so the workload matches the SDK that builds
-        run: dotnet workload install maui-android
+        working-directory: reader   # under global.json: the pinned SDK and workload set
+        run: |
+          dotnet workload install maui-android
+          dotnet workload --version
 
       # The Reader's root nuget.config points at the dev-only ./localpackages; CI restores from
       # its committed feed (ci/packages) + nuget.org, exactly like the Reader's own CI.

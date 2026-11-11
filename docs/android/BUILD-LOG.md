@@ -825,3 +825,15 @@ same screen; no crash), smoke pass. With round 6 (API 36 phone and tablet, all c
   for a self-contained Android app. The notices still match what ships (AT-19's fix). Holding the runtime too needs the
   workload set pinned as well (`dotnet workload install maui-android --version <workload set>`, or `workloadVersion` in
   global.json) — for the coordinator with the repo `global.json` (Foundation).
+
+### 62. Foundation 07ed3ca + Mobile UI 8699719; D-178 workload pin — coordinator, 11 Nov 06:25 IST
+- Composition: Foundation `07ed3ca` (platform/foundation-pr, patch 26: page /Rotate on screen, the Excel grid as the file
+  holds it, H-23 value bar, text encoding, tabs close with their owner) + Mobile UI `8699719` — clean.
+- **D-178:** SDK *and* workload set pinned, so every build ships the same runtime. `global.json` (exact lines, the same
+  for the repo root — sent to Foundation):
+  `{ "sdk": { "version": "10.0.403", "workloadVersion": "10.0.403", "rollForward": "disable" } }`
+  Workload set 10.0.403 = Microsoft.NET.Sdk.Android 36.1.118, Maui 10.0.110, Mono toolchain 10.0.114 → runtime pack
+  **10.0.14**. The workflow writes it into the composed checkout while the repo has none, and fails if the repo's says
+  anything else; the workload is installed under it.
+- Sandbox, under that global.json: SDK 10.0.403, workload set 10.0.403, runtime 10.0.14 in the notices; Android Debug and
+  Release `-warnaserror` 0 warnings; Release manifest 14/14; Core 374 (+6 skipped), Hosting 91, MobileUi 16, WebUi 41.
