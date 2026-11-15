@@ -796,10 +796,22 @@ export async function measureFit(deskEl, mode, drawnOnly) {
     for (let i = 0; i < 40 && deskEl && !deskEl.querySelector('.rpage svg'); i++) {
         await new Promise(r => setTimeout(r, 50));
     }
-    const rendered = deskEl && deskEl.querySelector('.rpage svg');
+    // The page that is fitted is the one on screen (Mobile UI F-2: in a file whose pages differ, a turned or larger
+    // page was fitted by the first page's shape and ran off the side). When it isn't drawn yet, the first drawn page.
+    let rendered = null;
+    if (deskEl) {
+        const onScreen = mostVisiblePage(deskEl);
+        const wrap = onScreen >= 0 ? [...deskEl.querySelectorAll('.rpage-wrap')].find(w => pageOf(w) === onScreen) : null;
+        rendered = (wrap && wrap.querySelector('.rpage svg')) || deskEl.querySelector('.rpage svg');
+    }
     if (!rendered && drawnOnly) return 0;
     const page = rendered ? rendered.closest('.rpage') : deskEl && deskEl.querySelector('.rpage');
     if (!page) return 0;
+    return fitScale(deskEl, page, mode);
+}
+
+// The zoom at which one page fits the desk's width, or the whole desk (mode 'page'); 0 when it can't be measured.
+function fitScale(deskEl, page, mode) {
     const { natW, natH } = naturalSize(page);
     if (!natW || !natH) return 0;
     const cols = deskEl.classList.contains('two') ? 2 : 1;
@@ -812,6 +824,25 @@ export async function measureFit(deskEl, mode, drawnOnly) {
         ? perPageW / natW
         : Math.min(perPageW / natW, (deskEl.clientHeight - padY) / natH);
     return clampZoom(s);
+}
+
+// Mobile UI F-2: a file's pages can differ in shape (a turned page among upright ones, a wide sheet among letters).
+// While Fit width or Fit page is on, every drawn page that needs a different zoom to fit gets its own, so no page
+// runs off the side; pages of the fitted shape keep the document's zoom. mode '' (the person chose a zoom of their
+// own): every page goes back to the one zoom.
+export function fitEachPage(deskEl, mode) {
+    if (!deskEl) return;
+    const base = parseFloat(getComputedStyle(deskEl).getPropertyValue('--rpage-zoom')) || 1;
+    for (const wrap of deskEl.querySelectorAll('.rpage-wrap')) {
+        const own = wrap.style.getPropertyValue('--rpage-zoom');
+        const page = mode ? wrap.querySelector('.rpage') : null;
+        const s = page && page.querySelector('svg') ? fitScale(deskEl, page, mode) : 0;
+        if (s && Math.abs(s - base) / base > 0.01) {
+            if (own !== String(s)) wrap.style.setProperty('--rpage-zoom', s);
+        } else if (own) {
+            wrap.style.removeProperty('--rpage-zoom');
+        }
+    }
 }
 
 // Full-screen / immersive: collapse all app chrome to just the document.
