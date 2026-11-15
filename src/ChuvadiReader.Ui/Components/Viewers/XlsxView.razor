@@ -73,7 +73,24 @@
             </div>
         </div>
 
+        @if (_fit is { } fit)
+        {
+            @* D-190: a double press on a header's edge fits it. The candidates are drawn here, out of sight and
+               outside the zoomed sheet, with the cells' own styles; the script reads how much room they need. *@
+            <div class="xv-measure @(fit.Column ? "col" : "row")" @ref="_measureBox" aria-hidden="true">
+                @foreach (var (cell, width) in fit.Cells)
+                {
+                    <div class="xv-t @(!fit.Column && cell.Wrap ? "wrap" : null)" style="@MeasureStyle(fit.Column, cell, width, s.RightToLeft)"><span class="xv-s">@CellText(cell)</span></div>
+                }
+            </div>
+        }
+
         <div class="xv-bar">
+            @if (_own is not null)
+            {
+                <button type="button" class="xv-resetsizes" @onclick="ResetSizes"
+                        title="The column widths and row heights you changed are for viewing only; the file is not changed. This puts back the file's own sizes.">File's own sizes</button>
+            }
             <div class="xv-tabs" role="tablist" aria-label="Sheets">
                 @for (int i = 0; i < _wb.Sheets.Count; i++)
                 {
@@ -108,6 +125,20 @@
 </div>
 
 @code {
+    /// <summary>D-190: the tab's own column widths and row heights for this file (viewing only). Null: this view
+    /// keeps them itself, for as long as it lives.</summary>
+    [Parameter] public SheetSizeMemory? Sizes { get; set; }
+
+    private SheetSizeMemory? _localSizes;
+    private SheetSizeMemory SizeMemory => Sizes ?? (_localSizes ??= new SheetSizeMemory());
+
+    /// <summary>The sheet on screen's own sizes, or null when it is shown at the file's.</summary>
+    private SheetSizeMemory.Sizes? _own => _wb is null ? null : SizeMemory.Find(Path, _wb.Sheets[_active].Name);
+
+    private sealed record Fit(bool Column, int Index, IReadOnlyList<(SheetCell Cell, double Width)> Cells);
+    private Fit? _fit;
+    private ElementReference _measureBox;
+
     private WorkbookView? _wb;
     private string? _error;
     private string? _errorDetail;
@@ -344,7 +375,23 @@
             // The script tells us which part of the sheet is on screen (scrolling, resizing); asked for until it is on.
             var v = _version;
             var on = await JsAsync<bool>("gridWindow", _scroll, Self);
-            if (v == _version && on) _windowOn = true;
+            if (v == _version && on)
+            {
+                _windowOn = true;
+                await JsVoidAsync("gridResize", _scroll, Self);   // D-190: drag a header's edge, double press to fit
+            }
+        }
+
+        if (_fit is { } fit && _wb is not null && _grid is not null)
+        {
+            // The candidates are on the page now: read the room they need, then drop them.
+            var need = await JsAsync<double>("gridMeasure", _measureBox, fit.Column);
+            if (ReferenceEquals(fit, _fit))
+            {
+                _fit = null;
+                ApplyFit(fit, need);
+                StateHasChanged();
+            }
         }
 
         if (_goHome && _wb is not null)
@@ -378,6 +425,96 @@
         _view = (left / zoom, top / zoom, width / zoom, height / zoom);
         if (PlaceWindow(g, force: false)) StateHasChanged();
         return Task.CompletedTask;
+    }
+
+    // ── D-190: sizes for viewing only ────────────────────────────────────────────────────────────
+
+    /// <summary>A header's edge was dragged: that column or row gets the new size (pixels at 100 %), on screen only.</summary>
+    [JSInvokable]
+    public Task OnGridResize(bool column, int index, double px)
+    {
+        if (_wb is null || _grid is not { } g || Disposed || !Resizable(g, column, index)) return Task.CompletedTask;
+        var sheet = _wb.Sheets[_active];
+        if (column) SizeMemory.SetColumn(Path, sheet.Name, index, px);
+        else SizeMemory.SetRow(Path, sheet.Name, index, px);
+        Replace(g, sheet);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>A double press on a header's edge: fit that column to its widest text, or that row to its tallest.</summary>
+    [JSInvokable]
+    public Task OnGridFit(bool column, int index)
+    {
+        if (_wb is null || _grid is not { } g || Disposed || !Resizable(g, column, index)) return Task.CompletedTask;
+        _fit = new Fit(column, index, FitCandidates(g, column, index));
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    // A hidden row or column is not there to resize; it stays hidden.
+    private static bool Resizable(GridLayout g, bool column, int index) =>
+        column ? index >= 1 && index <= g.LastCol && g.ColWidth(index) > 0
+               : index >= 1 && index <= g.LastRow && g.RowHeight(index) > 0;
+
+    /// <summary>How many cells a fit looks at. Past that, a column is fitted to its longest texts by length.</summary>
+    private const int FitLooksAt = 60;
+
+    /// <summary>The cells a fit measures: the column's or row's cells with text, merged cells left out (as Excel
+    /// leaves them out). For a column, the ones likely to be widest (longest line, larger or bold font first).</summary>
+    private IReadOnlyList<(SheetCell, double)> FitCandidates(GridLayout g, bool column, int index)
+    {
+        bool Counts(SheetCell c) => c.Text.Length > 0 && !g.MergeAt.ContainsKey((c.Row, c.Col)) && !g.Covered.Contains((c.Row, c.Col));
+        if (!column)
+        {
+            return g.Rows.TryGetValue(index, out var row)
+                ? row.Where(Counts).Where(c => g.ColWidth(c.Col) > 0).Take(FitLooksAt * 5).Select(c => (c, g.ColWidth(c.Col))).ToList()
+                : [];
+        }
+
+        static double Likely(SheetCell c)
+        {
+            int longest = 0;
+            foreach (var line in c.Text.Split('\n')) longest = Math.Max(longest, line.Length);
+            return longest * (c.FontSizePt ?? 11) * (c.Bold ? 1.1 : 1) + c.Indent * 9;
+        }
+
+        return _wb!.Sheets[_active].Cells
+            .Where(c => c.Col == index && Counts(c) && g.RowHeight(c.Row) > 0)
+            .OrderByDescending(Likely).Take(FitLooksAt).Select(c => (c, 0d)).ToList();
+    }
+
+    private void ApplyFit(Fit fit, double need)
+    {
+        if (_wb is null || _grid is not { } g) return;
+        var sheet = _wb.Sheets[_active];
+        if (need <= 0)
+        {
+            // Nothing to fit to: back to the file's own size.
+            if (fit.Column) SizeMemory.ClearColumn(Path, sheet.Name, fit.Index);
+            else SizeMemory.ClearRow(Path, sheet.Name, fit.Index);
+        }
+        else if (fit.Column) SizeMemory.SetColumn(Path, sheet.Name, fit.Index, Math.Ceiling(need) + 1);
+        else SizeMemory.SetRow(Path, sheet.Name, fit.Index, Math.Ceiling(need) + 1);
+        g.Place(sheet, SizeMemory.Find(Path, sheet.Name));
+        PlaceWindow(g, force: true);
+    }
+
+    private static string MeasureStyle(bool column, SheetCell cell, double width, bool rtl) =>
+        (column ? null : "width:" + Px(width + 1) + ";") + TextStyle(cell, rtl);
+
+    private void ResetSizes()
+    {
+        if (_wb is null || _grid is not { } g) return;
+        var sheet = _wb.Sheets[_active];
+        SizeMemory.Reset(Path, sheet.Name);
+        Replace(g, sheet);
+    }
+
+    private void Replace(GridLayout g, SheetView sheet)
+    {
+        g.Place(sheet, SizeMemory.Find(Path, sheet.Name));
+        PlaceWindow(g, force: true);
+        StateHasChanged();
     }
 
     private (double Left, double Top, double W, double H) _view = (0, 0, 1600, 1000);
@@ -459,7 +596,7 @@
         if (_wb is null) return;
         var sheet = _wb.Sheets[_active];
         foreach (var c in sheet.Cells) _index[(c.Row, c.Col)] = c;
-        _grid = new GridLayout(sheet);
+        _grid = new GridLayout(sheet, SizeMemory.Find(Path, sheet.Name));
         _view = (0, 0, _view.W, _view.H);
         _goHome = true;
         PlaceWindow(_grid, force: true);
@@ -481,7 +618,8 @@
     {
         public readonly int LastRow, LastCol, FrozenRows, FrozenCols;
         public readonly double[] RowTop, ColLeft;     // [n] = where row or column n starts; [last + 1] = the total
-        public readonly double HeadW, FrozenW, FrozenH;
+        public readonly double HeadW;
+        public double FrozenW, FrozenH;
         public readonly Dictionary<int, SheetCell[]> Rows = new();
         public readonly Dictionary<(int, int), SheetMerge> MergeAt = new();   // by top-left cell
         public readonly HashSet<(int, int)> Covered = new();                  // inside a merge, not its top-left
@@ -490,7 +628,7 @@
         public double TotalW => ColLeft[LastCol + 1];
         public double TotalH => RowTop[LastRow + 1];
 
-        public GridLayout(SheetView s)
+        public GridLayout(SheetView s, SheetSizeMemory.Sizes? own)
         {
             int lastRow = s.LastRow, lastCol = s.LastCol;
             foreach (var c in s.Cells)
@@ -512,11 +650,8 @@
             FrozenCols = Math.Clamp(s.FreezeCols, 0, LastCol - 1);
 
             RowTop = new double[LastRow + 2];
-            for (int r = 1; r <= LastRow; r++) RowTop[r + 1] = RowTop[r] + s.RowHeightPx(r);
             ColLeft = new double[LastCol + 2];
-            for (int c = 1; c <= LastCol; c++) ColLeft[c + 1] = ColLeft[c] + s.ColWidthPx(c);
-            FrozenH = RowTop[FrozenRows + 1];
-            FrozenW = ColLeft[FrozenCols + 1];
+            Place(s, own);
             HeadW = Math.Max(36, 14 + 7 * LastRow.ToString(System.Globalization.CultureInfo.InvariantCulture).Length);
 
             foreach (var row in s.Cells.GroupBy(c => c.Row))
@@ -536,6 +671,28 @@
                             if (r != m.Row || c != m.Col) Covered.Add((r, c));
                 }
             }
+        }
+
+        /// <summary>Sets where every row and column starts: the file's sizes, or the person's own where they set
+        /// one (D-190; viewing only). A row or column the file hides stays hidden whatever was set.</summary>
+        public void Place(SheetView s, SheetSizeMemory.Sizes? own)
+        {
+            for (int r = 1; r <= LastRow; r++)
+            {
+                double h = s.RowHeightPx(r);
+                if (h > 0 && own is not null && own.Rows.TryGetValue(r, out var mine)) h = mine;
+                RowTop[r + 1] = RowTop[r] + h;
+            }
+
+            for (int c = 1; c <= LastCol; c++)
+            {
+                double w = s.ColWidthPx(c);
+                if (w > 0 && own is not null && own.Cols.TryGetValue(c, out var mine)) w = mine;
+                ColLeft[c + 1] = ColLeft[c] + w;
+            }
+
+            FrozenH = RowTop[FrozenRows + 1];
+            FrozenW = ColLeft[FrozenCols + 1];
         }
 
         public double RowHeight(int r) => RowTop[r + 1] - RowTop[r];
@@ -567,7 +724,7 @@
         {
             double w = g.ColWidth(c);
             if (w <= 0) continue;   // E-06: a hidden column has no header; the letters skip it, as in Excel
-            <div class="xv-colhdr" style="inset-inline-start:@Px(g.ColLeft[c] - originX);width:@Px(w);height:@Px(HeadH)">@ColLetter(c)</div>
+            <div class="xv-colhdr @(_own?.Cols.ContainsKey(c) == true ? "own" : null)" data-c="@c" style="inset-inline-start:@Px(g.ColLeft[c] - originX);width:@Px(w);height:@Px(HeadH)">@ColLetter(c)</div>
         }
     </text>;
 
@@ -576,7 +733,7 @@
         {
             double h = g.RowHeight(r);
             if (h <= 0) continue;
-            <div class="xv-rowhdr" style="top:@Px(g.RowTop[r] - originY);height:@Px(h);width:@Px(g.HeadW)">@r</div>
+            <div class="xv-rowhdr @(_own?.Rows.ContainsKey(r) == true ? "own" : null)" data-r="@r" style="top:@Px(g.RowTop[r] - originY);height:@Px(h);width:@Px(g.HeadW)">@r</div>
         }
     </text>;
 

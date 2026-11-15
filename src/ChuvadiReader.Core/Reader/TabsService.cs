@@ -42,6 +42,9 @@ public sealed class ReaderTab
     /// <summary>True when closing this tab would lose marks (D-190).</summary>
     public bool HasUnsavedMarks => Marks?.HasUnsaved == true;
 
+    /// <summary>Column widths and row heights set on screen for an Excel file in this tab (D-190). Viewing only.</summary>
+    public SheetSizeMemory SheetSizes { get; } = new();
+
     public bool IsLoading { get; set; }
 
     /// <summary>Cancels this tab's PDF open while it is loading (B-24); closing the tab cancels it.</summary>
