@@ -208,7 +208,7 @@ jobs:
       - name: Test tooling (never shipped)
         run: pip install websocket-client==1.8.0 reportlab==4.2.5 pypdf==5.1.0 pillow
       - uses: reactivecircus/android-emulator-runner@v2
-        timeout-minutes: 130     # rounds 10c and 11a: the phone step never returned; the upload below still runs
+        timeout-minutes: 110     # rounds 10c and 11a: the phone step never returned; the upload below still runs
         with:
           api-level: ${{ matrix.api }}
           target: google_apis

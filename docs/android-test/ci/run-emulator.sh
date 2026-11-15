@@ -11,6 +11,8 @@ adb root >/dev/null 2>&1; sleep 2; adb wait-for-device
 adb shell settings put secure stylus_handwriting_enabled 0
 adb shell settings put system screen_off_timeout 1800000
 adb shell svc power stayon true
+# Live log, so the evidence survives if the device stops answering (rounds 10c, 11a, 11 on the phone).
+(adb logcat -v epoch > "$OUT/logcat-live.txt" 2>/dev/null &)
 
 API="$(adb shell getprop ro.build.version.sdk | tr -d '\r')"
 if [ "$API" -lt 36 ] && [ -d "$DONOR" ]; then
@@ -69,9 +71,6 @@ fi
 if [[ $SUITES == *,licence,* ]]; then
   timeout 2700 python3 "$HERE/licence.py" "$OUT/licence" "$PKGS/assemblies.txt" || rc=1
 fi
-if [[ $SUITES == *,saves,* ]]; then
-  timeout 2700 python3 "$HERE/saves.py" "$OUT/saves" "$OUT/fixtures" || rc=1
-fi
 if [[ $SUITES == *,drift,* ]]; then
   timeout 2700 python3 "$HERE/drift.py" "$OUT/drift" "$OUT/fixtures" || rc=1
 fi
@@ -84,6 +83,10 @@ fi
 if [[ $SUITES == *,robust,* ]] && [ -f "$HERE/robust.py" ]; then
   timeout 2700 python3 "$HERE/robust.py" "$OUT/robust" "$OUT/fixtures" || rc=1
 fi
+# The save suite goes last: on the phone the device has stopped answering during it three times.
+if [[ $SUITES == *,saves,* ]]; then
+  timeout 2700 python3 "$HERE/saves.py" "$OUT/saves" "$OUT/fixtures" || rc=1
+fi
 # Save suite again on the test-only build with the host's save pickers switched on (AT-18).
 if [[ $SUITES == *,saves,* ]] && [ -f "$PKGS/chuvadi-reader-release-saves-on.apk" ] && [ "${RELEASE_ONLY:-0}" != 1 ]; then
   adb uninstall in.chuvadi.reader >/dev/null
@@ -91,8 +94,8 @@ if [[ $SUITES == *,saves,* ]] && [ -f "$PKGS/chuvadi-reader-release-saves-on.apk
   adb shell am start -W -n "$COMP" > /dev/null; sleep 5
   timeout 2700 python3 "$HERE/saves.py" "$OUT/saves-pickers-on" "$OUT/fixtures" || true
 fi
-adb logcat -d -v epoch > "$OUT/logcat.txt"
-adb shell dumpsys dropbox --print > "$OUT/dropbox.txt" 2>/dev/null
+timeout 90 adb logcat -d -v epoch > "$OUT/logcat.txt"
+timeout 90 adb shell dumpsys dropbox --print > "$OUT/dropbox.txt" 2>/dev/null
 grep -c -E "FATAL EXCEPTION|ANR in in.chuvadi" "$OUT/logcat.txt" > "$OUT/crash-count.txt"
 echo "run-emulator.sh finished, rc=$rc, $(date -u +%H:%M:%S)"
 pkill -INT crashpad_handler 2>/dev/null || true     # a known cause of the emulator action not returning

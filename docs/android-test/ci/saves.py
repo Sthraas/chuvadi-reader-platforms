@@ -326,9 +326,30 @@ def differs(a, b):
     return a["annots"] != b["annots"] or a["content_len"] != b["content_len"] or a["xobjects"] != b["xobjects"]
 
 
+def health(after):
+    """Is the device still well? Recorded after every case: three phone runs ended with a device that stopped answering."""
+    t0 = time.time()
+    try:
+        h = {"loadavg": adb("shell", "cat /proc/loadavg", timeout=25).strip(),
+             "mem_available_kB": adb("shell", "grep MemAvailable /proc/meminfo", timeout=25).split()[1:2],
+             "app_pss_kB": (re.findall(r"TOTAL PSS:\s+(\d+)", adb("shell", f"dumpsys meminfo {PKG}", timeout=40)) or [None])[0],
+             "anr_or_frozen": [l.strip()[:140] for l in adb("shell", "dumpsys activity processes | grep -i -E 'notResponding=true|crashing=true'", timeout=40).splitlines()][:4],
+             "input_tap_seconds": None}
+        t1 = time.time()
+        adb("shell", "input keyevent KEYCODE_UNKNOWN", timeout=40)
+        h["input_tap_seconds"] = round(time.time() - t1, 1)
+        h["seconds"] = round(time.time() - t0, 1)
+        ok = h["input_tap_seconds"] < 10 and not h["anr_or_frozen"]
+    except Exception as e:
+        h, ok = {"error": repr(e)[:200], "seconds": round(time.time() - t0, 1)}, False
+    R.check(f"device health after {after}", True if ok else False, h)
+    return ok
+
+
 def case(name, fn):
     try:
         fn()
+        health(name)
     except Exception as e:
         shot(name + "-error")
         R.check(f"{name}: the case ran to the end", False, {"error": repr(e)[:300], "controls": labels()})
@@ -890,8 +911,13 @@ def sv11_excel():
 
 
 
-for name, fn in (("SV-1", sv1_text), ("SV-2", sv2_shape), ("SV-3", sv3_form), ("SV-4", sv4_redact), ("SV-7", sv7_password), ("SV-8", sv8_compress),
-                 ("SV-9", sv9_flatten), ("SV-10", sv10_rotated), ("SV-12", sv12_zoom), ("SV-11", sv11_excel), ("SV-6", sv6_print), ("SV-5", sv5_arrange)):
+CASES = [("SV-1", sv1_text), ("SV-2", sv2_shape), ("SV-3", sv3_form), ("SV-4", sv4_redact), ("SV-7", sv7_password), ("SV-8", sv8_compress),
+         ("SV-9", sv9_flatten), ("SV-10", sv10_rotated), ("SV-12", sv12_zoom), ("SV-11", sv11_excel), ("SV-6", sv6_print), ("SV-5", sv5_arrange)]
+if os.environ.get("AT_SAVES_ORDER") == "marks-last" or phone():
+    # Round 11: the phone stopped answering after the third Mark › Save as. Everything else first, so it is covered whatever happens.
+    CASES = [c for c in CASES if c[0] not in ("SV-1", "SV-2", "SV-3", "SV-10", "SV-12")] + [c for c in CASES if c[0] in ("SV-12", "SV-10", "SV-1", "SV-2", "SV-3")]
+health("start")
+for name, fn in CASES:
     case(name, fn)
 
 log = adb("logcat", "-d", "-v", "epoch")

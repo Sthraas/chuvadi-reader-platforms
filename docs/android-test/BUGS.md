@@ -89,7 +89,7 @@ isn't keyed on the touch form factor here.
 **Actual:** tablet portrait shows tabs · pager · search; `Document ▾` is gone, so Properties / Export / Compress / Merge / Split
 have no entry point from the top bar in portrait. **Evidence:** `screenshots/r1/12f-vs-app.png`.
 
-## AT-06 · S3 · Mobile UI · **verified** R10 run 42938865447 (Android ce890a6 + Foundation 07ed3ca + Mobile UI 8699719, Release, API 36): every control measured is ≥ 44 dp — phone 42 of 42, tablet 30 of 30, including the leftovers listed in round 8 — Touch targets under 44 dp (handout: 48 dp on tablet and phone)
+## AT-06 · S4 · Mobile UI · **one leftover** R11: tablet landscape, Arrange shelf tools "Collapse every file" and "Weave two files" are 43 dp high (need 44); everything else measured passes (tablet 29 of 30 screens) — Touch targets under 44 dp (handout: 48 dp on tablet and phone)
 Measured in the page (CSS px = dp), every visible control, all screens, R1 API 36 (`design/*.layout.json`):
 | Form | Control | Size (dp) |
 |---|---|---|
@@ -104,6 +104,7 @@ Measured in the page (CSS px = dp), every visible control, all screens, R1 API 3
 | Tablet | Brand / Home `.tb-brand` | 83 × 22.5 |
 **Expected:** ≥ 44 dp everywhere (Android's own minimum is 48 dp; the handout asks 48 on tablet rails and phone bars). A larger
 hit area (padding / `::after` inset) keeps the drawn size.
+**Round 11 (run 43755713592):** `.shelf-tool` buttons "Collapse every file" (84.7 × 43) and "Weave two files page-for-page…" (76.3 × 43) in tablet landscape Arrange. One dp short; fix with the others' 44 px box.
 
 ## AT-07 · S4 · Android · **verified** R5 run 42746209649 (Foundation f88f9ef + Mobile UI c5c0b7e + Android 9ce073b, Release): no control labelled with a /data/ path on any screen — to verify — Tabs and Home's recent cards/rows label themselves with the internal working path
 The tablet tab's `title`, and the accessible name/`title` of every Home "Pick up where you left off" card (`.rcard`) and Recent
@@ -195,7 +196,7 @@ compare Foundation's B-24 "a stalled read never freezes the Reader") rather than
 Release once AT-03 lands. **Evidence:** R4 › results-phone-api36 › robust/; R4b › results-tablet-api36 › robust/ (screenshots,
 results.jsonl with PSS and `top`).
 
-## AT-14 · S3 · Foundation (open sequencing) · **partly fixed** R10 (D-164 A landed and works; C not achieved): cold Open-with to page 1 — phone 5,150 → 4,074 ms, tablet 7,572 → 9,149 ms (trace build, medians of 10). See the round 10 table below — Cold "Open with" takes 3.9 s (phone) / 6.0 s (tablet) to paint page 1 on Release
+## AT-14 · S3 · Foundation (open sequencing) · **partly fixed** (D-164 A works; C not done): cold Open-with to page 1, trace build — phone 5,150 (R7b) → 4,074 (R10) → 4,586 ms (R11); tablet 7,572 → 9,149 → 6,505 ms. Tables below — Cold "Open with" takes 3.9 s (phone) / 6.0 s (tablet) to paint page 1 on Release
 **Evidence:** R4e (run 42741617577), table in RESULTS §2: from the launch to page 1 painted, median 3,920 ms phone and 6,028 ms
 tablet over 12 cold runs, while the activity's first frame is ~1.2–1.5 s. The Release uses MAUI's default **profiled AOT**: the
 startup profile covers MAUI and the BCL, but Chuvadi's assemblies get 4–14 KB AOT images each (B-08), i.e. the PDF open, parse
@@ -343,6 +344,25 @@ and the render is not asked for until 8.7 s — 2.7 s of pure waiting (0.5 s on 
 overall in this round (runtime start 1,216 → 1,456 ms), so its absolute numbers are not a like-for-like regression; the 2.7 s gap is.
 **Remaining fix (Foundation):** ask for page 1's render as soon as the PDF is open and the page boxes exist, not on Ready; and
 look at why first paint is at 2.8 s / 5.8 s. Expected gain if the render follows the page boxes: about 0.5 s phone, 2.5 s tablet.
+### AT-14 round 11 (run 43755713592; Android a2c022c (= 39a623b, same app) + Foundation 57a63c5 (patch 27) + Mobile UI 5a49864, Release, API 36)
+Same method (trace build, cold Open with, 10 runs, median ms from process start).
+
+| Milestone | Phone R10 | Phone R11 | Tablet R10 | Tablet R11 |
+|---|---|---|---|---|
+| open request reaches the shared code | 976 | 1,170 | 2,334 | 1,637 |
+| PDF opened (library) | 1,857 | 2,135 | 3,766 | 2,776 |
+| first paint of the shell | 2,836 | 3,486 | 5,764 | 4,066 |
+| page boxes laid out | 3,253 | 3,734 | 6,022 | 4,333 |
+| Ready signal | 3,751 | 4,230 | 8,618 | 6,135 |
+| page 1 render requested | 3,778 | 4,252 | 8,702 | 6,161 |
+| **page 1 painted** | **4,074** | **4,586** | **9,149** | **6,505** |
+
+As-built Release: tablet `startup.py` (12 runs) cold Open with → ready median **5,370 ms** (worst 6,279), against 9,398 (15,510) in
+round 10; plain cold start → ready 2,650 ms. The baseline variant measured in the separate AT-14 job: phone 4,414 (worst 9,094),
+tablet 7,317 (worst 12,508).
+**Reading:** nothing in patch 27 was aimed at this, and nothing changed in the shape: the render is still requested 22–26 ms after
+the Ready signal, 0.5 s (phone) and 1.8 s (tablet) after the page boxes exist. The swings between rounds (phone +0.5 s, tablet −2.6 s)
+are the CI emulators, not the app — which is why I'd judge AT-14 by the gap, not the total. **Still open for Foundation: (C).**
 
 ## AT-15 · S2 · Foundation (routed 10 Nov, with the page drift) · **partly verified** R8 run 42802779369 (Foundation 741930b + Mobile UI 2b29227 + Android 7c8e2d8, Release, API 36): shapes by finger drag work (phone "1 shape"; tablet rectangle drawn, screenshot), the Protect redaction box draws on tablet ("1 box"), and a finger tap with Mark › Text now creates the box. Still wrong: the new text box doesn't take the caret — see AT-17 — Mark › Text: a finger tap on the page makes no text box (phone and tablet)
 **Steps:** Release (f88f9ef composition), API 36, open a PDF, Mark, choose Text (button shows as on), tap the page — quick tap, then
@@ -429,7 +449,7 @@ Each saved file was pulled off the device and read back with a separate PDF read
 Not exercised by anyone yet: snapshot image, desk session file, Split, Merge, Export pages as images, Lift, Combine.
 No crash or ANR in any save run.
 
-## AT-19 · S2 · Android (build) · **verified in CI** R10 (clean build on the pinned SDK and workload set: 0 errors, 0 warnings, three runs) — one leftover: the pin exists only inside the workflows, see the note at the end — The clean build breaks on the .NET SDK patch released 10 Nov (10.0.404): the toolchain isn't pinned
+## AT-19 · S2 · Android (build) / Foundation · **verified, closed** R11 run 43755713592: `global.json` is in the repo (SDK 10.0.403, workload set 10.0.403, rollForward disable), the clean build uses it: 0 errors, 0 warnings, runtime pack 10.0.14 — The clean build breaks on the .NET SDK patch released 10 Nov (10.0.404): the toolchain isn't pinned
 **Steps:** clean runner, `actions/setup-dotnet` with `10.0.x` (what the Android workflow and mine use), `dotnet workload install
 maui-android`, publish Release (run 42863203546, 10 Nov 17:16 UTC; Android 8f173c9 + Foundation dd59362 + Mobile UI 3ecbc75).
 **Expected:** builds, as it did earlier the same day on SDK 10.0.403.
@@ -455,8 +475,9 @@ So a release built by hand from the repo (not through the workflow) is not pinne
   toolchain. *Cons:* one more file to bump on purpose.
 - (b) Leave it CI-only and state "release builds come only from the workflow". *Pros:* nothing to change. *Cons:* relies on habit.
 - **Recommendation: (a).**
+**Round 11:** the leftover is closed — `global.json` came with patch 27 and the build reads it from the repo (audit `global.json`, `sdk.txt`).
 
-## AT-20 · S2 · Android / Mobile UI · open, still unproven after R10c — needs the Android chat's gesture check or a real tablet — Tablet: long-press drag from the Shelf doesn't put a page on a desk
+## AT-20 · S2 · was my test tool, not the app · **verified, closed** R11a/R11 (runs 43748557072, 43755713592): on the tablet in portrait the Shelf → desk long-press drag (2 of 2) and the desk reorder (1 of 1) both work — Tablet: long-press drag from the Shelf doesn't put a page on a desk
 **Steps:** tablet API 36 portrait, one PDF open, Arrange (Shelf sheet shows pages 1–12, Desk 1 says "Drag pages here"); long-press
 shelf page 3 and drag it onto the desk.
 **Expected:** the page lands on the desk (it does on the phone: two pages dragged, then reordered by long-press drag, R9b).
@@ -470,8 +491,12 @@ both synthetic gestures. The same script moves and reorders pages on the phone (
 not stuck without it: Reader › "Send this page to a desk in Arrange" put two pages on desks and Bind all then wrote them (10c).
 Still the same caveat — synthetic gestures only. **Question stands:** does the Android chat's gesture check pass shelf drag and
 desk reorder on the tablet in portrait?
+**Round 11a / 11 — closed, and the fault was mine.** My copy of the raw-touch tool sent coordinates in the screen's natural
+(landscape) orientation, so on the tablet in portrait every long-press landed somewhere else; Android's `input draganddrop` does not
+produce the pointer events the page listens for. With the Android chat's rotation-aware `touch.py` (taken into `ci/touch.py`):
+Shelf → desk 2 of 2, reorder 1 of 1, on Android 070af93 and again on a2c022c. The app was never wrong here.
 
-## AT-21 · S4 · Android (host) · open — After Bind all, the message shows the app's internal working path instead of the folder the person chose
+## AT-21 · S4 · Android (host), fix P-09 pending in Foundation · **verified on tablet** R11a/R11 with P-09 applied by the composition: the message reads "Bound 1 desk into Download/at-bind", no internal path on screen — After Bind all, the message shows the app's internal working path instead of the folder the person chose
 **Steps:** tablet API 36, Arrange with pages on desks › **Bind all** › choose `Download/at-bind` in Android's folder picker › Allow.
 **Expected:** "Bound 2 desks into at-bind" (the folder's own name), as AT-07 settled for tabs and recents.
 **Actual:** "Bound 2 desks into /data/user/0/in.chuvadi.reader/cache/work/folder/b7b7ff383d02410990fcbf082bdd5ba6". The files
@@ -479,6 +504,7 @@ themselves are in the chosen folder and correct. (Run 42951440189, Android ce890
 **Cause:** the host hands the shared code a working folder and copies out afterwards; the shared message prints the path it was given.
 **Fix (Android chat):** give the message the picked folder's display name (the same display-name route used for AT-07). Any other
 "saved to …" message that prints a path (Export, Scatter, Press) should be checked the same way.
+**Round 11a / 11 (tablet):** verified with P-09 applied by Android's composition. It stays "pending" only in the sense that P-09 is not yet in Foundation; Press's own message was not checked (see AT-23).
 
 ## AT-22 · S2 · Mobile UI (phone look) / Foundation if the card is shared · open, needs one confirming look — Phone: after drawing a mark, its property card covers **Save as new PDF**, and the card has no close control
 **Steps:** phone API 36, open a PDF, Mark › Rectangle (or Text), draw on the page. The mark's card ("Rectangle" / "Text box":
@@ -497,6 +523,25 @@ discovers a gesture", pending that one look.
   hides. *Cons:* crowds a small screen.
 - (c) Make the card a short peek (title row only) that expands on tap. *Pros:* page stays visible while marking. *Cons:* more work.
 - **Recommendation: (a) now, (c) when there is time.**
+
+## AT-23 · S2 · Android (host) · open — Reduce file size (Press) writes the smaller PDF into the app's private cache, where the person can't find it
+**Steps:** tablet API 36, open `Download/sv-compress.pdf` › Document › **Reduce file size (Press)** › **Press →**.
+**Expected:** like every other save to a new file since AT-18: Android's picker asks where, and the file is there afterwards.
+**Actual:** no picker. The card says "23.2 KB → 17.2 KB (25.9% smaller)" with an "open pressed file" link and a folder chip "Compressed".
+The file is `/data/user/0/in.chuvadi.reader/cache/work/Chuvadi Documents/Compressed/sv-compress-pressed.pdf` — inside the app's cache
+(found with root on the emulator). Nothing new appears in Downloads or anywhere the Files app can see, and Android may clear the cache
+at any time. The host's own note says there is "no default save folder, because every save goes through the system picker"; Press
+doesn't. (Runs 43748557072 and 43755713592; `screenshots/r11/r11-tablet-zoom-press-reorder-bind.png`, first frame.)
+**Likely the same for** anything else that saves into the Reader's default save folder without asking (the card's "change…" folder
+route; Scatter, Lift, Export when no folder was picked) — not yet exercised.
+**Fix options (Android chat):**
+- (a) **Press asks through the picker** (CreateDocument, suggested name `…-pressed.pdf`) like Flatten and Save as. *Pros:* one rule
+  for every save, file is where the person put it. *Cons:* one more tap.
+- (b) Map the default save folder to a real, visible place (e.g. `Documents/Chuvadi`) once, with the folder picker's permission kept.
+  *Pros:* closest to the desktop behaviour, no prompt per save. *Cons:* a first-run permission step; more host work.
+- (c) Keep it private and rely on "open pressed file" + Save as. *Pros:* nothing to build. *Cons:* the person must know to do it, and
+  the file can vanish.
+- **Recommendation: (a) for Phase 1;** (b) later if Arun wants a standing Chuvadi folder on Android.
 
 ## Questions for the coordinator (not filed as bugs)
 - **Q-1 Same file opened again → new tab** — answered by the coordinator (9 Nov 07:12): Windows is the reference. Checked the shared

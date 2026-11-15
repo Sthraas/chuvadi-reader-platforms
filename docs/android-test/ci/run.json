@@ -1,9 +1,8 @@
 {
-  "round": "11 (head a2c022c: patch 27 + Mobile UI 5a49864)",
+  "round": "12 (head c6ce38b: Foundation 87f95c0 patch 28 + Mobile UI cbdef77; save suite last, marks last on the phone, device health, live log)",
   "emulators": "phone-36,tablet-36",
-  "suites": "saves,drift,function,design,at13,startup,aot",
-  "variants": "baseline trace",
-  "foundation_ref": "57a63c5f82756f7784b392cf8c110cb328ac4dc1",
-  "mobileui_ref": "5a49864c643ceba2bb28e4e3ea22e315f79e475c",
-  "android_ref": "a2c022ce0831b4a9d144db58891577012d46fa51"
+  "suites": "saves,drift,function,design,at13",
+  "foundation_ref": "87f95c0a36a8366ce3da4f8f6494ac05e7bce59d",
+  "mobileui_ref": "cbdef7729d603018fcde0f4e72910d98cff50b95",
+  "android_ref": "c6ce38b9dd31e12e485a4c7e6bcd8f2fdf55af3f"
 }
