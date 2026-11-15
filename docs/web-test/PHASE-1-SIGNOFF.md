@@ -1,4 +1,28 @@
-# Web — what remains for a Phase 1 sign-off (Web Test chat, 11 Nov 2026)
+# Web — what remains for a Phase 1 sign-off (Web Test chat)
+
+> **Updated 16 Nov 2026, 01:10 IST** — tested heads 21ac80d (patch 26) and 4803bfa (D-181). The section below supersedes §1–§3 of the 11 Nov text that follows.
+
+## Status on 16 Nov
+**Fixed and verified since 11 Nov:** WT-22 (reload keeps the tabs), WT-21 (complete), WT-17, WT-20; the Leave-site question (D-181).
+
+**Blocks the sign-off**
+| # | What | Owner |
+|---|---|---|
+| M-27 | Marks land at pointer × zoom on WebKit 18.4 and earlier (Safari 17/18). Fix is in Foundation (PR 18); **not yet on `platform/web`** (head still 4803bfa). Re-test on the patch 27/28 head with current engines **and** WebKit 17.4, including Redact and move/resize | Web merges; Web Test re-tests |
+| WT-19 | Excel close / cancelled open gives no memory back | Foundation / library — status not re-measured on 21ac80d yet |
+| WT-18 | Oversized Excel part called "damaged" | Foundation / library |
+| WT-23 | Unsaved marks on a tab that isn't showing are lost on reload with no question | Coordinator: accept or fix |
+| Skipped tests | 6 skipped in the Reader tests on 21ac80d — say why | Foundation |
+
+**Decisions still open (from 11 Nov):** number grouping (server culture vs browser); the stored Excel value on touch; General cells.
+
+**Then, on the sign-off head:** the final full pass (clean build, all suites × 3 engines + WebKit 17.4 for marks, hostile corpus, fidelity, design screenshots against the handout, tablet portrait frame, sandbox speed re-run).
+
+**Phase 2 unchanged:** 40-person load (now also: sessions kept 30 min after a browser is closed count against `MaxWorkers = 40`), V-1 to V-7, https back-channel, M-1 to M-4 (add Safari 17/18 devices for M-27), G-12.
+
+---
+
+# 11 Nov 2026 text
 
 Tested head: `platform/web` **04cdd21**. Full evidence: `RESULTS.md`; bugs: `BUGS.md`.
 
