@@ -60,7 +60,6 @@ public sealed class MacPrintService : IPrintService
                 controller.ShowsPaperSelectionForLoadedPapers = true;
                 // M-26, second part: even on a landscape sheet UIKit drew a PDF printing item into the upright sheet's
                 // area and cut the page off. The pages are drawn onto the sheet here instead (still vector).
-                controller.PrintingItem = null;
                 controller.PrintPageRenderer = new MacPdfPageRenderer(doc.Pdf, request.FitToPage);
 
                 controller.Present(true, (_, completed, error) =>
