@@ -178,7 +178,9 @@ Landed on `platform/foundation` (be4498a) during this session; `platform/web-ui`
 ## ✔ decided (c) — Q-3 / D-119 Home wording on the portal (coordinator 02:30, confirmed 03:07)
 "Files in this session" for the Storage map heading, and "Nothing shelved this session — open the Library" for the empty shelf. The example line, "Your shelves for this session are empty — …", wraps to two lines, which would be a layout change, so I used the shorter line that keeps the "this session" wording and the layout. The diff went to the Foundation (HOOKS). The hide-on-Web version was prepared and then dropped.
 
-## U-18 "Sign with certificate" is live on the portal since patch 26 (found 11 Nov) — D-27 says "off now"
+## ✔ decided (b), D-187 — U-18 "Sign with certificate" is live on the portal since patch 26 (found 11 Nov) — D-27 says "off now"
+Diff sent to the Foundation: `proposal/web-ui-portal-certificate-off.patch` (HOOKS). One wording choice in it to confirm: the rail word is "off" ("desktop" does not fit).
+
 **What changed.** Windows PR 15 (chuvadi-pdf 3.32.0, real signing) removed `DisabledReason = CertificateSignService.WaitingReason` from the three places the action appears: the Reader's Protect rail, Redact's Tools rail, and the Ctrl K command "Sign with certificate". Until then it was greyed out on every platform only because the library wasn't ready. No capability flag covers signing, and the 12c `SangamGate` was never hooked (`EDITS-FOR-APPROVAL.md` line 82).
 
 **What a portal user sees now** (preview, Web profile; `screenshots/chromium-portal-sign-with-certificate.png`): an enabled "Sign with certificate" button, and a card with "Choose certificate (.pfx)…", "Certificate password" and "Save signed copy". On the real Web host the picker returns nothing (`PortalOptions.AllowCertificateUpload` is false by default, W-08), so no private key reaches the server and the security side of D-27 (a) holds. But the button looks live and does nothing.
@@ -195,3 +197,22 @@ Landed on `platform/foundation` (be4498a) during this session; `platform/web-ui`
 - **Find hits in hidden rows and columns can't be seen.** `layout.xlsx`, Find "hidden": "4 found", tab badges Layout 2 · Secret 1 · Deep 1. The two Layout hits are A5 (hidden row) and C6 (hidden column), so the sheet shows no outlined cell. The tests say hidden cells stay findable (D-171); this is only to note that the person gets a count with nothing to look at.
 - **Phone:** "4 found" wraps onto two lines in the Find box (390 px), and the hit badges of sheets further along the tab strip are off-screen until the strip is scrolled.
 - **Declared already** (audit E-07): a merged range that crosses the frozen line is cut at it. `layout.xlsx` A1:B2 shows "Title merge", and the yellow fill stops at column A.
+
+## U-19 Find matches inside hidden rows and columns: how the person sees where they are (asked for by the coordinator, 15 Nov; an option, not a diff)
+**Today** (`layout.xlsx`, Find "hidden"): "4 found", tab badges Layout 2 · Secret 1 · Deep 1. The two Layout matches are A5 (row 5 is hidden) and C6 (column C is hidden), so nothing is outlined on the sheet. Matches in hidden *sheets* are already reachable: the tab carries the count and opens on a click. D-171 keeps hidden cells findable, so the question is only how to show them.
+
+- **(a) A line under the Find box naming them.** For the sheet on screen: "2 matches are in hidden cells: A5 (hidden row), C6 (hidden column)". With more than five: the first five, then "and 12 more".
+  - Pros: says where, in words, with the cell address; readable on touch; the grid doesn't change; small (the viewer already knows each match's cell and which rows and columns are hidden).
+  - Cons: the Find box grows by a line (two on a phone at 390 px); it names the place but doesn't show the value.
+- **(b) Step through the matches, and let the value bar show each one.** Enter goes to the next match (as Excel's Find Next does). For a hidden one the value bar reads "A5 · hidden row" with the stored value, and nothing moves on the grid.
+  - Pros: every match, hidden or not, gets an address and its value; it uses the value bar that is already there; it also gives Office Find the next / previous it lacks today.
+  - Cons: the biggest piece of work (stepping, a current match, scrolling to visible ones); the value bar gains a second kind of content.
+- **(c) Mark the gap on the sheet.** The header line between rows 4 and 6 (and between columns B and D) is drawn in the match colour, with the tooltip "Match in hidden row 5 (A5)".
+  - Pros: shows the place on the sheet itself, where the eye already is.
+  - Cons: a tooltip can't be read on touch; easy to miss; several hidden matches in one gap share one mark.
+- Not offered: leaving hidden cells out of Find. That would go against D-171.
+
+**Recommendation: (a) now.** It is the smallest change that answers "where is it?" everywhere, phone included. (b) is the fuller answer and is worth doing when Office Find gets next / previous anyway. (c) only as an extra on top of (a).
+
+## Observation for the Foundation: Ctrl F does nothing on Word, Excel, Markdown and text files (found 15 Nov; old, every platform)
+The Find button's tooltip says "Find (Ctrl F)", and for a PDF the key opens Find. For the other formats it opens nothing. The key handler lives in `reader.js` `init(deskEl, …)` (line 280), which runs only when a PDF's desk is set up (`Reader.razor` line 3480), and it calls `OpenFind`, the PDF Find. I tried routing `OpenFind` to the viewers' Find for view-only formats: no effect, because the handler isn't attached at all while an Office file is shown. So this is a piece of its own (attach the keys for the viewers too); it is **not** in my Find-focus patch. The same in Chromium, Firefox and WebKit, on the Web and Windows profiles.

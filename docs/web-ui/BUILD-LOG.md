@@ -377,3 +377,27 @@ Build `-warnaserror` 0 warnings. Tests 374 + 16 + 41 + 91 = **522 pass**, 0 fail
 
 ### 6. Observations passed to the Foundation (OPTIONS)
 The Office Find box doesn't take the cursor (old, all platforms); Find hits in hidden rows and columns can't be seen; on the phone "4 found" wraps and far tab badges are off-screen; merged range cut at the frozen line (already declared, E-07).
+
+## 2026-11-15/16 — session 22 (coordinator 15 Nov 23:55: D-187, U-18 (b); Find-focus diff; hidden Find matches as an option)
+
+### 1. Branches and merge
+Checked all: `platform/foundation` 20030cb (15 Nov; pinch-to-zoom, M-27 mark-under-pointer fix), `platform/foundation-pr` 89ac6b2 (11 Nov, older), `platform/foundation-lib33` 52b867c (work in progress, not for merge, D-186), `main` e578a80 (D-186, D-187), `platform/web` 21ac80d, `platform/web-test` aa25188 (unchanged), `platform/mobile-ui` a1dfb40. Merged **`platform/foundation` 20030cb** (clean); `src` equals the Foundation's. Both diffs below are written against it.
+
+### 2. U-18 (b): `proposal/web-ui-portal-certificate-off.patch`
+Nine files, +43 / −4 (HOOKS has the table). On the portal "Sign with certificate" is greyed with the D-187 sentence in the Reader's Protect rail, Redact's Tools rail, Ctrl K and the phone's Protect strip. With a mouse it is disabled and the sentence is its tooltip. On a touch screen it stays greyed but answers a tap, and the card shows the sentence in place of its fields. Proved in Chromium, Firefox and WebKit at desktop, tablet and phone sizes: 9 of 9 as decided.
+- Rail word: "off". "desktop app" and "desktop" run past the rail's edge (measured: "desktop" by 4 px in all three browsers); "off" ends where the shortcut letters end.
+- Windows profile, with and without the patch (Protect rail, Sign card, Redact rail × 3 browsers): 8 of 9 pixel-identical. The ninth (Chromium, rail shot) differs in an 82 × 5 px strip on the Ctrl K pill's bottom edge, which the patch doesn't touch and which is identical in the other two Chromium shots of the same top bar. On Windows the button is enabled and the full card shows, as before.
+- Portal sweep (63 screenshots against the merged tree without the patches): text identical in all 63; the only pixel change is the Redact rail's button at desktop and tablet sizes, greyed again (intended).
+
+### 3. Find focus: `proposal/web-ui-office-find-focus.patch`
+Two files, +11. The Find box of the Word, Excel, Markdown and text viewers takes the cursor when it opens. Proved by typing without clicking the box: "4 found" in `layout.xlsx` and "1 found" in `discharge.docx`, from the left bar's Find (desktop, tablet), from ⋮ › Find (phone) and on the Windows profile, in all three browsers. Not provable here: a real iPhone raising its keyboard (HOOKS says why and what to check).
+
+### 4. Found on the way
+**Ctrl F does nothing on Office files** (old, every platform): the key handler is set up only with a PDF's desk. I tried routing `OpenFind` to the viewers' Find; no effect, so it is left out of the patch and written up in OPTIONS for the Foundation.
+
+### 5. U-19 (option, not a diff)
+How a person sees Find matches that sit in hidden rows and columns: three options in OPTIONS, recommending a line under the Find box that names them with their cell addresses.
+
+### 6. Build and tests
+- Merged tree as pushed (the Foundation's files untouched): build `-warnaserror` 0 warnings.
+- With both patches applied: build `-warnaserror` 0 warnings; tests 374 + 16 + 41 + 97 = **528 pass**, 0 fail, 6 skipped (the Foundation's). Each patch applies alone and in either order.

@@ -1,5 +1,52 @@
 # Web portal UI — existing-file hooks
 
+## Still to apply — "Sign with certificate" off on the portal, greyed with its reason (U-18 b, D-187)
+**`proposal/web-ui-portal-certificate-off.patch`**, against foundation **20030cb** (applies cleanly; independent of the Find-focus patch below, and the two apply together). Nine files, 43 lines added and 4 removed:
+
+| File | Change |
+|---|---|
+| `Ui/Components/Platform/PlatformText.cs` | The sentence (`CertificateSigningOnPortal`), the rail word (`CertificateSigningTag = "off"`), `CertificateSigningOff(platform)` (the sentence on Web, null elsewhere) and `ReasonOnTap(platform)` (true where `Input` has Touch) |
+| `Ui/Components/Rails/RailButton.razor` | Two optional parameters. `DisabledTag` (default "soon") is the word shown where the shortcut would be. `ReasonOnTap`: with a `DisabledReason`, the button is not `disabled` but gets class `off` and `aria-disabled="true"`, so it looks greyed and still runs `OnClick`. Defaults leave every existing button as it is |
+| `Ui/wwwroot/css/shell.css` | `.rb.off { opacity: 0.38; }`, the same grey as `.rb:disabled` |
+| `Ui/Pages/Reader.razor` | Protect rail's button gets the three parameters. The "cert" card: where signing is off it shows the sentence in place of the certificate, password, reason, location and Save controls |
+| `Ui/Pages/Redact.razor` | Tools rail's button gets the same three parameters |
+| `Ui/Pages/Reader.Shell.cs` | Command `p.cert` (Ctrl K, phone Protect strip): greyed with the reason; on a touch screen it runs and is marked `Dimmed` |
+| `Core/Reader/ShellService.cs` | `ShellCommand.Dimmed` (init-only, default false): shown greyed although it runs |
+| `Ui/Components/Platform/Phone/PhoneToolStrip.razor`, `Ui/wwwroot/css/mobile.css` | A `Dimmed` command's tool gets class `dim`; `.ph-tool.dim { opacity: .38; }` |
+
+Wording choice to confirm: the rail word is **"off"**. "soon" would be untrue, and "desktop app" and "desktop" don't fit: beside "Sign with certificate", the longest label on the Tools rail, "desktop" ends 4 px past the rail's edge in all three browsers. "off" ends at the same x as the shortcut letters above it (1204 of 1218). At most six characters fit.
+
+Proofs (preview; Chromium / Firefox / WebKit; the same in all three):
+
+| Profile | Button | On click or tap |
+|---|---|---|
+| Portal, desktop 1280×720, mouse | Reader Protect rail and Redact Tools rail: `disabled`, opacity 0.38, tooltip "Sign with certificate — Certificate signing is in the desktop app. Your private key never leaves your computer.", word "off" | Nothing (disabled) |
+| Portal, tablet 1024×768, touch | Both rails: not disabled, class `off`, `aria-disabled="true"`, opacity 0.38 | The card opens with the sentence; no "Choose certificate", no password box, no "Save signed copy" |
+| Portal, phone 390×844, touch | Protect strip "Sign": not disabled, class `dim`, opacity 0.38 | The card opens with the sentence; no fields |
+| Windows 1280×720 | Enabled, opacity 1, no word | The full card, as before |
+
+Windows profile pixel check and the portal sweep: see the build log, session 22. Screenshots: `screenshots/chromium-u18-rail-hover.png`, `screenshots/webkit-u18-tablet-card.png`, `screenshots/webkit-u18-phone-card.png`.
+
+Not changed: the placed-signature card's note "For a certificate signature use Protect › Sign with certificate" still reads true (the button is there, with its reason). The Web host's `AllowCertificateUpload` stays as it is (off).
+
+## Still to apply — the Find box in Word, Excel, Markdown and text files takes the cursor (coordinator 15 Nov, D-187)
+**`proposal/web-ui-office-find-focus.patch`**, against foundation **20030cb** (applies cleanly). Two files, 11 lines added:
+- `Ui/Pages/Reader.razor`: the viewers' Find box gets `@ref="_viewerFindBoxRef"`; `OnAfterRenderAsync` focuses it once after the render that draws it (`_focusViewerFind`), the same call the PDF Find box gets in `OpenFind`.
+- `Ui/Pages/Reader.Shell.cs`: `OpenViewerFind` sets `_focusViewerFind`.
+
+Proofs (preview; Chromium / Firefox / WebKit; the same in all three). "Focus" is `document.activeElement` 0.9 s after opening Find; then the query is typed **without clicking the box**:
+
+| Profile | How Find is opened | Excel (`layout.xlsx`) | Word (`discharge.docx`) | PDF |
+|---|---|---|---|---|
+| Portal desktop | Left bar Find | box focused; "hidden" + Enter → "4 found" | box focused; "discharge" → "1 found" | box focused (as before) |
+| Portal tablet (touch) | Left bar Find, tapped | focused; "4 found" | focused; "1 found" | focused |
+| Portal phone (touch) | ⋮ › Find, tapped | focused; "4 found" | focused; "1 found" | focused |
+| Windows | Left bar Find | focused; "4 found" | focused; "1 found" | focused |
+
+Before the patch the focus stayed on the Find button (or the page) in every Office case.
+
+**What I could not prove here:** that a real phone raises its keyboard. The box does take focus under touch emulation, and Android Chrome shows the keyboard on a focus like this. iOS Safari only does so when the focus happens inside the tap itself; on the portal (Blazor Server) the focus arrives one round trip later, exactly as it does for the PDF Find box today. This needs a look on a real iPhone (Web Test or Mobile Test). If iOS doesn't raise it, the PDF box has the same gap and the cure is the same for both: focus from a small script in the tap handler.
+
 ## Applied by the Foundation (patch 26; checked on 37bd4a0) — the Word "left out" note is wider than the page on tablet and phone (D-168)
 In exactly as sent (`git apply -R --check` succeeds). Re-measured on 37bd4a0: the note and the page share the same edges at desktop, tablet and phone sizes in all three browsers.
 

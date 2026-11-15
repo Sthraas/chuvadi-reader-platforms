@@ -1,0 +1,55 @@
+diff --git a/src/ChuvadiReader.Ui/Pages/Reader.Shell.cs b/src/ChuvadiReader.Ui/Pages/Reader.Shell.cs
+index 76b56816..70b5046f 100644
+--- a/src/ChuvadiReader.Ui/Pages/Reader.Shell.cs
++++ b/src/ChuvadiReader.Ui/Pages/Reader.Shell.cs
+@@ -56,6 +56,7 @@ public partial class Reader
+     private string? _viewerFind;
+     private string _viewerFindInput = string.Empty;
+     private bool _viewerFindOpen;
++    private bool _focusViewerFind;   // set when the person opens Find; OnAfterRenderAsync then focuses the box
+     private int _viewerFindCount;
+     private string? _viewerStatus;
+     private int _textSize = 100;
+@@ -1199,6 +1200,7 @@ public partial class Reader
+     private void OpenViewerFind()
+     {
+         _viewerFindOpen = true;
++        _focusViewerFind = true;
+     }
+ 
+     private void CloseViewerFind()
+diff --git a/src/ChuvadiReader.Ui/Pages/Reader.razor b/src/ChuvadiReader.Ui/Pages/Reader.razor
+index e45ae46b..07d3c595 100644
+--- a/src/ChuvadiReader.Ui/Pages/Reader.razor
++++ b/src/ChuvadiReader.Ui/Pages/Reader.razor
+@@ -369,6 +369,7 @@
+         {
+             <div class="rfind">
+                 <input class="rfind-box" placeholder="Find in @tab.Format.Label()…" @bind="_viewerFindInput" @bind:event="oninput"
++                       @ref="_viewerFindBoxRef"
+                        @onkeydown="OnViewerFindKey" />
+                 <span class="rfind-count">@(_viewerFind is null ? "" : $"{_viewerFindCount} found")</span>
+                 <button class="rfind-x" @onclick="CloseViewerFind" title="Close (Esc)"><Icon Name="x" Size="14" /></button>
+@@ -2044,6 +2045,7 @@
+     private Dictionary<int, List<RedactService.RedactSearchMatch>> _findByPage = new();
+     private int _findIndex = -1;
+     private ElementReference _findBoxRef;
++    private ElementReference _viewerFindBoxRef;   // the Find box of the Word, Excel, Markdown and text viewers
+     private string? _lastFindQuery;
+ 
+     private RedactService.RedactSearchMatch? CurrentFindMatch =>
+@@ -3409,6 +3411,14 @@
+         PublishShell();
+         var tab = Tabs.Active;
+ 
++        // The viewers' Find box takes the cursor when it opens, as the PDF one does (OpenFind), so the person can
++        // type at once and a phone brings its keyboard up. Done here because the box exists only after this render.
++        if (_focusViewerFind && _viewerFindOpen)
++        {
++            _focusViewerFind = false;
++            try { await _viewerFindBoxRef.FocusAsync(); } catch { }
++        }
++
+         // Pinch and Ctrl + wheel on the Word, Excel, Markdown and text viewers (asked for until the script says it is
+         // on; the viewers' element is new whenever one replaces the PDF desk).
+         if (tab is not null && tab.Format != DocumentFormat.Pdf && _viewerHost.Id is { } hostId && hostId != _viewerPinchOn)
