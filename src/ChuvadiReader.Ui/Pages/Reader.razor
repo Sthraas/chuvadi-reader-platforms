@@ -2065,6 +2065,15 @@
     [JSInvokable]
     public async Task OpenFind()
     {
+        // ⌘/Ctrl+F from the page on a Word, Excel, Markdown, text or HTML file opens that viewer's Find, as the
+        // Find button and the shell's command do; the PDF Find bar below does not exist for those (Mac Test M-28).
+        if (Tab is { } viewOnly && viewOnly.Format.IsViewOnly())
+        {
+            OpenViewerFind();
+            StateHasChanged();
+            return;
+        }
+
         _findOpen = true;
         StateHasChanged();
         await Task.Yield();
@@ -3439,6 +3448,7 @@
             {
                 _js ??= await JS.InvokeAsync<IJSObjectReference>("import", "./_content/ChuvadiReader.Ui/js/reader.js");
                 _ref ??= DotNetObjectReference.Create(this);
+                await _js.InvokeAsync<bool>("bindKeys", _ref);   // shortcuts work with no PDF opened yet (M-28)
                 if (await _js.InvokeAsync<bool>("viewerPinch", _viewerHost, _ref)) _viewerPinchOn = hostId;
             }
             catch { }
