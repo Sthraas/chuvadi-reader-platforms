@@ -116,6 +116,16 @@ app.MapPost("/__preview/open", async (string path) =>
     return Results.Ok(new { tab.Id });
 });
 
+// POST /__preview/close-app: what a host does when its window is asked to close (D-190). Answers at once with
+// "closed" when nothing is unsaved; otherwise the Ui asks, and the answer comes when the person has answered.
+app.MapPost("/__preview/close-app", async () =>
+{
+    var work = app.Services.GetRequiredService<ChuvadiReader.Platform.IUnsavedWork>();
+    bool had = work.HasUnsavedWork;
+    bool go = !had || await work.ConfirmCloseAsync();
+    return Results.Ok(new { hadUnsavedWork = had, closed = go });
+});
+
 shell.SetMode(DocMode.Read, first.Id);
 
 app.Run();

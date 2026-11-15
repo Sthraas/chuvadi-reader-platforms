@@ -1753,9 +1753,113 @@
     // gesture. MkUp waits for the press, so a tap still places its text box.
     private Task _mkPress = Task.CompletedTask;
 
-    private readonly Dictionary<int, List<TextBox>> _texts = new();
-    private readonly Dictionary<int, List<ShapeBox>> _shapes = new();
-    private readonly Dictionary<int, List<ImageBox>> _images = new();
+    // D-186 Q3 B: the marks belong to the tab, not to this page. _marks is the active tab's set (ReaderTab.Marks),
+    // so the marks are still there after another tab was shown, or Home, or Arrange. They go when the tab closes.
+    private MarkSet _marks = new();
+    private Dictionary<int, List<TextBox>> _texts => _marks.Texts;
+    private Dictionary<int, List<ShapeBox>> _shapes => _marks.Shapes;
+    private Dictionary<int, List<ImageBox>> _images => _marks.Images;
+
+    /// <summary>One tab's unsaved marks and their undo history.</summary>
+    private sealed class MarkSet : ITabMarks
+    {
+        public readonly Dictionary<int, List<TextBox>> Texts = new();
+        public readonly Dictionary<int, List<ShapeBox>> Shapes = new();
+        public readonly Dictionary<int, List<ImageBox>> Images = new();
+        public readonly Stack<MkState> Undo = new();
+        public readonly Stack<MkState> Redo = new();
+
+        /// <summary>The file the marks were drawn on; another file in the same tab starts a new set.</summary>
+        public string? Path;
+
+        /// <summary>The marks as "Save as new PDF" last wrote them: until they change, they are not unsaved.</summary>
+        public string? SavedAs;
+
+        // What a save writes: text boxes with text in them, shapes, pictures. An empty text box is nothing to lose.
+        public int Count =>
+            Texts.Values.Sum(l => l.Count(t => !string.IsNullOrEmpty(t.Text)))
+            + Shapes.Values.Sum(l => l.Count)
+            + Images.Values.Sum(l => l.Count(i => i.Bytes.Length > 0));
+
+        public bool HasUnsaved => Count > 0 && Signature() != SavedAs;
+
+        public void Discard()
+        {
+            Texts.Clear();
+            Shapes.Clear();
+            Images.Clear();
+            Undo.Clear();
+            Redo.Clear();
+            SavedAs = null;
+        }
+
+        public string Signature()
+        {
+            var sb = new System.Text.StringBuilder();
+            foreach (var (p, l) in Texts.OrderBy(k => k.Key))
+            {
+                foreach (var t in l)
+                {
+                    sb.Append('t').Append(p).Append(t.X).Append(',').Append(t.Y).Append(',').Append(t.W).Append(',').Append(t.H)
+                      .Append(t.Text).Append(t.FontFamily).Append(t.Bold).Append(t.Italic).Append(t.FontSizePt).Append(t.ColorHex)
+                      .Append(t.Align).Append(t.Rotation).Append('|');
+                }
+            }
+
+            foreach (var (p, l) in Shapes.OrderBy(k => k.Key))
+            {
+                foreach (var sh in l)
+                {
+                    sb.Append('s').Append(p).Append(sh.Kind).Append(sh.X).Append(',').Append(sh.Y).Append(',').Append(sh.W).Append(',').Append(sh.H)
+                      .Append(sh.FillHex).Append(sh.StrokeHex).Append(sh.StrokeWidthPt).Append(sh.Rotation).Append(sh.BehindContent)
+                      .Append(sh.Points?.Count ?? 0).Append('|');
+                }
+            }
+
+            foreach (var (p, l) in Images.OrderBy(k => k.Key))
+            {
+                foreach (var i in l)
+                {
+                    sb.Append('i').Append(p).Append(i.X).Append(',').Append(i.Y).Append(',').Append(i.W).Append(',').Append(i.H)
+                      .Append(i.Opacity).Append(i.Rotation).Append(i.BehindContent).Append(i.Bytes.Length).Append('|');
+                }
+            }
+
+            return sb.ToString();
+        }
+    }
+
+    /// <summary>Makes <see cref="_marks"/> the set kept with this tab (a new, empty one for a tab or a file that
+    /// has none yet). True when the set changed, so what was selected or being drawn belongs to the other set.</summary>
+    private bool UseMarksOf(ReaderTab? tab)
+    {
+        var set = tab?.Marks as MarkSet;
+        if (set is null || set.Path != tab!.Path)
+        {
+            set = new MarkSet { Path = tab?.Path };
+            if (tab is not null) tab.Marks = set;
+        }
+
+        _mkDocPath = tab?.Path;
+        if (ReferenceEquals(set, _marks)) return false;
+        _marks = set;
+        _pendingSnap = null;
+        _selText = null; _selShape = null; _selImage = null;
+        _dragText = null; _dragShape = null; _dragImage = null;
+        _mkStatus = null; _mkSavedPath = null; _mkMode = MkMode.None; _textDraft = null; _shapeDraft = null;
+        return true;
+    }
+
+    /// <summary>D-190: the close question's Save and Save as, for the tab in front. Null: saved. Empty: the person
+    /// backed out of the save. Otherwise why it failed.</summary>
+    private async Task<string?> SaveMarksForCloseAsync(bool saveAs)
+    {
+        UseMarksOf(Tabs.Active);
+        if (!_marks.HasUnsaved) return null;
+        if (saveAs) await SaveMarkup(); else await SaveInPlace();
+        if (!_marks.HasUnsaved) return null;
+        return _mkError ? _mkStatus ?? "The marks couldn't be saved." : "";
+    }
     private TextBox? _selText;
     private int _selTextPage = -1;
     private ShapeBox? _selShape;
@@ -2402,16 +2506,7 @@
 
     private void EnsureMarkupDoc()
     {
-        var path = Tab?.Path;
-        if (path != _mkDocPath)
-        {
-            _mkDocPath = path;
-            _texts.Clear();
-            _shapes.Clear();
-            _images.Clear();
-            _selText = null; _selShape = null; _selImage = null;
-            _mkStatus = null; _mkSavedPath = null;
-        }
+        UseMarksOf(Tab);
     }
 
     private async Task<bool> CacheLayerRect(int page)
@@ -3066,6 +3161,7 @@
         _texts.Clear();
         _shapes.Clear();
         _images.Clear();
+        _marks.SavedAs = null;
         _selText = null; _selShape = null; _selImage = null;
         _mkStatus = null; _mkSavedPath = null;
     }
@@ -3144,10 +3240,9 @@
 
             await WriteBack.DeliverOrThrowAsync(src);
 
-            // Flattened into the file now — clear the editable overlays.
-            _texts.Clear();
-            _shapes.Clear();
-            _images.Clear();
+            // Flattened into the file now — clear the editable overlays (and their history: undo must not bring
+            // back a mark the file already holds).
+            _marks.Discard();
             _selText = null; _selShape = null; _selImage = null;
             _mkStatus = $"Saved to {System.IO.Path.GetFileName(src)}";
             _mkError = false;
@@ -3185,6 +3280,7 @@
             await Redact.FlattenToFileAsync(active.Path, output!, new Dictionary<int, PageRedaction>(), _mkColor, texts, imgs, shps);
             await WriteBack.DeliverOrThrowAsync(output);
             _mkSavedPath = output;
+            _marks.SavedAs = _marks.Signature(); // these marks are in a file now; closing need not ask until they change
             _mkStatus = $"Saved → {System.IO.Path.GetFileName(output)}";
             _mkError = false;
         }
@@ -3394,14 +3490,9 @@
             _recoverBannerDismissed = false;
             _recoverStatus = null;
             if (tab?.Path != _pageBgPath) _ = LoadPageBgAsync(tab?.Path);
-            if (tab?.Path != _mkDocPath)
+            bool otherFile = tab?.Path != _mkDocPath;
+            if (UseMarksOf(tab) || otherFile)
             {
-                _mkDocPath = tab?.Path;
-                _texts.Clear();
-                _shapes.Clear();
-                _images.Clear();
-                _selText = null; _selShape = null; _selImage = null;
-                _mkStatus = null; _mkSavedPath = null; _mkMode = MkMode.None; _textDraft = null; _shapeDraft = null;
                 _mkTagged = false; _mkTaggedPath = null;
                 if (_markup) _ = CheckTaggedAsync();
             }
@@ -3719,7 +3810,10 @@
     public async Task CloseAllTabs()
     {
         await Tabs.CloseAllAsync();
-        Nav.NavigateTo("/");
+        if (Tabs.Tabs.Count == 0)   // D-190: Cancel on the unsaved-marks question keeps the tabs
+        {
+            Nav.NavigateTo("/");
+        }
     }
 
     [JSInvokable]
