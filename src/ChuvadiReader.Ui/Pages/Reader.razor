@@ -369,6 +369,7 @@
         {
             <div class="rfind">
                 <input class="rfind-box" placeholder="Find in @tab.Format.Label()…" @bind="_viewerFindInput" @bind:event="oninput"
+                       @ref="_viewerFindBoxRef"
                        @onkeydown="OnViewerFindKey" />
                 <span class="rfind-count">@(_viewerFind is null ? "" : $"{_viewerFindCount} found")</span>
                 <button class="rfind-x" @onclick="CloseViewerFind" title="Close (Esc)"><Icon Name="x" Size="14" /></button>
@@ -577,8 +578,10 @@
                                 var isCur = ReferenceEquals(fm, CurrentFindMatch);
                                 @foreach (var hb in fm.Boxes)
                                 {
+                                    @* The highlight is a little deeper than the text's box (descenders); on a page shown
+                                       turned a quarter, "deeper" is sideways (F-1). *@
                                     <div class="rfind-hl @(isCur ? "cur" : null)"
-                                         style="left:@Pct(hb.X);top:@Pct(hb.Y);width:@Pct(hb.W);height:@Pct(hb.H * 1.3)"></div>
+                                         style="left:@Pct(hb.X);top:@Pct(hb.Y);width:@Pct(fm.Sideways ? hb.W * 1.3 : hb.W);height:@Pct(fm.Sideways ? hb.H : hb.H * 1.3)"></div>
                                 }
                             }
                         }
@@ -672,7 +675,7 @@
             }
             else if (_selText is { } sel)
             {
-                <FloatCard Title="Text box" Meta="@SelMeta(_selTextPage, _texts, sel)">
+                <FloatCard Title="Text box" Meta="@SelMeta(_selTextPage, _texts, sel)" OnClose="MarkCardClose">
                     <div class="fc-seg">
                         @foreach (var fam in new[] { "Helvetica", "Times", "Courier" })
                         {
@@ -717,7 +720,7 @@
             }
             else if (_selShape is { } ssel)
             {
-                <FloatCard Title="@ShapeKindLabel(ssel.Kind)" Meta="@SelMeta(_selShapePage, _shapes, ssel)">
+                <FloatCard Title="@ShapeKindLabel(ssel.Kind)" Meta="@SelMeta(_selShapePage, _shapes, ssel)" OnClose="MarkCardClose">
                     <div class="fc-row">
                         <span class="fc-lbl">Stroke</span>
                         <label class="fc-sw on" title="Stroke colour" style="background:@ssel.StrokeHex"><input type="color" value="@ssel.StrokeHex" @onchange="e => { MkSnap(); SetShapeStroke(ssel, e); }" /></label>
@@ -747,7 +750,7 @@
             }
             else if (_selImage is { } isel)
             {
-                <FloatCard Title="Image" Meta="@SelMeta(_selImagePage, _images, isel)">
+                <FloatCard Title="Image" Meta="@SelMeta(_selImagePage, _images, isel)" OnClose="MarkCardClose">
                     <div class="fc-row">
                         <span class="fc-lbl">Opacity</span>
                         <input class="fc-grow" type="range" min="0.1" max="1" step="0.05" value="@isel.Opacity" @oninput="e => SetImageOpacity(isel, e)" @onchange="_ => MkSnap()" />
@@ -798,6 +801,12 @@
                     break;
                 case "password":
                     <PasswordCard Path="@tab.Path" Session="@tab.Session" CurrentPage="@tab.CurrentPageIndex" OnClose="CloseCard" OnMessage="OnCardMessage" OnSaved="OnProtectedSaved" />
+                    break;
+                case "cert" when ChuvadiReader.Ui.Components.Platform.PlatformText.CertificateSigningOff(Platform) is { } certOff:
+                    @* D-187: where signing is off (the Web portal) the card says why, in place of its fields. *@
+                    <FloatCard Title="Sign with certificate" OnClose="CloseCard">
+                        <p class="fc-note">@certOff</p>
+                    </FloatCard>
                     break;
                 case "cert":
                     <FloatCard Title="Sign with certificate" Meta="always a new file" OnClose="CloseCard">
@@ -1162,7 +1171,7 @@
                     <RailButton Icon="watermark" Label="Watermark" Active='_card == "stamp" && _stampFocus == "watermark"' OnClick='() => OpenStamp("watermark")' />
                     <RailButton Icon="compress" Label="Flatten" Disabled="_flattening" OnClick="FlattenNow" />
                     <RailButton Icon="doc-lock" Label="Password" Active='_card == "password"' OnClick='() => ToggleCard("password")' />
-                    <RailButton Icon="certification" Label="Sign with certificate" Active='_card == "cert"' OnClick='() => ToggleCard("cert")' />
+                    <RailButton Icon="certification" Label="Sign with certificate" DisabledReason="@ChuvadiReader.Ui.Components.Platform.PlatformText.CertificateSigningOff(Platform)" DisabledTag="@ChuvadiReader.Ui.Components.Platform.PlatformText.CertificateSigningTag" ReasonOnTap="@ChuvadiReader.Ui.Components.Platform.PlatformText.ReasonOnTap(Platform)" Active='_card == "cert"' OnClick='() => ToggleCard("cert")' />
                     <RailButton Icon="sliders" Label="View" Class="rb-viewfold" Active='_card == "view"' OnClick='() => ToggleCard("view")' />
                     <RailSpacer />
                     <RailButton Icon="download" Label="Save redacted copy" Primary="true" OnClick="() => GoRedact(false)" />
@@ -2044,6 +2053,7 @@
     private Dictionary<int, List<RedactService.RedactSearchMatch>> _findByPage = new();
     private int _findIndex = -1;
     private ElementReference _findBoxRef;
+    private ElementReference _viewerFindBoxRef;   // the Find box of the Word, Excel, Markdown and text viewers
     private string? _lastFindQuery;
 
     private RedactService.RedactSearchMatch? CurrentFindMatch =>
@@ -2057,6 +2067,15 @@
     [JSInvokable]
     public async Task OpenFind()
     {
+        // ⌘/Ctrl+F from the page on a Word, Excel, Markdown, text or HTML file opens that viewer's Find, as the
+        // Find button and the shell's command do; the PDF Find bar below does not exist for those (Mac Test M-28).
+        if (Tab is { } viewOnly && viewOnly.Format.IsViewOnly())
+        {
+            OpenViewerFind();
+            StateHasChanged();
+            return;
+        }
+
         _findOpen = true;
         StateHasChanged();
         await Task.Yield();
@@ -2890,6 +2909,12 @@
         _mkStatus = null; _mkSavedPath = null;
     }
 
+    // Tablet and phone: a selected mark's card has a close control (there is no Esc key, and on the
+    // phone the card is a bottom sheet over the page). Closing drops the selection only; the mark stays.
+    private EventCallback MarkCardClose => Platform.FormFactor != ChuvadiReader.Platform.FormFactor.Desktop
+        ? EventCallback.Factory.Create(this, () => { _selText = null; _selShape = null; _selImage = null; })
+        : default;
+
     private void SelectImage(int page, ImageBox ib)
     {
         _selImage = ib; _selImagePage = page;
@@ -3409,6 +3434,14 @@
         PublishShell();
         var tab = Tabs.Active;
 
+        // The viewers' Find box takes the cursor when it opens, as the PDF one does (OpenFind), so the person can
+        // type at once and a phone brings its keyboard up. Done here because the box exists only after this render.
+        if (_focusViewerFind && _viewerFindOpen)
+        {
+            _focusViewerFind = false;
+            try { await _viewerFindBoxRef.FocusAsync(); } catch { }
+        }
+
         // Pinch and Ctrl + wheel on the Word, Excel, Markdown and text viewers (asked for until the script says it is
         // on; the viewers' element is new whenever one replaces the PDF desk).
         if (tab is not null && tab.Format != DocumentFormat.Pdf && _viewerHost.Id is { } hostId && hostId != _viewerPinchOn)
@@ -3417,6 +3450,7 @@
             {
                 _js ??= await JS.InvokeAsync<IJSObjectReference>("import", "./_content/ChuvadiReader.Ui/js/reader.js");
                 _ref ??= DotNetObjectReference.Create(this);
+                await _js.InvokeAsync<bool>("bindKeys", _ref);   // shortcuts work with no PDF opened yet (M-28)
                 if (await _js.InvokeAsync<bool>("viewerPinch", _viewerHost, _ref)) _viewerPinchOn = hostId;
             }
             catch { }
@@ -3443,6 +3477,18 @@
             {
                 return;
             }
+        }
+
+        // F-2: while a fit is on, a page of another shape gets the zoom at which it fits; without one, all pages
+        // share the document's zoom again (asked once after the fit goes off).
+        if (tab.FitMode != ReaderFitMode.Free || _pageFitsOn)
+        {
+            _pageFitsOn = tab.FitMode != ReaderFitMode.Free;
+            try
+            {
+                await _js.InvokeVoidAsync("fitEachPage", _desk, tab.FitMode switch { ReaderFitMode.Width => "width", ReaderFitMode.Page => "page", _ => "" });
+            }
+            catch { }
         }
 
         if (_focusNewText)
@@ -4172,6 +4218,7 @@
         }
     }
 
+    private bool _pageFitsOn;
     private ElementReference _viewerHost;
     private string? _viewerPinchOn;
 

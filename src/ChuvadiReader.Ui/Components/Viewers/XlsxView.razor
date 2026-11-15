@@ -28,6 +28,11 @@
         var s = _wb.Sheets[_active];
         var g = _grid!;
         var zoom = Zoom(s);
+        @if (HiddenHitsLine(s, g) is { } hiddenHits)
+        {
+            @* D-188 (U-19 a): a match in a hidden row or column has nothing to outline on the sheet, so it is named. *@
+            <div class="xv-hiddenhits" role="status">@hiddenHits</div>
+        }
         <div class="xv-valbar" hidden aria-live="polite"><span class="xv-val-addr"></span><span class="xv-val-text"></span><span class="xv-val-more"></span></div>
         @* The grid is drawn as a window onto the sheet: only the rows and columns on screen exist as elements
            (B-09/B-10, E-05), each cell placed at the offset its row heights and column widths give (E-06 to E-08),
@@ -294,6 +299,26 @@
         if (_wb is null || _query is null) return;
         foreach (var c in _wb.Sheets[_active].Cells)
             if (Matches(c, _query)) _hits.Add((c.Row, c.Col));
+    }
+
+    /// <summary>D-188: the sheet's Find matches that sit in a hidden row or column, in words with their cells:
+    /// "2 matches are in hidden cells: A5 (hidden row), C6 (hidden column)"; the first five, then "and 12 more".
+    /// Null when there are none.</summary>
+    private string? HiddenHitsLine(SheetView s, GridLayout g)
+    {
+        if (_hits.Count == 0) return null;
+        var hidden = new List<string>();
+        foreach (var (row, col) in _hits.OrderBy(h => h.Item1).ThenBy(h => h.Item2))
+        {
+            bool rowHidden = s.RowHeightPx(row) <= 0, colHidden = s.ColWidthPx(col) <= 0;
+            if (!rowHidden && !colHidden) continue;
+            string where = rowHidden && colHidden ? "hidden row and column" : rowHidden ? "hidden row" : "hidden column";
+            hidden.Add($"{ColLetter(col)}{row.ToString(System.Globalization.CultureInfo.InvariantCulture)} ({where})");
+        }
+
+        if (hidden.Count == 0) return null;
+        string lead = hidden.Count == 1 ? "1 match is in a hidden cell: " : $"{hidden.Count} matches are in hidden cells: ";
+        return lead + string.Join(", ", hidden.Take(5)) + (hidden.Count > 5 ? $" and {hidden.Count - 5} more" : null);
     }
 
     /// <summary>D-171: Find looks in the value the file stores and in the text the cell shows, so both 1234567 and
