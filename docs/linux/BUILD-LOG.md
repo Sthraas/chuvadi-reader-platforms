@@ -729,3 +729,29 @@ as errors; Reader 305/305 (3 skipped), host kit 91/91, Linux 46/46, Web Ui 41/41
   forwarding with the values the gesture would send. **Not checked here:** a real trackpad, GNOME Wayland, a GPU.
 - **Not done, for a decision:** Settings → "Splash screen on launch" does nothing on Linux (Windows shows the
   designed splash window when it's on).
+
+### 56. Start-up times recorded; M-27 checked on Linux: not present (15 Nov)
+No app change: one UI step added (38). Build under test: 7cd960c5.
+- **Start-up, on screen** (Xvfb, software drawing, no GPU; six launches, the first set aside; screen grabbed about
+  every 90 ms, and the grabbing itself slows the app by roughly a third):
+  - window on screen, with the start-up mark in its first frame: **0.80 to 0.89 s** after the process starts
+    (median; range 0.70 to 0.91 s). No grabbed frame shows the window without the mark.
+  - Home on screen: **1.86 to 1.94 s** (range 1.65 to 2.02 s).
+  - the app's own marks in the same launches: window presented 0.42 s, host page loaded 0.85 s, first render
+    1.54 s. Without the grabbing: presented 0.22 s, page loaded 0.58 s, first render 1.13 s.
+  - So before the mark there is no window at all (0.4 to 0.5 s between GTK presenting it and the desktop showing
+    its first frame here); after it, about 1 s of mark, then Home. Arun's laptop measured 1.35 s warm to Home;
+    time to the mark on a real GPU desktop is not measured here.
+- **M-27 (Mac Test, S1: a mark drawn with the mouse lands away from the pointer, offset following the zoom).**
+  Not present on Linux. A rectangle dragged with the real mouse (xdotool) sits on the drag's own corners, to
+  under 0.1 px on every side, in each case:
+  - a session with no pinch at all: 86 % (fit), 111 % and 161 % (rail), 54 % and 138 % (real Ctrl+scroll);
+  - zoom reached by pinch steps: 54 %, 100 %, 150 %, 300 %; then 175 % by the rail and 53 % by Ctrl+scroll after
+    those pinches; 100 % after pinching in, out and in again; 150 % after paging on.
+  Why Linux is not exposed: the pinch here only sends the Reader its own Ctrl+wheel event, so the Reader's zoom
+  (one CSS value) is the only thing that changes; the web view's own page scale and zoom level are never
+  touched, and marks are placed from the mark layer's measured box at the moment of the press.
+  One first-run "failure" was the check's own: it pressed on a rectangle already there, which moves it.
+- **UI step 38** keeps this checked on every pass (54, 100, 150 % by pinch, then rail and Ctrl+scroll).
+- **Limit, as before:** the pinch steps are sent through the host's forwarding, not made by a real trackpad.
+- **To do when Foundation's PR 18 lands:** move the pinch to `window.chuvadiPinch` and drop the 0.0015 constant.

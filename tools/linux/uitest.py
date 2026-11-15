@@ -1292,6 +1292,92 @@ def pinch_and_ctrl_scroll():
 
 step("37-pinch-and-ctrl-scroll", pinch_and_ctrl_scroll)
 
+
+def mark_lands_under_pointer():
+    """Mac Test's M-27 (a mark drawn with the mouse landed away from the pointer, by an amount that followed the
+    zoom, in the build that added Mac's pinch): checked here at 54, 100 and 150 % reached by pinch steps, then by
+    the rail and by Ctrl+scroll after those pinches. A rectangle dragged with the real mouse must sit on the
+    drag's own corners."""
+    ensure_reader(1)
+    gx, gy = (int(v) for v in window_geometry()[0].split(","))
+    view = ("var d=document.querySelector('.rdesk').getBoundingClientRect(); var best=null; "
+            "document.querySelectorAll('.mk-layer').forEach(l => { var r=l.getBoundingClientRect(); "
+            "var x0=Math.max(r.left,d.left), y0=Math.max(r.top,d.top,90), x1=Math.min(r.right,d.right), y1=Math.min(r.bottom,d.bottom,innerHeight-90); "
+            "var a=Math.max(0,x1-x0)*Math.max(0,y1-y0); if (!best || a>best[4]) best=[x0,y0,x1,y1,a]; }); return best")
+    shapes = "return [...document.querySelectorAll('.mk-shape.rect')].map(e => { var r=e.getBoundingClientRect(); return [r.left,r.top,r.right,r.bottom]; })"
+    done = []
+
+    def pinch_to(target):
+        x0, y0, x1, y1, _ = app.js(view)
+        for _ in range(60):
+            z = zoom_now()
+            if abs(z - target) < 0.004:
+                break
+            app.send(f"pinch {(x0 + x1) / 2:.0f} {(y0 + y1) / 2:.0f} {max(1 / 1.12, min(1.12, target / z))}")
+            time.sleep(0.12)
+        time.sleep(0.8)
+
+    def draw(how):
+        click_label(".srail", "Rectangle")
+        focus_main()
+        x0, y0, x1, y1, _ = app.js(view)
+        w, h = x1 - x0, y1 - y0
+        before = app.js(shapes)
+        for k in range(40):  # a place clear of the shapes already there: pressing on one moves it
+            ax, ay = round(x0 + w * (0.06 + 0.115 * (k % 7))), round(y0 + h * (0.06 + 0.15 * (k // 7)))
+            bx, by = ax + round(min(w * 0.10, 110)), ay + round(min(h * 0.09, 70))
+            if not any(ax - 12 < o[2] and bx + 12 > o[0] and ay - 12 < o[3] and by + 12 > o[1] for o in before):
+                break
+        else:
+            raise AssertionError("no clear place left on the page")
+        app.xdo("mousemove", str(gx + ax), str(gy + ay))
+        time.sleep(0.15)
+        app.xdo("mousedown", "1")
+        for i in range(1, 11):
+            app.xdo("mousemove", str(gx + ax + (bx - ax) * i // 10), str(gy + ay + (by - ay) * i // 10))
+            time.sleep(0.04)
+        time.sleep(0.15)
+        app.xdo("mouseup", "1")
+        time.sleep(1.0)
+        new = [s for s in app.js(shapes) if not any(all(abs(a - b) < 0.5 for a, b in zip(s, o)) for o in before)]
+        if len(new) != 1:
+            raise AssertionError(f"{how}: {len(new)} new rectangles for one drag")
+        off = [new[0][0] - ax, new[0][1] - ay, new[0][2] - bx, new[0][3] - by]
+        if any(abs(v) > 2.5 for v in off):
+            raise AssertionError(f"{how} at {zoom_now() * 100:.0f} %: the rectangle is off the pointer by (left, top, right, bottom) "
+                                 f"{', '.join(f'{v:+.1f}' for v in off)} px; dragged ({ax},{ay}) to ({bx},{by})")
+        done.append(f"{zoom_now() * 100:.0f} % ({how})")
+        app.key("Escape")
+        time.sleep(0.3)
+
+    try:
+        for z in (0.54, 1.0, 1.5):
+            pinch_to(z)
+            draw("pinch")
+        click_label(".srail", "Zoom in")
+        time.sleep(0.6)
+        draw("rail, after pinches")
+        x0, y0, x1, y1, _ = app.js(view)
+        app.xdo("mousemove", str(int(gx + (x0 + x1) / 2)), str(int(gy + (y0 + y1) / 2)))
+        app.xdo("keydown", "ctrl")
+        try:
+            app.xdo("click", "--repeat", "5", "--delay", "70", "5")
+        finally:
+            app.xdo("keyup", "ctrl")
+        time.sleep(1.0)
+        draw("Ctrl+scroll, after pinches")
+        app.shot("38-marks-under-pointer")
+    finally:
+        try:
+            app.key("Escape")
+            click_label(".srail", "Fit page")  # the zoom the later steps start from (they launch afresh)
+        except Exception:
+            pass
+    return "a rectangle dragged with the mouse sits on the drag's corners (within the outline's width) at " + ", ".join(done)
+
+
+step("38-mark-lands-under-pointer", mark_lands_under_pointer)
+
 # The desktop's window-button layout, followed exactly (any subset, any order, either end) — the
 # setting GNOME (button-layout) and KDE hand to GTK, written to GTK's settings file for a fresh launch.
 LAYOUTS = [
