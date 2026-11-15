@@ -1,8 +1,24 @@
 diff --git a/src/ChuvadiReader.Ui/Pages/Reader.razor b/src/ChuvadiReader.Ui/Pages/Reader.razor
-index e45ae46b..e646deba 100644
+index e45ae46b..fd20fa86 100644
 --- a/src/ChuvadiReader.Ui/Pages/Reader.razor
 +++ b/src/ChuvadiReader.Ui/Pages/Reader.razor
-@@ -3417,6 +3417,7 @@
+@@ -2057,6 +2057,15 @@
+     [JSInvokable]
+     public async Task OpenFind()
+     {
++        // ⌘/Ctrl+F from the page on a Word, Excel, Markdown, text or HTML file opens that viewer's Find, as the
++        // Find button and the shell's command do; the PDF Find bar below does not exist for those (Mac Test M-28).
++        if (Tab is { } viewOnly && viewOnly.Format.IsViewOnly())
++        {
++            OpenViewerFind();
++            StateHasChanged();
++            return;
++        }
++
+         _findOpen = true;
+         StateHasChanged();
+         await Task.Yield();
+@@ -3417,6 +3426,7 @@
              {
                  _js ??= await JS.InvokeAsync<IJSObjectReference>("import", "./_content/ChuvadiReader.Ui/js/reader.js");
                  _ref ??= DotNetObjectReference.Create(this);

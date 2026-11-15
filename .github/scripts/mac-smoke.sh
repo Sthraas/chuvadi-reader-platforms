@@ -347,7 +347,14 @@ open -n --env CHUVADI_SMOKE=1 \
   --stdout "$LOG" --stderr "$LOG" -a "$APP" "$DOCS/k1.pdf"
 native_watch 240 &
 NW=$!
-wait_for 'CHUVADI steps done' 240 || fail "M-27 steps did not finish"
+if ! wait_for 'CHUVADI steps done' 240; then
+  fail "M-27 steps did not finish"
+  # What the app is doing when it stops answering: the main thread's stack, and WebKit's content process.
+  APID=$(pgrep -f "$APP/Contents/MacOS/$EXE" | head -1)
+  [ -n "$APID" ] && sample "$APID" 3 2>/dev/null | sed -n '/Call graph:/,/Total number in stack/p' | head -70
+  WPID=$(pgrep -f com.apple.WebKit.WebContent | tail -1)
+  [ -n "$WPID" ] && { echo "--- WebContent $WPID"; sample "$WPID" 3 2>/dev/null | sed -n '/Call graph:/,/Total number in stack/p' | head -45; }
+fi
 wait $NW 2>/dev/null || true
 grep -E "CHUVADI (step [0-9]+ (cmd|markdrag): [^r]|page-key)|clicked page" "$LOG" | sed -E 's/^.*CHUVADI //' | cut -c1-300
 order=$(st 2 | sed -E 's/.* order="([^"]*)".*/\1/')
