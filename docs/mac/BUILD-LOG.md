@@ -592,3 +592,30 @@ again.
   watches the pinch and hands each step to the page as the wheel + Ctrl event it expects, at the pointer; reader.js
   zooms around the pointer as on Windows. No shared change. Smoke checks the page half (a 1.5× step zooms in, a 0.5×
   step out); the gesture itself needs a real trackpad — added to REAL-MAC-CHECKS §11.
+
+### 2026-11-16 — rebased onto foundation-pr 57a63c5 (patch 27); stall, M-24 to M-28; workload set
+Head fb5a806 and later. Run 43750903257 (5dbd6b8, two patches tried on the runner only — see below): **0 failed**.
+- **Build blocker (open, Foundation's file):** patch 27's strict `global.json` names workload set 10.0.403, whose
+  Mac Catalyst pack (27.0.10742) requires Xcode 27.1. The `macos-26` runner's newest is 26.6, so the branch as it
+  stands does not build (run 43749112132). Set 10.0.401 (Mac Catalyst 26.5.10318) builds. One-line diff for Foundation:
+  `docs/mac/foundation/global-json-mac-workload-10.0.401.patch`. Until it is decided, Mac runs pass it in `try_patch`,
+  and such runs upload no app.
+- **"Stall" after a click on a PDF page:** the `sample` (run 43747352333) shows the main thread in
+  `NSContextMenuTrackingSession startRunningMenuEventLoop` — a context menu was open, not a hang. The smoke's own
+  click followed a posted ⌃Tab and was taken as a Control-click. `keys.swift` now posts the click with no modifier
+  keys; with that, the app answers after the click with and without the pinch recognizer, and ⌃Tab, ⌃⇧Tab, ⌘2, ⌘1
+  all work after it. Still to look at: what menu a real secondary click on a page shows.
+- **Pinch:** `MacPinch` calls the kit's `window.chuvadiPinch(phase, scale, x, y)` (patch 27) instead of forwarding a
+  wheel event. One path only: the recognizer; the page's own gesture events do not fire for a UIKit pinch here as far
+  as the runner can show — a real trackpad must confirm there is no double zoom (REAL-MAC-CHECKS §11).
+- **M-27 (mark not under the pointer):** shared — the page box was measured under CSS zoom, which WebKit reports
+  unzoomed. Fixed by Foundation in patch 27. Smoke drags a rectangle mark at zoom 0.505: off by 0 px.
+- **M-26 (rotated page printed cut off):** `PrintDocument.Landscape` from the first printed page's shown size;
+  `MacPrintService` sets the orientation. 9 unit tests. The printed result needs Mac Test.
+- **M-28 (⌘F does nothing right after opening a non-PDF):** shared — the Reader's keys were bound only by the PDF
+  desk. `docs/mac/foundation/M-28-keys-without-a-pdf.patch`; passes on the runner when tried, fails without it.
+- **M-24, second cause (shared):** the host hands files over in name order (log), yet tabs came out many05, many07,
+  many06 once. Every request starts its own run of the Reader's open loop, which awaits Recents between taking a
+  request and adding its tab. `docs/mac/foundation/M-24-open-requests-one-at-a-time.patch` (Ui builds with it).
+- **Several files crash on cf17eff:** `CompareOptions.NumericOrdering` is not supported on Apple; own comparer in
+  `FileBatchOrder`, and ordering can no longer stop the files opening.

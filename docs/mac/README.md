@@ -15,7 +15,7 @@ codesign --force --deep --sign - src/ChuvadiReader.Mac/bin/Release/net10.0-macca
 ```
 Run: `open src/ChuvadiReader.Mac/bin/Release/net10.0-maccatalyst/Chuvadi.app` (always through `open` or Finder — a Mac Catalyst app started by running its binary directly aborts).
 
-CI pins: workload set `10.0.401` (Mac Catalyst 26.5.10318) and `/Applications/Xcode_26.6.app`. Move both forward together when the runner image carries the Xcode a newer workload needs.
+CI pins: the repo `global.json` (SDK 10.0.403 and its workload set) and `/Applications/Xcode_26.6.app`. Set 10.0.403 needs Xcode 27.1, which the runner lacks; set 10.0.401 (Mac Catalyst 26.5.10318) builds — see BUILD-LOG 2026-11-16.
 
 Without a Mac: run the **Mac** workflow by hand (Actions → Mac → Run workflow, branch `platform/mac`) — it
 builds, tests, verifies the bundle layout, smoke-launches and uploads `Chuvadi-mac-universal-unsigned.zip`.
