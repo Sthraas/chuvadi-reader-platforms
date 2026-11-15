@@ -611,3 +611,33 @@ Evidence:
   identical apart from the clock; Read and Home show the known 1 to 2 level noise pixels (same places as
   on 15 Nov, where a repeat run was clean).
 
+## 16 Nov, 02:45: Foundation 87f95c0 (patch 28) merged; F-1, F-2, H-24 and the Find changes re-checked
+- Merged platform/foundation-pr 87f95c0: no conflicts. H-24 is in as sent: its patch and hooks-11 moved to
+  `proposal/landed/`. Foundation also touched two of my files (PhoneToolStrip.razor: a `dim` class;
+  mobile.css: `.ph-tool.dim`, for D-187) — kept.
+- New tool `tools/mobile-ui/turned.py` (13 checks; needs a four-turns PDF: /Rotate 0, 90, 180, 270 with
+  `rotmark<turn>` on each page), at 800×1280, 1280×800, 412×915, 915×412:
+  - F-1: Find's highlight is on the word, turned as the word is, on screen and not covered, on all four turns.
+  - F-2: Fit page keeps every page inside the desk (phone portrait: 388×549 upright, 388×274 turned; no
+    sideways overflow); Fit width no wider than the desk.
+  - Excel: the Find box has the cursor; "2 matches are in hidden cells: A5 (hidden row), C6 (hidden column)"
+    shows above the sheet, whole and inside the screen (one 26 px line at 412 px); gone when no match is hidden.
+  - Word: the Find box has the cursor.
+  - H-24: checks.py check 11 passes with no hooks patch for it (× on the card closes it, the mark stays).
+- **Found and fixed (mine, mobile.css):**
+  - The Find bar's controls were 26 px (arrows, ×, word) and 30 px (box) on touch; the box audit never
+    opened Find. Now 44 px boxes on phone and tablet, drawn as before (50 corner pixels of antialiasing
+    differ on the tablet bar). turned.py checks them.
+  - Phone: the Find bar was 428 px wide on a 412 px screen (8 px cut each side) and lay over the top 56 px
+    of the page; `rotmark90` sat half under it. While Find is open it now takes the top bar's place.
+    For: nothing of the page is covered, the bar fits any width. Against: the title, page chip and ⋮ are
+    hidden while Find is open (the bar has its own count and ×).
+- **Found, shared code:** H-26 (page at a time: Find settles on the next page when the match is low on its
+  page) as a diff; F-3 (the Find bar covers a match at a page's top on tablet and desktop) as a note. Both
+  in FOR-FOUNDATION.md. hooks-12 = H-25 + H-26.
+- Results (hooks-12 applied): 539 tests pass, 6 skipped by Foundation: 382 + 100 + 41 + 16; touch at the
+  four sizes: 206 checks pass (turned 13 each, pinchmarks 18 each, checks 12 each, gestures 8/8/9/9), box
+  audit clean; desktop before (87f95c0) / after at 1440×900: Mark, Mark with a rectangle selected, Arrange,
+  the desk menu and Read with Find open identical apart from the clock; Read and Home show the known
+  1-level noise pixels in the same places as before.
+

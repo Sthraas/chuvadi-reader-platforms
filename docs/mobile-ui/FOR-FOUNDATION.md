@@ -1,9 +1,24 @@
-# Mobile app UI → Foundation: hooks and hand-off (updated 16 Nov)
+# Mobile app UI → Foundation: hooks and hand-off (updated 16 Nov, patch 28)
 
-## Outstanding for Foundation: H-24 and H-25 (`proposal/mobile-ui-hooks-11.patch`)
-Two diffs to `Ui/Pages/Reader.razor`, against foundation-pr 57a63c5 (patch 27). `mobile-ui-hooks-11.patch` is
-both together (what Android's `compose.sh` applies); `proposal/H24-reader-mark-card-close-on-touch.patch` and
-`proposal/H25-reader-pinch-in-mark-leaves-no-mark.patch` are each on its own against the clean tree.
+## Outstanding for Foundation: H-25 and H-26 (`proposal/mobile-ui-hooks-12.patch`)
+Against foundation-pr 87f95c0 (patch 28). `mobile-ui-hooks-12.patch` is both together (what Android's
+`compose.sh` applies); `proposal/H25-reader-pinch-in-mark-leaves-no-mark.patch` and
+`proposal/H26-find-stays-on-the-match-page-when-pages-snap.patch` are each on its own.
+H-24 landed in patch 28 as sent (`proposal/landed/`).
+
+### H-26: page at a time, Find lands on the next page when the match is low on its page
+(`Ui/wwwroot/js/reader.js`, `scrollToMatch`, +7 / −1) — found re-checking F-1 on the tablet
+- Where pages snap (page at a time, not zoomed), `scrollToMatch` still aims a third of the way above the
+  match and leaves the snap to settle it. For a match in roughly the bottom sixth of its page that point
+  is nearer the next page's snap line, so the desk settles on the next page and the match is off screen.
+- Seen at 1280×800 on the four-turns PDF: Find `rotmark180` (the word is near the foot of the upside-down
+  page 3) left the desk on page 4, the highlight 72 px above the desk. Before patch 28 the highlight was
+  drawn elsewhere, so F-1's fix is what made it show; the scroll rule itself is older and is the same for
+  any match low on a page, turned or not, on every platform.
+- The change: when the desk snaps, the target is the match's own page top.
+- **For:** the match's page is the one shown (st 1496 instead of 2244 in the case above; highlight on screen);
+  nothing changes where pages don't snap. **Against:** none that I can see; in this layout a page is one
+  screen, so there is nowhere else on it to scroll to.
 
 ### H-25: a two-finger pinch in Mark leaves no mark behind (found checking patch 27 by finger)
 (`Ui/Pages/Reader.razor`, +24 / −1)
@@ -25,24 +40,16 @@ both together (what Android's `compose.sh` applies); `proposal/H24-reader-mark-c
   seen, so that pinch can still leave a mark. A fuller way is for reader.js to tell the Reader when its
   pinch begins and have the Reader drop the draft there — Foundation's choice; this diff is the small one.
 
-### H-24: a selected mark's card has a close control on tablet and phone (AT-22)
-(`Ui/Pages/Reader.razor`, +9 / −3)
-- The Text box, shape (Rectangle, Ellipse, Line, Arrow, Draw) and Image cards are the only float cards
-  with no `OnClose`. On desktop the card sits in the gutter and nothing is under it. On the phone it is a
-  bottom sheet: after drawing a mark it covered the floating Save as new PDF, and nothing on screen
-  dismissed it (a tap on the empty page doesn't deselect; there is no Esc key).
-- The three cards get `OnClose="MarkCardClose"`. `MarkCardClose` is an `EventCallback` that clears
-  `_selText`, `_selShape` and `_selImage` when `Platform.FormFactor` isn't Desktop, and `default` on
-  desktop — so `FloatCard` draws no × there (`OnClose.HasDelegate` is false).
-- Closing drops the selection only; the mark stays on the page and can be tapped again.
-- **For:** the card can be put away on touch; desktop markup is unchanged (checked: Mark with a
-  rectangle selected is pixel-identical before and after at 1440×900, no × in the card).
-- **Against:** the three cards behave slightly differently by form factor; one more property in Reader.
-- Other way considered: let a tap on the empty page deselect (all platforms). Rejected for now: with a
-  drawing tool on, that tap is the start of the next mark, and it would change desktop behaviour.
+## Seen on touch, for Foundation to weigh (not patched)
+### F-3: the Find bar lies over the top of the desk, so a match under it is hidden (tablet, desktop)
+- The bar floats at the desk's top right (428 × 44 px, 12 px down). `scrollToMatch` keeps the match's page
+  top at the desk top where it can, so a match in the first ~56 px of a page, under the bar's width, is
+  on screen but covered. On the phone the bar covered the whole width; there it now takes the top bar's
+  place (mobile.css, mine), so nothing is covered. Tablet and desktop still have it.
+- One way: when the current match's box meets the bar's box after the scroll, scroll up by the overlap.
 
-## Two things seen while checking patch 26 on touch (Foundation's files; not changed here)
-Both are in Reader code, on every platform, so they're reported, not patched.
+## F-1 and F-2 (11 Nov): fixed in patch 28
+Checked on 87f95c0 at 412×915, 915×412, 800×1280 and 1280×800 (tools/mobile-ui/turned.py). Kept for the record:
 
 ### F-1: Find's highlight on a page with /Rotate is drawn where the text would be on the unturned page
 - File: a 4-page PDF with /Rotate 0, 90, 180, 270 and one word on each page (`rotmark0` … `rotmark270`).
