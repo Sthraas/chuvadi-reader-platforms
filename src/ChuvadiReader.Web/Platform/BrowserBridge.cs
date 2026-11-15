@@ -37,6 +37,10 @@ public sealed class BrowserBridge
     }
 
     /// <summary>Sends the browser to another address of the portal (sign-out, expiry).</summary>
+    /// <summary>D-181: turns the browser's own "Leave site?" question on or off for this tab.</summary>
+    public ValueTask SetLeaveGuardAsync(bool on)
+        => _js.InvokeVoidAsync("chvdPortal.guardLeave", on);
+
     public async Task LeaveAsync(string path, TimeSpan timeout)
     {
         using var cts = new CancellationTokenSource(timeout);

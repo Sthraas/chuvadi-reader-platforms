@@ -10,6 +10,7 @@
 @inject OpenTabs Tabs
 @inject SessionSpace Space
 @inject BrowserBridge Browser
+@inject LeaveGuard Leaving
 @inject ChuvadiReader.Core.Reader.TabsService Documents
 @inject ILogger<PortalRoot> Log
 @inject Microsoft.Extensions.Options.IOptions<ChuvadiReader.Web.Hosting.PortalOptions> Options
@@ -86,6 +87,7 @@
                 // Input is reported at most once per 1/30 of the idle limit (a minute for 30 minutes).
                 var every = TimeSpan.FromTicks(Math.Clamp(Options.Value.IdleTimeout.Ticks / 30, TimeSpan.FromSeconds(5).Ticks, TimeSpan.FromMinutes(1).Ticks));
                 await Browser.TrackActivityAsync(every);
+                Leaving.Start();
             }
             catch (Microsoft.JSInterop.JSDisconnectedException)
             {

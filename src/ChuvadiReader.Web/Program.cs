@@ -348,6 +348,7 @@ public static class Program
         builder.Services.AddSingleton<SessionStates>(); // D-174: files and tabs belong to the signed-in session
         builder.Services.AddScoped<SessionSpace>();
         builder.Services.AddScoped<BrowserBridge>();
+        builder.Services.AddScoped<LeaveGuard>(); // D-181: the browser's "Leave site?" while marks are unsaved
         builder.Services.AddScoped<OutboxDelivery>();
         builder.Services.AddScoped<CircuitHandler, SessionLifetime>();
         AddReader(builder.Services);

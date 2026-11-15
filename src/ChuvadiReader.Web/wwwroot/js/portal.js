@@ -312,9 +312,22 @@
         report();
     }
 
+    // D-181: while the open document has unsaved marks, the browser asks before a reload, a close or a move to
+    // another site ("Leave site? Changes you made may not be saved"). The wording and look are the browser's.
+    // A reload brings the tabs back (D-174) but not marks that were never saved.
+    var unsavedMarks = false;
+    function guardLeave(on) { unsavedMarks = on === true; }
+    window.addEventListener('beforeunload', function (e) {
+        if (!unsavedMarks) return undefined;
+        e.preventDefault();
+        e.returnValue = ''; // older browsers need a value set
+        return '';
+    });
+
     // Leave for another portal address. Only same-origin paths; returns at once, navigates after.
     function leave(path) {
         if (typeof path !== 'string' || path.charAt(0) !== '/' || path.charAt(1) === '/') return;
+        unsavedMarks = false; // the portal itself is leaving (the session ended): no question
         setTimeout(function () { window.location.replace(path); }, 0);
     }
 
@@ -391,5 +404,5 @@
         if (hasFiles(e) && !e.defaultPrevented && !isFileInput(e.target)) e.preventDefault();
     });
 
-    window.chvdPortal = { pick: pick, download: download, print: print, copyImage: copyImage, copyText: copyText, openLink: openLink, watchViewport: watchViewport, leave: leave, trackActivity: trackActivity, stillHere: stillHere };
+    window.chvdPortal = { guardLeave: guardLeave, pick: pick, download: download, print: print, copyImage: copyImage, copyText: copyText, openLink: openLink, watchViewport: watchViewport, leave: leave, trackActivity: trackActivity, stillHere: stillHere };
 })();
