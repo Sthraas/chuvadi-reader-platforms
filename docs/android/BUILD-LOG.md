@@ -874,3 +874,6 @@ same screen; no crash), smoke pass. With round 6 (API 36 phone and tablet, all c
   script stopped with a KeyError. Test tooling, not the app (the same check passed in the last four rounds). Fixed:
   `launch()` waits for the process and, if monkey started nothing, sends the launcher intent with `am start`
   (NEW_TASK | RESET_TASK_IF_NEEDED, as the launcher does); the split-screen comparison tolerates a missing state.
+- **Run 43750628461** (phone API 36, full, 6487cf4): **all green** — gestures 11/11, platform 29/29 (AT-11 pass: new
+  process, back on /reader, same tab, 5 tabs, page "1 / 3"), Release launch pass. With 43748779082, all four emulators
+  are green on this composition. Head for Android Test round 11: 6487cf4.
