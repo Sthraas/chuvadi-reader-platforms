@@ -1741,7 +1741,7 @@ def m27():
     """Mark › Rectangle, drag inside the page, screenshot. Offline: the red shape's box in the screenshot against
     the drag's window coordinates. Three zooms, each from a fresh launch so only one shape is on screen."""
     ev = {}
-    for tag, zoom_ins in (("fit", 0), ("zoom-in-2", 2), ("to-100", 99)):
+    for tag, zoom_ins in (("fit", 0), ("zoom-in-1", 1), ("zoom-in-2", 2), ("zoom-in-4", 4)):
         reset_state({"theme": "light"})
         launch(settle=4)
         open_doc(f"{FX}/five-pages.pdf", settle=4)
