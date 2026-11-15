@@ -1766,6 +1766,50 @@ def m27():
     record("M-27 mark lands under the pointer", "info", "; ".join(f"{k}: zoom {v['zoom']} %, {v['status']}" for k, v in ev.items()), **ev)
 
 
+@case("Stall after a click on a PDF page")
+def stall():
+    """Mac chat, 16 Nov: after a real mouse click on a PDF page the app stops answering and will not quit."""
+    reset_state({"theme": "light"})
+    launch(settle=4)
+    open_doc(f"{FX}/five-pages.pdf", settle=4)
+    cx, cy, win = main_centre()
+    ev = {}
+    for n in (1, 2, 3):
+        drive("click", cx - 60 + 30 * n, cy - 40 + 20 * n)
+        time.sleep(2)
+    # is the Ui still answering? ⌘K must open the bar, Esc close it; a page key (→) must turn the page
+    n0 = len(axdump("stall-before-cmdk").splitlines())
+    drive("key", "cmd+k")
+    time.sleep(1.5)
+    ev["cmdk_opens"] = len(axdump("stall-cmdk").splitlines()) != n0
+    drive("key", "escape")
+    time.sleep(1)
+    rc, o = press("Next page", role="AXButton", click=True)
+    time.sleep(1.5)
+    t = axdump("stall-after-next")
+    ev["next_page_works"] = bool(re.search(r"page 2 of 5", t))
+    ev["shot"] = shot("stall-after-clicks")
+    _, ps = sh(f"ps -o %cpu=,state= -p {(pids() or [''])[0]}")
+    ev["ps"] = ps.strip()
+    t0 = time.time()
+    drive("quit", NAME, timeout=20)
+    gone = False
+    for _ in range(100):
+        if not pids():
+            gone = True
+            break
+        time.sleep(0.1)
+    ev["quit_seconds"] = round(time.time() - t0, 1)
+    ev["quit_clean"] = gone
+    if not gone:
+        os.makedirs(f"{OUT}/logs", exist_ok=True)
+        sh(f"sample {pids()[0]} 3 -file {OUT}/logs/stall-sample.txt", timeout=60)
+        quit_app(force=True)
+    ok = ev["cmdk_opens"] and ev["next_page_works"] and gone
+    record("Stall after a click on a PDF page", "pass" if ok else "fail",
+           f"after three clicks on the page: ⌘K opens={ev['cmdk_opens']}, Next page works={ev['next_page_works']}, quits by itself={gone} ({ev['quit_seconds']} s)", **ev)
+
+
 @case("M-14 .NET message in Details")
 def m14():
     src = f"{FX}/noaccess.pdf"
@@ -1805,6 +1849,7 @@ def main():
         return
     if A.suite == "shared":
         m27()
+        stall()
         p26()
         p25()
         t4_0()
