@@ -11,7 +11,19 @@ public sealed record TextDocument(
     string Text,
     IReadOnlyList<string> Lines,
     string EncodingName,
-    long SizeBytes);
+    long SizeBytes)
+{
+    /// <summary>The code page the text was read as (see <see cref="TextEncodings"/>); zero when unknown.</summary>
+    public int CodePage { get; init; }
+
+    /// <summary>True when the encoding was chosen by hand rather than worked out from the file.</summary>
+    public bool EncodingChosen { get; init; }
+
+    /// <summary>How many bytes are not valid in the encoding the text was read as. For an automatic read this is
+    /// zero unless the file fell back to Windows-1252 and holds bytes that page leaves undefined, a sign that it
+    /// was written in some other encoding.</summary>
+    public int BytesNotFitting { get; init; }
+}
 
 /// <summary>Loads Markdown, plain-text and HTML files for the view-only viewers (D-09): size limit,
 /// encoding detection (BOM, then strict UTF-8, then Windows-1252) and line splitting. Pure BCL.</summary>
@@ -33,7 +45,13 @@ public sealed class TextViewService
 
     public long MaxBytes { get; }
 
-    public TextDocument Load(string path)
+    public TextDocument Load(string path) => Load(path, codePage: null);
+
+    /// <summary>Loads the file as the encoding with this code page (one of <see cref="TextEncodings.All"/>), or
+    /// works the encoding out from the file when <paramref name="codePage"/> is null. A chosen encoding is never
+    /// second-guessed: bytes that do not fit it are shown as U+FFFD and counted in
+    /// <see cref="TextDocument.BytesNotFitting"/>.</summary>
+    public TextDocument Load(string path, int? codePage)
     {
         if (string.IsNullOrWhiteSpace(path))
             throw new DocumentViewException(ViewErrorReason.Other, "No file was given.");
@@ -56,8 +74,25 @@ public sealed class TextViewService
 
         if (bytes.LongLength > MaxBytes) throw TooLarge(bytes.LongLength); // grew since the stat
 
+        if (codePage is int chosen)
+        {
+            var read = TextEncodings.Decode(bytes, chosen, out int notFitting);
+            var name = TextEncodings.Find(chosen)?.Name ?? string.Create(CultureInfo.InvariantCulture, $"Code page {chosen}");
+            return new TextDocument(path, read, SplitLines(read), name, bytes.LongLength)
+            {
+                CodePage = chosen,
+                EncodingChosen = true,
+                BytesNotFitting = notFitting,
+            };
+        }
+
         var text = Decode(bytes, out var encodingName);
-        return new TextDocument(path, text, SplitLines(text), encodingName, bytes.LongLength);
+        int detected = TextEncodings.CodePageOfDetected(encodingName);
+        return new TextDocument(path, text, SplitLines(text), encodingName, bytes.LongLength)
+        {
+            CodePage = detected,
+            BytesNotFitting = detected == TextEncodings.Windows1252 ? TextEncodings.UndefinedIn1252(bytes) : 0,
+        };
     }
 
     private DocumentViewException TooLarge(long size) =>
