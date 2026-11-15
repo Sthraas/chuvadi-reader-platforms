@@ -859,3 +859,11 @@ same screen; no crash), smoke pass. With round 6 (API 36 phone and tablet, all c
   on the phone and the tablet; on the tablet in real portrait (screenshot g10-portrait-dragged, 1600×2560, Shelf as a
   sheet) the Shelf → desk drag (2 → 3 pages) and the reorder both pass. The app was never the problem; the touch tool
   didn't follow the rotation. Head for Android Test: e706b1d.
+
+### 64. Foundation 57a63c5 (patch 27, repo global.json) + Mobile UI 5a49864 — coordinator, 16 Nov 00:10 / 00:40 IST
+- Composition: Foundation `57a63c5` + Mobile UI `5a49864` (AT-22, AT-20 long-press arms before 400 ms) — clean; P-09
+  still pending in Foundation, applied here.
+- The repo now has `global.json` with D-178's exact lines; the workflow's step checks it matches (it does) instead of
+  writing one. Per Foundation's note the workflow runs `dotnet workload update` under it before installing maui-android.
+- Sandbox (repo global.json: SDK 10.0.403, runtime 10.0.14): Android Debug and Release `-warnaserror` 0 warnings;
+  Release manifest 14/14; Core 374 (+6 skipped), Hosting 98, MobileUi 16, WebUi 41 pass.

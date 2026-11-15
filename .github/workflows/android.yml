@@ -26,10 +26,10 @@ on:
         options: [full, smoke, timeline]
 
 env:
-  # platform/foundation-pr: patch 26 (page /Rotate, Excel grid as the file holds it, H-23, text encoding, tabs close with their owner) on Reader main 0cd4915.
-  FOUNDATION_REF: 07ed3ca834a8d21b20e5176f54852ac0ee52cd79
-  # platform/mobile-ui: Foundation 07ed3ca merged, no hooks left; Excel tabs and view toggle 44 px on touch.
-  MOBILEUI_REF: a1dfb4011442c64b2a8722e4c16e239ac91544af
+  # platform/foundation-pr: patch 27 (shared pinch entry, engine-independent mark placement, repo global.json) on Reader main 04d97d7.
+  FOUNDATION_REF: 57a63c5f82756f7784b392cf8c110cb328ac4dc1
+  # platform/mobile-ui: AT-22 (the mark card leaves Save reachable), AT-20 long-press arms before 400 ms.
+  MOBILEUI_REF: 5a49864c643ceba2bb28e4e3ea22e315f79e475c
   DOTNET_NOLOGO: '1'
   DOTNET_CLI_TELEMETRY_OPTOUT: '1'
 
@@ -79,8 +79,8 @@ jobs:
 
       # D-178: every build uses the same SDK *and* the same workload set, so the same .NET runtime (the workload
       # set, not the SDK, picks an Android app's runtime pack: run 42906276392 had SDK 10.0.403 but runtime 10.0.15).
-      # The repo-level global.json (Foundation's) is these exact lines; until it lands, the composed checkout gets
-      # them here, and if it has one it must say the same.
+      # The repo-level global.json (Foundation's, since patch 27) holds these exact lines; the step checks it says the
+      # same (and would write them into a composition without one).
       - name: Pin the SDK and the workload set (global.json)
         working-directory: reader
         run: |
@@ -100,6 +100,7 @@ jobs:
       - name: Install the MAUI Android workload
         working-directory: reader   # under global.json: the pinned SDK and workload set
         run: |
+          dotnet workload update          # to the workload set global.json pins (Foundation's patch 27 note)
           dotnet workload install maui-android
           dotnet workload --version
 
