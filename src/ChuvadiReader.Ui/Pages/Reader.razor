@@ -352,7 +352,7 @@
                     <DocxView @ref="_viewer" Path="@tab.Path" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" OnStopOpening="StopOpening" />
                     break;
                 case DocumentFormat.Xlsx:
-                    <XlsxView @ref="_viewer" Path="@tab.Path" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" OnStopOpening="StopOpening" />
+                    <XlsxView @ref="_viewer" Path="@tab.Path" Sizes="@tab.SheetSizes" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" OnStopOpening="StopOpening" />
                     break;
                 case DocumentFormat.Markdown:
                     <MarkdownView @ref="_viewer" Path="@tab.Path" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" OnStopOpening="StopOpening" />
