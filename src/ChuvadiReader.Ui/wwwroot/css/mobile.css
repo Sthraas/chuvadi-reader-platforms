@@ -357,6 +357,7 @@ html[data-shell="phone"], html[data-shell="tablet"] { --mu-line: var(--chvd-stro
 }
 .ph-tool.on { background: var(--chvd-binding-soft); color: var(--chvd-binding); }
 .ph-tool:disabled { opacity: .38; cursor: default; }
+.ph-tool.dim { opacity: .38; }   /* greyed, still answers a tap (ShellCommand.Dimmed) */
 
 /* Bottom bar: Read · Mark · Arrange · Protect — icon in a 60 × 32 pill over the italic verb. */
 .ph-nav {

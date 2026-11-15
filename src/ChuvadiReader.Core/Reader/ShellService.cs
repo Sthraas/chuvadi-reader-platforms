@@ -29,6 +29,10 @@ public sealed record ShellCommand(
     string? Keywords = null)
 {
     public bool IsEnabled => DisabledReason is null;
+
+    /// <summary>Shown greyed out although it runs: running it tells the person why the action is off here
+    /// (a touch screen has no tooltip to carry <see cref="DisabledReason"/>; D-187).</summary>
+    public bool Dimmed { get; init; }
 }
 
 /// <summary>A message shown bottom-right after an action (States &amp; Feedback).</summary>

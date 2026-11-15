@@ -455,7 +455,12 @@ public sealed class RedactService
     /// <summary>One text match: the page it is on (0-based), its box(es) in normalised
     /// top-left page fractions (ready for the overlay layer and for redaction), and a short
     /// context snippet for the matches list.</summary>
-    public sealed record RedactSearchMatch(int PageIndex, IReadOnlyList<NormBox> Boxes, string Snippet);
+    public sealed record RedactSearchMatch(int PageIndex, IReadOnlyList<NormBox> Boxes, string Snippet)
+    {
+        /// <summary>F-1: the page is shown turned a quarter either way, so the text (and its boxes) runs up or down
+        /// the screen. A highlight then gets its extra room across the text, which is sideways.</summary>
+        public bool Sideways { get; init; }
+    }
 
     /// <summary>Built-in regex preset groups (financial / medical / general PII), sourced from
     /// the library's <see cref="CommonPatterns"/>. A seam for a future library-side expansion —
@@ -497,18 +502,16 @@ public sealed class RedactService
             if (m.PageNumber < 0 || m.PageNumber >= doc.PageCount) continue;
             var page = doc.Pages[m.PageNumber];
             var shown = ShownBox.Of(page);   // D-160: fractions of the box the page shows
-            double w = shown.W, h = shown.H;
-            if (w <= 0 || h <= 0) continue;
+            int turn = ShownBox.TurnOf(page);   // F-1: and of the page as shown, turned by its /Rotate
+            if (shown.W <= 0 || shown.H <= 0) continue;
 
             var boxes = new List<NormBox>(m.BoundingBoxes.Count);
             foreach (var r in m.BoundingBoxes)
             {
                 // Search boxes are in PDF user space (bottom-left origin, y UP). Convert to the
-                // app's normalised top-left / y-DOWN fractions used by the overlay layer and by
-                // MapToPdf for redaction.
-                double nx = (r.X - shown.X0) / w;
-                double ny = (shown.Y1 - (r.Y + r.Height)) / h;
-                boxes.Add(new NormBox(nx, ny, r.Width / w, r.Height / h));
+                // app's normalised top-left / y-DOWN fractions of the page as shown, used by the overlay
+                // layer and by MapToPdf for redaction.
+                boxes.Add(shown.Fractions(turn, r.X, r.Y, r.Width, r.Height));
             }
             if (boxes.Count == 0) continue;
 
@@ -525,7 +528,7 @@ public sealed class RedactService
             perPageCount.TryGetValue(m.PageNumber, out var nth);
             perPageCount[m.PageNumber] = nth + 1;
             var at = NthIndexOf(text, query, nth, caseSensitive);
-            results.Add(new RedactSearchMatch(m.PageNumber, boxes, MakeSnippet(text, at, query.Length, query)));
+            results.Add(new RedactSearchMatch(m.PageNumber, boxes, MakeSnippet(text, at, query.Length, query)) { Sideways = turn is 90 or 270 });
         }
 
         return results;
