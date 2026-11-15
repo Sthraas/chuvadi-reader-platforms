@@ -799,6 +799,12 @@
                 case "password":
                     <PasswordCard Path="@tab.Path" Session="@tab.Session" CurrentPage="@tab.CurrentPageIndex" OnClose="CloseCard" OnMessage="OnCardMessage" OnSaved="OnProtectedSaved" />
                     break;
+                case "cert" when ChuvadiReader.Ui.Components.Platform.PlatformText.CertificateSigningOff(Platform) is { } certOff:
+                    @* D-187: where signing is off (the Web portal) the card says why, in place of its fields. *@
+                    <FloatCard Title="Sign with certificate" OnClose="CloseCard">
+                        <p class="fc-note">@certOff</p>
+                    </FloatCard>
+                    break;
                 case "cert":
                     <FloatCard Title="Sign with certificate" Meta="always a new file" OnClose="CloseCard">
                         <div class="fc-row">
@@ -1162,7 +1168,7 @@
                     <RailButton Icon="watermark" Label="Watermark" Active='_card == "stamp" && _stampFocus == "watermark"' OnClick='() => OpenStamp("watermark")' />
                     <RailButton Icon="compress" Label="Flatten" Disabled="_flattening" OnClick="FlattenNow" />
                     <RailButton Icon="doc-lock" Label="Password" Active='_card == "password"' OnClick='() => ToggleCard("password")' />
-                    <RailButton Icon="certification" Label="Sign with certificate" Active='_card == "cert"' OnClick='() => ToggleCard("cert")' />
+                    <RailButton Icon="certification" Label="Sign with certificate" DisabledReason="@ChuvadiReader.Ui.Components.Platform.PlatformText.CertificateSigningOff(Platform)" DisabledTag="@ChuvadiReader.Ui.Components.Platform.PlatformText.CertificateSigningTag" ReasonOnTap="@ChuvadiReader.Ui.Components.Platform.PlatformText.ReasonOnTap(Platform)" Active='_card == "cert"' OnClick='() => ToggleCard("cert")' />
                     <RailButton Icon="sliders" Label="View" Class="rb-viewfold" Active='_card == "view"' OnClick='() => ToggleCard("view")' />
                     <RailSpacer />
                     <RailButton Icon="download" Label="Save redacted copy" Primary="true" OnClick="() => GoRedact(false)" />
