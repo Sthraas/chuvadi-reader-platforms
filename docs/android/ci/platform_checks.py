@@ -138,6 +138,22 @@ def state():
     return cdp.evaluate(STATE_JS)
 
 
+def launch():
+    """Starts the app as its launcher icon does. monkey sometimes gives up without starting anything
+    (run 43748779082: the launcher stayed on screen for 45 s after a background kill, no crash), so
+    if no process appears, the same launcher intent goes out with am start (NEW_TASK |
+    RESET_TASK_IF_NEEDED: the flags the launcher uses, so an existing task comes back as it was)."""
+    adb("shell", "monkey", "-p", PKG, "-c", "android.intent.category.LAUNCHER", "1")
+    for _ in range(10):
+        time.sleep(1)
+        if adb("shell", "pidof", PKG).strip():
+            return
+    component = adb("shell", "cmd", "package", "resolve-activity", "--brief", PKG).split()[-1]
+    print(f"monkey didn't start {PKG}; am start {component}")
+    adb("shell", "am", "start", "-a", "android.intent.action.MAIN", "-c", "android.intent.category.LAUNCHER",
+        "-f", "0x10200000", "-n", component)
+
+
 def safe_state():
     """The page state, or {"error": …} while the WebView isn't reachable yet (a new process after a kill:
     DevTools refuses or resets the connection for a moment — run 42739965634)."""
@@ -697,7 +713,7 @@ dead = [st_ for st_ in steps if st_["resumed"] == PKG and st_["from"] == st_["to
 check("back steps back through the app's screens, then leaves the app; the process stays",
       left not in (PKG, None) and pid() == pid0 and not dead,
       {"steps": steps, "pid": [pid0, pid()], "deadPresses": len(dead)})
-adb("shell", "monkey", "-p", PKG, "-c", "android.intent.category.LAUNCHER", "1")
+launch()
 r1 = wait_for(lambda s: s.get("route"), 20, "the app to come back")
 shot("p10-relaunched")
 last_route = steps[-1]["from"] if steps else None
@@ -707,7 +723,7 @@ check("relaunch returns to the same process and the screen it left from", pid() 
 
 # D-89 B: Android can't take drops (DropFiles false), so Home says "open", never "drop".
 if r1.get("route") != "/":
-    adb("shell", "monkey", "-p", PKG, "-c", "android.intent.category.LAUNCHER", "1")
+    launch()
 home = wait_for(lambda s: s.get("route") == "/", 10, "Home")
 home_text = home.get("text") or ""
 drop_words = sorted(set(re.findall(r"[^\n]*\b[Dd]rop(?:ped|ping|s)?\b[^\n]*", home_text)))
@@ -813,7 +829,7 @@ pid_before = pid()
 adb("shell", "am", "kill", PKG)          # what Android does to a background app under memory pressure
 time.sleep(2)
 killed = pid() in ("", None) or pid() != pid_before
-adb("shell", "monkey", "-p", PKG, "-c", "android.intent.category.LAUNCHER", "1")
+launch()
 k1 = wait_for(lambda s: s.get("route") == "/reader" and s.get("pages", 0) > 0 and s.get("tab") and s.get("counter"), 45, "the Reader after the kill")
 shot("p10d-after-background-kill")
 keep = ("route", "tab", "tabs", "counter")
@@ -837,7 +853,7 @@ full = safe_state()
 pid0 = pid()
 adb("shell", "am", "start", "-a", "android.settings.SETTINGS")
 time.sleep(3)
-adb("shell", "monkey", "-p", PKG, "-c", "android.intent.category.LAUNCHER", "1")
+launch()
 time.sleep(3)
 tid = task_id()
 out = wmshell("splitscreen", "moveToSideStage", str(tid), "1") if tid else "no task id"
@@ -853,7 +869,8 @@ check("split screen: the app re-lays out to the half window (same process, no si
        "formFactor": [full.get("formFactor"), split.get("formFactor")], "shell": [full.get("shell"), split.get("shell")],
        "overflowPage": split.get("overflowPage"), "pid": [pid0, pid()], "command": out.strip()[:200]})
 component = adb("shell", "cmd", "package", "resolve-activity", "--brief", PKG).split()[-1]
-full_again = lambda s: abs(s["innerW"] - full["innerW"]) <= 2 and abs(s["innerH"] - full["innerH"]) <= 60
+full_again = lambda s: (s.get("innerW") is not None and full.get("innerW") is not None
+                        and abs(s["innerW"] - full["innerW"]) <= 2 and abs(s["innerH"] - full["innerH"]) <= 60)
 # Ways out of split screen, tried in turn until the window is full size again (WMShell's command set
 # differs between Android versions); the one that worked is recorded.
 exits = [

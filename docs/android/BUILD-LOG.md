@@ -867,3 +867,10 @@ same screen; no crash), smoke pass. With round 6 (API 36 phone and tablet, all c
   writing one. Per Foundation's note the workflow runs `dotnet workload update` under it before installing maui-android.
 - Sandbox (repo global.json: SDK 10.0.403, runtime 10.0.14): Android Debug and Release `-warnaserror` 0 warnings;
   Release manifest 14/14; Core 374 (+6 skipped), Hosting 98, MobileUi 16, WebUi 41 pass.
+- **Run 43748779082** (all four, full, a2c022c): green on phone 35, tablet 35 and tablet 36 (gestures 13/13, platform 27/27),
+  Release launch pass on all four; repo global.json matches; runtime 10.0.14. **Phone 36: platform 27/29** — after the
+  background kill, the check's `monkey` relaunch left the launcher on screen for 45 s (screenshot p10d: home screen, no
+  app process, no crash in the logs), so AT-11 couldn't be judged; split screen then failed on the missing state and the
+  script stopped with a KeyError. Test tooling, not the app (the same check passed in the last four rounds). Fixed:
+  `launch()` waits for the process and, if monkey started nothing, sends the launcher intent with `am start`
+  (NEW_TASK | RESET_TASK_IF_NEEDED, as the launcher does); the split-screen comparison tolerates a missing state.
