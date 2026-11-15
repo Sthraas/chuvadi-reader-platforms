@@ -578,8 +578,10 @@
                                 var isCur = ReferenceEquals(fm, CurrentFindMatch);
                                 @foreach (var hb in fm.Boxes)
                                 {
+                                    @* The highlight is a little deeper than the text's box (descenders); on a page shown
+                                       turned a quarter, "deeper" is sideways (F-1). *@
                                     <div class="rfind-hl @(isCur ? "cur" : null)"
-                                         style="left:@Pct(hb.X);top:@Pct(hb.Y);width:@Pct(hb.W);height:@Pct(hb.H * 1.3)"></div>
+                                         style="left:@Pct(hb.X);top:@Pct(hb.Y);width:@Pct(fm.Sideways ? hb.W * 1.3 : hb.W);height:@Pct(fm.Sideways ? hb.H : hb.H * 1.3)"></div>
                                 }
                             }
                         }
@@ -3477,6 +3479,18 @@
             }
         }
 
+        // F-2: while a fit is on, a page of another shape gets the zoom at which it fits; without one, all pages
+        // share the document's zoom again (asked once after the fit goes off).
+        if (tab.FitMode != ReaderFitMode.Free || _pageFitsOn)
+        {
+            _pageFitsOn = tab.FitMode != ReaderFitMode.Free;
+            try
+            {
+                await _js.InvokeVoidAsync("fitEachPage", _desk, tab.FitMode switch { ReaderFitMode.Width => "width", ReaderFitMode.Page => "page", _ => "" });
+            }
+            catch { }
+        }
+
         if (_focusNewText)
         {
             _focusNewText = false;
@@ -4204,6 +4218,7 @@
         }
     }
 
+    private bool _pageFitsOn;
     private ElementReference _viewerHost;
     private string? _viewerPinchOn;
 

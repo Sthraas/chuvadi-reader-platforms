@@ -56,6 +56,21 @@ public readonly record struct ShownBox(double X0, double Y0, double W, double H)
         return AtOrigin ? t : Chuvadi.Pdf.Graphics.Transform.CreateTranslation(-X0, -Y0).Multiply(t);
     }
 
+    /// <summary>A rectangle in the page's own space (x, y its bottom-left corner, y up) as fractions of the page as
+    /// shown: from its top-left, with the page turned clockwise by <paramref name="turn"/> (Mobile UI F-1). On a page
+    /// turned a quarter either way the rectangle is on its side too.</summary>
+    public NormBox Fractions(int turn, double x, double y, double w, double h)
+    {
+        double px = x - X0, py = y - Y0;
+        return turn switch
+        {
+            90 => new NormBox(py / H, px / W, h / H, w / W),
+            180 => new NormBox((W - px - w) / W, py / H, w / W, h / H),
+            270 => new NormBox((H - py - h) / H, (W - px - w) / W, h / H, w / W),
+            _ => new NormBox(px / W, (H - py - h) / H, w / W, h / H),
+        };
+    }
+
     public static ShownBox Of(PdfPage page)
     {
         var m = page.MediaBox;
