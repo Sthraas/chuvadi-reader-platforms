@@ -1,8 +1,29 @@
-# Mobile app UI → Foundation: hooks and hand-off (updated 15 Nov)
+# Mobile app UI → Foundation: hooks and hand-off (updated 16 Nov)
 
-## Outstanding for Foundation: H-24 (`proposal/mobile-ui-hooks-10.patch`)
-One diff, against foundation-pr 07ed3ca. `proposal/H24-reader-mark-card-close-on-touch.patch` is the same
-diff on its own. Android's `compose.sh` applies `mobile-ui-hooks-10.patch` for round 11.
+## Outstanding for Foundation: H-24 and H-25 (`proposal/mobile-ui-hooks-11.patch`)
+Two diffs to `Ui/Pages/Reader.razor`, against foundation-pr 57a63c5 (patch 27). `mobile-ui-hooks-11.patch` is
+both together (what Android's `compose.sh` applies); `proposal/H24-reader-mark-card-close-on-touch.patch` and
+`proposal/H25-reader-pinch-in-mark-leaves-no-mark.patch` are each on its own against the clean tree.
+
+### H-25: a two-finger pinch in Mark leaves no mark behind (found checking patch 27 by finger)
+(`Ui/Pages/Reader.razor`, +24 / −1)
+- Today, in Mark on a touchscreen, every pinch zooms **and** places a mark: the first finger's press starts
+  a text box (Text is the tool when none is picked) or a shape, and its lift commits it. Measured at 412×915
+  and 800×1280 on 57a63c5: no tool picked → 1 stray text box per pinch; Rectangle on → 1 stray rectangle
+  per pinch (and its card opens); Text on → 1 stray text box. Not new in patch 27 (`MkDown` is unchanged);
+  it shows now because pinch is the way to zoom in before placing a mark.
+- The change: a touch pointer that isn't the primary one is a second finger. Its press (`MkDownPress`) drops
+  the draft the first finger began and marks the gesture as a pinch; `MkMove` ignores moves while that
+  holds and from any second finger; `MkUp` places nothing for a pinch and the first finger's lift ends it.
+  `MkUp` still opens with the `_mkPress` wait (TouchMarkupTests holds).
+- Mouse and pen: untouched (`PointerType == "touch"` only; a mouse is always primary).
+- **For:** pinch in Mark zooms and nothing else, with any tool; 4 sizes × (no tool, Rectangle, Text, Draw),
+  fingers together and 80 ms apart: 0 stray marks, zoom as asked. Marks by finger and by mouse still land
+  under the pointer at the fit zoom and at ×1.6.
+- **Against / not covered:** it relies on the second finger's press reaching the mark layer. A second finger
+  that lands off the page, or on an existing mark (those handlers stop the press before the layer), isn't
+  seen, so that pinch can still leave a mark. A fuller way is for reader.js to tell the Reader when its
+  pinch begins and have the Reader drop the draft there — Foundation's choice; this diff is the small one.
 
 ### H-24: a selected mark's card has a close control on tablet and phone (AT-22)
 (`Ui/Pages/Reader.razor`, +9 / −3)

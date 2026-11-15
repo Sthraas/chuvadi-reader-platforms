@@ -1,0 +1,56 @@
+diff --git a/src/ChuvadiReader.Ui/Pages/Reader.razor b/src/ChuvadiReader.Ui/Pages/Reader.razor
+index e45ae46..e55aadd 100644
+--- a/src/ChuvadiReader.Ui/Pages/Reader.razor
++++ b/src/ChuvadiReader.Ui/Pages/Reader.razor
+@@ -2409,9 +2409,34 @@
+ 
+     private Task MkDown(PointerEventArgs e, int page) => _mkPress = MkDownPress(e, page);
+ 
++    // Two fingers are a pinch (reader.js zooms the page). The second finger's press drops whatever the
++    // first one began, and the rest of that gesture is ignored, so zooming in Mark leaves no mark behind.
++    private bool _mkPinch;
++    private static bool IsSecondFinger(PointerEventArgs e) => e.PointerType == "touch" && !e.IsPrimary;
++
++    // A finger of a pinch lifts: nothing is placed. The first finger's lift ends the pinch.
++    private bool MkUpOfPinch(PointerEventArgs e)
++    {
++        if (IsSecondFinger(e)) return true;
++        if (!_mkPinch) return false;
++        MkDropForPinch();
++        _mkPinch = false;
++        MkEndGesture();
++        return true;
++    }
++
++    private void MkDropForPinch()
++    {
++        _mkPinch = true;
++        _mkMode = MkMode.None;
++        _textDraft = null; _shapeDraft = null; _freehandPts = null;
++    }
++
+     private async Task MkDownPress(PointerEventArgs e, int page)
+     {
+         if (!_markup || e.Button != 0) return;
++        if (IsSecondFinger(e)) { MkDropForPinch(); return; }
++        _mkPinch = false;
+         EnsureMarkupDoc();
+         MkBeginGesture();
+         if (!await CacheLayerRect(page)) return;
+@@ -2446,7 +2471,7 @@
+ 
+     private void MkMove(PointerEventArgs e)
+     {
+-        if (_mkMode == MkMode.None) return;
++        if (_mkPinch || IsSecondFinger(e) || _mkMode == MkMode.None) return;
+         MkBeginGesture();
+         var cx = Clamp01((e.ClientX - _mkRect.L) / _mkRect.W);
+         var cy = Clamp01((e.ClientY - _mkRect.T) / _mkRect.H);
+@@ -2568,6 +2593,7 @@
+             await _mkPress;
+             MkMove(e);
+         }
++        if (MkUpOfPinch(e)) return;
+         MkUpCore(e);
+         MkEndGesture();
+     }

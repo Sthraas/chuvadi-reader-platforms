@@ -590,3 +590,24 @@ Evidence:
   Arrange and the desk menu identical apart from the clock; Home shows the same 4 noise pixels as on 11 Nov
   (they also differ between two runs of one build).
 
+## 16 Nov, 00:15: Foundation 57a63c5 (patch 27) merged; pinch and marks by finger and by mouse
+- Merged platform/foundation-pr 57a63c5: no conflicts. (My clone's fetch list only had main and mobile-ui,
+  so a plain fetch missed it; fetched `refs/heads/platform/*` explicitly.)
+- The repo `global.json` pins SDK 10.0.403 and its workload set: `dotnet workload update` once in
+  /home/claude/mui, as Foundation's note says; before it nothing built ("Workload version 10.0.403 … not found").
+- New tool `tools/mobile-ui/pinchmarks.py` (18 checks), at 800×1280, 1280×800, 412×915 and 915×412:
+  - PDF: two-finger pinch ×1.5 → ×1.50; Ctrl + wheel (mouse, trackpad) zooms; `window.chuvadiPinch` ×0.8 → ×0.8.
+  - Excel and Word: two-finger pinch ×1.4 → text ×1.4; Ctrl + wheel; `window.chuvadiPinch` ×1.25; no
+    sideways page overflow. (Finger pinch on these viewers is new in patch 27 and doesn't collide with
+    mobile.js.)
+  - Mark: a rectangle dragged by finger and by mouse lies under the drag (0 px off) at the fit zoom and at ×1.6.
+- **Found:** in Mark, a finger pinch also placed a mark each time (a text box, or the picked shape). Not new
+  in patch 27. Shared code, so it is a diff for Foundation: **H-25** (FOR-FOUNDATION.md). hooks-10 is replaced
+  by `mobile-ui-hooks-11.patch` = H-24 + H-25. The first shape of H-25 broke Foundation's
+  `Every_markup_press_is_tracked_so_pointerup_waits_for_it`; reshaped so `MkUp` still opens with the press wait.
+- Results (hooks-11 applied): 528 tests pass, 6 skipped by Foundation: 374 + 97 + 41 + 16; touch at the four
+  sizes: 154 checks pass (pinchmarks 18 each, gestures 8/8/9/9, checks 12 each), box audit clean; desktop
+  before (57a63c5) / after at 1440×900: Mark, Mark with a rectangle selected, Arrange and the desk menu
+  identical apart from the clock; Read and Home show the known 1 to 2 level noise pixels (same places as
+  on 15 Nov, where a repeat run was clean).
+
