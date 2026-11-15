@@ -33,10 +33,14 @@ jobs:
     env:
       DOTNET_CLI_TELEMETRY_OPTOUT: "1"
       DOTNET_NOLOGO: "1"
+      # Ubuntu's .NET runtime. The steps that run the published app set DOTNET_ROOT to it, so the app is tested on
+      # the runtime Ubuntu users get, not on the one that came with the SDK above.
+      DISTRO_DOTNET: /usr/lib/dotnet
     steps:
       - uses: actions/checkout@v4
 
-      # Build: SDK, GTK 4, WebKitGTK 6.0, dpkg-dev. Test only (never shipped): Xvfb, mutter, ImageMagick,
+      # Build: GTK 4, WebKitGTK 6.0, dpkg-dev (the SDK is the next step). Run: Ubuntu's own .NET runtime, the one
+      # the framework-dependent package depends on (DISTRO_DOTNET below). Test only (never shipped): Xvfb, mutter, ImageMagick,
       # xdotool, xclip, x11-utils, poppler-utils, CUPS + cups-pdf, xdg-utils, qpdf (makes the no-printing fixture),
       # lintian + python3-fonttools/brotli (package check), python3-seccomp (no-user-namespace test),
       # python3-gi (a stand-in file manager for the Show in folder test).
@@ -44,11 +48,21 @@ jobs:
         timeout-minutes: 15
         run: |
           sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 update -qq
-          sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 install -y -qq dotnet-sdk-10.0 \
+          sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 install -y -qq dotnet-runtime-10.0 \
             libgtk-4-dev libwebkitgtk-6.0-dev dpkg-dev \
             xvfb mutter imagemagick dbus-x11 xdotool xclip x11-utils poppler-utils cups cups-pdf xdg-utils qpdf \
             lintian python3-fonttools python3-brotli python3-seccomp python3-gi
+
+      # The one SDK every build uses (D-178, D-186): global.json pins SDK and workload set, roll-forward off.
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      # With the workload set pinned, nothing builds until that set's manifests are on the machine.
+      - name: Install the pinned workload set
+        run: |
+          dotnet workload update
           dotnet --info | head -8
+          ls /usr/lib/dotnet/shared/Microsoft.NETCore.App
 
       # Packages: the committed ci/packages feed (byte-identical to the Windows app), coordinator D-01,
       # copied to ./localpackages, which the repo's nuget.config points to.
@@ -78,12 +92,18 @@ jobs:
           done
 
       - name: Launch test under Xvfb
+        env:
+          DOTNET_ROOT: ${{ env.DISTRO_DOTNET }}
         run: bash tools/linux/smoke.sh "$PWD/publish" "$PWD/smoke" 3
 
       - name: No user namespaces → a plain message and exit 2, not an abort (B-15)
+        env:
+          DOTNET_ROOT: ${{ env.DISTRO_DOTNET }}
         run: bash tools/linux/no-userns-test.sh "$PWD/publish" "$PWD/no-userns"
 
       - name: First launch per person, no GPU (B-12; recorded, not a pass/fail threshold)
+        env:
+          DOTNET_ROOT: ${{ env.DISTRO_DOTNET }}
         run: python3 -I tools/linux/first-launch.py "$PWD/publish" 5 | tee first-launch.txt
 
       - name: Build the .deb packages (self-contained default, and framework-dependent)
@@ -110,18 +130,26 @@ jobs:
           lpstat -p -d
 
       - name: Full UI test pass (every toolbar, GTK dialogs, print to CUPS)
+        env:
+          DOTNET_ROOT: ${{ env.DISTRO_DOTNET }}
         timeout-minutes: 40
         run: python3 -I -u tools/linux/uitest.py "$PWD/uitest-build" "$PWD/uitest" --cups-out "$HOME/PDF"
 
       - name: Read-only home → starts, opens the file, one notice (B-16; the runner's user isn't root)
+        env:
+          DOTNET_ROOT: ${{ env.DISTRO_DOTNET }}
         run: |
           python3 -I tools/linux/make-fixtures.py "$PWD/ro-fixtures"
           python3 -I tools/linux/readonly-home-test.py "$PWD/uitest-build" "$PWD/ro-fixtures/five-pages.pdf" "$PWD/readonly-home"
 
       - name: Show in folder → one file-manager window, slow or missing file manager (B-21)
+        env:
+          DOTNET_ROOT: ${{ env.DISTRO_DOTNET }}
         run: python3 -I tools/linux/reveal-test.py "$PWD/uitest-build" "$PWD/ro-fixtures/five-pages.pdf" "$PWD/reveal"
 
       - name: No printing service → Print explains itself (B-20); a separate CUPS server is used (remote CUPS)
+        env:
+          DOTNET_ROOT: ${{ env.DISTRO_DOTNET }}
         run: |
           sudo systemctl stop cups.service cups.socket cups.path 2>/dev/null || sudo pkill -x cupsd || true
           status=0

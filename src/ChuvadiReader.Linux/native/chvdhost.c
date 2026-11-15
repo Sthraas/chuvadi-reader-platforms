@@ -65,7 +65,7 @@ static struct
      * first render (chvd_ready), or the fallback time. */
     GtkWidget *cover;
     guint cover_fallback;
-    double pinch_scale; /* the pinch's scale at the last change sent to the page */
+    double pinch_scale; /* the pinch's scale at the last change sent to the page; 0 when no pinch is on */
 
     /* The last pointer press inside the view, for begin-move from the HTML title bar. */
     GdkDevice *press_device;
@@ -573,14 +573,13 @@ CHVD_EXPORT int chvd_start_mark_shown(void)
 
 /* ── pinch ───────────────────────────────────────────────────────────────── */
 
-/* Sends a pinch step to the page as the event the Reader already zooms on: a wheel event with Ctrl held, at
- * the pinch's place (reader.js: "trackpad pinch and Ctrl+wheel both arrive as wheel+ctrlKey", zoom multiplied
- * by exp(-deltaY * 0.0015)). WebKitGTK doesn't send that for a pinch; it zooms the whole web page instead,
- * which the claim below stops. Where the page has no zoom of its own (Home, Settings) nothing listens, and
- * nothing moves. x, y: view coordinates; ratio: this step's scale change (1.1 = 10 % larger). */
-static void forward_pinch(double x, double y, double ratio)
+/* Passes the pinch to the Reader's shared entry (patch 27): window.chuvadiPinch(phase, scale, x, y), phase
+ * 'begin' | 'change' | 'end', scale since 'begin', x, y in the page's CSS pixels. WebKitGTK gives the page no
+ * trackpad pinch; it would zoom the whole web page instead, which the claim below stops. The entry exists once a
+ * view that zooms is open: on Home and Settings there is none, and nothing moves. x, y: view coordinates. */
+static void forward_pinch(const char *phase, double scale, double x, double y)
 {
-    if (!S.view || !(ratio > 0) || !isfinite(ratio))
+    if (!S.view || !(scale > 0) || !isfinite(scale))
     {
         return;
     }
@@ -592,17 +591,22 @@ static void forward_pinch(double x, double y, double ratio)
         y /= level;
     }
 
-    char bx[G_ASCII_DTOSTR_BUF_SIZE], by[G_ASCII_DTOSTR_BUF_SIZE], bd[G_ASCII_DTOSTR_BUF_SIZE];
+    char bs[G_ASCII_DTOSTR_BUF_SIZE], bx[G_ASCII_DTOSTR_BUF_SIZE], by[G_ASCII_DTOSTR_BUF_SIZE];
+    g_ascii_formatd(bs, sizeof bs, "%.5f", scale);
     g_ascii_formatd(bx, sizeof bx, "%.2f", x);
     g_ascii_formatd(by, sizeof by, "%.2f", y);
-    g_ascii_formatd(bd, sizeof bd, "%.4f", -log(ratio) / 0.0015);
-    char *script = g_strdup_printf(
-        "(function(x,y,d){var t=document.elementFromPoint(x,y)||document.body;"
-        "t.dispatchEvent(new WheelEvent('wheel',{bubbles:true,cancelable:true,composed:true,view:window,"
-        "ctrlKey:true,deltaMode:0,deltaY:d,clientX:x,clientY:y}));})(%s,%s,%s);",
-        bx, by, bd);
+    char *script = g_strdup_printf("window.chuvadiPinch&&window.chuvadiPinch('%s',%s,%s,%s);", phase, bs, bx, by);
     webkit_web_view_evaluate_javascript(S.view, script, -1, NULL, NULL, NULL, NULL, NULL);
     g_free(script);
+}
+
+static void pinch_place(GtkGesture *gesture, double *x, double *y)
+{
+    if (!gtk_gesture_get_bounding_box_center(gesture, x, y))
+    {
+        *x = gtk_widget_get_width(GTK_WIDGET(S.view)) / 2.0;
+        *y = gtk_widget_get_height(GTK_WIDGET(S.view)) / 2.0;
+    }
 }
 
 /* Pinch-to-zoom (touchpad or touch screen) would zoom the whole page; the Reader zooms its own
@@ -610,41 +614,47 @@ static void forward_pinch(double x, double y, double ratio)
 static void on_zoom_begin(GtkGesture *gesture, GdkEventSequence *sequence, gpointer data)
 {
     (void)data;
-    gtk_gesture_set_state(gesture, GTK_EVENT_SEQUENCE_CLAIMED);
-    S.pinch_scale = 1.0;
     (void)sequence;
+    gtk_gesture_set_state(gesture, GTK_EVENT_SEQUENCE_CLAIMED);
+    double x, y;
+    pinch_place(gesture, &x, &y);
+    S.pinch_scale = 1.0;
+    forward_pinch("begin", 1.0, x, y);
 }
 
-/* scale: the pinch so far, 1.0 at its start. Each change goes to the page as a step from the last one sent. */
+/* scale: the pinch so far, 1.0 at its start. */
 static void on_zoom_scale_changed(GtkGestureZoom *gesture, double scale, gpointer data)
 {
     (void)data;
-    if (!(scale > 0) || !(S.pinch_scale > 0))
+    if (!(scale > 0) || !(S.pinch_scale > 0) || fabs(scale / S.pinch_scale - 1.0) < 0.003)
     {
-        return;
-    }
-
-    double ratio = scale / S.pinch_scale;
-    if (fabs(ratio - 1.0) < 0.004)
-    {
-        return; /* too small to see; it adds up into the next step */
+        return; /* not begun, or too small a change to see: it is in the next one */
     }
 
     double x, y;
-    if (!gtk_gesture_get_bounding_box_center(GTK_GESTURE(gesture), &x, &y))
-    {
-        x = gtk_widget_get_width(GTK_WIDGET(S.view)) / 2.0;
-        y = gtk_widget_get_height(GTK_WIDGET(S.view)) / 2.0;
-    }
-
+    pinch_place(GTK_GESTURE(gesture), &x, &y);
     S.pinch_scale = scale;
-    forward_pinch(x, y, ratio);
+    forward_pinch("change", scale, x, y);
 }
 
-/* A pinch step at a place in the view, as the gesture sends it (UI tests: a pinch can't be made under Xvfb). */
-CHVD_EXPORT void chvd_pinch(double x, double y, double ratio)
+/* The fingers lifted, or the gesture was taken away: the Reader settles on the zoom it has. */
+static void on_zoom_end(GtkGesture *gesture, GdkEventSequence *sequence, gpointer data)
 {
-    forward_pinch(x, y, ratio);
+    (void)gesture;
+    (void)sequence;
+    (void)data;
+    if (S.pinch_scale > 0)
+    {
+        S.pinch_scale = 0;
+        forward_pinch("end", 1.0, 0, 0);
+    }
+}
+
+/* One step of a pinch at a place in the view, as the gesture sends it (UI tests: a pinch can't be made under
+ * Xvfb). phase: 0 begin, 1 change, 2 end; scale: since the begin. */
+CHVD_EXPORT void chvd_pinch(int phase, double scale, double x, double y)
+{
+    forward_pinch(phase == 0 ? "begin" : phase == 1 ? "change" : "end", scale, x, y);
 }
 
 /*
@@ -740,6 +750,8 @@ CHVD_EXPORT int chvd_create_window(const char *title, const char *app_id, int wi
     gtk_event_controller_set_propagation_phase(GTK_EVENT_CONTROLLER(zoom), GTK_PHASE_CAPTURE);
     g_signal_connect(zoom, "begin", G_CALLBACK(on_zoom_begin), NULL);
     g_signal_connect(zoom, "scale-changed", G_CALLBACK(on_zoom_scale_changed), NULL);
+    g_signal_connect(zoom, "end", G_CALLBACK(on_zoom_end), NULL);
+    g_signal_connect(zoom, "cancel", G_CALLBACK(on_zoom_end), NULL);
     gtk_widget_add_controller(GTK_WIDGET(S.view), GTK_EVENT_CONTROLLER(zoom));
 
     /* The web view under the start-up mark (make_cover), which goes at the app's first render. */

@@ -61,9 +61,10 @@ internal static unsafe partial class Native
     [LibraryImport(Lib, EntryPoint = "chvd_start_mark_shown")]
     public static partial int StartMarkShown();
 
-    /// <summary>A pinch step at a place in the view, as the pinch gesture sends it (UI tests).</summary>
+    /// <summary>One step of a pinch at a place in the view, as the pinch gesture sends it (UI tests).
+    /// phase: 0 begin, 1 change, 2 end; scale: since the begin.</summary>
     [LibraryImport(Lib, EntryPoint = "chvd_pinch")]
-    public static partial void Pinch(double x, double y, double ratio);
+    public static partial void Pinch(int phase, double scale, double x, double y);
 
     [LibraryImport(Lib, EntryPoint = "chvd_navigate", StringMarshalling = StringMarshalling.Utf8)]
     public static partial void Navigate(string uri);

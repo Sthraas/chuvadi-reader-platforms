@@ -1193,6 +1193,16 @@ def zoom_now():
     return float(app.js("var d=document.querySelector('.rdesk'); return d ? parseFloat(getComputedStyle(d).getPropertyValue('--rpage-zoom')) || 1 : 0"))
 
 
+def pinch(x, y, scales):
+    """One pinch at a place in the view, sent as GTK's zoom gesture sends it: begin, the scale so far at each
+    change, end (a real pinch can't be made under Xvfb)."""
+    app.send(f"pinch 0 1 {x} {y}")
+    for s in scales:
+        app.send(f"pinch 1 {s:.5f} {x} {y}")
+        time.sleep(0.05)
+    app.send(f"pinch 2 1 {x} {y}")
+
+
 def page_point():
     """A point over the page in view (client coordinates) and where on that page it is (fractions of its box)."""
     return app.js("var w=[...document.querySelectorAll('.rpage-wrap')].find(e => { var r=e.getBoundingClientRect(); return r.bottom > 200 && r.top < innerHeight - 200; }); "
@@ -1208,7 +1218,7 @@ def where_on_page(x, y, page):
 
 def pinch_and_ctrl_scroll():
     """Arun's laptop check (11 Nov): a trackpad pinch did nothing. The host takes the pinch (so WebKit doesn't zoom
-    the whole app) and now hands each step to the Reader as the wheel-with-Ctrl event it zooms on. A pinch can't
+    the whole app) and hands it to the Reader's shared entry, window.chuvadiPinch (patch 27). A pinch can't
     be made under Xvfb, so the steps are sent through the host's own forwarding (the gesture's signal calls the
     same function); Ctrl+scroll is real input. On Home, which has no zoom, neither changes anything."""
     open_tab(PDF)
@@ -1218,8 +1228,7 @@ def pinch_and_ctrl_scroll():
     whole = app.js(scale)
     z0 = zoom_now()
     x, y, fx, fy, page = page_point()
-    for _ in range(5):  # spread: five steps of 10 %
-        app.send(f"pinch {x} {y} 1.1")
+    pinch(x, y, [1.1 ** i for i in range(1, 6)])  # spread: five steps of 10 %
     app.wait(lambda: abs(zoom_now() - z0 * 1.1 ** 5) < 0.03 * z0, 5, f"zoom {z0 * 1.1 ** 5:.2f} after a spread from {z0:.2f} (now {zoom_now():.2f})")
     z1 = zoom_now()
     app.shot("37-pinch-spread")
@@ -1230,13 +1239,12 @@ def pinch_and_ctrl_scroll():
     for _ in range(14):
         if app.js(wider):
             break
-        app.send(f"pinch {x} {y} 1.1")
+        pinch(x, y, [1.1])
         time.sleep(0.15)
     time.sleep(0.5)
     x, y, fx, fy, page = page_point()
     za = zoom_now()
-    for _ in range(3):
-        app.send(f"pinch {x} {y} 1.1")
+    pinch(x, y, [1.1, 1.21, 1.331])
     app.wait(lambda: abs(zoom_now() - za * 1.1 ** 3) < 0.03 * za, 5, f"zoom {za * 1.1 ** 3:.2f} after a second spread (now {zoom_now():.2f})")
     time.sleep(0.4)
     ax, ay = where_on_page(x, y, page)
@@ -1246,7 +1254,7 @@ def pinch_and_ctrl_scroll():
     for _ in range(40):  # pinch back in, 10 % a step
         if zoom_now() <= z0 * 1.05:
             break
-        app.send(f"pinch {x} {y} {max(1 / 1.1, z0 / zoom_now())}")
+        pinch(x, y, [max(1 / 1.1, z0 / zoom_now())])
         time.sleep(0.1)
     app.wait(lambda: abs(zoom_now() - z0) < 0.03 * z0, 5, f"zoom back to {z0:.2f} after pinching in (now {zoom_now():.2f})")
     time.sleep(0.5)
@@ -1273,8 +1281,7 @@ def pinch_and_ctrl_scroll():
     go_home()
     time.sleep(0.5)
     before = app.js(scale + ".concat([document.body.scrollWidth, document.body.scrollHeight])")
-    for _ in range(4):
-        app.send("pinch 900 500 1.2")
+    pinch(900, 500, [1.2, 1.44, 1.73, 2.07])
     app.xdo("mousemove", str(gx + 900), str(gy + 500))
     app.xdo("keydown", "ctrl")
     try:
@@ -1313,7 +1320,7 @@ def mark_lands_under_pointer():
             z = zoom_now()
             if abs(z - target) < 0.004:
                 break
-            app.send(f"pinch {(x0 + x1) / 2:.0f} {(y0 + y1) / 2:.0f} {max(1 / 1.12, min(1.12, target / z))}")
+            pinch(round((x0 + x1) / 2), round((y0 + y1) / 2), [max(1 / 1.12, min(1.12, target / z))])
             time.sleep(0.12)
         time.sleep(0.8)
 

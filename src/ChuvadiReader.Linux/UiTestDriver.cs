@@ -125,10 +125,11 @@ internal static class UiTestDriver
 
             case "pinch":
             {
-                // "x y ratio": one pinch step at a place in the view, sent as the gesture sends it (no pinch under Xvfb).
+                // "phase scale x y" (phase 0 begin, 1 change, 2 end; scale since the begin): one step of a pinch at a
+                // place in the view, sent as the gesture sends it (no pinch under Xvfb).
                 var parts = arg.Split(' ', StringSplitOptions.RemoveEmptyEntries)
                     .Select(v => double.Parse(v, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
-                GtkHost.Post(() => Native.Pinch(parts[0], parts[1], parts[2]));
+                GtkHost.Post(() => Native.Pinch((int)parts[0], parts[1], parts[2], parts[3]));
                 return "true";
             }
 
