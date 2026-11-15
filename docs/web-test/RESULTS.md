@@ -279,3 +279,13 @@ With **real Sangam rc.16** (gateway, short idle): owner with cookie 200; **the f
 - **Save (Ctrl S)** ✅: "Saved to text-3.pdf", the file downloads, no question on reload, and the mark is in the document after the reload.
 - After **Save as new PDF** the question still comes — stated limit (the marks are not in this document), noted.
 - Unsaved marks on a tab that isn't showing → no question, mark lost → **WT-23**.
+
+## 16 Nov 2026 — `platform/web` @ **eab426b** (Foundation patch 27: M-27 fix; pinned SDK and workload set)
+- **Build from clean:** needs `dotnet workload update` once per machine now (`global.json` pins SDK and workload set 10.0.403, roll-forward off; without it MSB4242) — then 0 warnings; Reader **374** (+6 skipped — library items PDF-L1, PDF-L2, PDF-L6, PDF-L7, PDF-L8, SH-L1; Foundation is writing the reason for each), Hosting **97**, Mobile UI **16**, Web UI **41**; Web **181/181**; `check-package.sh` PASS; no third-party assemblies.
+- **M-27** ✅ fixed — `mark_position.py`: Chromium 16/16, WebKit 26.6 16/16, Firefox 14/16 (two `goto` time-outs, OBS-1), **WebKit 17.4 16/16**; worst 0.9 px on screen, 0.4 % of the page in the saved PDF. `zoom_tools.py` (move, resize, Redact box at a zoom) 5/5 on all four. `mark_zoom.py` 4/4 × 3. Table in BUGS.md.
+- **Leave site (D-181)** ✅ `leave_prompt.py` 4/4 real checks × Chromium, Firefox, WebKit (the question after Save as new PDF is the stated limit); `leave_guard.py` 7/7 Chrome, 6/6 Firefox, 7/7 WebKit.
+- **WT-22 / WT-21** ✅ `reload_tabs.py` 11/11 × 3.
+- **WT-19** ✅ fixed (first measured since 04cdd21; Chromium): rows-1048576.xlsx open 1,054 MB → 155 MB 2 s after close (flat to 30 s); cancelled open of cancel-4x1m.xlsx peak 1,556 MB → 147 MB.
+- **WT-18** ✗ unchanged: ratio-600.xlsx and zip-bomb.xlsx refused in 0.3–0.8 s with "damaged or isn't an Excel workbook"; rows-1048577 and entries-20001 say "too large".
+- **Regression:** `flows.py` 10/10, `page_images.py` 7/7, `reload.py` 11/11, `sangam_signin.py` 18/18, `expiry.py` 12/12 — each × Chrome, Firefox, WebKit; `office_limits.py` 6/6 Chrome, WebKit; `comeback.py` 5/5.
+- **OBS-2:** once, one portal instance stopped ending sessions after browsers were killed mid-load; 15 fresh-portal kill trials and 7 timed kills since — not reproduced (BUGS.md).

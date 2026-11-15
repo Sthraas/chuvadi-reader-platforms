@@ -1,24 +1,25 @@
 # Web — what remains for a Phase 1 sign-off (Web Test chat)
 
-> **Updated 16 Nov 2026, 01:10 IST** — tested heads 21ac80d (patch 26) and 4803bfa (D-181). The section below supersedes §1–§3 of the 11 Nov text that follows.
+> **Updated 16 Nov 2026, 03:40 IST** — tested head **eab426b** (patch 27). The section below supersedes §1–§3 of the 11 Nov text that follows.
 
-## Status on 16 Nov
-**Fixed and verified since 11 Nov:** WT-22 (reload keeps the tabs), WT-21 (complete), WT-17, WT-20; the Leave-site question (D-181).
+## Status on 16 Nov (eab426b)
+**Fixed and verified:** M-27 (Chromium, Firefox, WebKit 26.6 and WebKit 17.4; Rectangle, Text box, move, resize, Redact box at a zoom), WT-19 (Excel close and cancelled open give the memory back), WT-22, WT-21, WT-17, WT-20, the Leave-site question (D-181). 22 of 24 numbered bugs closed.
 
 **Blocks the sign-off**
 | # | What | Owner |
 |---|---|---|
-| M-27 | Marks land at pointer × zoom on WebKit 18.4 and earlier (Safari 17/18). Fix is in Foundation (PR 18); **not yet on `platform/web`** (head still 4803bfa). Re-test on the patch 27/28 head with current engines **and** WebKit 17.4, including Redact and move/resize | Web merges; Web Test re-tests |
-| WT-19 | Excel close / cancelled open gives no memory back | Foundation / library — status not re-measured on 21ac80d yet |
-| WT-18 | Oversized Excel part called "damaged" | Foundation / library |
-| WT-23 | Unsaved marks on a tab that isn't showing are lost on reload with no question | Coordinator: accept or fix |
-| Skipped tests | 6 skipped in the Reader tests on 21ac80d — say why | Foundation |
+| WT-23 | Unsaved marks on a tab that isn't showing are lost on reload. Decided: fix (D-186, D-190 — marks kept with the tab; ask-before-closing card) | Foundation builds; Web merges; Web Test re-tests |
+| WT-18 | Oversized Excel part / zip bomb still called "damaged" | Foundation / library |
+| PR 19 | Merged in Reader main 814f755, not yet on `platform/web` — re-test M-27 again on that head (current engines + WebKit 17.4, Redact, move/resize) | Web merges; Web Test re-tests |
+| Skipped tests | 6 skipped (PDF-L1, L2, L6, L7, L8, SH-L1) — the written reason for each | Foundation (in hand) |
 
-**Decisions still open (from 11 Nov):** number grouping (server culture vs browser); the stored Excel value on touch; General cells.
+**Watching, not blocking:** OBS-2 — once, a portal instance stopped ending sessions after browsers were killed mid-load; 22 tries since, not reproduced. Suggestion to Web in BUGS.md (a time limit and a log line in the expiry pass).
 
-**Then, on the sign-off head:** the final full pass (clean build, all suites × 3 engines + WebKit 17.4 for marks, hostile corpus, fidelity, design screenshots against the handout, tablet portrait frame, sandbox speed re-run).
+**Decisions:** all settled (D-161, D-162, D-171, D-172, patch 26) — none open.
 
-**Phase 2 unchanged:** 40-person load (now also: sessions kept 30 min after a browser is closed count against `MaxWorkers = 40`), V-1 to V-7, https back-channel, M-1 to M-4 (add Safari 17/18 devices for M-27), G-12.
+**Then, on the sign-off head:** the final full pass (clean build incl. the `dotnet workload update` step, all suites × 3 engines + WebKit 17.4 for marks, hostile corpus, fidelity, design screenshots against the handout, tablet portrait frame, sandbox speed re-run).
+
+**Phase 2 unchanged:** 40-person load (also: sessions kept 30 min after a browser is closed count against `MaxWorkers = 40`), V-1 to V-7, https back-channel, M-1 to M-4 (add Safari 17/18 devices for marks, lines, images, signature at a zoom), G-12.
 
 ---
 

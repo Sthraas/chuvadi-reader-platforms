@@ -18,10 +18,17 @@ os.makedirs(out, exist_ok=True)
 DOCS = {"unrotated": "/tmp/m27/plain.pdf", "rot90": "/tmp/m27/rot90.pdf"}
 # (label, viewport height, how to get there)
 ZOOMS = [("fit", {"unrotated": 900, "rot90": 900}, 0), ("54", {"unrotated": 716, "rot90": 538}, 0), ("100", {"unrotated": 671, "rot90": 507}, 2), ("150", {"unrotated": 671, "rot90": 507}, 4)]
-GEOM = """() => { const l = document.querySelector('.mk-layer[data-page="0"]').getBoundingClientRect();
+# UNZ: true when this engine reports a zoomed element's rectangle unzoomed (WebKit 18.4 and earlier); the true
+# client rectangle is then the reported one times the zoom, and the script corrects for it so the pointer goes
+# where it means to and the comparison is in true client pixels.
+UNZ = """() => { const o = document.createElement('div'); o.style.cssText = 'position:fixed;left:0;top:0;zoom:2;visibility:hidden';
+  o.innerHTML = '<div style="width:100px;height:50px"></div>'; document.body.appendChild(o);
+  const w = o.firstChild.getBoundingClientRect().width; o.remove(); return w < 150; }"""
+GEOM = """(unz) => { const l = document.querySelector('.mk-layer[data-page="0"]').getBoundingClientRect();
   const d = document.querySelector('[style*="--rpage-zoom"]'); const dr = d.getBoundingClientRect();
-  return { layer: [l.left, l.top, l.width, l.height], desk: [dr.left, dr.top, dr.right, dr.bottom],
-           zoom: parseFloat(d.style.getPropertyValue('--rpage-zoom')), vw: innerWidth, vh: innerHeight }; }"""
+  const z = parseFloat(d.style.getPropertyValue('--rpage-zoom')), k = unz ? z : 1;
+  return { layer: [l.left * k, l.top * k, l.width * k, l.height * k], desk: [dr.left, dr.top, dr.right, dr.bottom],
+           zoom: z, vw: innerWidth, vh: innerHeight }; }"""
 rows = []
 
 def nonwhite_bbox(img, thr=235):
@@ -35,7 +42,7 @@ def run(pw, engine):
         for dl, doc in DOCS.items():
             vh = vhs[dl]
             for tool in ("Rectangle", "Text"):
-                pg = ctx.new_page(); pg.set_viewport_size({"width": 1440, "height": vh}); row = {"engine": engine, "zoom": zl, "page": dl, "tool": tool}
+                pg = ctx.new_page(); pg.set_viewport_size({"width": 1440, "height": vh}); row = {"engine": engine + " " + b.version, "zoom": zl, "page": dl, "tool": tool}
                 try:
                     pg.goto(base + "/"); pg.wait_for_selector("nav.leftbar")
                     with pg.expect_file_chooser() as fc: pg.click("nav.leftbar >> text=Upload")
@@ -45,7 +52,8 @@ def run(pw, engine):
                     for _ in range(steps): pg.click("button[title^='Zoom in']"); pg.wait_for_timeout(250)
                     pg.wait_for_timeout(600)
                     pg.mouse.move(700, 300); pg.wait_for_timeout(600)
-                    g = pg.evaluate(GEOM); L, T, W, H = g["layer"]; row["zoom_actual"] = round(g["zoom"], 3)
+                    unz = pg.evaluate(UNZ); row["rect_unzoomed_engine"] = unz
+                    g = pg.evaluate(GEOM, unz); L, T, W, H = g["layer"]; row["zoom_actual"] = round(g["zoom"], 3)
                     # the part of the page that is on screen
                     vx0, vy0 = max(L, g["desk"][0], 0) + 8, max(T, g["desk"][1], 0) + 8
                     vx1, vy1 = min(L + W, g["desk"][2], g["vw"]) - 8, min(T + H, g["desk"][3], g["vh"]) - 8
@@ -59,7 +67,8 @@ def run(pw, engine):
                         pg.keyboard.type("HHHH"); pg.wait_for_timeout(300)
                     sel = ".mk-shape.rect:not(.draft)" if tool == "Rectangle" else ".mk-text:not(.draft)"
                     d = pg.evaluate(f"() => {{ const e = document.querySelector('.mk-layer[data-page=\"0\"] {sel}'); if (!e) return null; const r = e.getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }}")
-                    g2 = pg.evaluate(GEOM); L, T, W, H = g2["layer"]
+                    if d and unz: d = [v * g["zoom"] for v in d]
+                    g2 = pg.evaluate(GEOM, unz); L, T, W, H = g2["layer"]
                     row["pointer"] = [round(px0), round(py0), round(px1 - px0), round(py1 - py0)]
                     row["drawn"] = [round(v) for v in d] if d else None
                     if d: row["screen_offset_px"] = [round(d[0] - px0, 1), round(d[1] - py0, 1)]
