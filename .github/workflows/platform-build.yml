@@ -58,7 +58,10 @@ jobs:
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: '10.0.x'
+          global-json-file: global.json   # D-178, D-186: the one SDK every build uses
+      # global.json pins the workload set too; no build runs until that set's manifests are on the machine.
+      - name: Install the pinned workload set
+        run: dotnet workload update
 
       - name: Install workloads
         if: inputs.workloads != ''

@@ -1,98 +1,24 @@
 # Open questions from the Foundation (for the coordinator and Arun)
 
-Updated 11 Nov 2026. Each question has its options, pros, cons and the Foundation's recommendation. Decide here; the
+Updated 15 Nov 2026. Each question has its options, pros, cons and the Foundation's recommendation. Decide here; the
 Foundation acts on the answer and removes the question when it is done.
 
 ---
 
-## Q1. Who moves bookmark saving to the exact write-back (chuvadi-pdf 3.33.0, PDF-17)?
+**Nothing is open at the moment.**
 
-3.33.0 lets an untouched bookmark be written back exactly (destination, named destination, action, colour, style,
-open or closed). The Reader's bookmark saving (`OutlineService`, last changed by the Windows Reader chat in its PR 15)
-has to move to it. It must be done once.
+## Decided (kept as a record)
 
-| Option | Pros | Cons |
+| Question | Decision | Where it is now |
 |---|---|---|
-| **A. The Foundation does it, in the library patch (recommended)** | Lands with the library move, so main never has 3.33.0 with the old saving. One set of tests. It is shared Core, which is the Foundation's. | The Windows Reader chat wrote the current code and knows it best; it reviews the change. |
-| B. The Windows Reader chat does it | The author of the current code changes it. | It needs the library patch merged first, so the exact write-back arrives one PR later, and main is on 3.33.0 with the old saving in between. |
-
-**Recommendation: A.** Size: S (under half a day), plus the Windows Reader chat's review.
-
----
-
-## Q2. `global.json` (D-178): which lines?
-
-There is no `global.json` in the repo. Android writes one in its CI only (SDK 10.0.403, roll-forward disabled) and now
-wants the workload version pinned too. Proposed, at the repo root:
-
-```json
-{
-  "sdk": {
-    "version": "10.0.403",
-    "rollForward": "disable",
-    "workloadVersion": "<the workload set Android installs>"
-  }
-}
-```
-
-**Needed from Android:** the exact workload set number. The Foundation will not guess it.
-
-**For Arun: how strict?**
-
-| Option | Pros | Cons |
-|---|---|---|
-| **A. `rollForward: disable` (recommended)** | Every build, on every machine and runner, uses the same SDK. This is what stopped Android's runtime drifting. | Arun's PC and every runner must have exactly 10.0.403 installed. Moving up is a deliberate one-line change in this file. |
-| B. `rollForward: latestPatch` | A machine with a newer patch still builds. | Builds can differ between machines again, which is the fault D-178 closes. |
-
-**Recommendation: A.** With A, the Foundation's own CI changes from "10.0.x" to reading this file. Size: S.
+| Q1. Who moves bookmark saving to the exact write-back (chuvadi-pdf 3.33.0)? | **A (D-184):** the Foundation, inside the library patch; the Windows Reader chat reviews | Waits for the libraries' next release (see Q4) |
+| Q2. `global.json` | **A, strict (D-186):** SDK 10.0.403, workload set 10.0.403, roll-forward disabled | In the repo root from patch 27. **Every machine that builds runs `dotnet workload update` once in the repo folder** (about 6 seconds, needs nuget.org): with the workload set pinned, no project builds until that set's manifests are installed, even one that uses no workload. CI does it in each workflow |
+| Q3. Unsaved marks surviving a page reload | **B (D-186):** kept with the tab, in memory | To build after the current fixes, as its own PR |
+| Q4. Chuvadi.Fonts.Liberation with chuvadi-pdf 3.33.0 | **Accepted (D-186)**, but the Reader does not move to 3.33.0 / Sheets 2.0.5 now: it takes library changes at the libraries' next release, in one move | `platform/foundation-lib33`, kept buildable, no PR. Measured: no effect on startup (183.5 ms on 3.32.0, 180.8 ms with the new libraries, 42 assemblies loaded either way); a published app grows from 102 to 106 MB |
 
 ---
 
-## Q3. Should marks that aren't saved yet survive a page reload? (asked by Web)
-
-Today unsaved marks (text boxes, shapes, pictures, redaction boxes) live only in the open Reader page. A reload, or a
-dropped connection on the Web portal, loses them. Nothing is written anywhere.
-
-| Option | Pros | Cons | Cost |
-|---|---|---|---|
-| A. Leave as is | Nothing unsaved is ever stored. Simplest and most private. | A reload loses work, and on the Web portal a reload is easy to trigger. | None |
-| **B. Keep them with the tab, in memory (recommended)** | Survives a reload on the Web portal once tabs belong to the session (D-174). Nothing touches disk. Gone when the session ends. Also keeps marks when the Reader page is left and returned to. | Does not survive closing the app or a server restart. Pictures added as marks stay in memory until the tab closes. | M: about two days, mostly moving state out of the page and re-proving Mark |
-| C. Save drafts to storage | Survives closing the app and restarts, on every host. | Unsaved redaction boxes and added pictures would sit on disk or on the server. Needs rules for when drafts are deleted and a "restore your marks?" prompt. | L: four to five days |
-
-**Recommendation: B.** It gives Web what it asked for at about half the cost and keeps unsaved redaction marks off disk.
-C can follow later if drafts should outlive the app.
-
----
-
-## Q4. Chuvadi.Fonts.Liberation with chuvadi-pdf 3.33.0 (Arun's call under the no-externals rule)
-
-3.33.0 will not restore without Chuvadi.Fonts 1.1.0 and Chuvadi.Fonts.Liberation 1.0.0. The second is new: the
-Liberation fonts 2.1.5 (12 font files, SIL OFL 1.1), about 4.4 MB in every install.
-
-| Option | Pros | Cons |
-|---|---|---|
-| A. Accept it | The Reader moves to 3.33.0: exact bookmark write-back, damaged pages shown with a warning, Indic text in form fields copies correctly. Text set in Helvetica, Times or Courier that a file doesn't embed is drawn in metric-matched fonts. | Third-party font files in every install (inside one of Arun's own packages, under OFL, with a notices entry). About 4.4 MB more (a published app grows from 102 to 106 MB). **Startup: no effect measured** (below). |
-| B. Stay on 3.32.0 until the library can do without it | Nothing third-party added. | No bookmark fix, no damaged-page warning, no Indic copy fix until then. |
-
-**Startup, measured 11 Nov** (`tools/StartupProbe`, published ReadyToRun, 25 runs each, interleaved, medians):
-
-| | To first render | Methods compiled at start | Assemblies loaded at start |
-|---|---|---|---|
-| main (3.32.0) | 183.5 ms | 369 | 42 |
-| 3.33.0 + Sheets 2.0.5 + Fonts 1.1.0 + Fonts.Liberation | 180.8 ms | 369 | 42 |
-
-The difference is within noise, and the same 42 assemblies load: the Liberation pack is not touched at start. It is
-read the first time a page needs one of those fonts; that first use has not been timed.
-
-**No recommendation from the Foundation on the rule itself.** Hashes the Foundation computed (to be confirmed against
-the release records): Sheets 2.0.5 `338cfdafdcf79fb8247a73c6d2ef2732b01f17e06a6e38817a22dc39f7fd6ad2`,
-Fonts 1.1.0 `e6f5ffa6061dbab3d472c100e1e91846b33af485d2d2cb7a956902834d1f742c`,
-Fonts.Liberation 1.0.0 `6f4eb33e671dd8d9d5a2c2b4c238f333ac6b1216a8de3b8ad868a2a1d6540ba2`.
-The work is on `platform/foundation-lib33`, not for merge.
-
----
-
-# Embedding the Reader in Anjal Mail (for Arun's write-up; no code written)
+# Embedding the Reader in Anjal Mail (a record only: D-183, Anjal takes the libraries, not the Reader's screens)
 
 The idea: a mail page opens an attachment in the viewer or the PDF editor inside the page, and the saved result goes
 back as a reply attachment. Sizes: **S** under half a day, **M** one to two days, **L** three days or more.
