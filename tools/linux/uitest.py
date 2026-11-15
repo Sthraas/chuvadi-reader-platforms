@@ -1300,6 +1300,45 @@ def pinch_and_ctrl_scroll():
 step("37-pinch-and-ctrl-scroll", pinch_and_ctrl_scroll)
 
 
+def pinch_other_viewers():
+    """Patch 27: a pinch also changes the text size of the Word and Excel viewers (their zoom), through the
+    same shared entry; real Ctrl+scroll does too. The app itself never scales."""
+    zoom = "var e=[...document.querySelectorAll('[data-zoom]')].find(e => e.offsetParent); return e ? parseFloat(e.getAttribute('data-zoom')) : 0"
+    box = "var e=[...document.querySelectorAll('[data-zoom]')].find(e => e.offsetParent), r=e.getBoundingClientRect(); return [Math.round(r.left + r.width / 2), Math.round(r.top + r.height / 2)]"
+    scale = "return [window.visualViewport ? visualViewport.scale : 1, innerWidth]"
+    whole = app.js(scale)
+    gx, gy = (int(v) for v in window_geometry()[0].split(","))
+    said = []
+    for name in ("sample.docx", "sample.xlsx"):
+        open_tab(os.path.join(FIX, name))
+        app.wait(lambda: app.js(zoom) > 0, 20, name + " shown")
+        time.sleep(1.0)
+        z0 = app.js(zoom)
+        x, y = app.js(box)
+        pinch(x, y, [1.15, 1.3, 1.4])
+        app.wait(lambda: abs(app.js(zoom) - z0 * 1.4) <= 2, 5, f"{name}: {z0 * 1.4:.0f} % after a spread (now {app.js(zoom)})")
+        z1 = app.js(zoom)
+        pinch(x, y, [0.85, z0 / z1])
+        app.wait(lambda: abs(app.js(zoom) - z0) <= 2, 5, f"{name}: back to {z0:.0f} % (now {app.js(zoom)})")
+        focus_main()
+        app.xdo("mousemove", str(gx + x), str(gy + y))
+        app.xdo("keydown", "ctrl")
+        try:
+            app.xdo("click", "--repeat", "2", "--delay", "70", "4")
+        finally:
+            app.xdo("keyup", "ctrl")
+        app.wait(lambda: app.js(zoom) > z0 + 5, 5, f"{name}: above {z0:.0f} % after Ctrl+scroll up (now {app.js(zoom)})")
+        z2 = app.js(zoom)
+        if app.js(scale) != whole:
+            raise AssertionError(f"{name}: the whole app was zoomed: {whole} -> {app.js(scale)}")
+        said.append(f"{name}: pinch {z0:.0f} -> {z1:.0f} -> {z0:.0f} %, Ctrl+scroll -> {z2:.0f} %")
+        close_active_tab()
+    return "; ".join(said) + "; the app itself never scaled"
+
+
+step("37b-pinch-word-and-excel", pinch_other_viewers)
+
+
 def mark_lands_under_pointer():
     """Mac Test's M-27 (a mark drawn with the mouse landed away from the pointer, by an amount that followed the
     zoom, in the build that added Mac's pinch): checked here at 54, 100 and 150 % reached by pinch steps, then by

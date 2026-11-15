@@ -755,3 +755,23 @@ No app change: one UI step added (38). Build under test: 7cd960c5.
 - **UI step 38** keeps this checked on every pass (54, 100, 150 % by pinch, then rail and Ctrl+scroll).
 - **Limit, as before:** the pinch steps are sent through the host's forwarding, not made by a real trackpad.
 - **To do when Foundation's PR 18 lands:** move the pinch to `window.chuvadiPinch` and drop the 0.0015 constant.
+
+### 57. Patch 27 merged (57a63c5); pinch through the shared `window.chuvadiPinch`; workflows on the pinned SDK (16 Nov)
+- **Merge of `platform/foundation-pr` 57a63c5** (PR 18, Reader main 04d97d7): clean; shared `src` and `tests`
+  identical to 57a63c5. Unit tests: Reader 374 passed / 6 skipped, host kit 97, Linux 61, Web Ui 41, Mobile Ui 16.
+  Full UI pass under Xvfb: **125/125**, then step 37b added and run with its neighbours (126 steps in all).
+- **Pinch moved to the shared entry.** The host passes GTK's zoom gesture as `window.chuvadiPinch('begin' |
+  'change' | 'end', scale since begin, x, y)` (`forward_pinch`, `on_zoom_begin`, `on_zoom_scale_changed`,
+  `on_zoom_end` for both "end" and "cancel"). The wheel-with-Ctrl events and reader.js's 0.0015 constant are gone
+  from the host. Where no view that zooms is open (Home, Settings) the entry isn't there and nothing moves.
+- **New with patch 27, checked here:** a pinch and Ctrl+scroll also change the Word and Excel viewers' text size
+  (100 → 140 → 100 %, Ctrl+scroll → 137 %); UI step 37b. Steps 37 and 38 now send the pinch as the gesture does.
+- **`global.json` (SDK 10.0.403, workload set 10.0.403, roll-forward off).** This machine had Ubuntu's SDK
+  10.0.114 only, which the file refuses. SDK 10.0.403 installed beside it at `/opt/dotnet-403` (Microsoft's
+  archive; same runtime, 10.0.14), `dotnet workload update` run once in the repo folder.
+- **`linux.yml`:** installed Ubuntu's `dotnet-sdk-10.0`; now `actions/setup-dotnet` with `global-json-file`, then
+  `dotnet workload update`. Ubuntu's `dotnet-runtime-10.0` is still installed and the steps that run the
+  published app set `DOTNET_ROOT` to it, so the app is tested on the runtime Ubuntu users get, as before.
+- **`platforms.yml`, `platform-build.yml`:** the Reader PR branch carries only `ci.yml`, so these two still asked
+  for `10.0.x` with no workload step and would not build. Taken unchanged from `platform/foundation` 7fd806fb.
+- **Limit, as before:** the pinch is sent through the host's forwarding, not made by a real trackpad.
