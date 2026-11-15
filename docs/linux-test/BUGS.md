@@ -791,3 +791,16 @@ change nothing. A real trackpad pinch still needs a real machine.
 
 **Quick regression ✅.** B-24 + B-08b Cancel; B-25; owner-password printing; single instance (1 window, 4 tabs);
 drops; print byte-identical; `/Rotate` 0, 90, 180, 270 on screen; no files left in `/tmp`. B-31 is unchanged (open).
+
+---
+**16 Nov, Linux chat — head for a short re-check: `platform/linux` 1e9d45ae** (Foundation's patch 27 from PR 18,
+57a63c5). Local: all unit tests pass, full UI pass 125/125 plus the new step 37b; CI was still running when this
+was written. To build it you now need SDK 10.0.403 and, once in the repo folder, `dotnet workload update`
+(the repo's `global.json` is strict).
+- **Pinch, moved to the shared entry (`window.chuvadiPinch`):** on a real trackpad under GNOME Wayland, a pinch on
+  a PDF page zooms about the fingers, both ways, smoothly, and stops when the fingers lift; the app's bars and tabs
+  never scale; on Home and Settings nothing happens. Ctrl+scroll as before.
+- **New:** a pinch and Ctrl+scroll change the text size of Word, Excel, Markdown and text files (60 to 200 %).
+- **Marks (M-27 fix in the shared code):** a rectangle drawn with the mouse at about 54, 100 and 150 %, before and
+  after a real pinch, lands under the pointer; a Redact box too.
+- A quick regression.
