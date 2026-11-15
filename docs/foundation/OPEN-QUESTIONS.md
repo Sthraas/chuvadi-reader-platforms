@@ -71,8 +71,18 @@ Liberation fonts 2.1.5 (12 font files, SIL OFL 1.1), about 4.4 MB in every insta
 
 | Option | Pros | Cons |
 |---|---|---|
-| A. Accept it | The Reader moves to 3.33.0: exact bookmark write-back, damaged pages shown with a warning, Indic text in form fields copies correctly. Text set in Helvetica, Times or Courier that a file doesn't embed is drawn in metric-matched fonts. | Third-party font files in every install (inside one of Arun's own packages, under OFL, with a notices entry). About 4.4 MB more. Startup effect: see `PACKAGES-3.33.0-NOTES.md` when measured. |
+| A. Accept it | The Reader moves to 3.33.0: exact bookmark write-back, damaged pages shown with a warning, Indic text in form fields copies correctly. Text set in Helvetica, Times or Courier that a file doesn't embed is drawn in metric-matched fonts. | Third-party font files in every install (inside one of Arun's own packages, under OFL, with a notices entry). About 4.4 MB more (a published app grows from 102 to 106 MB). **Startup: no effect measured** (below). |
 | B. Stay on 3.32.0 until the library can do without it | Nothing third-party added. | No bookmark fix, no damaged-page warning, no Indic copy fix until then. |
+
+**Startup, measured 11 Nov** (`tools/StartupProbe`, published ReadyToRun, 25 runs each, interleaved, medians):
+
+| | To first render | Methods compiled at start | Assemblies loaded at start |
+|---|---|---|---|
+| main (3.32.0) | 183.5 ms | 369 | 42 |
+| 3.33.0 + Sheets 2.0.5 + Fonts 1.1.0 + Fonts.Liberation | 180.8 ms | 369 | 42 |
+
+The difference is within noise, and the same 42 assemblies load: the Liberation pack is not touched at start. It is
+read the first time a page needs one of those fonts; that first use has not been timed.
 
 **No recommendation from the Foundation on the rule itself.** Hashes the Foundation computed (to be confirmed against
 the release records): Sheets 2.0.5 `338cfdafdcf79fb8247a73c6d2ef2732b01f17e06a6e38817a22dc39f7fd6ad2`,
