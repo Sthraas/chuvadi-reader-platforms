@@ -31,7 +31,7 @@ jobs:
         env:
           TRY_PATCH: ${{ inputs.try_patch }}
         run: |
-          git apply --verbose "$TRY_PATCH"
+          for f in $TRY_PATCH; do git apply --verbose "$f"; done   # one or more paths, separated by spaces
           echo "::notice::This run includes $TRY_PATCH, which is not on the branch."
 
       - name: Setup .NET 10
@@ -236,6 +236,7 @@ jobs:
             smoke-tabkeys.log
             smoke-many.log
             smoke-marks.log
+            smoke-viewer-keys.log
             *.ips
             chuvadi-logs-steps/
             chuvadi-logs-recovery/
