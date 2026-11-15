@@ -1736,6 +1736,36 @@ def p26():
            f"→{z['after_pinch_in_gesture']}→{z['after_pinch_out_gesture']} (synthetic pinch)", **ev)
 
 
+@case("M-27 mark lands under the pointer")
+def m27():
+    """Mark › Rectangle, drag inside the page, screenshot. Offline: the red shape's box in the screenshot against
+    the drag's window coordinates. Three zooms, each from a fresh launch so only one shape is on screen."""
+    ev = {}
+    for tag, zoom_ins in (("fit", 0), ("zoom-in-2", 2), ("to-100", 99)):
+        reset_state({"theme": "light"})
+        launch(settle=4)
+        open_doc(f"{FX}/five-pages.pdf", settle=4)
+        press("Mark 2")
+        time.sleep(1.5)
+        z = zoom_percent(f"m27-{tag}-z0")
+        n = 0
+        while n < min(zoom_ins, 10) and (zoom_ins < 99 or (z or 0) < 100):
+            press("Zoom in", role="AXButton")
+            time.sleep(0.8)
+            n += 1
+            z = zoom_percent(f"m27-{tag}-z")
+        press("Rectangle", role="AXButton")
+        time.sleep(1)
+        _, _, win = main_centre()
+        d = [470, 260, 590, 360]
+        drive("drag", win[0] + d[0], win[1] + d[1], win[0] + d[2], win[1] + d[3])
+        time.sleep(1.5)
+        st = [re.sub(r"\s*@.*$", "", l.strip())[:100] for l in axdump(f"m27-{tag}").splitlines() if re.search(r"\d shape", l)][:1]
+        ev[tag] = {"zoom": z, "zoom_in_presses": n, "window": win, "drag_window": d, "status": st, "shot": shot(f"m27-{tag}")}
+        quit_app()
+    record("M-27 mark lands under the pointer", "info", "; ".join(f"{k}: zoom {v['zoom']} %, {v['status']}" for k, v in ev.items()), **ev)
+
+
 @case("M-14 .NET message in Details")
 def m14():
     src = f"{FX}/noaccess.pdf"
@@ -1770,7 +1800,11 @@ def main():
         t4_6()
         m18()
         return
+    if A.suite == "mark":
+        m27()
+        return
     if A.suite == "shared":
+        m27()
         p26()
         p25()
         t4_0()
