@@ -401,7 +401,16 @@
     private int _r0 = 1, _r1, _c0 = 1, _c1;
     private bool _windowOn, _goHome;
 
-    public override Task GoToAsync(int index) => SelectAsync(index - 1);
+    public override Task GoToAsync(int index) => SelectFromOutsideAsync(index - 1);
+
+    // The title bar's sheet arrows and number box, and the outline, call in from outside this component, so nothing
+    // redraws it by itself: the number moved and the sheet stayed. A press on a sheet tab is this component's own
+    // event and always redrew.
+    private async Task SelectFromOutsideAsync(int i)
+    {
+        await SelectAsync(i);
+        await InvokeAsync(StateHasChanged);
+    }
 
     /// <summary>Anchors are "sheet-N" (from the outline) or a sheet name.</summary>
     public override Task ScrollToAnchorAsync(string anchor)
@@ -409,9 +418,9 @@
         if (_wb is null || string.IsNullOrEmpty(anchor)) return Task.CompletedTask;
         if (anchor.StartsWith("sheet-", StringComparison.Ordinal)
             && int.TryParse(anchor.AsSpan(6), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var n))
-            return SelectAsync(n - 1);
+            return SelectFromOutsideAsync(n - 1);
         var byName = _wb.Sheets.ToList().FindIndex(sh => sh.Name == anchor);
-        return byName >= 0 ? SelectAsync(byName) : Task.CompletedTask;
+        return byName >= 0 ? SelectFromOutsideAsync(byName) : Task.CompletedTask;
     }
 
     /// <summary>Every sheet as tab-separated rows (each cell's stored value, D-161), sheets separated by a
