@@ -854,3 +854,8 @@ same screen; no crash), smoke pass. With round 6 (API 36 phone and tablet, all c
   Export, Split to files): proposal **P-09** routes them through `IPathLabels` (shared Ui files, so for Foundation), with
   a drift test. The composition applies it until Foundation takes it.
 - Composition: Foundation `07ed3ca` + Mobile UI `a1dfb40` (clean) + P-09.
+- **Run 43743838768** (phone and tablet API 36, full, e706b1d, P-09 applied): **all green** — phone gestures 11/11,
+  tablet 13/13, platform 29/29 and 27/27, Release launch pass on both. **AT-20:** desk reorder by long-press drag passes
+  on the phone and the tablet; on the tablet in real portrait (screenshot g10-portrait-dragged, 1600×2560, Shelf as a
+  sheet) the Shelf → desk drag (2 → 3 pages) and the reorder both pass. The app was never the problem; the touch tool
+  didn't follow the rotation. Head for Android Test: e706b1d.
