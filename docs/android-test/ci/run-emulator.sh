@@ -47,51 +47,53 @@ fi
 
 rc=0
 if [[ $SUITES == *,startup,* ]]; then
-  python3 "$HERE/startup.py" "$OUT/startup-release" "$OUT/fixtures/doc-12p.pdf" 12 || rc=1
+  timeout 2700 python3 "$HERE/startup.py" "$OUT/startup-release" "$OUT/fixtures/doc-12p.pdf" 12 || rc=1
 fi
 if [ "${RELEASE_ONLY:-0}" = 1 ]; then
   adb uninstall in.chuvadi.reader >/dev/null
   adb install -r "$PKGS/chuvadi-reader-debug-x64.apk" | tee "$OUT/install-debug.txt"
   if [[ $SUITES == *,startup,* ]]; then
-    python3 "$HERE/startup.py" "$OUT/startup-debug" "$OUT/fixtures/doc-12p.pdf" 12 || rc=1
+    timeout 2700 python3 "$HERE/startup.py" "$OUT/startup-debug" "$OUT/fixtures/doc-12p.pdf" 12 || rc=1
   fi
 fi
 adb logcat -c   # suites judge crashes from here on (the as-built AT-03 crashes are recorded above)
 if [[ $SUITES == *,design,* ]]; then
-  python3 "$HERE/design.py" "$OUT/design" "$OUT/fixtures/doc-12p.pdf" || rc=1
+  timeout 2700 python3 "$HERE/design.py" "$OUT/design" "$OUT/fixtures/doc-12p.pdf" || rc=1
 fi
 if [[ $SUITES == *,function,* ]] && [ -f "$HERE/function.py" ]; then
-  python3 "$HERE/function.py" "$OUT/function" "$OUT/fixtures" || rc=1
+  timeout 2700 python3 "$HERE/function.py" "$OUT/function" "$OUT/fixtures" || rc=1
 fi
 if [[ $SUITES == *,function2,* ]]; then
-  python3 "$HERE/function2.py" "$OUT/function2" "$OUT/fixtures" || rc=1
+  timeout 2700 python3 "$HERE/function2.py" "$OUT/function2" "$OUT/fixtures" || rc=1
 fi
 if [[ $SUITES == *,licence,* ]]; then
-  python3 "$HERE/licence.py" "$OUT/licence" "$PKGS/assemblies.txt" || rc=1
+  timeout 2700 python3 "$HERE/licence.py" "$OUT/licence" "$PKGS/assemblies.txt" || rc=1
 fi
 if [[ $SUITES == *,saves,* ]]; then
   timeout 2700 python3 "$HERE/saves.py" "$OUT/saves" "$OUT/fixtures" || rc=1
 fi
 if [[ $SUITES == *,drift,* ]]; then
-  python3 "$HERE/drift.py" "$OUT/drift" "$OUT/fixtures" || rc=1
+  timeout 2700 python3 "$HERE/drift.py" "$OUT/drift" "$OUT/fixtures" || rc=1
 fi
 if [[ $SUITES == *,at13,* ]]; then
-  python3 "$HERE/at13.py" "$OUT/at13" "$OUT/fixtures" 5 || rc=1
+  timeout 2700 python3 "$HERE/at13.py" "$OUT/at13" "$OUT/fixtures" 5 || rc=1
 fi
 if [[ $SUITES == *,gate,* ]]; then
-  python3 "$HERE/gate.py" "$OUT/gate" || rc=1
+  timeout 2700 python3 "$HERE/gate.py" "$OUT/gate" || rc=1
 fi
 if [[ $SUITES == *,robust,* ]] && [ -f "$HERE/robust.py" ]; then
-  python3 "$HERE/robust.py" "$OUT/robust" "$OUT/fixtures" || rc=1
+  timeout 2700 python3 "$HERE/robust.py" "$OUT/robust" "$OUT/fixtures" || rc=1
 fi
 # Save suite again on the test-only build with the host's save pickers switched on (AT-18).
 if [[ $SUITES == *,saves,* ]] && [ -f "$PKGS/chuvadi-reader-release-saves-on.apk" ] && [ "${RELEASE_ONLY:-0}" != 1 ]; then
   adb uninstall in.chuvadi.reader >/dev/null
   adb install -r "$PKGS/chuvadi-reader-release-saves-on.apk" | tee "$OUT/install-saves-on.txt"
   adb shell am start -W -n "$COMP" > /dev/null; sleep 5
-  python3 "$HERE/saves.py" "$OUT/saves-pickers-on" "$OUT/fixtures" || true
+  timeout 2700 python3 "$HERE/saves.py" "$OUT/saves-pickers-on" "$OUT/fixtures" || true
 fi
 adb logcat -d -v epoch > "$OUT/logcat.txt"
 adb shell dumpsys dropbox --print > "$OUT/dropbox.txt" 2>/dev/null
 grep -c -E "FATAL EXCEPTION|ANR in in.chuvadi" "$OUT/logcat.txt" > "$OUT/crash-count.txt"
+echo "run-emulator.sh finished, rc=$rc, $(date -u +%H:%M:%S)"
+pkill -INT crashpad_handler 2>/dev/null || true     # a known cause of the emulator action not returning
 exit $rc

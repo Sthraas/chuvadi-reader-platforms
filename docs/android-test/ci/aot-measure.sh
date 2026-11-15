@@ -27,3 +27,5 @@ for v in ("baseline", "chuvadi", "fullaot"):
             if t["kind"] == "open-with-cold" and t["n"]:
                 print(v, t)
 PY
+echo "aot-measure.sh finished, $(date -u +%H:%M:%S)"
+pkill -INT crashpad_handler 2>/dev/null || true

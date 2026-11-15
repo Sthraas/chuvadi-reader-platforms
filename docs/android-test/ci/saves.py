@@ -742,6 +742,9 @@ def doc_save(case_id, name, action_labels, confirm_labels):
     picker = save_picker() if case_id != "SV-8" or in_picker() else False
     time.sleep(6)
     files = new_pdfs()
+    private = None
+    if case_id == "SV-8":
+        private = sh("su 0 find /data/user/0/in.chuvadi.reader /sdcard/Android/data/in.chuvadi.reader -newer /data/local/tmp/at-mark -iname '*press*' 2>/dev/null | head -5").strip().splitlines()
     if not files and case_id == "SV-8":
         folder_picker("at-bind", 6) if in_picker() else None
         time.sleep(4)
@@ -752,7 +755,7 @@ def doc_save(case_id, name, action_labels, confirm_labels):
         res = {"pages": len(pages), "text_p1": "Discharge summary - page 1" in pages[0], "bytes": os.path.getsize(os.path.join(OUT, case_id.lower() + "-out.pdf"))}
     R.check(f"{case_id} {action_labels[0]} → saved to a new file: readable, 12 pages, text kept",
             bool(res and res["pages"] == 12 and res["text_p1"]),
-            {"action": act, "card_buttons": btns, "button": hit, "picker": picker, "files": files, "pdf": res, "app_says": says(), "screen_lines": [l.strip()[:140] for l in (cdp.js("document.body.innerText") or "").splitlines() if re.search(r"press|saved|smaller|compress|kB|MB", l, re.I)][:8], "controls": None if act else labels()})
+            {"action": act, "card_buttons": btns, "button": hit, "picker": picker, "files": files, "files_inside_the_app_only": private, "pdf": res, "app_says": says(), "screen_lines": [l.strip()[:140] for l in (cdp.js("document.body.innerText") or "").splitlines() if re.search(r"press|saved|smaller|compress|kB|MB", l, re.I)][:8], "controls": None if act else labels()})
 
 
 def sv8_compress():
@@ -791,18 +794,20 @@ def sv10_rotated():
 
 
 def stamp_rect(reader, i=0):
-    """Where the saved mark sits on the page, in points: the form XObject's BBox through the matrix in force at its Do."""
+    """Where the saved mark sits on the page, in points: the path the newest stamp XObject draws (its `re`, or its m/l/c points)."""
     try:
         pg = reader.pages[i]
-        data = pg.get_contents().get_data().decode("latin-1")
         xo = pg["/Resources"]["/XObject"]
         name = sorted(k for k in xo.keys() if "Stamp" in k)[-1]
-        m = re.search(r"([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) cm\s*" + re.escape(name) + r" Do", data)
-        bb = [float(v) for v in xo[name].get_object()["/BBox"]]
-        if not m:
-            return {"bbox": bb, "tail": data[-200:]}
-        a, b, c, d, e, f = map(float, m.groups())
-        pts = [(a * x + c * y + e, b * x + d * y + f) for x in (bb[0], bb[2]) for y in (bb[1], bb[3])]
+        d = xo[name].get_object().get_data().decode("latin-1")
+        pts = []
+        for m in re.finditer(r"([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) re", d):
+            x, y, w, h = map(float, m.groups())
+            pts += [(x, y), (x + w, y + h)]
+        for m in re.finditer(r"([-\d.]+) ([-\d.]+) [ml]\b", d):
+            pts.append((float(m.group(1)), float(m.group(2))))
+        if not pts:
+            return {"stream": d[:200]}
         return {"x0": round(min(p[0] for p in pts), 1), "y0": round(min(p[1] for p in pts), 1), "x1": round(max(p[0] for p in pts), 1), "y1": round(max(p[1] for p in pts), 1)}
     except Exception as e:
         return {"error": repr(e)[:200]}
@@ -831,7 +836,7 @@ def sv12_zoom():
     x0, x1 = max(r[0], 0) + min(r[2], r[4]) * 0.22, max(r[0], 0) + min(r[2], r[4]) * 0.62
     y0, y1 = max(r[1], 0) + r[5] * 0.22, max(r[1], 0) + r[5] * 0.40
     a, b = to_screen(x0, y0), to_screen(x1, y1)
-    sh(f"input swipe {a[0]} {a[1]} {b[0]} {b[1]} 700")
+    touch("swipe", a[0], a[1], b[0], b[1], 900)       # raw touch events: the finger really ends at b
     time.sleep(1.5)
     shot("sv12-marked-at-zoom")
     r2 = cdp.js(PAGE0)
@@ -843,7 +848,7 @@ def sv12_zoom():
         rd, pages = read(s["files"][-1], "sv12-saveas.pdf")
         got = stamp_rect(rd) if rd else None
     off = max(abs(got[k] - want[k]) for k in want) if got and "x0" in got else None
-    R.check("SV-12b a rectangle drawn by finger at the pinched zoom is saved where it was drawn (within 10 pt)", off is not None and off <= 10,
+    R.check("SV-12b a rectangle drawn by finger at the pinched zoom is saved where it was drawn (within 6 pt)", off is not None and off <= 6,
             {"zoomed_page_css": [round(v) for v in r[:4]], "page_moved_during_draw": [round(v) for v in r2[:4]] != [round(v) for v in r[:4]], "drawn_pt": want, "saved_pt": got, "largest_offset_pt": off, "save": s})
     touch("pinch", c[0], c[1], round(span * 0.8), round(span * 0.25), 600)
     time.sleep(2)

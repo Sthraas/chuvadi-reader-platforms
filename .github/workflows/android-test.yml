@@ -100,6 +100,7 @@ jobs:
         run: |
           if [ -f global.json ]; then echo "global.json from the composition:"; else echo '{ "sdk": { "version": "10.0.403", "workloadVersion": "10.0.403", "rollForward": "disable" } }' > global.json; echo "no global.json in the composition; D-178 lines written:"; fi
           cat global.json; dotnet --version
+          dotnet workload update
           dotnet workload install maui-android
           dotnet workload --version
       - name: Restore (Reader's ci/packages feed + nuget.org)
@@ -207,6 +208,7 @@ jobs:
       - name: Test tooling (never shipped)
         run: pip install websocket-client==1.8.0 reportlab==4.2.5 pypdf==5.1.0 pillow
       - uses: reactivecircus/android-emulator-runner@v2
+        timeout-minutes: 130     # rounds 10c and 11a: the phone step never returned; the upload below still runs
         with:
           api-level: ${{ matrix.api }}
           target: google_apis
@@ -251,6 +253,7 @@ jobs:
         run: |
           if [ -f global.json ]; then echo "global.json from the composition:"; else echo '{ "sdk": { "version": "10.0.403", "workloadVersion": "10.0.403", "rollForward": "disable" } }' > global.json; echo "no global.json in the composition; D-178 lines written:"; fi
           cat global.json; dotnet --version
+          dotnet workload update
           dotnet workload install maui-android
           dotnet workload --version
       - working-directory: reader
@@ -287,6 +290,7 @@ jobs:
           sudo udevadm control --reload-rules; sudo udevadm trigger --name-match=kvm
       - run: pip install websocket-client==1.8.0 reportlab==4.2.5 pypdf==5.1.0 pillow
       - uses: reactivecircus/android-emulator-runner@v2
+        timeout-minutes: 60
         with:
           api-level: 36
           target: google_apis

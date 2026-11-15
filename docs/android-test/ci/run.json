@@ -1,8 +1,9 @@
 {
-  "round": "11a (head 070af93: AT-20 with the rotation-aware touch tool, AT-21 with P-09, save suite, pinch)",
+  "round": "11 (head a2c022c: patch 27 + Mobile UI 5a49864)",
   "emulators": "phone-36,tablet-36",
-  "suites": "saves,drift",
-  "foundation_ref": "07ed3ca834a8d21b20e5176f54852ac0ee52cd79",
-  "mobileui_ref": "a1dfb4011442c64b2a8722e4c16e239ac91544af",
-  "android_ref": "070af9371436fb2f18f3292f270f1e407d34f3d9"
+  "suites": "saves,drift,function,design,at13,startup,aot",
+  "variants": "baseline trace",
+  "foundation_ref": "57a63c5f82756f7784b392cf8c110cb328ac4dc1",
+  "mobileui_ref": "5a49864c643ceba2bb28e4e3ea22e315f79e475c",
+  "android_ref": "a2c022ce0831b4a9d144db58891577012d46fa51"
 }
