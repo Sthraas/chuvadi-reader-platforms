@@ -369,6 +369,7 @@
         {
             <div class="rfind">
                 <input class="rfind-box" placeholder="Find in @tab.Format.Label()…" @bind="_viewerFindInput" @bind:event="oninput"
+                       @ref="_viewerFindBoxRef"
                        @onkeydown="OnViewerFindKey" />
                 <span class="rfind-count">@(_viewerFind is null ? "" : $"{_viewerFindCount} found")</span>
                 <button class="rfind-x" @onclick="CloseViewerFind" title="Close (Esc)"><Icon Name="x" Size="14" /></button>
@@ -2050,6 +2051,7 @@
     private Dictionary<int, List<RedactService.RedactSearchMatch>> _findByPage = new();
     private int _findIndex = -1;
     private ElementReference _findBoxRef;
+    private ElementReference _viewerFindBoxRef;   // the Find box of the Word, Excel, Markdown and text viewers
     private string? _lastFindQuery;
 
     private RedactService.RedactSearchMatch? CurrentFindMatch =>
@@ -3420,6 +3422,14 @@
 
         PublishShell();
         var tab = Tabs.Active;
+
+        // The viewers' Find box takes the cursor when it opens, as the PDF one does (OpenFind), so the person can
+        // type at once and a phone brings its keyboard up. Done here because the box exists only after this render.
+        if (_focusViewerFind && _viewerFindOpen)
+        {
+            _focusViewerFind = false;
+            try { await _viewerFindBoxRef.FocusAsync(); } catch { }
+        }
 
         // Pinch and Ctrl + wheel on the Word, Excel, Markdown and text viewers (asked for until the script says it is
         // on; the viewers' element is new whenever one replaces the PDF desk).

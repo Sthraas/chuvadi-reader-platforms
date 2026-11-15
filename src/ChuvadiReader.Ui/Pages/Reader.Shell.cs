@@ -56,6 +56,7 @@ public partial class Reader
     private string? _viewerFind;
     private string _viewerFindInput = string.Empty;
     private bool _viewerFindOpen;
+    private bool _focusViewerFind;   // set when the person opens Find; OnAfterRenderAsync then focuses the box
     private int _viewerFindCount;
     private string? _viewerStatus;
     private int _textSize = 100;
@@ -1202,6 +1203,7 @@ public partial class Reader
     private void OpenViewerFind()
     {
         _viewerFindOpen = true;
+        _focusViewerFind = true;
     }
 
     private void CloseViewerFind()
