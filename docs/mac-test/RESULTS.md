@@ -11,6 +11,33 @@ Runs (one each, read before the next — no retries):
 | 3 | 42494662734 | ⌘O found not to open a panel → the Open button; app stdout per launch; diagnostic exception build |
 | 4 | 42517758923 | panel path set through Accessibility (typing into the Go-to field was lossy) → documents open; timing sets skipped |
 
+## Re-test on platform/mac 0e7c70d (16 Nov, Foundation patch 27) — NOT signed off: M-26, M-28 and the build
+
+Runs **43754035832** (shared), **43756197743** (marking, four zooms), **43756373634** (full). All three runners.
+
+**How this head was built — read first.** As pushed, 0e7c70d does not build on the `macos-26` runner: its `global.json`
+names workload set 10.0.403, whose Mac Catalyst pack needs Xcode 27.1, and the runner's newest is 26.6. My workflow
+changes that one line to 10.0.401 before building (the same change as the Mac chat's
+`docs/mac/foundation/global-json-mac-workload-10.0.401.patch`). Everything below is for the app built that way. The
+Windows comparison and the Chromium reference jobs fail on the same file, so there are no Windows numbers for this head.
+
+| Check | macOS 26 | macOS 15 | 15 Intel | Note / bug |
+|---|---|---|---|---|
+| **M-27** mark under the pointer at 54, 79, 104, 154 % | ✅ | ✅ | ✅ | fixed; showed on 15 and 15-Intel before, never on 26 |
+| Mark on the /Rotate 90 page under the pointer; saved where shown | ✅ | ✅ | ✅ | |
+| Stall after clicks on a PDF page | not seen | not seen | not seen | Ui answers, quits by itself in 0.2–0.8 s (two heads) |
+| Tab keys, both focus states (M-08, M-23) | ✅ | ✅ | ✅ | |
+| Several files at once: no crash, name order (M-24) | ✅ | ✅ | ✅ | |
+| **M-26** rotated page prints whole | ❌ | ❌ | ❌ | landscape sheet, upright drawing area — still clipped |
+| **M-28** ⌘F right after opening an Excel file | ❌ | ❌ | ❌ | |
+| Excel grid, hidden sheet, Find on value and shown text | ✅ | ✅ | ✅ | |
+| Synthetic pinch (now through the kit's `chuvadiPinch`) | – | ✅ 54→87→51 % | ✅ 54→84→62 % | no result on 26 |
+| ⌘O in five states, Immersive/Esc, labels, Details, cold opens, Word | ✅ | ✅ | ✅ | |
+| Full regression | ✅ | ✅ | ✅ | only my two test-side items on 26; no crash report |
+
+**What blocks the sign-off:** M-26 (S2), M-28 (S3), and a head that builds as pushed (the `global.json` decision).
+M-25 (Intel, intermittent ⌘O) was not seen on this head; it stays open for a real Intel Mac.
+
 ## Re-test on platform/mac df535ce and c969613 (16 Nov) — NOT signed off; earlier sign-offs withdrawn for macOS 15
 
 **No build is signed off for macOS 15 at the moment.** The marking test, run back on 3bc7f68 and e2a1cc8, shows M-27
