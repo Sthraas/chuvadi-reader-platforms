@@ -11,7 +11,9 @@ each frame is a small binary file of input_event structs, and a device-side scri
     touch.py swipe X1 Y1 X2 Y2 [ms]
     touch.py pinch CX CY D_FROM D_TO [ms]        (two fingers, horizontal; D = distance in px)
     touch.py longdrag X1 Y1 X2 Y2 [hold_ms] [ms]
-Coordinates are screen pixels in the current (portrait) orientation.
+Coordinates are screen pixels in the current orientation, whatever it is: the touchscreen reports in the
+display's natural orientation (the tablet's is landscape), so points are rotated back to it first
+(AT-20: in portrait every tablet gesture landed in the wrong place).
 """
 import os
 import re
@@ -55,12 +57,36 @@ def find_touchscreen():
     raise SystemExit("no multi-touch device found:\n" + out)
 
 
-DEV, MAX_X, MAX_Y, SCREEN_W, SCREEN_H = find_touchscreen()
+def current_rotation():
+    """0, 1, 2 or 3 (quarter turns from the natural orientation) of the default display."""
+    out = adb("shell", "dumpsys", "input")
+    m = re.search(r"SurfaceOrientation:\s*(\d)", out)
+    if not m:
+        m = re.search(r"mCurrentRotation=(?:ROTATION_)?(\d+)", adb("shell", "dumpsys", "window", "displays"))
+        if m and int(m.group(1)) in (90, 180, 270):
+            return int(m.group(1)) // 90
+    return int(m.group(1)) if m else 0
+
+
+DEV, MAX_X, MAX_Y, SCREEN_W, SCREEN_H = find_touchscreen()   # SCREEN_W × SCREEN_H: the natural size
+ROTATION = current_rotation()
 _next_id = [100]
 
 
+def natural(x, y):
+    """A point on the screen as it is now → the same point in the natural orientation."""
+    if ROTATION == 1:      # 90°: display x = natural y, display y = W − natural x
+        return SCREEN_W - 1 - y, x
+    if ROTATION == 2:
+        return SCREEN_W - 1 - x, SCREEN_H - 1 - y
+    if ROTATION == 3:      # 270°: display x = H − natural y, display y = natural x
+        return y, SCREEN_H - 1 - x
+    return x, y
+
+
 def raw(x, y):
-    return (round(x * MAX_X / max(1, SCREEN_W - 1)), round(y * MAX_Y / max(1, SCREEN_H - 1)))
+    nx, ny = natural(x, y)
+    return (round(nx * MAX_X / max(1, SCREEN_W - 1)), round(ny * MAX_Y / max(1, SCREEN_H - 1)))
 
 
 def ev(t, c, v):
@@ -178,7 +204,7 @@ def main():
     else:
         raise SystemExit(__doc__)
     g.run()
-    print(f"{cmd} {' '.join(sys.argv[2:])} on {DEV} (raw max {MAX_X}x{MAX_Y}, screen {SCREEN_W}x{SCREEN_H})")
+    print(f"{cmd} {' '.join(sys.argv[2:])} on {DEV} (raw max {MAX_X}x{MAX_Y}, natural {SCREEN_W}x{SCREEN_H}, rotation {ROTATION})")
 
 
 if __name__ == "__main__":

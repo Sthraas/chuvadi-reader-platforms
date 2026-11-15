@@ -840,3 +840,17 @@ same screen; no crash), smoke pass. With round 6 (API 36 phone and tablet, all c
 - **Run 42935783457** (all four, full, ce890a6): **all green** — SDK 10.0.403, workload set 10.0.403, **runtime 10.0.14**
   on the runner (was 10.0.15: the pin holds); API 35 WebView gate 4/4 on both; gestures 10/10 and 9/9; platform 29/29
   and 27/27; Release launch pass on all four. Head for Android Test round 10: ce890a6.
+
+### 63. AT-20 gesture check on the tablet in portrait; AT-21 (P-09); Mobile UI a1dfb40 — coordinator, 15 Nov 23:30 IST
+- Android Test round 10: AT-06, 16, 17, 19 verified; AT-18 verified on tablet (8 paths) and phone (3).
+- **AT-20** (tablet: Shelf long-press drag doesn't put a page on a desk, portrait): my gesture check passed the Shelf →
+  desk drag on the tablet, but only in landscape (the emulator's natural orientation) and never tried a desk reorder.
+  `touch.py` wrote touch coordinates as if the screen were always in its natural orientation, so on the tablet in
+  portrait every gesture landed somewhere else — the same blind spot Android Test's report suspected. Fixed: `touch.py`
+  reads the current rotation and turns each point back to the touchscreen's natural axes. `gestures.py` now also: drags a
+  second page and reorders the desk by long-press drag (phone and tablet), then on the tablet turns to portrait, opens the
+  Shelf sheet and does the Shelf → desk drag and the reorder again (AT-20 checks).
+- **AT-21:** five status messages printed the folder path they were given (Bind all, Scatter, Export images, Reader's
+  Export, Split to files): proposal **P-09** routes them through `IPathLabels` (shared Ui files, so for Foundation), with
+  a drift test. The composition applies it until Foundation takes it.
+- Composition: Foundation `07ed3ca` + Mobile UI `a1dfb40` (clean) + P-09.

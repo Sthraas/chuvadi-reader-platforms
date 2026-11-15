@@ -1,0 +1,87 @@
+diff --git a/src/ChuvadiReader.Ui/Pages/Bench.razor b/src/ChuvadiReader.Ui/Pages/Bench.razor
+index 05dbac0..63847fe 100644
+--- a/src/ChuvadiReader.Ui/Pages/Bench.razor
++++ b/src/ChuvadiReader.Ui/Pages/Bench.razor
+@@ -2166,7 +2166,7 @@
+         {
+             var n = await BenchSvc.BindAllAsync(folder!);
+             if (n > 0) await WriteBack.DeliverOrThrowAsync(folder);
+-            _status = n == 0 ? "Nothing to bind." : $"Bound {n} desk{(n == 1 ? "" : "s")} into {folder}";
++            _status = n == 0 ? "Nothing to bind." : $"Bound {n} desk{(n == 1 ? "" : "s")} into {PathLabels.Describe(folder)}";
+             _resultPath = null;
+         }
+         catch (Exception ex) { _status = ex.Message; _error = true; }
+@@ -2727,7 +2727,7 @@
+             var n = await BenchSvc.ScatterDeskAsync(deskId, _scatterFolder);
+             if (n > 0) await WriteBack.DeliverOrThrowAsync(_scatterFolder);
+             _scatterDesk = null;
+-            _status = $"Scattered {n} page{(n == 1 ? "" : "s")} into {_scatterFolder}";
++            _status = $"Scattered {n} page{(n == 1 ? "" : "s")} into {PathLabels.Describe(_scatterFolder)}";
+             _error = false; _resultPath = null;
+         }
+         catch (Exception ex) { _status = ex.Message; _error = true; }
+@@ -2797,7 +2797,7 @@
+             var n = await BenchSvc.ExportDeskAsync(deskId, _expFolder, _expFormat, _expDpi, _expSelectedOnly);
+             if (n > 0) await WriteBack.DeliverOrThrowAsync(_expFolder);
+             _expDesk = null;
+-            _status = $"Exported {n} image{(n == 1 ? "" : "s")} into {_expFolder}";
++            _status = $"Exported {n} image{(n == 1 ? "" : "s")} into {PathLabels.Describe(_expFolder)}";
+             _error = false; _resultPath = null;
+         }
+         catch (Exception ex) { _status = ex.Message; _error = true; }
+diff --git a/src/ChuvadiReader.Ui/Pages/Reader.razor b/src/ChuvadiReader.Ui/Pages/Reader.razor
+index b1dcdeb..9560b86 100644
+--- a/src/ChuvadiReader.Ui/Pages/Reader.razor
++++ b/src/ChuvadiReader.Ui/Pages/Reader.razor
+@@ -1317,7 +1317,7 @@
+         {
+             var n = await Export.ExportAsync(active.Path, _expFolder, _expFormat, _expAll, CurPage - 1, _expDpi);
+             if (n > 0) await WriteBack.DeliverOrThrowAsync(_expFolder);
+-            _expStatus = $"Exported {n} file{(n == 1 ? "" : "s")} → {_expFolder}";
++            _expStatus = $"Exported {n} file{(n == 1 ? "" : "s")} → {PathLabels.Describe(_expFolder)}";
+         }
+         catch (Exception ex)
+         {
+diff --git a/src/ChuvadiReader.Ui/Pages/Split.razor b/src/ChuvadiReader.Ui/Pages/Split.razor
+index 63ef9f2..393adf6 100644
+--- a/src/ChuvadiReader.Ui/Pages/Split.razor
++++ b/src/ChuvadiReader.Ui/Pages/Split.razor
+@@ -212,7 +212,7 @@
+             {
+                 var n = await Tools.SplitToFolderAsync(_sourcePath, dir);
+                 if (n > 0) await WriteBack.DeliverOrThrowAsync(dir);
+-                _status = $"Wrote {n} files to {dir}.";
++                _status = $"Wrote {n} files to {PathLabels.Describe(dir)}.";
+             }
+             catch (Exception ex)
+             {
+diff --git a/tests/ChuvadiReader.Hosting.Tests/HostingTests.cs b/tests/ChuvadiReader.Hosting.Tests/HostingTests.cs
+index 90bce0b..8ca0f2e 100644
+--- a/tests/ChuvadiReader.Hosting.Tests/HostingTests.cs
++++ b/tests/ChuvadiReader.Hosting.Tests/HostingTests.cs
+@@ -101,6 +101,25 @@ public sealed class HostingTests
+         Assert.Empty(leaks);
+     }
+ 
++    /// <summary>
++    /// AT-21 drift guard: a status message never prints a folder or path as it is ("Bound 2 desks into
++    /// /data/user/0/…/cache/work/folder/…" on Android) — it goes through <see cref="IPathLabels"/> or names
++    /// the file alone (<c>Path.GetFileName</c>).
++    /// </summary>
++    [Fact]
++    public void Ui_messages_name_folders_through_path_labels()
++    {
++        var dir = Path.Combine(AppContext.BaseDirectory, "UiSources");
++        var raw = new System.Text.RegularExpressions.Regex(
++            @"\$"".*\{(?:dir|folder|path|[\w.]*(?:Folder|Path|Dir))\}");
++        var leaks = Directory.GetFiles(dir, "*.razor", SearchOption.AllDirectories)
++            .SelectMany(f => File.ReadLines(f).Select((line, i) => (f, i, line)))
++            .Where(x => raw.IsMatch(x.line))
++            .Select(x => $"{Path.GetRelativePath(dir, x.f)}:{x.i + 1}: {x.line.Trim()}")
++            .ToList();
++        Assert.Empty(leaks);
++    }
++
+     private sealed class TestWriteBack : IFileWriteBack
+     {
+         public bool IsNeeded => true;

@@ -168,3 +168,28 @@ tests 61 pass. On 42461ba + Mobile UI 1f4b4c3 + this patch: Core tests 210, Host
 Android host Debug and Release `-warnaserror` 0 warnings. On device, run 42541330985 (phone and tablet API 36, first
 version of the patch): `platform_checks.py` "no private cache path in tab, card or row titles, accessible names or text"
 pass on both.
+
+## P-09 Status messages name folders through `IPathLabels` (AT-21) — **for Foundation's next patch** (follows D-146)
+Patch: [`proposal/P-09-folder-messages.patch`](proposal/P-09-folder-messages.patch), against platform/foundation-pr
+**07ed3ca** (applies on it alone, on 07ed3ca + Mobile UI a1dfb40, and on foundation-pr 89ac6b2); 4 files, +24 −5.
+
+AT-21: after **Bind all** the tablet said "Bound 2 desks into /data/user/0/in.chuvadi.reader/cache/work/folder/b7b7…".
+P-08 put titles, accessible names and visible paths through `IPathLabels`, but five status messages still print the
+folder they were given:
+
+| file | message |
+|---|---|
+| Bench.razor | `Bound {n} desks into {folder}` |
+| Bench.razor | `Scattered {n} pages into {_scatterFolder}` |
+| Bench.razor | `Exported {n} images into {_expFolder}` |
+| Reader.razor | `Exported {n} files → {_expFolder}` |
+| Split.razor | `Wrote {n} files to {dir}.` |
+
+Each becomes `{PathLabels.Describe(…)}` (all three pages already inject `PathLabels`). Desktops: unchanged (the default
+returns the path). Android: the picked folder's own place, e.g. "Bound 2 desks into Download/at-bind". The other "saved"
+messages already name the file alone (`Path.GetFileName`). New drift test in Hosting.Tests,
+`Ui_messages_name_folders_through_path_labels`: fails on any `$"…{folder|dir|path|…Folder|…Path|…Dir}"` in the Ui's
+markup; it catches all five old lines and none of the new ones. Not an API change: one more use of the D-146 seam.
+
+**Verified (sandbox):** on 07ed3ca + Mobile UI a1dfb40 + this patch: Platforms solution `-warnaserror` 0 warnings;
+Hosting 92, MobileUi 16, WebUi 41 pass; Android Debug 0 warnings.

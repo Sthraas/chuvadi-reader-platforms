@@ -72,6 +72,8 @@ STATE_JS = r"""
     shelfHead: rect([...document.querySelectorAll('.shelf-head')].find(vis) || null),
     deskDrop: rect([...document.querySelectorAll('.desk-drop')].find(vis) || null),
     deskPages: document.querySelectorAll('.desk-drop [data-bench-id]').length,
+    deskCards: [...document.querySelectorAll('.desk-drop [data-bench-id]')].filter(vis).slice(0, 6).map(rect),
+    deskOrder: [...document.querySelectorAll('.desk-drop [data-bench-id]')].map(e => e.dataset.benchId),
   };
 })()
 """
@@ -354,6 +356,37 @@ if st0.get("desk"):
     check("pinch out zooms in", w3 > w2 * 1.08 or (st3.get("zoomed") and not st2.get("zoomed")),
           {"contentW_before": w2, "contentW_after": w3, "zoomed": [st2.get("zoomed"), st3.get("zoomed")]})
 
+def arrange_more(prefix, st):
+    """With at least one page on the desk: drag one more from the Shelf if there is only one, then
+    reorder the desk by long-press drag (first page onto the far half of the second) — AT-20."""
+    if (st.get("deskPages") or 0) < 2 and st.get("shelfVisible") and st.get("deskDrop"):
+        a, dz = st["shelfVisible"][-1], st["deskDrop"]
+        ax, ay = to_screen(st, a["x"] + a["w"] / 2, a["y"] + a["h"] / 2)
+        tx, ty = to_screen(st, dz["x"] + dz["w"] * 0.8, dz["y"] + dz["h"] / 2)
+        gesture("longdrag-second", "longdrag", ax, ay, tx, ty, 800, 900)
+        st = state()
+    cards = st.get("deskCards") or []
+    if len(cards) < 2:
+        check(prefix + "a second Shelf page goes on the desk, for the reorder", False,
+              {"deskPages": st.get("deskPages"), "cards": len(cards)})
+        return
+    c0, c1 = cards[0], cards[1]
+    horizontal = abs(c1["x"] - c0["x"]) > abs(c1["y"] - c0["y"])
+    ax, ay = to_screen(st, c0["x"] + c0["w"] / 2, c0["y"] + c0["h"] / 2)
+    if horizontal:
+        tx, ty = to_screen(st, c1["x"] + c1["w"] * 0.85, c1["y"] + c1["h"] / 2)
+    else:
+        tx, ty = to_screen(st, c1["x"] + c1["w"] / 2, c1["y"] + c1["h"] * 0.85)
+    before = st.get("deskOrder") or []
+    gesture("reorder", "longdrag", ax, ay, tx, ty, 800, 900)
+    time.sleep(1)
+    after = state().get("deskOrder") or []
+    shot("g8-" + (prefix.strip(": ").replace(" ", "-") or "landscape") + "-reordered")
+    check(prefix + "long-press drag reorders the desk (AT-20)",
+          len(after) == len(before) and after != before and sorted(after) == sorted(before),
+          {"before": before, "after": after})
+
+
 # ── 5. Arrange: long-press a page and drag it ─────────────────────────────────
 xml = dump()
 m = None
@@ -388,6 +421,37 @@ if m:
         shot("g7-dragged")
         check("long-press drag puts a Shelf page on the desk", (st5.get("deskPages") or 0) > (st4.get("deskPages") or 0),
               {"deskPages_before": st4.get("deskPages"), "deskPages_after": st5.get("deskPages"), "order": st5.get("order")})
+        arrange_more("", st5)
+
+    # AT-20: the tablet in portrait — the Shelf becomes a sheet; the same drags must work there.
+    if st0.get("shell") == "tablet":
+        adb("shell", "settings", "put", "system", "accelerometer_rotation", "0")
+        adb("shell", "settings", "put", "system", "user_rotation", "1")
+        time.sleep(4)
+        _origin = None
+        stp = wait_for(lambda s: s.get("deskDrop") and (s.get("shelfPages") or 0) >= 6, 30, "Arrange in portrait")
+        shot("g9-portrait")
+        if not stp.get("shelfVisible") and stp.get("shelfHead"):
+            h = stp["shelfHead"]
+            hx, hy = to_screen(stp, h["x"] + h["w"] / 2, h["y"] + h["h"] / 2)
+            gesture("shelf-open-portrait", "tap", hx, hy)
+            stp = wait_for(lambda s: len(s.get("shelfVisible") or []) >= 1, 20, "the Shelf sheet to open")
+        check("tablet in portrait: the Shelf shows its pages", len(stp.get("shelfVisible") or []) >= 1,
+              {"visible": len(stp.get("shelfVisible") or []), "deskPages": stp.get("deskPages"), "dpr": stp.get("dpr")})
+        if stp.get("shelfVisible") and stp.get("deskDrop"):
+            a, dz = stp["shelfVisible"][-1], stp["deskDrop"]
+            ax, ay = to_screen(stp, a["x"] + a["w"] / 2, a["y"] + a["h"] / 2)
+            tx, ty = to_screen(stp, dz["x"] + dz["w"] / 2, dz["y"] + dz["h"] / 2)
+            gesture("longdrag-portrait", "longdrag", ax, ay, tx, ty, 800, 900)
+            stq = state()
+            shot("g10-portrait-dragged")
+            check("tablet in portrait: long-press drag puts a Shelf page on the desk (AT-20)",
+                  (stq.get("deskPages") or 0) > (stp.get("deskPages") or 0),
+                  {"deskPages_before": stp.get("deskPages"), "deskPages_after": stq.get("deskPages")})
+            arrange_more("tablet in portrait: ", stq)
+        adb("shell", "settings", "put", "system", "user_rotation", "0")
+        time.sleep(3)
+        _origin = None
 
 with open(os.path.join(OUT, "gestures.json"), "w") as f:
     json.dump({"webview": WEBVIEW, "results": results}, f, indent=2)

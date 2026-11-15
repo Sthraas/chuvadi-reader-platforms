@@ -28,8 +28,8 @@ on:
 env:
   # platform/foundation-pr: patch 26 (page /Rotate, Excel grid as the file holds it, H-23, text encoding, tabs close with their owner) on Reader main 0cd4915.
   FOUNDATION_REF: 07ed3ca834a8d21b20e5176f54852ac0ee52cd79
-  # platform/mobile-ui: foundation-pr 742a5da merged; AT-06 leftovers 44 px.
-  MOBILEUI_REF: 86997198419f51b9fc74fdac5d95236c1120fcd3
+  # platform/mobile-ui: Foundation 07ed3ca merged, no hooks left; Excel tabs and view toggle 44 px on touch.
+  MOBILEUI_REF: a1dfb4011442c64b2a8722e4c16e239ac91544af
   DOTNET_NOLOGO: '1'
   DOTNET_CLI_TELEMETRY_OPTOUT: '1'
 
