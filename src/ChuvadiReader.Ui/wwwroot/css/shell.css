@@ -296,6 +296,7 @@ html[data-theme="dark"] .statusbar .status-dot.server { background: #8fa3e6; }
 .rb.primary:hover:not(:disabled) { background: var(--chvd-binding); color: var(--chvd-on-accent); filter: brightness(1.08); }
 .rb.danger { color: var(--chvd-danger); }
 .rb:disabled { opacity: 0.38; cursor: default; }
+.rb.off { opacity: 0.38; }   /* greyed, still answers a tap: its card gives the reason (RailButton.ReasonOnTap) */
 .rb.primary:disabled { opacity: 0.45; }
 .rb-l { flex: 1; min-width: 120px; opacity: 0; transition: opacity var(--chvd-quick); }
 .rb-k { font-family: var(--chvd-mono); font-size: 10px; color: var(--chvd-ink-muted); opacity: 0; transition: opacity var(--chvd-quick); }
