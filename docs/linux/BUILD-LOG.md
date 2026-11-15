@@ -775,3 +775,12 @@ No app change: one UI step added (38). Build under test: 7cd960c5.
 - **`platforms.yml`, `platform-build.yml`:** the Reader PR branch carries only `ci.yml`, so these two still asked
   for `10.0.x` with no workload step and would not build. Taken unchanged from `platform/foundation` 7fd806fb.
 - **Limit, as before:** the pinch is sent through the host's forwarding, not made by a real trackpad.
+
+### 58. Patch 28 merged (87f95c0) (16 Nov)
+- **Merge of `platform/foundation-pr` 87f95c0** (PR 19, Reader main 814f755: Find and Fit on turned pages, hidden
+  Find matches named above the sheet, the Find box in Excel and Word taking the cursor, keys with no PDF opened
+  yet and Ctrl F opening the viewer's Find, a close control on a mark's card): clean; shared `src` and `tests`
+  identical to 87f95c0. No Linux host change.
+- Release build `-warnaserror` clean on SDK 10.0.403. Unit tests: Reader 382 passed / 6 skipped, host kit 100,
+  Linux 61, Web Ui 41, Mobile Ui 16. Full UI pass under Xvfb: **126/126**.
+- Patch 28's own changes were not checked by hand here beyond the pass; Linux Test re-checks from the branch.
