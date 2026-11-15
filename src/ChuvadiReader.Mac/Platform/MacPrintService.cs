@@ -49,6 +49,10 @@ public sealed class MacPrintService : IPrintService
                 var info = UIPrintInfo.PrintInfo;
                 info.JobName = doc.JobName;
                 info.OutputType = UIPrintInfoOutputType.General;
+                // M-26: a page shown landscape (a wide page, or an upright one with /Rotate 90) was fitted to the sheet's
+                // long side but left on an upright sheet, so its right-hand third was cut off. UIKit does not turn the
+                // sheet for a PDF item by itself; ask for the sheet the first page needs.
+                info.Orientation = doc.Landscape ? UIPrintInfoOrientation.Landscape : UIPrintInfoOrientation.Portrait;
 
                 var controller = UIPrintInteractionController.SharedPrintController;
                 controller.PrintInfo = info;

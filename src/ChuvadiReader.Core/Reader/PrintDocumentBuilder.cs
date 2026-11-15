@@ -4,7 +4,9 @@ using Chuvadi.Pdf.Operations;
 namespace ChuvadiReader.Core.Reader;
 
 /// <summary>The PDF a host hands to its operating system's print system, plus what it holds.</summary>
-public sealed record PrintDocument(byte[] Pdf, int PageCount, string JobName);
+/// <param name="Landscape">The first page to print is wider than tall as shown (its /Rotate counted), so a host
+/// whose print system does not turn the sheet by itself can ask for a landscape sheet (Mac Test M-26).</param>
+public sealed record PrintDocument(byte[] Pdf, int PageCount, string JobName, bool Landscape = false);
 
 /// <summary>The file's own permissions forbid printing (<see cref="PrintPermission"/>); the message is
 /// <see cref="PrintPermission.Refused"/>.</summary>
@@ -74,6 +76,14 @@ public static class PrintDocumentBuilder
             PageOperations.Assemble(output, selectors);
 
             var name = string.IsNullOrWhiteSpace(request.JobName) ? Path.GetFileName(pdfPath) : request.JobName!;
-            return new PrintDocument(output.ToArray(), pages.Count, name);
+            var landscape = false;
+            if (pages.Count > 0 && pages[0] >= 0 && pages[0] < flatDoc.Pages.Count)   // zero-based indices
+            {
+                var first = flatDoc.Pages[pages[0]];
+                var (w, h) = ChuvadiReader.Core.Documents.ShownBox.Of(first).ShownSize(ChuvadiReader.Core.Documents.ShownBox.TurnOf(first));
+                landscape = w > h;
+            }
+
+            return new PrintDocument(output.ToArray(), pages.Count, name, landscape);
         }, ct);
 }

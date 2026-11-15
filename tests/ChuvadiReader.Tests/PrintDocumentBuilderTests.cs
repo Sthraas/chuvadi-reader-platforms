@@ -122,4 +122,44 @@ public class PrintDocumentBuilderTests
         var ex = await Assert.ThrowsAsync<ArgumentException>(() => PrintDocumentBuilder.BuildAsync(src, new PrintRequest { PageRange = "9" }));
         Assert.Equal("Pages run from 1 to 3.", ex.Message);
     }
+
+    // Mac Test M-26: the host needs to know the sheet the first page wants.
+    [Fact]
+    public async Task A_wide_page_asks_for_a_landscape_sheet_and_a_tall_one_does_not()
+    {
+        var wide = await PrintDocumentBuilder.BuildAsync(TestPdf.BlankPage(400, 200), new PrintRequest());
+        var tall = await PrintDocumentBuilder.BuildAsync(TestPdf.BlankPage(200, 400), new PrintRequest());
+        Assert.True(wide.Landscape);
+        Assert.False(tall.Landscape);
+    }
+
+    [Fact]
+    public async Task An_upright_page_turned_by_Rotate_90_asks_for_a_landscape_sheet()
+    {
+        var objs = new[]
+        {
+            "<< /Type /Catalog /Pages 2 0 R >>", "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Rotate 90 >>",
+        };
+        var sb = new System.Text.StringBuilder("%PDF-1.4\n");
+        var offsets = new List<int>();
+        for (var i = 0; i < objs.Length; i++)
+        {
+            offsets.Add(sb.Length);
+            sb.Append(i + 1).Append(" 0 obj\n").Append(objs[i]).Append("\nendobj\n");
+        }
+
+        var xref = sb.Length;
+        sb.Append("xref\n0 ").Append(objs.Length + 1).Append("\n0000000000 65535 f \n");
+        foreach (var o in offsets)
+        {
+            sb.Append(o.ToString("D10", System.Globalization.CultureInfo.InvariantCulture)).Append(" 00000 n \n");
+        }
+
+        sb.Append("trailer\n<< /Size ").Append(objs.Length + 1).Append(" /Root 1 0 R >>\nstartxref\n").Append(xref).Append("\n%%EOF\n");
+        var path = TestPdf.WriteTemp(System.Text.Encoding.ASCII.GetBytes(sb.ToString()));
+
+        var result = await PrintDocumentBuilder.BuildAsync(path, new PrintRequest());
+        Assert.True(result.Landscape);
+    }
 }
