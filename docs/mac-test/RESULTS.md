@@ -11,6 +11,27 @@ Runs (one each, read before the next — no retries):
 | 3 | 42494662734 | ⌘O found not to open a panel → the Open button; app stdout per launch; diagnostic exception build |
 | 4 | 42517758923 | panel path set through Accessibility (typing into the Go-to field was lossy) → documents open; timing sets skipped |
 
+## Re-test on platform/mac df535ce and c969613 (16 Nov) — NOT signed off; earlier sign-offs withdrawn for macOS 15
+
+**No build is signed off for macOS 15 at the moment.** The marking test, run back on 3bc7f68 and e2a1cc8, shows M-27
+there too on macOS 15 and 15-Intel (never on macOS 26). The sign-off moves when Foundation PR 18 is on platform/mac and
+M-27 passes at three zooms on every runner, and M-26 and M-28 are closed.
+
+Runs: **43743104866** (marking on e2a1cc8), **43743245619** (marking on 3bc7f68), **43744319751** (shared, df535ce),
+**43745397401** (full, df535ce), **43749197719** (shared, c969613). All three runners each.
+
+| Check | macOS 26 | macOS 15 | 15 Intel | Note / bug |
+|---|---|---|---|---|
+| M-27 mark under the pointer, 54 % and 104 % | ✅ | ❌ | ❌ | same on 3bc7f68, e2a1cc8, cf17eff, df535ce, c969613 |
+| M-24 several files at once: no crash, name order | ✅ | ✅ (order once in two parts) | ✅ | fixed |
+| Tab keys, no first responder and after a page click | ✅ | ✅ | ✅ | M-08 / M-23 fixed again |
+| Stall after clicks on a PDF page (Mac chat, 16 Nov) | not seen | not seen | not seen | after three clicks: ⌘K opens, Next page works, quits by itself in 0.3–0.4 s (c969613, one run) |
+| M-26 rotated page prints whole | ❌ | ❌ | ❌ | sheet now landscape, drawing area still upright → still clipped |
+| M-28 ⌘F right after opening an Excel file | ❌ | ❌ | ❌ | |
+| Excel Find on a value / on shown text ("50" in ₹1,234.50) / absent | ✅ 1 / 1 / 0 found | ✅ | ✅ | patch 26 item complete |
+| Synthetic pinch zooms | – | ✅ | ✅ | no result on 26 (my gesture doesn't arrive) |
+| Full regression (df535ce) | ✅ | ✅ | ✅ | only my two test-side items on 26 |
+
 ## Re-test on platform/mac cf17eff (11 Nov, Foundation patch 26) — NOT signed off
 
 **The sign-off stays on e2a1cc8.** cf17eff has two S1s and a regression. Runs **42937512173**, **42939932567**,
@@ -35,7 +56,7 @@ Runs (one each, read before the next — no retries):
 | ⌘O in five states, Immersive/Esc, labels, Details | ✅ | ✅ | ✅ | |
 | Full regression | T4.14 ❌ (the M-24 crash) | same | same | otherwise as e2a1cc8 |
 
-## SIGN-OFF moved to platform/mac e2a1cc8 (11 Nov 2026, Foundation patch 25)
+## SIGN-OFF moved to platform/mac e2a1cc8 (11 Nov 2026, Foundation patch 25) — WITHDRAWN for macOS 15 on 16 Nov (M-27)
 
 **Verdict: still ready for Arun's check**, now on e2a1cc8. Runs **42903578048** and **42906361892** (shared suite plus
 the new patch-25 case, all three runners) and **42903751170** (full suite, all three runners).
@@ -61,7 +82,7 @@ Getting the app: use the Mac workflow run for e2a1cc8 — https://github.com/Sth
 → Artifacts → **Chuvadi-mac-universal-unsigned**. Install steps and the ten things to try are unchanged, below; in
 item 3, "several PDFs at once" now works — please look at the tab order instead (M-24).
 
-## SIGN-OFF — platform/mac 3bc7f68 (11 Nov 2026): Mac is ready for Arun's check
+## SIGN-OFF — platform/mac 3bc7f68 (11 Nov 2026) — WITHDRAWN for macOS 15 on 16 Nov (M-27)
 
 **Verdict: ready**, on the three GitHub runners I can reach (macOS 26.x Apple Silicon, macOS 15 Apple Silicon, macOS 15
 Intel). Every bug M-01 to M-23 is closed except the ones listed under "Open, not blocking". Nothing here was run on
