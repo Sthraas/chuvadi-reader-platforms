@@ -79,7 +79,12 @@ if args[2] == "click-page" {
     }
     let src = CGEventSource(stateID: .hidSystemState)
     for type in [CGEventType.mouseMoved, .leftMouseDown, .leftMouseUp] {
-        CGEvent(mouseEventSource: src, mouseType: type, mouseCursorPosition: point, mouseButton: .left)?.post(tap: .cghidEventTap)
+        // No modifier keys on the click, whatever key was posted before it: with Control left over from a ⌃Tab the
+        // click is a secondary click and opens the context menu, whose tracking loop then holds the app.
+        let e = CGEvent(mouseEventSource: src, mouseType: type, mouseCursorPosition: point, mouseButton: .left)
+        e?.flags = []
+        if type != .mouseMoved { e?.setIntegerValueField(.mouseEventClickState, value: 1) }
+        e?.post(tap: .cghidEventTap)
         usleep(120_000)
     }
     print("clicked page at \(Int(point.x)),\(Int(point.y))")
