@@ -7,8 +7,9 @@ namespace ChuvadiReader.Mac.Platform;
 /// <summary>
 /// Prints through the native macOS print panel, keeping every page vector (never rasterised).
 /// chuvadi-pdf prepares the print PDF — the chosen pages in order, decrypted with the file's
-/// password — via <see cref="PrintDocumentBuilder"/>; the panel (an OS component) then prints that
-/// PDF. Copies, paper, scaling and the printer itself are chosen in the panel, as in any Mac app.
+/// password — via <see cref="PrintDocumentBuilder"/>; <see cref="MacPdfPageRenderer"/> then draws each page onto
+/// the sheet, placed by <see cref="PrintFit"/>. Copies, paper and the printer are chosen in the panel, as in any
+/// Mac app.
 /// The original file is never changed. A file whose own permissions forbid printing is refused
 /// before the panel opens (<see cref="PrintPermission"/>, as the Windows print service does).
 /// </summary>
@@ -57,7 +58,10 @@ public sealed class MacPrintService : IPrintService
                 var controller = UIPrintInteractionController.SharedPrintController;
                 controller.PrintInfo = info;
                 controller.ShowsPaperSelectionForLoadedPapers = true;
-                controller.PrintingItem = NSData.FromArray(doc.Pdf);
+                // M-26, second part: even on a landscape sheet UIKit drew a PDF printing item into the upright sheet's
+                // area and cut the page off. The pages are drawn onto the sheet here instead (still vector).
+                controller.PrintingItem = null;
+                controller.PrintPageRenderer = new MacPdfPageRenderer(doc.Pdf, request.FitToPage);
 
                 controller.Present(true, (_, completed, error) =>
                 {

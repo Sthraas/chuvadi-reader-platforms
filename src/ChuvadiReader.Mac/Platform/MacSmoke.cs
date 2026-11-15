@@ -304,6 +304,33 @@ internal static class MacSmoke
         }
         logger.LogWarning("smoke-check could not open '/Users/someone/Documents/smoke-secret-name.pdf' with password 'smoke-hunter2'");
 
+        // M-26 check (CHUVADI_SMOKE_PRINTFIT=<pdf>): the print PDF's first page drawn as the print renderer draws it.
+        if (Environment.GetEnvironmentVariable("CHUVADI_SMOKE_PRINTFIT") is { Length: > 0 } printFile)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var doc = await PrintDocumentBuilder.BuildAsync(printFile, new PrintRequest()).ConfigureAwait(false);
+                    UIApplication.SharedApplication.BeginInvokeOnMainThread(() =>
+                    {
+                        try
+                        {
+                            Log($"printfit landscape={(doc.Landscape ? 1 : 0)} " + MacPdfPageRenderer.Probe(doc.Pdf, doc.Landscape, true));
+                        }
+                        catch (Exception ex)
+                        {
+                            Log("printfit failed: " + ex.Message);
+                        }
+                    });
+                }
+                catch (Exception ex)
+                {
+                    Log("printfit failed: " + ex.Message);
+                }
+            });
+        }
+
         Log("dotnet-text " + new ObjectDisposedException("IServiceProvider").Message.Replace('\n', ' ')); // M-14
         tabs.Changed += () => UIApplication.SharedApplication.BeginInvokeOnMainThread(ReportTabs);
         ReportTabs();

@@ -78,6 +78,19 @@ out += b"xref\n0 %d\n0000000000 65535 f \n" % (len(a0) + 1)
 for o in offs: out += b"%010d 00000 n \n" % o
 out += b"trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n" % (len(a0) + 1, x)
 open(os.path.join(d, "large-a0.pdf"), "wb").write(out)
+# M-26: an upright A4 page with /Rotate 90 (shown landscape) and a frame 22 pt inside its edges.
+stream = b"4 w 22 22 551 798 re S"
+rot = [b"<< /Type /Catalog /Pages 2 0 R >>", b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+       b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Rotate 90 /Contents 4 0 R /Resources << >> >>",
+       b"<< /Length %d >>\nstream\n" % len(stream) + stream + b"\nendstream"]
+out = bytearray(b"%PDF-1.4\n"); offs = []
+for i, o in enumerate(rot, 1):
+    offs.append(len(out)); out += b"%d 0 obj\n" % i + o + b"\nendobj\n"
+x = len(out)
+out += b"xref\n0 %d\n0000000000 65535 f \n" % (len(rot) + 1)
+for o in offs: out += b"%010d 00000 n \n" % o
+out += b"trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n" % (len(rot) + 1, x)
+open(os.path.join(d, "turned.pdf"), "wb").write(out)
 open(os.path.join(d, "notes.md"), "w").write("# Notes\n\nA *Markdown* file.\n\n- one\n- two\n")
 open(os.path.join(d, "plain.txt"), "w").write("A plain text file.\nSecond line.\n")
 open(os.path.join(d, "page.html"), "w").write("<!doctype html><html><body><h1>Page</h1><p>An HTML file.</p></body></html>\n")
@@ -115,9 +128,19 @@ PICKS="five-pages.pdf notes.md plain.txt page.html letter.docx table.xlsx large-
 PICK_ENV=$(for f in $PICKS; do printf '%s;' "$DOCS/$f"; done)
 rm -f "$LOG"
 LOGDIR="$HOME/Library/Logs/Chuvadi"; rm -rf "$LOGDIR"
-open -n --env CHUVADI_SMOKE=1 --env CHUVADI_SMOKE_LOGFILL=1 --env "CHUVADI_SMOKE_PICK=$PICK_ENV" --stdout "$LOG" --stderr "$LOG" -a "$APP"
+open -n --env CHUVADI_SMOKE=1 --env CHUVADI_SMOKE_LOGFILL=1 --env "CHUVADI_SMOKE_PRINTFIT=$DOCS/turned.pdf" --env "CHUVADI_SMOKE_PICK=$PICK_ENV" --stdout "$LOG" --stderr "$LOG" -a "$APP"
 wait_for 'CHUVADI tabs 7: ' 170 || true
 sleep 3   # the last Ui report comes 1.5 s after the tab
+# M-26: a page shown landscape is drawn whole on a landscape sheet (the print renderer's own drawing, into a bitmap).
+pf=$(grep "CHUVADI printfit " "$LOG" | tail -1); echo "${pf:-no printfit line}"
+python3 - "$pf" <<'PYEOF' && pass "M-26 a turned page is drawn whole on a landscape sheet" || fail "M-26 turned page on the sheet: ${pf:-no printfit line}"
+import re, sys
+m = re.search(r"landscape=1 sheet=792x612 .*ink=(-?\d+),(-?\d+)\.\.(-?\d+),(-?\d+)", sys.argv[1])
+if not m: sys.exit(1)
+x0, y0, x1, y1 = map(int, m.groups())
+ok = x0 >= 18 and y0 >= 18 and x1 <= 774 and y1 <= 594 and x1 - x0 >= 700 and y1 - y0 >= 480
+sys.exit(0 if ok else 1)
+PYEOF
 grep -E 'CHUVADI (open-button|picked|tabs|ui) ' "$LOG"
 i=0
 for f in $PICKS; do

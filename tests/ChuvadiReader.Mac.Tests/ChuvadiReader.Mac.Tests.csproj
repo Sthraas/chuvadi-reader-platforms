@@ -18,6 +18,7 @@
   <ItemGroup>
     <Compile Include="..\..\src\ChuvadiReader.Mac\Platform\LogScrubber.cs" Link="LogScrubber.cs" />
     <Compile Include="..\..\src\ChuvadiReader.Mac\Platform\FileBatchOrder.cs" Link="FileBatchOrder.cs" />
+    <Compile Include="..\..\src\ChuvadiReader.Mac\Platform\PrintFit.cs" Link="PrintFit.cs" />
   </ItemGroup>
 
 </Project>
