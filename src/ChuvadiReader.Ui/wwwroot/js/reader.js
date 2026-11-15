@@ -1182,13 +1182,40 @@ function reanchor() {
     reportAfterQuiet();
 }
 
+// Mac Test M-27: the page is zoomed with CSS zoom, and engines differ on what getBoundingClientRect says for an element
+// under it. Chromium and current WebKit give the rectangle on screen; older WebKit gives it in the element's own
+// unzoomed pixels (position and size both divided by the zoom), so a pointer position measured against it lands at
+// "pointer times zoom". The engine is asked once, with a probe, which it does; then its answer is put right.
+let chvdUnzoomedRects = null;
+function reportsUnzoomedRects() {
+    if (chvdUnzoomedRects === null) {
+        const probe = document.createElement('div');
+        probe.style.cssText = 'position:fixed;left:0;top:0;width:10px;height:10px;zoom:2;visibility:hidden;pointer-events:none';
+        document.body.appendChild(probe);
+        chvdUnzoomedRects = Math.abs(probe.getBoundingClientRect().width - 10) < 0.5;   // 20 where rectangles are on screen
+        probe.remove();
+    }
+    return chvdUnzoomedRects;
+}
+
+// An element's rectangle on screen (the pixels pointer events are in), whatever the engine reports under CSS zoom.
+function screenRect(el) {
+    const r = el.getBoundingClientRect();
+    if (!reportsUnzoomedRects()) return { left: r.left, top: r.top, width: r.width, height: r.height };
+    let zoom = 1;
+    for (let e = el; e && e.nodeType === 1; e = e.parentElement) {
+        const z = parseFloat(getComputedStyle(e).zoom);
+        if (isFinite(z) && z > 0) zoom *= z;
+    }
+    return { left: r.left * zoom, top: r.top * zoom, width: r.width * zoom, height: r.height * zoom };
+}
+
 // Markup: report a page's redaction layer rect (viewport pixels) so the C# side
 // can convert pointer positions to normalised page fractions regardless of zoom.
 window.chuvadiReaderMkRect = function (page) {
     const el = document.querySelector(".mk-layer[data-page='" + page + "']");
     if (!el) { return null; }
-    const r = el.getBoundingClientRect();
-    return { left: r.left, top: r.top, width: r.width, height: r.height };
+    return screenRect(el);
 };
 
 // ── Add Image: clipboard paste + drag-and-drop ───────────────────────────────
