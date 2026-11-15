@@ -318,6 +318,36 @@ cp "$LOG" "$PWD/smoke-tabkeys.log"
 quit_app || fail "tab-key run did not quit"
 sleep 2
 
+# --- M-28, M-08/M-23 after a real click on the page, M-27 (a mark lands under the pointer) ----------------------
+# An Excel file handed over (no click yet) → real ⌘F; a real mouse click on the page → real ⌃Tab, ⌃⇧Tab, ⌘2, ⌘1;
+# then Mark: Rectangle on the first tab (a PDF, zoomed to fit) and a 120×80 drag — the shape must be where the pointer was.
+rm -f "$LOG"
+open -n --env CHUVADI_SMOKE=1 \
+  --env "CHUVADI_SMOKE_STEPS=wait;native:cmd-f;native:escape;native:click-page;native:ctrl-tab;native:ctrl-shift-tab;native:cmd-2;native:cmd-1;cmd:Mark: Rectangle;markdrag;wait" \
+  --stdout "$LOG" --stderr "$LOG" -a "$APP" "$DOCS/table.xlsx"
+native_watch 240 &
+NW=$!
+wait_for 'CHUVADI steps done' 240 || fail "M-27/M-28 steps did not finish"
+wait $NW 2>/dev/null || true
+grep -E "CHUVADI (step [0-9]+ [a-z]+:|page-key)|clicked page" "$LOG" | cut -c1-900
+st() { grep -E "CHUVADI step $1 [a-z]+: route=" "$LOG" | tail -1; }
+sv() { st "$1" | sed -E 's/.* strip=("[^"]*"|-).*/\1/'; }
+s=$(st 2); [[ "$s" == *"find=1"* ]] && pass "M-28 real ⌘F right after a file opens shows Find" || fail "M-28 ⌘F after open: ${s:-no report}"
+order=$(st 4 | sed -E 's/.* order="([^"]*)".*/\1/')
+first="\"$(echo "$order" | cut -d'|' -f1)\""; second="\"$(echo "$order" | cut -d'|' -f2)\""
+c4=$(sv 4); c5=$(sv 5); c6=$(sv 6); c7=$(sv 7); c8=$(sv 8)
+echo "after a click on the page: before=$c4 ⌃Tab=$c5 ⌃⇧Tab=$c6 ⌘2=$c7 ⌘1=$c8 (first $first, second $second)"
+[ -n "$c5" ] && [ "$c5" != "$c4" ] && pass "M-08 after a click on the page, real ⌃Tab changes the tab" || fail "M-08 after a click: ⌃Tab $c4 → $c5"
+[ -n "$c6" ] && [ "$c6" = "$c4" ] && pass "M-08 after a click on the page, real ⌃⇧Tab changes it back" || fail "M-08 after a click: ⌃⇧Tab $c6 (expected $c4)"
+[ -n "$c7" ] && [ "$c7" = "$second" ] && pass "M-23 after a click on the page, real ⌘2 shows the second tab" || fail "M-23 after a click: ⌘2 $c7 (expected $second)"
+[ -n "$c8" ] && [ "$c8" = "$first" ] && pass "M-23 after a click on the page, real ⌘1 shows the first tab" || fail "M-23 after a click: ⌘1 $c8 (expected $first)"
+s=$(st 11); err=$(echo "$s" | sed -nE 's/.* markerr=([0-9]+).*/\1/p')
+echo "mark: $(echo "$s" | grep -oE 'mark=[^ ]+ pointer=[^ ]+ markerr=[0-9]+ rects=[a-z]+') $(echo "$s" | grep -oE 'zoom=[0-9.]+')"
+[ -n "$err" ] && [ "$err" -le 6 ] && pass "M-27 a dragged mark lands under the pointer (off by ${err} px)" || fail "M-27 mark vs pointer: ${err:-no mark} px off — $(echo "$s" | grep -oE 'mark=[^ ]+ pointer=[^ ]+|mark=none')"
+cp "$LOG" "$PWD/smoke-marks.log"
+quit_app || fail "marks run did not quit"
+sleep 2
+
 # --- M-17 / M-18 / M-21 / M-19: the tester's sequences, scripted --------------------------------------------
 # Locked PDFs (qpdf: a testing tool, never shipped), a real-key sender with Post Event access, then one launch that
 # walks: page error → locked AES-256 file → wrong password → right password (each with a real Return) → real ⌃⌘F →

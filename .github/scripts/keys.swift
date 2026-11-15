@@ -67,12 +67,33 @@ for app in NSRunningApplication.runningApplications(withBundleIdentifier: args[1
     app.activate(options: [.activateAllWindows])
 }
 usleep(600_000)
+// click-page: a real mouse click 200 pt right of and 60 pt below the middle of the app's window — on the page, as a
+// person clicks it (Mac Test: keys died after a click on the page).
+if args[2] == "click-page" {
+    var point = CGPoint(x: 700, y: 450)
+    if let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]],
+       let pid = NSRunningApplication.runningApplications(withBundleIdentifier: args[1]).first?.processIdentifier,
+       let win = list.first(where: { ($0[kCGWindowOwnerPID as String] as? Int32) == pid && ($0[kCGWindowLayer as String] as? Int) == 0 }),
+       let b = win[kCGWindowBounds as String] as? [String: CGFloat] {
+        point = CGPoint(x: (b["X"] ?? 0) + (b["Width"] ?? 0) / 2 + 200, y: (b["Y"] ?? 0) + (b["Height"] ?? 0) / 2 + 60)
+    }
+    let src = CGEventSource(stateID: .hidSystemState)
+    for type in [CGEventType.mouseMoved, .leftMouseDown, .leftMouseUp] {
+        CGEvent(mouseEventSource: src, mouseType: type, mouseCursorPosition: point, mouseButton: .left)?.post(tap: .cghidEventTap)
+        usleep(120_000)
+    }
+    print("clicked page at \(Int(point.x)),\(Int(point.y))")
+    exit(0)
+}
+
 let keys: [String: (CGKeyCode, CGEventFlags)] = [
     "escape": (53, []),
     "return": (36, []),
     "ctrl-cmd-f": (3, [.maskControl, .maskCommand]),
     "cmd-k": (40, [.maskCommand]),
     "cmd-o": (31, [.maskCommand]),
+    "cmd-f": (3, [.maskCommand]),
+    "cmd-2": (19, [.maskCommand]),
     "cmd-1": (18, [.maskCommand]),
     "ctrl-tab": (48, [.maskControl]),
     "ctrl-shift-tab": (48, [.maskControl, .maskShift]),

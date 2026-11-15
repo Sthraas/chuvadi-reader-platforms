@@ -7,6 +7,11 @@ name: Mac
 # Manual only (D-90: macOS minutes cost 10× Linux; Mac runs only when the coordinator confirms).
 on:
   workflow_dispatch:
+    inputs:
+      try_patch:
+        description: 'Try a patch for shared code on the runner only (path in the repo, e.g. docs/mac/foundation/X.patch). Nothing is committed.'
+        required: false
+        default: ''
 
 jobs:
   mac:
@@ -19,6 +24,15 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+
+      # Proof for a patch sent to Foundation: applied to this checkout only, so the smoke run shows it on real WebKit.
+      - name: Try a shared-code patch (this run only)
+        if: ${{ inputs.try_patch != '' }}
+        env:
+          TRY_PATCH: ${{ inputs.try_patch }}
+        run: |
+          git apply --verbose "$TRY_PATCH"
+          echo "::notice::This run includes $TRY_PATCH, which is not on the branch."
 
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v6
@@ -200,6 +214,7 @@ jobs:
           shasum -a 256 out/Chuvadi-mac-universal-unsigned.zip | tee out/SHA256.txt
 
       - name: Upload app
+        if: ${{ inputs.try_patch == '' }}   # a run that tried a patch is not the branch's build; never hand it out
         uses: actions/upload-artifact@v7
         with:
           name: Chuvadi-mac-universal-unsigned
@@ -220,6 +235,7 @@ jobs:
             smoke-keys.log
             smoke-tabkeys.log
             smoke-many.log
+            smoke-marks.log
             *.ips
             chuvadi-logs-steps/
             chuvadi-logs-recovery/

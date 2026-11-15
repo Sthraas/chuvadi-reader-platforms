@@ -1,0 +1,78 @@
+diff --git a/src/ChuvadiReader.Ui/wwwroot/js/reader.js b/src/ChuvadiReader.Ui/wwwroot/js/reader.js
+index e4830c27..61c640c5 100644
+--- a/src/ChuvadiReader.Ui/wwwroot/js/reader.js
++++ b/src/ChuvadiReader.Ui/wwwroot/js/reader.js
+@@ -1182,13 +1182,32 @@ function reanchor() {
+     reportAfterQuiet();
+ }
+ 
++// A box as it is shown on screen, in the same pixels as a pointer's clientX / clientY. The page is scaled with CSS
++// zoom, and engines disagree about a box inside a zoomed element: Chromium (WebView2, Android) reports it as shown;
++// WebKit (the Mac and Linux hosts, Safari) reports it in the zoomed element's own, unzoomed pixels — the whole box,
++// position and size, divided by the zoom. Used as it came, a pointer at x landed a mark at x × zoom (Mac Test M-27).
++// A 100 px probe inside the element says which this engine does (the larger side, so a rotated page reads the same).
++function shownRect(el) {
++    const r = el.getBoundingClientRect();
++    let z = 1;
++    for (let n = el; n && n.nodeType === 1; n = n.parentElement) z *= parseFloat(getComputedStyle(n).zoom) || 1;
++    if (Math.abs(z - 1) < 0.001) return { left: r.left, top: r.top, width: r.width, height: r.height };
++    const probe = document.createElement('div');
++    probe.style.cssText = 'position:absolute;left:0;top:0;width:100px;height:100px;visibility:hidden;pointer-events:none';
++    el.appendChild(probe);
++    const pr = probe.getBoundingClientRect();
++    probe.remove();
++    const side = Math.max(pr.width, pr.height);
++    const k = Math.abs(side - 100 * z) <= Math.abs(side - 100) ? 1 : z;   // 1: reported as shown; z: reported unzoomed
++    return { left: r.left * k, top: r.top * k, width: r.width * k, height: r.height * k };
++}
++
+ // Markup: report a page's redaction layer rect (viewport pixels) so the C# side
+ // can convert pointer positions to normalised page fractions regardless of zoom.
+ window.chuvadiReaderMkRect = function (page) {
+     const el = document.querySelector(".mk-layer[data-page='" + page + "']");
+     if (!el) { return null; }
+-    const r = el.getBoundingClientRect();
+-    return { left: r.left, top: r.top, width: r.width, height: r.height };
++    return shownRect(el);
+ };
+ 
+ // ── Add Image: clipboard paste + drag-and-drop ───────────────────────────────
+diff --git a/src/ChuvadiReader.Ui/wwwroot/js/redact.js b/src/ChuvadiReader.Ui/wwwroot/js/redact.js
+index 1bc7a569..dbaf1270 100644
+--- a/src/ChuvadiReader.Ui/wwwroot/js/redact.js
++++ b/src/ChuvadiReader.Ui/wwwroot/js/redact.js
+@@ -74,13 +74,32 @@ function invoke(method, arg) {
+     try { dotnet.invokeMethodAsync(method, arg); } catch (e) { }
+ }
+ 
++// A box as it is shown on screen, in the same pixels as a pointer's clientX / clientY. The page is scaled with CSS
++// zoom, and engines disagree about a box inside a zoomed element: Chromium (WebView2, Android) reports it as shown;
++// WebKit (the Mac and Linux hosts, Safari) reports it in the zoomed element's own, unzoomed pixels — the whole box,
++// position and size, divided by the zoom. Used as it came, a pointer at x landed a mark at x × zoom (Mac Test M-27).
++// A 100 px probe inside the element says which this engine does (the larger side, so a rotated page reads the same).
++function shownRect(el) {
++    const r = el.getBoundingClientRect();
++    let z = 1;
++    for (let n = el; n && n.nodeType === 1; n = n.parentElement) z *= parseFloat(getComputedStyle(n).zoom) || 1;
++    if (Math.abs(z - 1) < 0.001) return { left: r.left, top: r.top, width: r.width, height: r.height };
++    const probe = document.createElement('div');
++    probe.style.cssText = 'position:absolute;left:0;top:0;width:100px;height:100px;visibility:hidden;pointer-events:none';
++    el.appendChild(probe);
++    const pr = probe.getBoundingClientRect();
++    probe.remove();
++    const side = Math.max(pr.width, pr.height);
++    const k = Math.abs(side - 100 * z) <= Math.abs(side - 100) ? 1 : z;   // 1: reported as shown; z: reported unzoomed
++    return { left: r.left * k, top: r.top * k, width: r.width * k, height: r.height * k };
++}
++
+ // Report a page's redaction layer rect (viewport pixels) so C# can convert pointer
+ // positions to normalised page fractions regardless of zoom.
+ window.chuvadiRedactMkRect = function (page) {
+     const el = document.querySelector(".mk-layer[data-page='" + page + "']");
+     if (!el) { return null; }
+-    const r = el.getBoundingClientRect();
+-    return { left: r.left, top: r.top, width: r.width, height: r.height };
++    return shownRect(el);
+ };
+ 
+ // Auto-paste source: the current on-page text selection, falling back to the clipboard.

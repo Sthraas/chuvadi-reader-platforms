@@ -65,6 +65,25 @@ internal static class MacSmoke
                 return;
             }
 
+            if (kind == "cmd")
+            {
+                // A command by its label, as the menu bar invokes it (e.g. "Mark: Rectangle").
+                var commands = _services!.GetRequiredService<ChuvadiReader.Platform.IAppCommands>();
+                var info = commands.Commands.FirstOrDefault(c => c.Label == arg);
+                Log($"step {index + 1} cmd: {arg} → {(info is null ? "no such command" : info.Id + (info.IsEnabled ? "" : " (disabled)"))}");
+                if (info is not null)
+                {
+                    ChuvadiReader.Mac.MainPage.Dispatch(() => commands.InvokeAsync(info.Id));
+                }
+
+                Later(2.5, async () =>
+                {
+                    Log($"step {index + 1} cmd: " + await UiTextAsync(Current(view)));
+                    RunSteps(view, index + 1);
+                });
+                return;
+            }
+
             if (kind == "unfocus")
             {
                 // M-08 / M-23: the state Mac Test saw — the window has no first responder (focus on its content group).
@@ -95,6 +114,39 @@ internal static class MacSmoke
             {
                 "pick" => null,
                 "wait" => "'waited'",
+                // M-27: drag a mark with the pointer inside the page and say where the shape landed. The drag is
+                // 120×80 px from 60 px inside the visible page's top-left; the shape's place comes from its own
+                // left/top/width/height (fractions of the page layer), against where the pointer was in the layer.
+                // The layer's true box on screen: WebKit reports a box inside a CSS-zoomed page in the page's own
+                // (unzoomed) pixels, Chromium as shown — a 100 px probe says which ("rects=").
+                "markdrag" => """
+                    (function () {
+                      var layer = document.querySelector('.mk-layer.drawmode') || document.querySelector('.mk-layer');
+                      var desk = document.querySelector('.rdesk');
+                      if (!layer || !desk) { return 'no-layer'; }
+                      var z = 1; for (var n = layer; n && n.nodeType === 1; n = n.parentElement) { z *= parseFloat(getComputedStyle(n).zoom) || 1; }
+                      var probe = document.createElement('div');
+                      probe.style.cssText = 'position:absolute;left:0;top:0;width:100px;height:100px;visibility:hidden;pointer-events:none';
+                      layer.appendChild(probe);
+                      var pr = probe.getBoundingClientRect(), w = Math.max(pr.width, pr.height); probe.remove();
+                      var shown = Math.abs(w - 100 * z) <= Math.abs(w - 100), k = shown ? 1 : z;
+                      var r = layer.getBoundingClientRect();
+                      var L = r.left * k, T = r.top * k, W = r.width * k, H = r.height * k;   // the layer as shown
+                      var d = desk.getBoundingClientRect();
+                      var ax = Math.max(L, d.left) + 60, ay = Math.max(T, d.top) + 60, bx = ax + 120, by = ay + 80;
+                      var fire = function (type, x, y, buttons) {
+                        var el = document.elementFromPoint(x, y) || layer;
+                        el.dispatchEvent(new PointerEvent(type, { clientX: x, clientY: y, button: 0, buttons: buttons, pointerId: 7,
+                          pointerType: 'mouse', isPrimary: true, bubbles: true, cancelable: true }));
+                      };
+                      fire('pointerdown', ax, ay, 1);
+                      setTimeout(function () { fire('pointermove', (ax + bx) / 2, (ay + by) / 2, 1); }, 250);
+                      setTimeout(function () { fire('pointermove', bx, by, 1); }, 500);
+                      setTimeout(function () { fire('pointerup', bx, by, 0); }, 750);
+                      window.__chvdMark = { ax: ax, ay: ay, bx: bx, by: by, L: L, T: T, W: W, H: H, z: z, rects: shown ? 'shown' : 'unzoomed' };
+                      return 'dragging z=' + z.toFixed(3) + ' rects=' + window.__chvdMark.rects;
+                    })()
+                    """,
                 "jserror" => """
                     (function () {
                       console.error("smoke-page-error opening '/Users/someone/Documents/smoke-secret-name.pdf'\n   at Smoke.Page.Frame()");
@@ -203,6 +255,7 @@ internal static class MacSmoke
 
         var tabs = services.GetRequiredService<TabsService>();
         _tabs = tabs;
+        _services = services;
         var last = string.Empty;
         void ReportTabs()
         {
@@ -323,6 +376,20 @@ internal static class MacSmoke
                     return ' pageimg=' + x.status + '/' + (x.getResponseHeader('content-type') || '?') + '/' + (x.responseText || '').length;
                   } catch (err) { return ' pageimg=error:' + err.message; }
                 })()
+                + (function () {   // M-27: where the last dragged mark landed, against the pointer (px on screen)
+                  var m = window.__chvdMark; if (!m) { return ''; }
+                  var shapes = document.querySelectorAll('.mk-shape.rect:not(.draft)');
+                  var s = shapes[shapes.length - 1]; if (!s) { return ' mark=none rects=' + m.rects; }
+                  var pct = function (v) { return parseFloat(v) / 100; };
+                  var sx = m.L + pct(s.style.left) * m.W, sy = m.T + pct(s.style.top) * m.H;
+                  var sw = pct(s.style.width) * m.W, sh = pct(s.style.height) * m.H;
+                  var err = Math.max(Math.abs(sx - m.ax), Math.abs(sy - m.ay), Math.abs(sx + sw - m.bx), Math.abs(sy + sh - m.by));
+                  return ' mark=' + Math.round(sx) + ',' + Math.round(sy) + '+' + Math.round(sw) + 'x' + Math.round(sh)
+                    + ' pointer=' + Math.round(m.ax) + ',' + Math.round(m.ay) + '+120x80 markerr=' + Math.round(err) + ' rects=' + m.rects;
+                })()
+                + (function () {   // M-28: the Find bar
+                  return ' find=' + (document.querySelector('.rfind, .rfind-box, input[placeholder^="Find"]') ? 1 : 0);
+                })()
                 + (function () {   // the page zoom as the page holds it
                   var d = document.querySelector('.rdesk');
                   return d ? ' zoom=' + (parseFloat(getComputedStyle(d).getPropertyValue('--rpage-zoom')) || 1).toFixed(3) : '';
@@ -351,6 +418,7 @@ internal static class MacSmoke
             """;
 
     private static TabsService? _tabs;
+    private static IServiceProvider? _services;
 
     private static async Task<string> UiTextAsync(WKWebView view)
     {
