@@ -55,4 +55,21 @@ public static class PlatformText
     /// Android get <paramref name="desktop"/>, character for character.</summary>
     public static string FetchOrUpload(IPlatformInfo platform, string desktop, string portal) =>
         platform.Kind == PlatformKind.Web ? portal : desktop;
+
+    /// <summary>Why "Sign with certificate" is off on the Web portal (D-27 a, D-187): a .pfx holds the person's
+    /// private key, and the portal never takes one.</summary>
+    public const string CertificateSigningOnPortal = "Certificate signing is in the desktop app. Your private key never leaves your computer.";
+
+    /// <summary>The word a greyed rail button shows where its shortcut would be, for <see cref="CertificateSigningOnPortal"/>
+    /// (other greyed buttons say "soon"; this one is off, D-27 a). Six characters at most: beside "Sign with
+    /// certificate", the longest label on the Tools rail, "desktop" already runs 4 px past the rail's edge.</summary>
+    public const string CertificateSigningTag = "off";
+
+    /// <summary>The reason "Sign with certificate" is greyed out on this host, or null where it works (every host but Web).</summary>
+    public static string? CertificateSigningOff(IPlatformInfo platform) =>
+        platform.Kind == PlatformKind.Web ? CertificateSigningOnPortal : null;
+
+    /// <summary>D-187: where there is a touch screen a tooltip can't be read, so the greyed control still answers a
+    /// tap and its card shows the reason in place of its fields.</summary>
+    public static bool ReasonOnTap(IPlatformInfo platform) => platform.Input.HasFlag(InputKinds.Touch);
 }

@@ -327,6 +327,64 @@ public sealed class PageRotateTests
         }
     }
 
+    /// <summary>A 200 × 400 page with one word, "rotmark", near its top-left (its baseline starts at 20, 340).</summary>
+    private static string TurnedWord(int rotate)
+    {
+        const string content = "BT /F1 14 Tf 20 340 Td (rotmark) Tj ET";
+        return LayersMeasureSignatureTests.RawPdf(
+            "<< /Type /Catalog /Pages 2 0 R >>",
+            "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+            $"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 400] /Rotate {rotate} /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",
+            $"<< /Length {content.Length} >>\nstream\n{content}\nendstream",
+            "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
+    }
+
+    /// <summary>Mobile UI F-1: Find's highlight on a turned page was drawn where the text would be on the unturned page.
+    /// The word is near the top-left of the unturned page; turned, it is near the top-right (90), bottom-right (180)
+    /// or bottom-left (270), and on its side for the quarter turns.</summary>
+    [Theory]
+    [InlineData(0, 0.1, 0.5, 0.05, 0.25, false)]
+    [InlineData(90, 0.75, 0.95, 0.1, 0.5, true)]
+    [InlineData(180, 0.5, 0.9, 0.75, 0.95, false)]
+    [InlineData(270, 0.05, 0.25, 0.5, 0.9, true)]
+    public async Task A_Find_match_is_boxed_where_the_word_is_shown(int rotate, double x0, double x1, double y0, double y1, bool onItsSide)
+    {
+        var path = TurnedWord(rotate);
+        var match = Assert.Single(await new RedactService().SearchAsync(path, "rotmark", false, false));
+        var box = Assert.Single(match.Boxes);
+        Assert.InRange(box.X, x0, x1);
+        Assert.InRange(box.X + box.W, x0, x1);
+        Assert.InRange(box.Y, y0, y1);
+        Assert.InRange(box.Y + box.H, y0, y1);
+
+        // And the word's ink is inside that box on the page as shown (the dark pixels are the word).
+        var (inPlace, elsewhere) = Dark(path, box.X - 0.01, box.X + box.W + 0.01, box.Y - 0.01, box.Y + box.H + 0.01);
+        Assert.True(inPlace > 5, "no ink inside the match's box");
+        Assert.Equal(0, elsewhere);
+
+        // A box on a quarter-turned page is taller than wide on screen (the shown page is 400 × 200).
+        var (sw, sh) = rotate is 90 or 270 ? (400d, 200d) : (200d, 400d);
+        Assert.Equal(onItsSide, box.H * sh > box.W * sw);
+    }
+
+    /// <summary>Search and redact: the match's boxes go back to the page through the same mapping, so the word found
+    /// on a turned page is the word that is covered.</summary>
+    [Theory]
+    [InlineData(0)]
+    [InlineData(90)]
+    [InlineData(180)]
+    [InlineData(270)]
+    public async Task Redacting_a_Find_match_on_a_turned_page_covers_the_word(int rotate)
+    {
+        var path = TurnedWord(rotate);
+        var match = Assert.Single(await new RedactService().SearchAsync(path, "rotmark", false, false));
+        var outp = TestPdf.TempOutput();
+        await new RedactService().RedactToFileAsync(path, outp, new Dictionary<int, PageRedaction> { [0] = new PageRedaction(0, match.Boxes) }, "#FF0000");
+        Assert.Empty(await new RedactService().SearchAsync(outp, "rotmark", false, false));
+        var box = match.Boxes[0];
+        Assert.True(TestPdf.IsReddish(Shown(outp, box.X + box.W / 2, box.Y + box.H / 2)), "the word's place is covered");
+    }
+
     // ── The bench ──
 
     private static BenchPage BenchOf(string path) => new() { SourcePath = path, SourceName = "t.pdf", SourceIndex = 0, OriginalIndex = 0 };

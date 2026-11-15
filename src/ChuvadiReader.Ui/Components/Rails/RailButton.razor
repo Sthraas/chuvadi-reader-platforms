@@ -4,13 +4,13 @@
     then the label and shortcut show. Unbuilt features pass DisabledReason: the button is
     greyed out and the reason is its tooltip (the owner wants them visible, not hidden).
 *@
-<button class="rb @Class @(Active ? "on" : null) @(Primary ? "primary" : null) @(Danger ? "danger" : null)"
-        disabled="@(DisabledReason is not null || Disabled)"
+<button class="rb @Class @(Active ? "on" : null) @(Primary ? "primary" : null) @(Danger ? "danger" : null) @(Soft ? "off" : null)"
+        disabled="@((DisabledReason is not null && !Soft) || Disabled)" aria-disabled="@(Soft ? "true" : null)"
         title="@Tip" aria-label="@Label" aria-pressed="@(Active ? "true" : null)"
         @onclick="OnClick">
     <Icon Name="@Icon" Size="@Size" />
     <span class="rb-l">@Label</span>
-    <span class="rb-k">@(DisabledReason is not null ? "soon" : ShownKeys)</span>
+    <span class="rb-k">@(DisabledReason is not null ? DisabledTag : ShownKeys)</span>
 </button>
 
 @code {
@@ -22,6 +22,13 @@
     [Parameter] public bool Danger { get; set; }
     [Parameter] public bool Disabled { get; set; }
     [Parameter] public string? DisabledReason { get; set; }
+
+    /// <summary>The word shown where the shortcut would be while <see cref="DisabledReason"/> is set.</summary>
+    [Parameter] public string DisabledTag { get; set; } = "soon";
+
+    /// <summary>With <see cref="DisabledReason"/>: the button looks greyed out but still answers a tap, so its
+    /// OnClick can show the reason where a tooltip can't be read (touch screens, D-187).</summary>
+    [Parameter] public bool ReasonOnTap { get; set; }
     [Parameter] public string? Class { get; set; }
     [Parameter] public int Size { get; set; } = 19;
     [Parameter] public EventCallback OnClick { get; set; }
@@ -29,6 +36,8 @@
     private string Tip => DisabledReason is not null
         ? $"{Label} — {DisabledReason}"
         : string.IsNullOrEmpty(Keys) ? Label : $"{Label} ({ShownKeys})";
+
+    private bool Soft => DisabledReason is not null && ReasonOnTap && !Disabled;
 
     private string? ShownKeys => string.IsNullOrEmpty(Keys) ? Keys : Platform.Keys.Format(Keys);
 }
