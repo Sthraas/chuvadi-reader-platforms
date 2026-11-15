@@ -135,10 +135,12 @@ class Cdp:
         self.n += 1
         my = self.n
         self.ws.send(json.dumps({"id": my, "method": method, "params": params or {}}))
-        while True:
+        end = time.time() + 90          # round 10c: a phone leg sat here for over an hour
+        while time.time() < end:
             msg = json.loads(self.ws.recv())
             if msg.get("id") == my:
                 return msg
+        raise RuntimeError(f"no answer from the page to {method} in 90 s")
 
     def js(self, expr):
         msg = self.call("Runtime.evaluate", {"expression": expr, "returnByValue": True, "awaitPromise": True})

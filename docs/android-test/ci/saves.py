@@ -121,12 +121,13 @@ def touch(*args):
 def longdrag(a, b, changed):
     """Long-press and drag a → b. Android's own `input draganddrop` first (rotation-aware); the raw
     touch script as a second way if `changed()` says nothing moved."""
+    touch("longdrag", a[0], a[1], b[0], b[1], 800, 1200)     # rotation-aware since round 11 (the Android chat's fix)
+    time.sleep(1)
+    if changed():
+        return "touch.py longdrag"
     sh(f"input draganddrop {a[0]} {a[1]} {b[0]} {b[1]} 1500")
     time.sleep(1.5)
-    if changed():
-        return "input draganddrop"
-    touch("longdrag", a[0], a[1], b[0], b[1], 800, 1200)
-    return "touch.py longdrag" if changed() else "neither moved it"
+    return "input draganddrop" if changed() else "neither moved it"
 
 
 def phone():
@@ -255,7 +256,11 @@ def tool(*names):
 def save_as():
     """Save as new PDF → picker → the new file's path."""
     mark_time()
-    put_away = card_away() if phone() else None
+    put_away = None
+    card_up = bool(cdp.js(FCARD)) if phone() else None
+    pre = find("Save as new PDF", "Save as", sel=".ph-fab, .rb, .ph-row, button")
+    if phone() and card_up and (not pre or pre.get("covered")):
+        put_away = card_away()
     hit = tap("Save as new PDF", "Save as", sel=".ph-fab, .rb, .ph-row, button")
     if not hit and phone():
         tap("More", sel=".ph-ib")
@@ -264,7 +269,7 @@ def save_as():
     picker = save_picker()
     time.sleep(2)
     files = new_pdfs()
-    return {"button": hit, "picker": picker, "files": files, "app_says": says(), "mark_card_put_away_by": put_away}
+    return {"button": hit, "picker": picker, "files": files, "app_says": says(), "mark_card_up": card_up, "save_reachable_with_card_up": bool(pre and not pre.get("covered")) if card_up else None, "mark_card_put_away_by": put_away}
 
 
 FCARD = "(() => { " + VIS + " const e = [...document.querySelectorAll('.fcard')].find(vis); if (!e) return null; const r = e.getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; })()"
@@ -344,7 +349,7 @@ cdp.wait("!!(window.Blazor && Blazor.navigateTo) && document.getElementById('app
 ORIG = {}
 for fx, nm in (("doc-12p.pdf", "sv-text.pdf"), ("doc-12p.pdf", "sv-shape.pdf"), ("form-filled.pdf", "sv-form.pdf"),
                ("doc-12p.pdf", "sv-redact.pdf"), ("doc-12p.pdf", "sv-arrange.pdf"), ("doc-12p.pdf", "sv-print.pdf"),
-               ("doc-12p.pdf", "sv-pass.pdf"), ("doc-12p.pdf", "sv-compress.pdf"), ("doc-12p.pdf", "sv-flatten.pdf"), ("rotated.pdf", "sv-rotated.pdf")):
+               ("doc-12p.pdf", "sv-pass.pdf"), ("doc-12p.pdf", "sv-compress.pdf"), ("doc-12p.pdf", "sv-flatten.pdf"), ("rotated.pdf", "sv-rotated.pdf"), ("doc-12p.pdf", "sv-zoom.pdf")):
     ORIG[nm] = push(fx, nm)
 time.sleep(3)
 
@@ -598,6 +603,11 @@ def sv5_arrange():
     if files:
         rd, pages = read(files[-1], "sv5-bound.pdf")
         got = [int(m.group(1)) if (m := re.search(r"- page (\d+)", t)) else None for t in pages]
+    msg = says()
+    body = cdp.js("document.body.innerText") or ""
+    leak = [l.strip()[:160] for l in body.splitlines() if "/data/" in l or "/cache/" in l]
+    R.check("AT-21 after Bind all the message names the chosen folder, not an internal path", bool(files) and not leak and any("at-bind" in l for l in body.splitlines() if "Bound" in l),
+            {"lines_with_Bound": [l.strip()[:160] for l in body.splitlines() if "Bound" in l], "internal_paths_on_screen": leak, "status": msg})
     want = [3 if i == id_p3 else 1 for i in after][-2:] if id_p3 else ([1, 2][:len(after)] if sent and after else None)
     R.check("SV-5c Bind all → folder chosen → bound PDF holds the desk's pages in the desk's order", bool(got and want and got[-len(want):] == want),
             {"button": hit, "picker": picker, "files": files, "saved_pages": got, "desk_order_as_pages": want, "app_says": says()})
@@ -724,17 +734,25 @@ def doc_save(case_id, name, action_labels, confirm_labels):
     hit = None
     if not in_picker():
         hit = tap(*confirm_labels, sel=".chvd-card button, [role=dialog] button, .ph-sheet button")
+        if not hit:
+            hit = cdp.js("(() => { " + VIS + " const b = [...document.querySelectorAll('button')].filter(vis).find(e => /^(press|reduce|compress)\\b/i.test((e.innerText || '').trim()) && !e.closest('.rb, .lb-btn, [role=menu], .ph-row')); if (!b) return null; const r = b.getBoundingClientRect(); return {text: b.innerText.trim(), x: r.left + r.width / 2, y: r.top + r.height / 2, disabled: b.disabled}; })()")
+            if hit:
+                tap_xy(hit["x"], hit["y"])
         time.sleep(2)
-    picker = save_picker()
-    time.sleep(4)
+    picker = save_picker() if case_id != "SV-8" or in_picker() else False
+    time.sleep(6)
     files = new_pdfs()
+    if not files and case_id == "SV-8":
+        folder_picker("at-bind", 6) if in_picker() else None
+        time.sleep(4)
+        files = new_pdfs()
     res = None
     if files:
         rd, pages = read(files[-1], case_id.lower() + "-out.pdf")
         res = {"pages": len(pages), "text_p1": "Discharge summary - page 1" in pages[0], "bytes": os.path.getsize(os.path.join(OUT, case_id.lower() + "-out.pdf"))}
     R.check(f"{case_id} {action_labels[0]} → saved to a new file: readable, 12 pages, text kept",
             bool(res and res["pages"] == 12 and res["text_p1"]),
-            {"action": act, "card_buttons": btns, "button": hit, "picker": picker, "files": files, "pdf": res, "app_says": says(), "controls": None if act else labels()})
+            {"action": act, "card_buttons": btns, "button": hit, "picker": picker, "files": files, "pdf": res, "app_says": says(), "screen_lines": [l.strip()[:140] for l in (cdp.js("document.body.innerText") or "").splitlines() if re.search(r"press|saved|smaller|compress|kB|MB", l, re.I)][:8], "controls": None if act else labels()})
 
 
 def sv8_compress():
@@ -772,6 +790,67 @@ def sv10_rotated():
             bool(info and differs(info["saved"], info["original"]) and info["saved"]["rotate"] == 90), {"save": s, "page1": info})
 
 
+def stamp_rect(reader, i=0):
+    """Where the saved mark sits on the page, in points: the form XObject's BBox through the matrix in force at its Do."""
+    try:
+        pg = reader.pages[i]
+        data = pg.get_contents().get_data().decode("latin-1")
+        xo = pg["/Resources"]["/XObject"]
+        name = sorted(k for k in xo.keys() if "Stamp" in k)[-1]
+        m = re.search(r"([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) cm\s*" + re.escape(name) + r" Do", data)
+        bb = [float(v) for v in xo[name].get_object()["/BBox"]]
+        if not m:
+            return {"bbox": bb, "tail": data[-200:]}
+        a, b, c, d, e, f = map(float, m.groups())
+        pts = [(a * x + c * y + e, b * x + d * y + f) for x in (bb[0], bb[2]) for y in (bb[1], bb[3])]
+        return {"x0": round(min(p[0] for p in pts), 1), "y0": round(min(p[1] for p in pts), 1), "x1": round(max(p[0] for p in pts), 1), "y1": round(max(p[1] for p in pts), 1)}
+    except Exception as e:
+        return {"error": repr(e)[:200]}
+
+
+PAGE0 = "(() => { const e = [...document.querySelectorAll('.rpage-wrap .rpage')].filter(e => e.getBoundingClientRect().width > 0)[0].getBoundingClientRect(); return [e.left, e.top, e.width, e.height, innerWidth, innerHeight]; })()"
+
+
+def sv12_zoom():
+    """Pinch with two fingers, then a mark by finger at that zoom: it must be saved where it was drawn."""
+    if not pick_open("sv-zoom.pdf")["opened"]:
+        R.check("SV-12 file opened through the picker", False, None)
+        return
+    r0 = cdp.js(PAGE0)
+    c = to_screen(r0[4] / 2, r0[5] / 2)
+    span = min(to_screen(r0[4], 0)[0], 1000)
+    touch("pinch", c[0], c[1], round(span * 0.25), round(span * 0.8), 600)
+    time.sleep(2)
+    r1 = cdp.js(PAGE0)
+    shot("sv12-pinched-out")
+    R.check("SV-12a pinch out with two fingers makes the page bigger", r1[2] > r0[2] * 1.15 or (cdp.js("visualViewport.scale") or 1) > 1.15, {"page_w_before": round(r0[2]), "page_w_after": round(r1[2]), "viewport": r0[4:], "visual_scale": cdp.js("visualViewport.scale")})
+    mode("Mark")
+    tool("Mark: Rectangle", "Rectangle", "Box")
+    r = cdp.js(PAGE0)
+    # two points that are on screen and on page 1
+    x0, x1 = max(r[0], 0) + min(r[2], r[4]) * 0.22, max(r[0], 0) + min(r[2], r[4]) * 0.62
+    y0, y1 = max(r[1], 0) + r[5] * 0.22, max(r[1], 0) + r[5] * 0.40
+    a, b = to_screen(x0, y0), to_screen(x1, y1)
+    sh(f"input swipe {a[0]} {a[1]} {b[0]} {b[1]} 700")
+    time.sleep(1.5)
+    shot("sv12-marked-at-zoom")
+    r2 = cdp.js(PAGE0)
+    want = {"x0": round((x0 - r[0]) / r[2] * 595.28, 1), "x1": round((x1 - r[0]) / r[2] * 595.28, 1),
+            "y1": round((1 - (y0 - r[1]) / r[3]) * 841.89, 1), "y0": round((1 - (y1 - r[1]) / r[3]) * 841.89, 1)}
+    s = save_as()
+    got = None
+    if s["files"]:
+        rd, pages = read(s["files"][-1], "sv12-saveas.pdf")
+        got = stamp_rect(rd) if rd else None
+    off = max(abs(got[k] - want[k]) for k in want) if got and "x0" in got else None
+    R.check("SV-12b a rectangle drawn by finger at the pinched zoom is saved where it was drawn (within 10 pt)", off is not None and off <= 10,
+            {"zoomed_page_css": [round(v) for v in r[:4]], "page_moved_during_draw": [round(v) for v in r2[:4]] != [round(v) for v in r[:4]], "drawn_pt": want, "saved_pt": got, "largest_offset_pt": off, "save": s})
+    touch("pinch", c[0], c[1], round(span * 0.8), round(span * 0.25), 600)
+    time.sleep(2)
+    r3 = cdp.js(PAGE0)
+    R.check("SV-12c pinch in makes it smaller again", r3[2] < r1[2] * 0.9, {"page_w_zoomed": round(r1[2]), "page_w_after_pinch_in": round(r3[2])})
+
+
 def sv11_excel():
     adb("push", os.path.join(FX, "test.xlsx"), "/sdcard/Download/sv-sheet.xlsx")
     sh("am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d 'file:///sdcard/Download/sv-sheet.xlsx' >/dev/null")
@@ -807,7 +886,7 @@ def sv11_excel():
 
 
 for name, fn in (("SV-1", sv1_text), ("SV-2", sv2_shape), ("SV-3", sv3_form), ("SV-4", sv4_redact), ("SV-7", sv7_password), ("SV-8", sv8_compress),
-                 ("SV-9", sv9_flatten), ("SV-10", sv10_rotated), ("SV-11", sv11_excel), ("SV-6", sv6_print), ("SV-5", sv5_arrange)):
+                 ("SV-9", sv9_flatten), ("SV-10", sv10_rotated), ("SV-12", sv12_zoom), ("SV-11", sv11_excel), ("SV-6", sv6_print), ("SV-5", sv5_arrange)):
     case(name, fn)
 
 log = adb("logcat", "-d", "-v", "epoch")

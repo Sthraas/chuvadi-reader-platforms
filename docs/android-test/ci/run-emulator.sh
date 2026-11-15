@@ -70,7 +70,7 @@ if [[ $SUITES == *,licence,* ]]; then
   python3 "$HERE/licence.py" "$OUT/licence" "$PKGS/assemblies.txt" || rc=1
 fi
 if [[ $SUITES == *,saves,* ]]; then
-  python3 "$HERE/saves.py" "$OUT/saves" "$OUT/fixtures" || rc=1
+  timeout 2700 python3 "$HERE/saves.py" "$OUT/saves" "$OUT/fixtures" || rc=1
 fi
 if [[ $SUITES == *,drift,* ]]; then
   python3 "$HERE/drift.py" "$OUT/drift" "$OUT/fixtures" || rc=1

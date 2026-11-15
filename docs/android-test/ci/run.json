@@ -1,8 +1,8 @@
 {
-  "round": "10c (save suite: folder picker for Bind, mark card put away, Reduce file size)",
+  "round": "11a (head 070af93: AT-20 with the rotation-aware touch tool, AT-21 with P-09, save suite, pinch)",
   "emulators": "phone-36,tablet-36",
-  "suites": "saves",
+  "suites": "saves,drift",
   "foundation_ref": "07ed3ca834a8d21b20e5176f54852ac0ee52cd79",
-  "mobileui_ref": "86997198419f51b9fc74fdac5d95236c1120fcd3",
-  "android_ref": "ce890a6f1b1c355fff56b9304ecfc0863050d4c7"
+  "mobileui_ref": "a1dfb4011442c64b2a8722e4c16e239ac91544af",
+  "android_ref": "070af9371436fb2f18f3292f270f1e407d34f3d9"
 }
