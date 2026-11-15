@@ -420,7 +420,7 @@ No files are left in `/tmp`.
   - The library items B-08a, B-09a (library side) and B-11a.
 - The real-machine checks still need a real desktop.
 
-## Sign-off — Linux 90895ef (11 Nov): ready for Arun, with two things to know
+## Sign-off — Linux 90895ef (11 Nov) — superseded by 7cd960c below
 
 **Build and CI.** Built from source. [CI run 42862764236](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/42862764236)
 is green. This replaces the bf60da9 sign-off above.
@@ -446,9 +446,35 @@ is green. This replaces the bf60da9 sign-off above.
   (library side) and B-11a, and SH-L2 to SH-L6.
 - The real-machine checks still need a real desktop.
 
-## Arun's check — Linux 90895ef
+## Sign-off — Linux 7cd960c (16 Nov): ready for Arun, with one thing to know
 
-**Get the package.** GitHub → `Sthraas/chuvadi-reader-platforms` → Actions → run **Linux** on `90895ef` ([run 42862764236](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/42862764236), green) → Artifacts → **linux-x64** (ARM machine: `linux-arm64`). Unzip it and use **`deb/chuvadi-reader_1.0.0~preview_amd64.deb`** — the self-contained one (37.8 MB, needs no .NET; artifacts kept until 8 Feb 2027). SHA-256 `c187b4810fa1adf917ec0c33f01c10e50ae1db590f51cc6a129410b77e4a47eb`. (`deb-framework-dependent/` is the smaller variant that pulls in Microsoft's .NET runtime package.) Or with the CLI: `gh run download 42862764236 -R Sthraas/chuvadi-reader-platforms -n linux-x64`.
+**Build and CI.** Built from source. [CI run 42940105350](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/42940105350)
+is green. This replaces the 90895ef sign-off above. Details and numbers are in BUGS.md.
+
+| Check | Result |
+|---|---|
+| M-27, marks by mouse (Mac S1) ✅ | Not on Linux. Rectangle and Text at 54–222 %, on an unrotated and a `/Rotate 90` page: 0 px off on screen, 1–3 pt off in the saved file |
+| B-32, `/Rotate` on screen ✅ | Fixed for 90, 180, 270; vector, cropped and heavy raster pages. Arun's CAD sheets (`/Rotate 270`) now show landscape |
+| Rotated pages in print (Mac's M-26) ✅ | Not clipped: all four pages print whole |
+| Excel grid ✅ | Widths, heights, merges, hidden rows, columns and sheets, right-to-left, gridlines and zoom match the file; Find works on the stored value and the shown text |
+| Excel time-only cells ✗ | **B-31 still open** (library) |
+| Text files ✅ | Windows-1252 reads right; UTF-8 unchanged |
+| Start-up mark ✅ | Never a blank window; no light flash in the dark theme; gone when the app shows |
+| Pinch | Can't be made on this runner. Ctrl+scroll zooms only the page |
+| Real CAD file and quick regression ✅ | Memory 249 → 937 → 265 MB; B-24 + B-08b, B-25, owner-password printing, single instance, drops, print, CropBox |
+
+**The one thing to know: B-31.** An Excel cell holding a time with no date (say 6:00 PM) shows `########`, and the
+stored value offered on hover and in copy is wrong (-0.25 for 0.75). It is a Chuvadi.Sheets item (SH-L1).
+
+**Ready.** Linux at 7cd960c is ready for Arun's check, with B-31 known.
+- Open, not blocking: B-27 (draw speed, library), WebKit's memory after closing, the library items B-08a, B-09a
+  (library side) and B-11a, and SH-L2 to SH-L6.
+- For a real machine: a trackpad pinch, marks under display scaling other than 100 %, start-up timing, and the
+  real-machine checks above.
+
+## Arun's check — Linux 7cd960c
+
+**Get the package.** GitHub → `Sthraas/chuvadi-reader-platforms` → Actions → run **Linux** on `7cd960c` ([run 42940105350](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/42940105350), green) → Artifacts → **linux-x64** (ARM machine: `linux-arm64`). Unzip it and use **`deb/chuvadi-reader_1.0.0~preview_amd64.deb`** — the self-contained one (37.9 MB, needs no .NET; artifacts kept until 9 Feb 2027). SHA-256 `b6ba158d6254fdb23eecd50dbfc39dcbfc1a7380d76dd76df890a95ea52977fb`. (`deb-framework-dependent/` is the smaller variant that pulls in Microsoft's .NET runtime package.) Or with the CLI: `gh run download 42940105350 -R Sthraas/chuvadi-reader-platforms -n linux-x64`.
 
 **Install** (Ubuntu 24.04 or 26.04, desktop):
 ```
@@ -459,15 +485,15 @@ sudo apt install ./chuvadi-reader_1.0.0~preview_amd64.deb
 It appears in the app grid as **Chuvadi Reader**; it also installs and loads its AppArmor profile. If the window ever opens blank, run `sudo apparmor_parser -r /etc/apparmor.d/chuvadi-reader` and start it again. To remove: `sudo apt remove chuvadi-reader` (`purge` also removes settings).
 
 **Ten things worth trying first**
-1. **Start from the app grid**, cold and again warm — note how long until Home shows (here: ~1.0 s warm on 2 CPUs without a GPU).
+1. **Start from the app grid**, cold and again warm — note how long until Home shows (here: about 1.5–2 s on 2 CPUs without a GPU). From the moment the window appears you should see a small progress bar on the theme's background, never a blank window; in the dark theme, no light flash.
 2. **Open a PDF by double-clicking it in Files**, then select **three files** → right-click → Open With → Chuvadi: each becomes its own tab in the one window.
 3. **Drag two files from Files onto the window** — two tabs.
-4. **The KDMC CAD drawing**: open it, page through all 5 sheets (try typing a sheet number, and jumping ahead then back), zoom in and out, close it. Note the time each sheet takes to draw, and the memory in System Monitor before opening, with 5 sheets, and just after closing. Here, on 2 CPUs with no GPU: sheet 1 takes ~6 s and each new sheet 4–6 s (B-27, known); the app goes from ~250 MB to ~0.9–1 GB with 5 sheets and back to ~270 MB on closing. Your real-hardware numbers are the useful ones. The window should stay responsive while it draws, and every sheet should draw and stay sharp. The rare fresh-open stall (a drawing stuck at 115 % with a tall blank page) is fixed on this head; if you ever see it, note what you did just before.
+4. **The KDMC CAD drawing**: open it (the sheets should now show landscape, the right way up), page through all 5 sheets (try typing a sheet number, and jumping ahead then back), zoom in and out, close it. Note the time each sheet takes to draw, and the memory in System Monitor before opening, with 5 sheets, and just after closing. Here, on 2 CPUs with no GPU: sheet 1 takes ~6 s and each new sheet 4–6 s (B-27, known); the app goes from ~250 MB to ~0.9–1 GB with 5 sheets and back to ~270 MB on closing. Your real-hardware numbers are the useful ones. The window should stay responsive while it draws, and every sheet should draw and stay sharp. The rare fresh-open stall (a drawing stuck at 115 % with a tall blank page) is fixed on this head; if you ever see it, note what you did just before.
 5. **Print to your real printer**: a mixed portrait/landscape file, 2 copies; check it's crisp (vector), and that a file whose permissions forbid printing is refused — then works when opened with its owner password.
 6. **A password-protected PDF**: wrong password, then the right one.
 7. **Mark → annotate → Save as**, and **Protect → Find & redact** a word → Save redacted copy — then search the saved copy for the word (it must be gone).
-8. **Word and Excel files** of your own — text should read exactly as in the file (spaces, spelling, case untouched). Excel numbers now show in the file's own format (currency, percent, dates; D-161); hover a cell or click it to see the stored value. Two known gaps: a time with no date shows `########` with a wrong stored value (B-31), and built-in short dates show as mm-dd-yy, not your system's format.
+8. **Word and Excel files** of your own — text should read exactly as in the file (spaces, spelling, case untouched). The Excel grid now follows the file: column widths, row heights, merged cells, borders and fills, hidden rows and columns, and hidden sheets listed dimmed. Numbers show in the file's own format; hover or click a cell for the stored value. Two known gaps: a time with no date shows `########` with a wrong stored value (B-31), and built-in short dates show as mm-dd-yy, not your system's format.
 9. **Document ▾ → Show in folder** opens Files with the file selected; **Snapshot → Copy** then paste into another app.
-10. **Settings**: switch the five themes and the interface size; change GNOME's window-button layout (Tweaks → Window Titlebars) and see the buttons follow; maximise and restore (corners square when maximised, rounded otherwise).
+10. **Settings and gestures**: switch the five themes and the interface size; change GNOME's window-button layout (Tweaks → Window Titlebars) and see the buttons follow; maximise and restore. **Pinch on the trackpad** over a page: the page should zoom about your fingers, both ways, and the bars and tabs should not scale; on Home a pinch should do nothing. Then draw a rectangle in Mark after pinching: it should land under the pointer. I couldn't test a real pinch here.
 
 Anything odd: note the step and what you saw; I reproduce it here and file it in `BUGS.md`.

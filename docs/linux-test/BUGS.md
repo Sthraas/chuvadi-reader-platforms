@@ -33,15 +33,15 @@ Every bug gets fixed; I re-verify on the fixing commit and mark it here.
 | B-21 | S3 | Linux | Show in folder: 5 s D-Bus timeout → `xdg-open` fallback → two file-manager windows | **verified fixed f3d5978** — cold Nautilus: one window; `xdg-open` fallback never called (logging stub) |
 | B-22 | S4 | shared Ui/Core | No designed keyboard-focus style: each engine draws its own (GTK blue on Linux) | **verified fixed e468d1a** (Foundation 8th patch) — focus ring 2 px solid in the theme accent (#8a3a1c in light) |
 | B-23 | S4 | shared Ui/Core | Tab order starts with one "Send page N to a desk" button per page | **verified fixed e468d1a** (Foundation 8th patch) — Tab starts on the current page's strip (rotate, send, snapshot, bookmark), not one button per page |
-| B-24 | S2 | **shared Ui/Core** | A stalled read (hung network share) shows a blank Reader with no "Opening…" or Cancel, and blocks every later open | **verified fixed 7595ef3** (13th patch) — stalled `.pdf`/`.xlsx`/`.docx`: "Opening…" at 0.3–0.9 s, Cancel at 10 s, Cancel closes the tab, later opens never blocked · re-verified 64c9c16 · 8dcf4d8 · d918161 · bf60da9 · 90895ef |
-| B-25 | S4 | **shared Ui/Core** | Excel viewer errors still use the old one-line wording (no WT-10 sentence + Details) | **verified fixed 7595ef3** — Excel "This file couldn't be read as an Excel workbook.", Word "…as a Word document.", damaged PDF "This PDF is damaged…", each with Details · re-verified 64c9c16 · 8dcf4d8 · d918161 · bf60da9 · 90895ef |
+| B-24 | S2 | **shared Ui/Core** | A stalled read (hung network share) shows a blank Reader with no "Opening…" or Cancel, and blocks every later open | **verified fixed 7595ef3** (13th patch) — stalled `.pdf`/`.xlsx`/`.docx`: "Opening…" at 0.3–0.9 s, Cancel at 10 s, Cancel closes the tab, later opens never blocked · re-verified 64c9c16 · 8dcf4d8 · d918161 · bf60da9 · 90895ef · 7cd960c |
+| B-25 | S4 | **shared Ui/Core** | Excel viewer errors still use the old one-line wording (no WT-10 sentence + Details) | **verified fixed 7595ef3** — Excel "This file couldn't be read as an Excel workbook.", Word "…as a Word document.", damaged PDF "This PDF is damaged…", each with Details · re-verified 64c9c16 · 8dcf4d8 · d918161 · bf60da9 · 90895ef · 7cd960c |
 | B-26 | S3 | **shared Ui/Core** | Excel number formats not applied: `"₹"#,##0.00` shows `1234.5`, `0.00%` shows `0.125` (values unaltered) — Sheets 2.0.2 now has `Cell.GetDisplayText` | **superseded by D-161, verified 90895ef** — cells now show their number format as the file holds it (₹1,234.50, 12.50%, dates); the stored value is on hover, in the value bar and in copy. Exception: time-only cells (B-31) |
-| B-27 | S3 (perf) | **library + shared Ui/Core** | Large vector CAD PDF (5 × A1, ~1.44 M path ops): ~3–4 s to open + ~1 s to draw page 1; app memory 1.6 GB after viewing 5 pages | open (library) — 90895ef: sheet 1 6.3 s, sheets 2–5 4.0–6.0 s; page answers ≤ 0.18 s |
+| B-27 | S3 (perf) | **library + shared Ui/Core** | Large vector CAD PDF (5 × A1, ~1.44 M path ops): ~3–4 s to open + ~1 s to draw page 1; app memory 1.6 GB after viewing 5 pages | open (library) — 7cd960c: sheet 1 6.2 s, sheets 2–5 4.0–6.0 s; page answers ≤ 0.12 s |
 | B-28 | S2 | Linux (UI test) | UI tests 36a–36c count the 24×24 loading icon as a drawn page, so their sheet times (0.1–0.2 s) and 36c memory don't measure the real drawing | **verified fixed 8dcf4d8** (4de79ed) — `rendered()` counts only a page-sized svg; Linux's 36c sheet times (4.9–5.6 s) now match mine on the real file |
 | B-29 | S3 | **shared Ui/Core** (render queue) | Closing the CAD tab mid-render: the next file sometimes waits 3.7–4.6 s for its first page (2 of 6 closes) | **verified fixed 8dcf4d8; re-verified d918161, bf60da9, 90895ef** — 6 of 6 mid-render closes: next file drawn in 0.27–0.30 s |
-| B-30 | S2 (perf) | **shared Ui/Core + Foundation** | Memory isn't given back after closing the CAD drawing: 1.43–1.77 GB stays for 60 s+, and 680 MB of managed heap is still live after a full collection | **verified fixed bf60da9, re-verified 90895ef** — app 251 MB before, 936 MB with 5 sheets, 267 MB 2 s after closing. Recorded: WebKit 222 → ~586 MB and stays |
-| B-31 | S2 | **library** (Chuvadi.Sheets, SH-L1) | Excel time-only cells (stored 0 to 1, e.g. 6:00 PM) show `########`, and the stored value on hover, in the value bar and in copy is wrong (0.75 reads as -0.25). On bf60da9 they showed `1899-12-30 18:00` | **open** — 90895ef |
-| B-32 | S2 | **library + shared Ui/Core** | A PDF page's `/Rotate` (90, 180, 270) is ignored on screen: the page shows unrotated. Same on bf60da9 | **open** — 90895ef |
+| B-30 | S2 (perf) | **shared Ui/Core + Foundation** | Memory isn't given back after closing the CAD drawing: 1.43–1.77 GB stays for 60 s+, and 680 MB of managed heap is still live after a full collection | **verified fixed bf60da9; re-verified 90895ef, 7cd960c** — app 249 MB before, 937 MB with 5 sheets, 265 MB 2 s after closing. Recorded: WebKit 221 → ~587 MB and stays |
+| B-31 | S2 | **library** (Chuvadi.Sheets, SH-L1) | Excel time-only cells (stored 0 to 1, e.g. 6:00 PM) show `########`, and the stored value on hover, in the value bar and in copy is wrong (0.75 reads as -0.25). On bf60da9 they showed `1899-12-30 18:00` | **open** — still on 7cd960c: `########`, stored value shown as -0.25 for 0.75 |
+| B-32 | S2 | **library + shared Ui/Core** | A PDF page's `/Rotate` (90, 180, 270) is ignored on screen: the page shows unrotated. Same on bf60da9 | **verified fixed 7cd960c** (86996dd) — 90, 180 and 270 turned as the file says, on vector pages, on a cropped page and on heavy raster sheets (Arun's CAD sheets are `/Rotate 270` and now show landscape) |
 | K-01 | — | Linux | GNOME close-only layout showed all three buttons (known, 7 Nov) | **verified fixed f7d0034, re-verified f3d5978** (6 layouts) |
 
 Routing (coordinator, 8 Nov): **Linux** → the Linux chat. **shared Ui/Core** → Foundation's combined patch, as exact diffs from the Linux chat or Foundation. **library** → the coordinator compiles them for Arun (library coordinator).
@@ -687,3 +687,84 @@ when this was written.
   by an amount that follows the zoom. Here it does not (rectangle on the drag's corners at 54, 100, 150 and 300 %,
   before and after pinch steps; BUILD-LOG §56), but my pinch steps are not a real trackpad's. Please draw a
   rectangle with the mouse at about 54, 100 and 150 %, **before and after a real pinch**, and say where it lands.
+
+
+---
+## Linux Test — 16 Nov, re-check on `platform/linux` 7cd960c (Foundation's patch 26; start-up mark; pinch)
+Built from source; CI run 42940105350 is green. Runner: Xvfb + mutter, 100 % scaling, 2 vCPU, no GPU.
+New tools: `tools/t_mark.py`, `t_mark_saved.py`, `t_grid.py`, `t_startmark.py`. New fixtures: `fixtures/mark-rot.pdf`
+(page 1 unrotated, page 2 `/Rotate 90`, 50-pt grid) and `fixtures/rot4.pdf` (0, 90, 180, 270).
+
+**M-27 (Mac Test, S1): not reproduced on Linux. Marks land under the pointer.**
+- *Method.* On `mark-rot.pdf`, a Rectangle dragged with the mouse and a Text mark clicked and typed, on both pages,
+  at 54 %, 61 %, 86 % (Fit page), 111 %, 118 %, 161 % and 222 %. The zoom was set with the buttons (61, 86, 111, 161)
+  and with Ctrl+scroll (54, 118, 222). Each run was saved with "Save as new PDF", and the saved file rendered with Poppler.
+- *On screen.* All 14 Rectangles have exactly the dragged box (0 px difference in x, y, width and height), in the
+  page and in a screenshot diff. All 14 Text boxes start exactly at the click point.
+- *In the saved file.* Every mark is within 1–3 pt of the pointer's position on the page, on both pages. Example at
+  161 %, rotated page: pointer box 105, 60 – 303, 152 pt; saved ink 104, 59 – 304, 153 pt.
+- *Draw (freehand).* Strokes land on the pointer path. In my first runs some strokes were missing; that was my
+  test starting the stroke on top of the Text box it had just made. Away from other marks, 8 of 8 strokes drew.
+- *Not covered here.* Display scaling other than 100 % (HiDPI, fractional scaling) and a real pinch. Linux has since
+  added UI step 38 for marks after pinches (9a38f62, after this head); I haven't run that head.
+
+**B-32 ✅ fixed.**
+
+| File | Shown | Verdict |
+|---|---|---|
+| `rot4.pdf` page 1 (0) | 595 × 842, red bottom-left, blue top-right | ✅ |
+| page 2 (`/Rotate 90`) | 842 × 595, red top-left, blue bottom-right | ✅ |
+| page 3 (180) | 595 × 842, red top-right, blue bottom-left | ✅ |
+| page 4 (270) | 842 × 595, red bottom-right, blue top-left | ✅ |
+| `crop.pdf` page 2 (CropBox + 90) | 500 × 400, cropped and turned | ✅ |
+| Heavy stand-in sheet turned with `qpdf --rotate=+90` | Portrait 1684 × 2384 raster | ✅ |
+| Arun's CAD file (all 5 sheets are `/Rotate 270`) | Each sheet image is now 4967 × 3508 (landscape); on every earlier head it was 3508 × 4967 | ✅ |
+
+Arun's drawing was shown turned on its side on every head before this one. The ink count per sheet is unchanged
+(for example 647,248 pixels on sheet 1), so it is the same picture, turned.
+
+**Rotated pages in print (Mac's M-26): not clipped on Linux.** `rot4.pdf` goes to CUPS byte-identical. In the
+printed PDF, all four pages are A4 and carry both corner squares whole (30 × 30 px at 36 dpi) and the text.
+CUPS prints the 180° page the same way up as the unrotated one; on paper that makes no difference.
+
+**Excel grid as the file holds it ✅** (`layout.xlsx`, against its own XML):
+
+| In the file | Shown | Verdict |
+|---|---|---|
+| Column A width 20, E width 5, others default | 140, 35 and 64 px | ✅ Excel's rule |
+| Row 3 height 30 pt, row 16 48 pt, others default | 40, 64 and 20 px | ✅ |
+| A1:B2 merged | One box, 204 × 40 px | ✅ |
+| Row 5 hidden, column C hidden | Row numbers go 4, 6; column letters go B, D | ✅ |
+| Sheets "Secret" (hidden) and "Deep" (very hidden) | Listed dimmed, marked "hidden"; they open | ✅ |
+| Sheet "Settings": right to left, no gridlines, zoom 150 | `rtl`, no lines, zoom 1.5 | ✅ |
+| A12 comment, A13 hyperlink | Comment text and link target carried on the cell | ✅ |
+
+- *Find.* "hidden" finds 2 cells on Layout (in the hidden row and the hidden column) and 1 on each hidden sheet.
+  `7654321` (the stored value) and `7,654,321` (the shown text) both find A18. `42` goes to B1 on Settings.
+- *`exact.xlsx`.* Text cells are still exact (double spaces, leading and trailing spaces, case, spelling, Tamil,
+  tab, `00123`, line break); ₹1,234.50 and 12.50% as before.
+- **B-31 is still open.** Time-only cells show `########`, and the stored value reads -0.25 for 0.75.
+
+**Text files ✅.** A Windows-1252 file shows `café – “quoted” € 5`; a UTF-8 file with Tamil is unchanged.
+
+**Start-up mark ✅.** The screen was grabbed about 10 times a second during launch, four launches.
+
+| Launch | Sequence | Blank or light frames |
+|---|---|---|
+| Light, first | desktop → mark at 0.95 s → app at 1.97 s | none |
+| Light, again | desktop → mark at 0.84 s → app at 1.84 s | none |
+| Dark, first | desktop → mark at 0.77 s (dark background) → app at 1.56 s | none |
+| Dark, again | desktop → mark at 0.91 s (dark background) → app at 1.59 s | none |
+
+The mark is gone once the app shows. Real-machine timing, cold and warm, still needs Arun's laptop.
+
+**Pinch.** A real pinch can't be made on this runner. What I could check:
+- Ctrl+scroll over a page zooms the page (86 % → 138 % → 86 %); the top bar (40 px) and side bar (208 px) don't change.
+- Ctrl+scroll on Home changes nothing.
+- A real trackpad pinch under GNOME Wayland, and a touch screen, remain for a real machine.
+
+**Real CAD file ✅.** Sheet 1 in 6.2 s. Memory, app / WebKit, in MB: 249 / 221 before, 937 / 593 with 5 sheets,
+265 / 587 after closing.
+
+**Quick regression ✅.** B-24 + B-08b Cancel (`.pdf`, `.xlsx`, `.docx`); B-25; owner-password printing; single
+instance (1 window, 4 tabs); drops; print byte-identical; CropBox pages 1, 3 and 4; Ctrl+F; no files left in `/tmp`.
