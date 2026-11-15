@@ -513,14 +513,13 @@ Checked again on this head:
 
 **Two notes**
 - My test copy is built with SDK 10.0.114, with `global.json` (10.0.403) set aside. CI uses the pinned SDK.
-- CI run 43764387511 on ac90d94 was still in progress when I wrote this. The package in Arun's checklist below
-  stays on 1e9d45a until that run is green.
+- [CI run 43764387511](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/43764387511) on ac90d94 is green, and Arun's checklist below uses its package.
 
 **Ready**, with B-31 (Excel time-only cells) known. A real trackpad pinch still needs a real machine.
 
-## Arun's check — Linux 1e9d45a
+## Arun's check — Linux ac90d94
 
-**Get the package.** GitHub → `Sthraas/chuvadi-reader-platforms` → Actions → run **Linux** on `1e9d45a` ([run 43750913193](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/43750913193), green) → Artifacts → **linux-x64** (ARM machine: `linux-arm64`). Unzip it and use **`deb/chuvadi-reader_1.0.0~preview_amd64.deb`** — the self-contained one (37.9 MB, needs no .NET; artifacts kept until 13 Feb 2027). SHA-256 `c98b65f0e77fc3e4c667da3b7fb8ece6b543674359b53970de09ded46269119f`. (`deb-framework-dependent/` is the smaller variant that pulls in Microsoft's .NET runtime package.) Or with the CLI: `gh run download 43750913193 -R Sthraas/chuvadi-reader-platforms -n linux-x64`.
+**Get the package.** GitHub → `Sthraas/chuvadi-reader-platforms` → Actions → run **Linux** on `ac90d94` ([run 43764387511](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/43764387511), green) → Artifacts → **linux-x64** (ARM machine: `linux-arm64`). Unzip it and use **`deb/chuvadi-reader_1.0.0~preview_amd64.deb`** — the self-contained one (37.9 MB, needs no .NET; artifacts kept until 13 Feb 2027). SHA-256 `20f1248c70a7fc9f1511512a2e18a7d07833b47986ff5c70cbcefe3759ac7638`. (`deb-framework-dependent/` is the smaller variant that pulls in Microsoft's .NET runtime package.) Or with the CLI: `gh run download 43764387511 -R Sthraas/chuvadi-reader-platforms -n linux-x64`.
 
 **Install** (Ubuntu 24.04 or 26.04, desktop):
 ```
