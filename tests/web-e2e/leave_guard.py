@@ -14,7 +14,7 @@ import sys
 
 from playwright.sync_api import sync_playwright
 
-from pdfs import sign_in_as
+from pdfs import sign_in_as, sign_out
 
 base, pdf = sys.argv[1].rstrip("/"), sys.argv[2]
 engine = sys.argv[sys.argv.index("--browser") + 1] if "--browser" in sys.argv else "chrome"
@@ -111,6 +111,7 @@ with sync_playwright() as p:
     except Exception:  # noqa: BLE001 - reported below
         pass
     check("the portal's own leave at session end is not questioned", armed is True and len(dialogs) == seen and page.url.endswith("/signed-out"), page.url[-30:])
+    sign_out(ctx, base)
     b.close()
 
 sys.exit(0 if all(results) else 1)

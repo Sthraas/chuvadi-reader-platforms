@@ -22,7 +22,11 @@ jobs:
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          global-json-file: global.json   # the repo's pinned SDK (D-178, D-186)
+
+      # global.json pins the workload set too; no build runs until that set's manifests are on the machine.
+      - name: Install the pinned workload set
+        run: dotnet workload update
 
       # Same committed feed the Reader's CI uses (ci/packages), so the web build gets the exact
       # Chuvadi packages the Windows app ships.

@@ -179,6 +179,29 @@ public class EndpointTests : IClassFixture<PortalFixture>
     }
 
     [Fact]
+    public async Task Development_sign_out_ends_the_persons_session_and_shows_the_signed_out_page()
+    {
+        // Without Sangam a session could only end by expiry; it keeps its files and worker while it lasts (D-174).
+        var sessions = _portal.App.Services.GetRequiredService<ChuvadiReader.Web.Files.SessionStates>();
+        var who = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity([new System.Security.Claims.Claim("sub", "signs-out")], "test"));
+        var session = sessions.For(who);
+        var file = Path.Combine(session.Root, "uploads", "a.pdf");
+        await File.WriteAllTextAsync(file, "x");
+
+        using var crossSite = _portal.Client("signs-out", withOrigin: false);
+        crossSite.DefaultRequestHeaders.Add("Sec-Fetch-Site", "cross-site");
+        Assert.Equal(HttpStatusCode.Forbidden, (await crossSite.GetAsync("/signout")).StatusCode);
+        Assert.True(File.Exists(file)); // another site can't sign someone out
+
+        using var c = _portal.Client("signs-out", withOrigin: false);
+        using var r = await c.GetAsync("/signout");
+        Assert.Equal(HttpStatusCode.OK, r.StatusCode); // the client followed the redirect
+        Assert.Equal("/signed-out", r.RequestMessage?.RequestUri?.AbsolutePath);
+        Assert.True(session.Ended);
+        Assert.False(Directory.Exists(session.Root));
+    }
+
+    [Fact]
     public async Task The_circuit_refuses_a_foreign_origin_in_single_mode_too()
     {
         using var own = _portal.Client("alice");

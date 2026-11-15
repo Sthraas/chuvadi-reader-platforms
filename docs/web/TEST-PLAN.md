@@ -21,6 +21,8 @@ Test tooling (Playwright, its browsers, PostgreSQL for the local Sangam) is used
 | Production rehearsal | `ASPNETCORE_ENVIRONMENT=Production`, gateway mode, data root on tmpfs (`/dev/shm/...`), TLS from a test PEM on 8443, `ASPNETCORE_HTTPS_PORT`, `--insecure` in the e2e | Start-up checks, redirects, headers, cookies as in production |
 | Staging VM | Same size as production (runbook §2), before go-live | Load at real size, real Let's Encrypt staging, real Sangam |
 
+The repo's `global.json` pins the SDK (10.0.403) and the workload set, with roll-forward off (D-178, D-186). Once per machine, in the repo folder, run `dotnet workload update`, or nothing builds, not even Core ("Workload version 10.0.403 … was not found"). Both workflows do it.
+
 From a clean clone, restore from the committed feed first (WT-12; the root `nuget.config` points at a local folder that isn't in git):
 
 ```
@@ -66,6 +68,7 @@ The Web projects aren't in `ChuvadiReader.Platforms.slnx` on purpose: that solut
 | F-26 | Open tabs belong to the signed-in session (D-174, WT-22) | A reload, the portal's address opened again, a dropped connection or a second browser tab of the same sign-in shows the same tabs (order, active tab, page); the active document is drawn again from the same working copy; settings and recents survive too. A tab closed before a reload stays closed. Closing the browser tab without signing out and coming back within the session shows the documents again. Another person, or the same person's other sign-in, sees none of it. Not kept across a reload: marks not yet saved into the file, and a typed password (asked again) | U `SessionKeepsTabsTests`; E `reload.py` (4 engines), `comeback.py`, `sangam_signin.py` (real cookie and sid, 3 engines); M on a phone: lock the screen for a minute, unlock |
 | F-27 | What a connection and a session let go of (WT-22, WT-21) | A connection that ends (reload, tab closed) closes the documents it had open at once: their page images answer 404 within seconds and their memory is freed; the saved tab list is untouched. When the session ends (sign-out, expiry, a Sangam sign-out), with any number of connections or none: every page image of that sign-in is freed (`PageImages.RemoveOwner`), its folder is deleted, its settings dropped, and its worker stops | U `SessionKeepsTabsTests`; E `reload.py`, `expiry.py` (a reload, then expiry: both images 404, files gone), `comeback.py` (expiry with no tab open: worker and files gone) |
 | F-28 | "Leave site?" while marks are unsaved (D-181) | With unsaved marks on the open document (the Reader shows "unsaved"), a reload, closing the tab or going to another site raises the browser's own question; staying keeps the marks. With no marks, after "Save" into the file or "Clear all marks", nothing is asked. The portal's own leave at session end is never questioned. Not covered: marks on a document that isn't the one showing; and after "Save as new PDF" the question still comes, because the marks are still not in this document (the Reader still says "unsaved") | U `LeaveGuardTests`; E `leave_guard.py` (4 engines; Firefox shows the dialog only after a real person's input); M on each browser in §5a: draw a mark, press F5, choose Stay, then Leave |
+| F-29 | A mark drawn by mouse lands where it was drawn, at any zoom (M-27, patch 27) | At the opening zoom, zoomed in and zoomed out, a rectangle dragged on the page sits under the drag: each edge within 4 px, in every engine | E `mark_zoom.py` (4 engines; within 1 px). **M on a real, older Safari** (Mac and iPhone/iPad, §5a): the fault was in older WebKit, which reports a zoomed element's rectangle unzoomed; the test tool's WebKit is current and never had it |
 
 ## 2. Security checks
 
@@ -255,7 +258,13 @@ Found and fixed while running this plan:
 - Shared solution 0 warnings and its tests; Web 180/180; package check.
 - `leave_guard.py` 7/7 in Chrome, WebKit and Chromium, 6/6 in Firefox; `flows.py` 10/10, `reload.py` 11/11 and `page_images.py` 7/7 in all four engines; `expiry.py` 12/12 in Chrome, Firefox and WebKit.
 
+**16 Nov, early (Foundation `57a63c5`, patch 27, merged; pinned SDK 10.0.403):**
+- Shared solution 0 warnings and its tests (Reader 374 with 6 skipped by the Foundation, Hosting 97, Mobile UI 16, Web UI 41); Web 181/181; package check.
+- `mark_zoom.py` 4/4 (within 1 px at three zooms), `flows.py` 10/10, `reload.py` 11/11, `page_images.py` 7/7, `office_limits.py` 6/6 and `leave_guard.py` (7/7; Firefox 6/6) in Chrome, Firefox, WebKit and Chromium.
+- `expiry.py` 12/12 and `sangam_signin.py` 18/18 in Chrome, Firefox and WebKit; `comeback.py` 5/5 in Chrome and WebKit; `load.py` 3/3.
+
 ## 8. Known gaps
+- **Browser tests must sign out when they finish** (`sign_out` in `tests/web-e2e/pdfs.py`; in Development `/signout` now ends the person's session). A session keeps its worker until it ends (D-174). On 16 Nov, twenty runs that never signed out left 40 workers alive, the pool's cap, holding 6.5 GB on an 8 GB machine (about 162 MB each), and a load run's page turn timed out. With sign-out, 4 to 7 workers stay.
 - **Browser tests need a person of their own per run** (`sign_in_as` in `tests/web-e2e/pdfs.py`). A signed-in session now keeps its tabs (D-174), so a fixed test name starts each run with the last run's documents open, tabs pile up, and that person's worker stays for the whole session. The first re-run after patch 26 showed it as three one-off failures; with a person per run everything passed.
 - **Browser tests and the Development sign-in:** name the person with the `chvd-dev-user` cookie, not only the `X-Dev-User` header. A closing page's "disconnect" call is a beacon: it carries cookies (as the real sign-in does) but not a test tool's extra headers, so with the header alone it reaches the default person's worker and the old connection lingers for 3 minutes. That made WT-22's leak look larger in Development than it is with the real cookie.
 - The legal texts are drafts and say not to publish until counsel has reviewed them: V-7 blocks go-live until the DRAFT lines are gone.

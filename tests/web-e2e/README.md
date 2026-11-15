@@ -26,5 +26,8 @@ env ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS=http://127.0.0.1:5090 Por
 | `reload.py <base> <some.pdf> <out> [--browser …]` | Development sign-in (by cookie), gateway mode | D-174: after a reload both tabs are back and the active one is drawn; the old connection's page image is freed; the portal's address again and a second browser tab show the same tabs; a tab closed before a reload stays closed; another person sees none. |
 | `comeback.py <base> <some.pdf> <data root> [--browser …]` | Short limits (see the script) | D-174: with the browser tab closed and no sign-out, the session's worker and file stay; coming back shows the document; after expiry with no tab open, the worker and files are gone and a new session starts empty. |
 | `leave_guard.py <base> <some.pdf> [--browser …]` | Development sign-in | D-181: no question with no marks; after drawing a rectangle a reload raises the browser's "Leave site?" and staying keeps the mark; after "Clear all marks" a reload goes straight through; the portal's own leave at session end is not questioned. |
+| `mark_zoom.py <base> <some.pdf> [--browser …]` | Development sign-in | M-27: a rectangle drawn by mouse at the opening zoom, zoomed in and zoomed out lands under the drag, each edge within 4 px. |
 
 Name the person with the `chvd-dev-user` cookie in new browser tests (`ctx.add_cookies`), not only the `X-Dev-User` header: a closing page's "disconnect" beacon carries cookies only.
+
+Sign out when a script finishes (`sign_out(ctx, base)`): a signed-in session keeps its worker until it ends (D-174), so test people who never sign out pile up for 30 minutes and fill the worker pool.

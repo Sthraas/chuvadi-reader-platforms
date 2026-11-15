@@ -147,6 +147,10 @@ async def person(browser, n, results):
         except Exception:  # noqa: BLE001
             pass
     finally:
+        try:  # sign out, as a person would: a session keeps its worker until it ends (D-174)
+            await ctx.request.get(base + "/signout", max_redirects=0)
+        except Exception:  # noqa: BLE001
+            pass
         await ctx.close()
 
 

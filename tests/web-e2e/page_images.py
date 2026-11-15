@@ -11,7 +11,7 @@ import sys
 
 from playwright.sync_api import sync_playwright
 
-from pdfs import large_format_pdf, sign_in_as
+from pdfs import large_format_pdf, sign_in_as, sign_out
 
 base, out = sys.argv[1].rstrip("/"), sys.argv[2]
 engine = sys.argv[sys.argv.index("--browser") + 1] if "--browser" in sys.argv else "chrome"
@@ -70,6 +70,8 @@ with sync_playwright() as p:
         page.click("button.rtab-x")
         page.wait_for_timeout(2000)
         check("after the tab is closed the owner gets 404 too", owner.request.get(url).status == 404)
+    sign_out(owner, base)
+    sign_out(other, base)
     b.close()
 
 sys.exit(0 if all(results) else 1)

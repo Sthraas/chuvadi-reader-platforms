@@ -13,7 +13,7 @@ import time
 
 from playwright.sync_api import sync_playwright
 
-from pdfs import large_format_pdf, sign_in_as
+from pdfs import large_format_pdf, sign_in_as, sign_out
 
 base, pdf, out = sys.argv[1].rstrip("/"), sys.argv[2], sys.argv[3]
 engine = sys.argv[sys.argv.index("--browser") + 1] if "--browser" in sys.argv else "chrome"
@@ -128,6 +128,8 @@ with sync_playwright() as p:
     op.wait_for_timeout(2000)
     check("another person sees no tabs", op.evaluate(TABS) == [], op.evaluate(TABS))
     check("no page errors", not errors, "; ".join(errors[:3]))
+    sign_out(ctx, base)
+    sign_out(other, base)
     b.close()
 
 sys.exit(0 if all(results) else 1)

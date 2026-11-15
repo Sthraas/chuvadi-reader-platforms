@@ -3,7 +3,7 @@ Test tool only (Playwright + the machine's Chrome)."""
 import sys, time, os
 from playwright.sync_api import sync_playwright
 
-from pdfs import sign_in_as
+from pdfs import sign_in_as, sign_out
 
 base, pdf, out, serverlog = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
 # --browser chrome (the machine's Chrome, default) | chromium | firefox | webkit (Safari's engine)
@@ -168,6 +168,7 @@ with sync_playwright() as p:
           "%s, %d download(s), %d entries" % (d.suggested_filename, len(downloads), len(names)))
 
     check("no console errors", not errors, "; ".join(errors[:3]))
+    sign_out(ctx, base)
     b.close()
 
 sys.exit(0 if all(ok for _, ok, _ in results) else 1)

@@ -14,7 +14,7 @@ import zipfile
 
 from playwright.sync_api import sync_playwright
 
-from pdfs import sign_in_as
+from pdfs import sign_in_as, sign_out
 
 base, out = sys.argv[1].rstrip("/"), sys.argv[2]
 engine = sys.argv[sys.argv.index("--browser") + 1] if "--browser" in sys.argv else "chrome"
@@ -112,6 +112,7 @@ with sync_playwright() as p:
     with urllib.request.urlopen(base + "/healthz", timeout=10) as r:
         check("the portal still answers", r.status == 200)
     check("no page errors", not errors, "; ".join(errors[:3]))
+    sign_out(ctx, base)
     b.close()
 
 sys.exit(0 if all(ok for _, ok, _ in results) else 1)

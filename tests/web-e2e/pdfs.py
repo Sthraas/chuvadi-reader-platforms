@@ -28,3 +28,12 @@ def sign_in_as(ctx, base, name):
     who = "%s-%d" % (name, int(time.time() * 1000) % 100000000)
     ctx.add_cookies([{"name": "chvd-dev-user", "value": who, "url": base}])
     return who
+
+
+def sign_out(ctx, base):
+    """Ends the context's session, as "Sign out" does. Call it when a script is done: a signed-in session keeps
+    its documents and its worker until it ends (D-174), so people who never sign out pile up for 30 minutes."""
+    try:
+        ctx.request.get(base + "/signout", max_redirects=0)
+    except Exception:  # noqa: BLE001 - the portal may already be gone
+        pass

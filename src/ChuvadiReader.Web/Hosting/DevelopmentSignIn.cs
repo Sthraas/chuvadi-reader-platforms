@@ -47,3 +47,32 @@ public sealed class DevelopmentSignInHandler : AuthenticationHandler<Authenticat
         return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(identity), SchemeName)));
     }
 }
+
+/// <summary>
+/// Development and test only, when Sangam isn't configured: <c>/signout</c> ends the person's session (every
+/// open tab leaves, its documents are closed, its files deleted, its worker stops) and shows the signed-out
+/// page, as the real sign-out does. Without it a Development session could only end by expiry, and since a
+/// session keeps its documents and its worker while it lasts (D-174), every test person stayed for 30 minutes.
+/// </summary>
+public static class DevelopmentSignOut
+{
+    public static IEndpointRouteBuilder MapDevelopmentSignOut(this IEndpointRouteBuilder app)
+    {
+        app.MapGet("/signout", async (HttpContext http, Auth.ITabControl tabs) =>
+        {
+            // As the real sign-out: a cross-site page can't sign someone out.
+            if (http.Request.Headers["Sec-Fetch-Site"].ToString() is "cross-site")
+            {
+                return Results.StatusCode(StatusCodes.Status403Forbidden);
+            }
+
+            if (http.User.FindFirst("sub")?.Value is { } sub)
+            {
+                await tabs.EndAsync(sub, null).ConfigureAwait(false);
+            }
+
+            return Results.Redirect(Auth.SangamSignIn.SignedOutPath);
+        });
+        return app;
+    }
+}

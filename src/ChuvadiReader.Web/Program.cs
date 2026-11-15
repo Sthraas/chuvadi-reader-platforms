@@ -161,6 +161,10 @@ public static class Program
         {
             app.MapSangamSignIn();
         }
+        else if (devSignIn)
+        {
+            app.MapDevelopmentSignOut(); // "Sign out" works without Sangam too: it ends the person's session
+        }
 
         app.MapSignedOutPage(withSangam: sangam.IsConfigured);
         if (mode == PortalMode.Gateway)
