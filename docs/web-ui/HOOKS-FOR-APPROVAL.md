@@ -1,7 +1,7 @@
 # Web portal UI — existing-file hooks
 
 ## Still to apply — "Sign with certificate" off on the portal, greyed with its reason (U-18 b, D-187)
-**`proposal/web-ui-portal-certificate-off.patch`**, against foundation **20030cb** (applies cleanly; independent of the Find-focus patch below, and the two apply together). Nine files, 43 lines added and 4 removed:
+**`proposal/web-ui-portal-certificate-off.patch`**, against foundation **20030cb** (applies cleanly; independent of the Find-focus patch below, and the two apply together). Nine files, 48 lines added and 7 removed:
 
 | File | Change |
 |---|---|
@@ -30,7 +30,7 @@ Windows profile pixel check and the portal sweep: see the build log, session 22.
 Not changed: the placed-signature card's note "For a certificate signature use Protect › Sign with certificate" still reads true (the button is there, with its reason). The Web host's `AllowCertificateUpload` stays as it is (off).
 
 ## Still to apply — the Find box in Word, Excel, Markdown and text files takes the cursor (coordinator 15 Nov, D-187)
-**`proposal/web-ui-office-find-focus.patch`**, against foundation **20030cb** (applies cleanly). Two files, 11 lines added:
+**`proposal/web-ui-office-find-focus.patch`**, against foundation **20030cb** (applies cleanly). Two files, 12 lines added:
 - `Ui/Pages/Reader.razor`: the viewers' Find box gets `@ref="_viewerFindBoxRef"`; `OnAfterRenderAsync` focuses it once after the render that draws it (`_focusViewerFind`), the same call the PDF Find box gets in `OpenFind`.
 - `Ui/Pages/Reader.Shell.cs`: `OpenViewerFind` sets `_focusViewerFind`.
 
