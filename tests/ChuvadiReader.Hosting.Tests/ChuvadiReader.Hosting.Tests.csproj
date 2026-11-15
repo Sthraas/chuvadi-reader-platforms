@@ -21,5 +21,6 @@
     <!-- The Ui's markup, read as text by the path-label drift test (AT-07). -->
     <None Include="..\..\src\ChuvadiReader.Ui\**\*.razor" Exclude="..\..\src\ChuvadiReader.Ui\bin\**;..\..\src\ChuvadiReader.Ui\obj\**" LinkBase="UiSources" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\src\ChuvadiReader.Ui\wwwroot\js\reader.js" LinkBase="UiSources\wwwroot\js" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\src\ChuvadiReader.Ui\wwwroot\js\redact.js" LinkBase="UiSources\wwwroot\js" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
