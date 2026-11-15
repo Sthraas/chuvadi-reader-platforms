@@ -804,3 +804,35 @@ was written. To build it you now need SDK 10.0.403 and, once in the repo folder,
 - **Marks (M-27 fix in the shared code):** a rectangle drawn with the mouse at about 54, 100 and 150 %, before and
   after a real pinch, lands under the pointer; a Redact box too.
 - A quick regression.
+
+
+---
+## Linux Test — 16 Nov, short re-check on `platform/linux` 1e9d45a (standing watch; Foundation's patch 27)
+Patch 27: the pinch goes through the shared `window.chuvadiPinch`, mark placement no longer depends on the engine,
+and the repo pins the SDK in `global.json`. New tool: `tools/t_pinch.py`; `t_mark.py` uses the new pinch verb
+(`pinch <phase> <scale> <x> <y>`).
+
+**Build note.** `global.json` pins SDK 10.0.403 with no roll-forward; this runner has 10.0.114 and no room to
+install another SDK. I built my test copy with `global.json` set aside (nothing committed). CI builds with the pinned
+SDK; its run 43750913193 was still in progress when this was written.
+
+**Marks after a pinch ✅.** Zoom reached by pinch steps, then Rectangle, Text and Draw by mouse on the unrotated and
+the `/Rotate 90` page of `mark-rot.pdf`; saved and rendered.
+
+| Zoom reached by pinch | On screen (18 marks) | In the saved file |
+|---|---|---|
+| 55 % | all exactly under the pointer | within 1–2 pt |
+| 100 % | all exactly under the pointer | within 1–3 pt |
+| 150 % | all exactly under the pointer | within 1–3 pt |
+
+**Pinch, as far as the runner allows ✅** (test verb, not a real gesture).
+
+| Where | Pinch out, then back | Bars |
+|---|---|---|
+| Home | nothing changes | 40 px and 208 px, unchanged |
+| PDF page | 86 % → 121 % → 86 % | unchanged |
+| Excel viewer | 100 % → 140 % → 100 % (grid 1316 → 1842 → 1316 px) | unchanged |
+| Word viewer | 100 % → 140 % → 100 % | unchanged |
+
+**Quick regression ✅.** B-24 + B-08b Cancel; B-25; owner-password printing; single instance (1 window, 4 tabs);
+drops; print byte-identical; `/Rotate` 0, 90, 180, 270; no files left in `/tmp`. B-31 is unchanged (open).

@@ -472,7 +472,7 @@ stored value offered on hover and in copy is wrong (-0.25 for 0.75). It is a Chu
 - For a real machine: a trackpad pinch, marks under display scaling other than 100 %, start-up timing, and the
   real-machine checks above.
 
-## Sign-off — Linux 9a38f62 (16 Nov): ready for Arun, with one thing to know
+## Sign-off — Linux 9a38f62 (16 Nov) — superseded by 1e9d45a below
 
 9a38f62 has the same app code as 7cd960c (it adds a UI test and build-log notes), so the 7cd960c sign-off above
 stands in full. [CI run 43744136829](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/43744136829) is green.
@@ -484,6 +484,22 @@ Checked again on this head:
 | Marks after a pinch ✅ | Rectangle and Text at 55, 100 and 150 % reached by pinch steps, unrotated and `/Rotate 90` pages: exactly under the pointer on screen, within 1–3 pt in the saved file |
 | Pinch itself ✅ (test verb only) | Zooms the page both ways; bars don't scale; nothing happens on Home |
 | Quick regression ✅ | B-24 + B-08b, B-25, owner-password printing, single instance, drops, print, `/Rotate` |
+
+**Ready**, with B-31 (Excel time-only cells) known. A real trackpad pinch still needs a real machine.
+
+## Sign-off — Linux 1e9d45a (16 Nov, patch 27): ready for Arun, with one thing to know
+
+| Check | Result |
+|---|---|
+| Marks after a pinch ✅ | Rectangle, Text and Draw at 55, 100 and 150 % reached by pinch steps, unrotated and `/Rotate 90` pages: exactly under the pointer on screen, within 1–3 pt in the saved file |
+| Pinch ✅ (test verb only) | Zooms a PDF page, the Excel grid and the Word view both ways; the bars never scale; nothing happens on Home |
+| Quick regression ✅ | B-24 + B-08b, B-25, owner-password printing, single instance, drops, print, `/Rotate` |
+
+**Two notes**
+- I built my test copy with SDK 10.0.114, with the repo's new `global.json` (10.0.403) set aside, because this
+  runner has no room for another SDK. CI uses the pinned SDK.
+- CI run 43750913193 on 1e9d45a was still in progress when I wrote this. The package in Arun's checklist below
+  stays on 9a38f62 until that run is green; I'll move it then.
 
 **Ready**, with B-31 (Excel time-only cells) known. A real trackpad pinch still needs a real machine.
 

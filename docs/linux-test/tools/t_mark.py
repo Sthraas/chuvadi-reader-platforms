@@ -52,7 +52,11 @@ try:
         for _ in range(60):
             z = float(a.js(ZL).strip("%"))
             if abs(z - target) <= 1: break
-            a.send(f"pinch {px} {py} {max(1 / 1.12, min(1.12, target / z))}"); time.sleep(0.25); steps += 1
+            ratio = max(1 / 1.12, min(1.12, target / z)); steps += 1
+            if os.environ.get("PINCH_VERB") == "old": a.send(f"pinch {px} {py} {ratio}")          # heads up to 9a38f62
+            else:                                                                                  # patch 27: begin, change, end
+                a.send(f"pinch 0 1 {px} {py}"); a.send(f"pinch 1 {ratio:.5f} {px} {py}"); time.sleep(0.05); a.send(f"pinch 2 1 {px} {py}")
+            time.sleep(0.25)
         print("PINCHED", steps, "steps to", a.js(ZL), "| chrome", a.js("return [Math.round(document.querySelector('.topbar').getBoundingClientRect().height), Math.round(document.querySelector('.leftbar').getBoundingClientRect().width)]"), flush=True)
     zoom = a.js(ZL); desk = a.rect(".rdesk")
     for i in (0, 1):
