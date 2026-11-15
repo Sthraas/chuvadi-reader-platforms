@@ -65,9 +65,10 @@ public partial class Reader
     private bool _showSource;
 
     // Markup undo / redo (snapshots of every overlay)
-    private readonly Stack<MkState> _mkUndo = new();
-    private readonly Stack<MkState> _mkRedo = new();
+    private Stack<MkState> _mkUndo => _marks.Undo;   // kept with the tab, like the marks
+    private Stack<MkState> _mkRedo => _marks.Redo;
     private MkState? _pendingSnap;
+    private Func<bool, Task<string?>>? _saveMarksHandler;
 
     private sealed record MkState(
         Dictionary<int, List<TextBox>> Texts,
@@ -82,6 +83,8 @@ public partial class Reader
         _counterHandler = p => InvokeAsync(() => CounterGoAsync(p));
         _findHandler = () => InvokeAsync(OpenFindFromShell);
         Shell.CounterHandler = _counterHandler;
+        _saveMarksHandler = SaveMarksForCloseAsync;   // called by the shell's close question, on the dispatcher
+        Shell.SaveMarksHandler = _saveMarksHandler;
         Shell.FindHandler = _findHandler;
         _findTextHandler = q => InvokeAsync(() => FindTextAsync(q));
         Shell.FindTextHandler = _findTextHandler;
@@ -161,6 +164,11 @@ public partial class Reader
         }
 
         // The next page may already have installed its own handlers; only remove ours.
+        if (Shell.SaveMarksHandler == _saveMarksHandler)
+        {
+            Shell.SaveMarksHandler = null;
+        }
+
         if (Shell.CounterHandler == _counterHandler)
         {
             Shell.CounterHandler = null;
@@ -205,8 +213,6 @@ public partial class Reader
         _viewerFindCount = 0;
         _viewerStatus = null;
         _showSource = false;
-        _mkUndo.Clear();
-        _mkRedo.Clear();
         _bmLoadedFor = null;
         if (_pagesDrawer && tab is not null && !tab.Format.IsViewOnly())
         {
@@ -374,7 +380,7 @@ public partial class Reader
             Shell.SetCounterStep(PageStep);
             var activity = LocalMode switch
             {
-                DocMode.Mark => $"Mark · {MarkCountLabel}{(OverlayCount > 0 ? " · unsaved" : "")}",
+                DocMode.Mark => $"Mark · {MarkCountLabel}{(_marks.HasUnsaved ? " · unsaved" : "")}",
                 DocMode.Protect => "Protect · always writes a new file",
                 _ => $"Read · page {CurPage} of {d.PageCount}{(_sigReport is { HasSignatures: true } r ? " · " + r.Headline : "")}",
             };
@@ -975,40 +981,7 @@ public partial class Reader
         return new MkState(texts, shapes, images, MkSignature());
     }
 
-    private string MkSignature()
-    {
-        var sb = new System.Text.StringBuilder();
-        foreach (var (p, l) in _texts.OrderBy(k => k.Key))
-        {
-            foreach (var t in l)
-            {
-                sb.Append('t').Append(p).Append(t.X).Append(',').Append(t.Y).Append(',').Append(t.W).Append(',').Append(t.H)
-                  .Append(t.Text).Append(t.FontFamily).Append(t.Bold).Append(t.Italic).Append(t.FontSizePt).Append(t.ColorHex)
-                  .Append(t.Align).Append(t.Rotation).Append('|');
-            }
-        }
-
-        foreach (var (p, l) in _shapes.OrderBy(k => k.Key))
-        {
-            foreach (var s in l)
-            {
-                sb.Append('s').Append(p).Append(s.Kind).Append(s.X).Append(',').Append(s.Y).Append(',').Append(s.W).Append(',').Append(s.H)
-                  .Append(s.FillHex).Append(s.StrokeHex).Append(s.StrokeWidthPt).Append(s.Rotation).Append(s.BehindContent)
-                  .Append(s.Points?.Count ?? 0).Append('|');
-            }
-        }
-
-        foreach (var (p, l) in _images.OrderBy(k => k.Key))
-        {
-            foreach (var i in l)
-            {
-                sb.Append('i').Append(p).Append(i.X).Append(',').Append(i.Y).Append(',').Append(i.W).Append(',').Append(i.H)
-                  .Append(i.Opacity).Append(i.Rotation).Append(i.BehindContent).Append(i.Bytes.Length).Append('|');
-            }
-        }
-
-        return sb.ToString();
-    }
+    private string MkSignature() => _marks.Signature();
 
     /// <summary>Push the current marks onto the undo stack (call before a change).</summary>
     private void MkSnap()

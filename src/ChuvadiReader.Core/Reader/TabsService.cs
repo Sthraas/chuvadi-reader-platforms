@@ -5,6 +5,21 @@ using ChuvadiReader.Core.Storage;
 
 namespace ChuvadiReader.Core.Reader;
 
+/// <summary>The marks drawn on a tab's document that are not in the file yet (D-186 Q3 B). The Reader page owns
+/// what they are; the tab keeps them, so they are still there after another tab or another page was shown.
+/// Memory only: they go when the tab closes.</summary>
+public interface ITabMarks
+{
+    /// <summary>How many marks there are that a save would write.</summary>
+    int Count { get; }
+
+    /// <summary>True when there are marks that no save has written yet.</summary>
+    bool HasUnsaved { get; }
+
+    /// <summary>Drops every mark (the person chose Discard).</summary>
+    void Discard();
+}
+
 /// <summary>One open tab: a document plus the view-state we remember for it.</summary>
 public sealed class ReaderTab
 {
@@ -20,6 +35,12 @@ public sealed class ReaderTab
     public IPdfSession? Session { get; set; }
 
     public bool IsLoaded => Session is not null || Format.IsViewOnly();
+
+    /// <summary>This tab's unsaved marks, set by the Reader page; null until a mark is drawn on it.</summary>
+    public ITabMarks? Marks { get; set; }
+
+    /// <summary>True when closing this tab would lose marks (D-190).</summary>
+    public bool HasUnsavedMarks => Marks?.HasUnsaved == true;
 
     public bool IsLoading { get; set; }
 
@@ -220,9 +241,82 @@ public sealed class TabsService : IDisposable
         }
     }
 
-    /// <summary>Close a tab, disposing its document and activating a neighbour.</summary>
+    /// <summary>D-190: asked before tabs with unsaved marks are closed. It gets those tabs and returns false when
+    /// the person chose Cancel; marks they chose to save are saved by then. The shell sets it (it shows the card).
+    /// Null: nothing is asked.</summary>
+    public Func<IReadOnlyList<ReaderTab>, Task<bool>>? CloseGuard { get; set; }
+
+    /// <summary>True when any open tab has unsaved marks.</summary>
+    public bool HasUnsavedMarks
+    {
+        get
+        {
+            lock (_tabsGate)
+            {
+                return _tabs.Exists(t => t.HasUnsavedMarks);
+            }
+        }
+    }
+
+    /// <summary>Asks about these tabs' unsaved marks, if they have any. True: go ahead and close.</summary>
+    public async Task<bool> ConfirmCloseAsync(IEnumerable<ReaderTab> tabs)
+    {
+        var unsaved = tabs.Where(t => t.HasUnsavedMarks).ToList();
+        if (unsaved.Count == 0 || CloseGuard is not { } guard)
+        {
+            return true;
+        }
+
+        if (Interlocked.Exchange(ref _confirming, 1) == 1)
+        {
+            return false; // the question is already on screen
+        }
+
+        var before = Active;
+        try
+        {
+            bool go = await guard(unsaved).ConfigureAwait(false);
+
+            // The question shows each file it asks about. When the answer is to go ahead, the tab that was in front
+            // comes back; on Cancel the person stays on the file the question was about.
+            if (go && before is not null && !ReferenceEquals(Active, before) && _tabs.Contains(before))
+            {
+                await ActivateAsync(before.Id).ConfigureAwait(false);
+            }
+
+            return go;
+        }
+        finally
+        {
+            Volatile.Write(ref _confirming, 0);
+        }
+    }
+
+    /// <summary>The question before the whole app closes: every tab with unsaved marks, one after another. No tab
+    /// is closed. True: the app may close.</summary>
+    public Task<bool> ConfirmCloseAllAsync()
+    {
+        List<ReaderTab> all;
+        lock (_tabsGate)
+        {
+            all = _tabs.ToList();
+        }
+
+        return ConfirmCloseAsync(all);
+    }
+
+    private int _confirming;
+
+    /// <summary>Close a tab, disposing its document and activating a neighbour. A tab with unsaved marks is asked
+    /// about first (<see cref="CloseGuard"/>) and stays open on Cancel.</summary>
     public async Task CloseAsync(string id, CancellationToken ct = default)
     {
+        var asked = _tabs.Find(t => t.Id == id);
+        if (asked is not null && !await ConfirmCloseAsync([asked]).ConfigureAwait(false))
+        {
+            return;
+        }
+
         var idx = _tabs.FindIndex(t => t.Id == id);
         if (idx < 0)
         {
@@ -261,6 +355,11 @@ public sealed class TabsService : IDisposable
         }
 
         var keep = Active;
+        if (!await ConfirmCloseAsync(_tabs.Where(t => !ReferenceEquals(t, keep)).ToList()).ConfigureAwait(false))
+        {
+            return;
+        }
+
         foreach (var tab in _tabs)
         {
             if (!ReferenceEquals(tab, keep))
@@ -280,6 +379,11 @@ public sealed class TabsService : IDisposable
     /// <summary>Close all tabs.</summary>
     public async Task CloseAllAsync(CancellationToken ct = default)
     {
+        if (!await ConfirmCloseAsync(_tabs.ToList()).ConfigureAwait(false))
+        {
+            return;
+        }
+
         foreach (var tab in _tabs)
         {
             Release(tab);

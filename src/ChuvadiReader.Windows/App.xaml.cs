@@ -210,6 +210,16 @@ public partial class App : Application
         _main.Focus();
     }
 
+    /// <summary>D-190: signing out or shutting down asks about unsaved marks first.</summary>
+    protected override void OnSessionEnding(SessionEndingCancelEventArgs e)
+    {
+        base.OnSessionEnding(e);
+        if (!e.Cancel)
+        {
+            _main?.OnSessionEnding(e);
+        }
+    }
+
     protected override void OnExit(ExitEventArgs e)
     {
         _instance?.Dispose();

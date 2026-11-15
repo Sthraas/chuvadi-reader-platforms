@@ -137,6 +137,11 @@ public sealed class ShellService
         }
     }
 
+    /// <summary>D-190: set by the Reader page while it is shown. Saves the active tab's unsaved marks, into the
+    /// file (false) or as a new PDF the person picks (true). Returns null when they are saved, an empty string
+    /// when the person backed out of the save, or the reason it failed.</summary>
+    public Func<bool, Task<string?>>? SaveMarksHandler { get; set; }
+
     /// <summary>Set by the page that owns the counter; called with a 1-based target.</summary>
     public Func<int, Task>? CounterHandler { get; set; }
 
