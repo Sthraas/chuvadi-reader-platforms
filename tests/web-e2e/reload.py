@@ -101,7 +101,12 @@ with sync_playwright() as p:
 
     # 3. A second browser tab of the same sign-in.
     second = ctx.new_page()
-    second.goto(base + "/")
+    try:
+        second.goto(base + "/", timeout=15000)
+    except Exception:  # noqa: BLE001
+        # The test tool's Firefox sometimes misses the load of a page opened in a second tab (it goes on
+        # reporting about:blank while the portal is loaded and drawn). What counts is what the tab shows.
+        print("note: the test tool didn't report the second tab's load; checking what it shows")
     got = wait_tabs(second, names)
     check("a second browser tab of the same sign-in shows the same tabs", got == names, got)
     second.close()
