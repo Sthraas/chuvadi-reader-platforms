@@ -160,7 +160,9 @@ public sealed class TabsService : IDisposable
     /// <summary>Open a document, or focus its existing tab if the same path is already open.</summary>
     public async Task<ReaderTab> OpenAsync(string path, string fileName, DocumentFormat format, CancellationToken ct = default)
     {
-        var existing = _tabs.FirstOrDefault(t => string.Equals(t.Path, path, StringComparison.OrdinalIgnoreCase));
+        // A copy taken under the lock: another open may be adding its tab on another thread right now (walking the
+        // list itself threw "Collection was modified", rarely, in the overlapping-opens test).
+        var existing = TabsSnapshot().FirstOrDefault(t => string.Equals(t.Path, path, StringComparison.OrdinalIgnoreCase));
         if (existing is not null)
         {
             await ActivateAsync(existing.Id, ct).ConfigureAwait(false);
@@ -282,7 +284,7 @@ public sealed class TabsService : IDisposable
 
             // The question shows each file it asks about. When the answer is to go ahead, the tab that was in front
             // comes back; on Cancel the person stays on the file the question was about.
-            if (go && before is not null && !ReferenceEquals(Active, before) && _tabs.Contains(before))
+            if (go && before is not null && !ReferenceEquals(Active, before) && TabsSnapshot().Contains(before))
             {
                 await ActivateAsync(before.Id).ConfigureAwait(false);
             }
@@ -299,13 +301,7 @@ public sealed class TabsService : IDisposable
     /// is closed. True: the app may close.</summary>
     public Task<bool> ConfirmCloseAllAsync()
     {
-        List<ReaderTab> all;
-        lock (_tabsGate)
-        {
-            all = _tabs.ToList();
-        }
-
-        return ConfirmCloseAsync(all);
+        return ConfirmCloseAsync(TabsSnapshot());
     }
 
     private int _confirming;
@@ -314,7 +310,7 @@ public sealed class TabsService : IDisposable
     /// about first (<see cref="CloseGuard"/>) and stays open on Cancel.</summary>
     public async Task CloseAsync(string id, CancellationToken ct = default)
     {
-        var asked = _tabs.Find(t => t.Id == id);
+        var asked = Array.Find(TabsSnapshot(), t => t.Id == id);
         if (asked is not null && !await ConfirmCloseAsync([asked]).ConfigureAwait(false))
         {
             return;
@@ -358,7 +354,7 @@ public sealed class TabsService : IDisposable
         }
 
         var keep = Active;
-        if (!await ConfirmCloseAsync(_tabs.Where(t => !ReferenceEquals(t, keep)).ToList()).ConfigureAwait(false))
+        if (!await ConfirmCloseAsync(TabsSnapshot().Where(t => !ReferenceEquals(t, keep))).ConfigureAwait(false))
         {
             return;
         }
@@ -382,7 +378,7 @@ public sealed class TabsService : IDisposable
     /// <summary>Close all tabs.</summary>
     public async Task CloseAllAsync(CancellationToken ct = default)
     {
-        if (!await ConfirmCloseAsync(_tabs.ToList()).ConfigureAwait(false))
+        if (!await ConfirmCloseAsync(TabsSnapshot()).ConfigureAwait(false))
         {
             return;
         }
