@@ -836,3 +836,30 @@ the `/Rotate 90` page of `mark-rot.pdf`; saved and rendered.
 
 **Quick regression ✅.** B-24 + B-08b Cancel; B-25; owner-password printing; single instance (1 window, 4 tabs);
 drops; print byte-identical; `/Rotate` 0, 90, 180, 270; no files left in `/tmp`. B-31 is unchanged (open).
+
+
+---
+## Linux Test — 16 Nov, short re-check on `platform/linux` ac90d94 (standing watch; Foundation's patch 28)
+Patch 28: Find and Fit on turned pages, Find matches in hidden Excel rows and columns named above the sheet, the
+Find box taking the cursor in Excel and Word, Ctrl+F opening the viewer's Find, a close control on a mark's card.
+Built from source with SDK 10.0.114 (`global.json` set aside in my test copy only). CI run 43764387511 was still in
+progress when this was written. New tool: `tools/t_patch28.py`.
+
+**Marks after a pinch ✅.** Rectangle, Text and Draw by mouse on the unrotated and the `/Rotate 90` page of
+`mark-rot.pdf`, after pinch steps to 55, 100 and 150 %: all 18 marks exactly under the pointer on screen, and
+within 2–3 pt in the saved file.
+
+**Pinch ✅** (test verb). PDF 86 % → 121 % → 86 %; Excel and Word 100 % → 140 % → 100 %; the bars stay 40 px and
+208 px; nothing changes on Home.
+
+**Patch 28 spot checks ✅**
+
+| Check | Result |
+|---|---|
+| Find "ROT" on `rot4.pdf` (0, 90, 180, 270) | The highlight sits on the word where it is shown on all four pages: centres at (0.36, 0.46), (0.55, 0.36), (0.64, 0.55), (0.46, 0.64) of the shown page, each where the turn puts the word; the highlight box is turned too (34 × 21 px upright, 30 × 48 px on the 90 and 270 pages) |
+| Fit page on `rot4.pdf` | Portrait pages 685 × 970 px, turned pages 1373 × 970 px, in a 1594 × 1014 view: each page fits |
+| Ctrl+F on an Excel file | The cursor is in "Find in Excel…" |
+| Find "hidden" in `layout.xlsx` | Above the sheet: "2 matches are in hidden cells: A5 (hidden row), C6 (hidden column)"; tabs show Layout 2, Secret 1, Deep 1 |
+
+**Quick regression ✅.** B-24 + B-08b Cancel; B-25; owner-password printing; single instance (1 window, 4 tabs);
+drops; print byte-identical; `/Rotate` 0, 90, 180, 270 on screen; no files left in `/tmp`. B-31 is unchanged (open).

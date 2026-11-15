@@ -487,7 +487,7 @@ Checked again on this head:
 
 **Ready**, with B-31 (Excel time-only cells) known. A real trackpad pinch still needs a real machine.
 
-## Sign-off — Linux 1e9d45a (16 Nov, patch 27): ready for Arun, with one thing to know
+## Sign-off — Linux 1e9d45a (16 Nov, patch 27) — superseded by ac90d94 below
 
 | Check | Result |
 |---|---|
@@ -499,6 +499,22 @@ Checked again on this head:
 - I built my test copy with SDK 10.0.114, with the repo's new `global.json` (10.0.403) set aside, because this
   runner has no room for another SDK. CI uses the pinned SDK.
 - [CI run 43750913193](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/43750913193) on 1e9d45a is green, and Arun's checklist below uses its package.
+
+**Ready**, with B-31 (Excel time-only cells) known. A real trackpad pinch still needs a real machine.
+
+## Sign-off — Linux ac90d94 (16 Nov, patch 28): ready for Arun, with one thing to know
+
+| Check | Result |
+|---|---|
+| Marks after a pinch ✅ | 18 marks at 55, 100 and 150 %, unrotated and `/Rotate 90` pages: exactly under the pointer on screen, within 2–3 pt in the saved file |
+| Pinch ✅ (test verb only) | Zooms a PDF page, the Excel grid and the Word view both ways; the bars never scale; nothing happens on Home |
+| Patch 28 ✅ | Find highlights the word where it is shown on turned pages; Fit page fits turned pages; Ctrl+F opens Find in Excel; Find matches in hidden rows and columns are named above the sheet |
+| Quick regression ✅ | B-24 + B-08b, B-25, owner-password printing, single instance, drops, print, `/Rotate` |
+
+**Two notes**
+- My test copy is built with SDK 10.0.114, with `global.json` (10.0.403) set aside. CI uses the pinned SDK.
+- CI run 43764387511 on ac90d94 was still in progress when I wrote this. The package in Arun's checklist below
+  stays on 1e9d45a until that run is green.
 
 **Ready**, with B-31 (Excel time-only cells) known. A real trackpad pinch still needs a real machine.
 
