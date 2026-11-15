@@ -103,7 +103,11 @@ for app in NSRunningApplication.runningApplications(withBundleIdentifier: "$BUND
 SW
   xcrun swift "$RUNNER_TEMP/quit.swift"
   local end=$((SECONDS + 40)); while pgrep -f "$APP/Contents/MacOS/$EXE" >/dev/null && [ $SECONDS -lt $end ]; do sleep 0.5; done
-  ! pgrep -f "$APP/Contents/MacOS/$EXE" >/dev/null
+  if pgrep -f "$APP/Contents/MacOS/$EXE" >/dev/null; then
+    pkill -9 -f "$APP/Contents/MacOS/$EXE"; sleep 2   # it would not quit: end it so the next phase starts clean
+    return 1
+  fi
+  return 0
 }
 
 # --- M-16: the left bar's Open button → the real Open panel → the Reader, for every format --------------
@@ -337,6 +341,35 @@ c1=$(sv 1); c4=$(sv 4)
 cp "$LOG" "$PWD/smoke-viewer-keys.log"
 quit_app || fail "viewer-keys run did not quit"
 sleep 2
+
+# --- A real mouse click on a PDF page must not stall the app (coordinator, 16 Nov: first item) -------------------
+# The same short walk twice: without the Mac pinch recognizer, then with it. After the click the app must still answer.
+stall_probe() {   # $1 label, $2 extra env (or empty)
+  rm -f "$LOG"
+  if [ -n "$2" ]; then
+    open -n --env CHUVADI_SMOKE=1 --env "$2" --env "CHUVADI_SMOKE_STEPS=wait;native:click-page;wait;wait" --stdout "$LOG" --stderr "$LOG" -a "$APP" "$DOCS/k1.pdf"
+  else
+    open -n --env CHUVADI_SMOKE=1 --env "CHUVADI_SMOKE_STEPS=wait;native:click-page;wait;wait" --stdout "$LOG" --stderr "$LOG" -a "$APP" "$DOCS/k1.pdf"
+  fi
+  native_watch 90 &
+  local nw=$!
+  if wait_for 'CHUVADI steps done' 90; then
+    pass "after a real click on a PDF page the app still answers ($1)"
+  else
+    fail "the app stopped answering after a real click on a PDF page ($1)"
+    grep -E "CHUVADI (step|native-key)|clicked page" "$LOG" | sed -E 's/^.*CHUVADI //' | cut -c1-160 | tail -4
+    local apid; apid=$(pgrep -f "$APP/Contents/MacOS/$EXE" | head -1)
+    [ -n "$apid" ] && { echo "--- sample of the app ($1)"; sample "$apid" 3 2>/dev/null | sed -n '/Call graph:/,/Total number in stack/p' | head -80; }
+    local wpid; wpid=$(pgrep -f com.apple.WebKit.WebContent | tail -1)
+    [ -n "$wpid" ] && { echo "--- sample of WebKit's content process ($1)"; sample "$wpid" 3 2>/dev/null | sed -n '/Call graph:/,/Total number in stack/p' | head -50; }
+  fi
+  wait $nw 2>/dev/null || true
+  cp "$LOG" "$PWD/smoke-stall-$3.log"
+  quit_app || fail "the app would not quit after the click ($1)"
+  sleep 2
+}
+stall_probe "without the pinch recognizer" "CHUVADI_SMOKE_NOPINCH=1" nopinch
+stall_probe "with the pinch recognizer" "" pinch
 
 # --- M-08/M-23 after a real click on a PDF page, then M-27 (a mark lands under the pointer) ---------------------
 # A real mouse click on the page → real ⌃Tab, ⌃⇧Tab, ⌘2, ⌘1; then Mark: Rectangle on the first tab (a PDF, zoomed to

@@ -56,7 +56,10 @@ internal static class MacSmoke
                 // The page half of a trackpad pinch: one 1.5× step at the middle of the page area (the gesture itself
                 // needs a real trackpad — REAL-MAC-CHECKS).
                 var v = Current(view);
-                MacPinch.Forward(v, double.Parse(arg, System.Globalization.CultureInfo.InvariantCulture), new CoreGraphics.CGPoint(v.Bounds.Width / 2, v.Bounds.Height / 2));
+                var mid = new CoreGraphics.CGPoint(v.Bounds.Width / 2, v.Bounds.Height / 2);
+                MacPinch.Send(v, "begin", 1, mid);
+                MacPinch.Send(v, "change", double.Parse(arg, System.Globalization.CultureInfo.InvariantCulture), mid);
+                MacPinch.Send(v, "end", 1, mid);
                 Later(2.0, async () =>
                 {
                     Log($"step {index + 1} pinch: " + await UiTextAsync(Current(view)));

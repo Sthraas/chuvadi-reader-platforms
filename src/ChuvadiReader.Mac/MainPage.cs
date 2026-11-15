@@ -140,7 +140,10 @@ public sealed class MainPage : ContentPage
 
         _services.GetService<MacUiScale>()?.Attach(view);
         FileDrop.Attach(view, _services);
-        MacPinch.Attach(view); // trackpad pinch zooms the page
+        if (Environment.GetEnvironmentVariable("CHUVADI_SMOKE_NOPINCH") != "1")   // smoke only: a run without the recognizer
+        {
+            MacPinch.Attach(view); // trackpad pinch zooms the page
+        }
         LoadingMarks = WebKitPrewarm.MarkLoading(view, "wk-ui"); // M-06: when the Ui's page load is asked for and done
         _services.GetService<MacWindowControls>()?.ApplyChrome();
     }

@@ -37,8 +37,7 @@ jobs:
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v6
         with:
-          # SDK band 10.0.4xx, matching the pinned workload set below.
-          dotnet-version: '10.0.4xx'
+          global-json-file: global.json   # the repo's strict pin (patch 27): SDK and workload set
 
       # Newest installed Xcode that has a macOS SDK and actool (some images carry Xcode
       # versions without the macOS platform). Must be 26.5 or later for the pinned workload.
@@ -60,13 +59,13 @@ jobs:
           xcodebuild -sdk "$(xcrun --sdk macosx --show-sdk-path)" -find actool
           sw_vers
 
-      # Pinned workload set: 10.0.401 carries .NET for Mac Catalyst 26.5, which builds with Xcode
-      # 26.5 or later. Newer sets (27.x) need Xcode 27.1, not yet on the runner image.
-      # Move the pin forward when the runner gets Xcode 27.1 (docs/mac/README.md).
+      # The workload set comes from the repo's global.json (workloadVersion), as the SDK does. Its Mac Catalyst
+      # pack must build with the Xcode chosen above; if a newer set needs a newer Xcode, this step or the build says so.
       - name: Install MAUI Mac Catalyst workload (pinned)
         run: |
           dotnet --version
-          dotnet workload install maui-maccatalyst --version 10.0.401
+          dotnet workload update                     # once per machine: the workload set global.json names (patch 27)
+          dotnet workload install maui-maccatalyst
           dotnet workload list
 
       - name: Restore
@@ -236,6 +235,7 @@ jobs:
             smoke-tabkeys.log
             smoke-many.log
             smoke-marks.log
+            smoke-stall-*.log
             smoke-viewer-keys.log
             *.ips
             chuvadi-logs-steps/
