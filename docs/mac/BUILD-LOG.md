@@ -619,3 +619,22 @@ Head fb5a806 and later. Run 43750903257 (5dbd6b8, two patches tried on the runne
   request and adding its tab. `docs/mac/foundation/M-24-open-requests-one-at-a-time.patch` (Ui builds with it).
 - **Several files crash on cf17eff:** `CompareOptions.NumericOrdering` is not supported on Apple; own comparer in
   `FileBatchOrder`, and ordering can no longer stop the files opening.
+
+### 2026-11-16 (later) — rebased onto foundation-pr 87f95c0 (patch 28); M-26 second part
+Head 6093598 and later. Run 43766024618 (second attempt; workload set 10.0.401 and the M-24 patch tried on the runner
+only): **0 failed**. Patch 28 carries the keys patch, so M-28 now passes on the branch itself.
+- **M-26, what was still clipped:** on 0e7c70d the sheet came out landscape (792 × 612) but UIKit drew the PDF printing
+  item into the upright sheet's area (clip 612 × 478), cutting the right 180 pt and the bottom ~80 pt. UIKit has no
+  setting for that. The app now draws each page onto the sheet itself: `Platform/MacPdfPageRenderer.cs` (a
+  UIPrintPageRenderer drawing with PDFKit — vector, marks included) placed by `Platform/PrintFit.cs` — the page as
+  shown, centred in the printable area, scaled to it when the request says fit to page, at its own size otherwise
+  (still shrunk if larger than the sheet). The sheet's orientation follows the first page; other pages are fitted whole.
+- **Checks:** 8 unit tests on the placement (Mac tests 23). Smoke draws an upright A4 page with /Rotate 90 and a frame
+  22 pt inside its edges with the same drawing code onto a landscape Letter sheet and measures the ink:
+  `scale=0.898 placed=18,39+756x534 ink=36,57..755,554` — the whole frame, inside the margins. The PDF the real print
+  panel produces is Mac Test's to confirm.
+- **Shared test failed once on macOS (reported to the coordinator):** `MemoryAfterCloseTests.A_sheet_that_left_the_
+  view_while_drawing_stops_and_the_next_page_starts` — the next sheet's render returned an empty string after the
+  first was cancelled (first attempt of run 43766024618); passed on the re-run.
+- **M-24 second cause:** with `docs/mac/foundation/M-24-open-requests-one-at-a-time.patch` tried, both batches in name
+  order. Still with Foundation.
