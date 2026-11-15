@@ -881,3 +881,5 @@ same screen; no crash), smoke pass. With round 6 (API 36 phone and tablet, all c
 ### 65. Foundation 87f95c0 (patch 28) + Mobile UI cbdef77 — coordinator, 16 Nov 02:45 IST
 - Composition clean; P-09 still pending in Foundation, applied here. Sandbox: Android Debug and Release `-warnaserror`
   0 warnings; Release manifest 14/14; Core 382 (+6 skipped), Hosting 101, MobileUi 16, WebUi 41 pass.
+- **Run 43762818990** (all four, full, ccda2d8): **all green** — API 35 WebView gate 4/4 on both; gestures 11/11 and
+  13/13; platform 29/29 and 27/27; Release launch pass on all four.
