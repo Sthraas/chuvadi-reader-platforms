@@ -1326,7 +1326,7 @@
         {
             var n = await Export.ExportAsync(active.Path, _expFolder, _expFormat, _expAll, CurPage - 1, _expDpi);
             if (n > 0) await WriteBack.DeliverOrThrowAsync(_expFolder);
-            _expStatus = $"Exported {n} file{(n == 1 ? "" : "s")} → {_expFolder}";
+            _expStatus = $"Exported {n} file{(n == 1 ? "" : "s")} → {PathLabels.Describe(_expFolder)}";
         }
         catch (Exception ex)
         {
