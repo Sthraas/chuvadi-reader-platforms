@@ -679,3 +679,11 @@ when this was written.
   **I could not make a real pinch here (Xvfb): this one needs a real trackpad under GNOME Wayland**, and a touch
   screen if one is to hand.
 - A quick regression.
+
+---
+**15 Nov, Linux chat — note for the re-check in hand.** `platform/linux` is now 9a38f62b: the app is the same as
+7cd960c5 (one UI test step and a BUILD-LOG section added), so keep testing the build you have.
+- **One more check, from Mac Test's M-27 (S1):** on Mac a mark drawn with the mouse lands away from the pointer,
+  by an amount that follows the zoom. Here it does not (rectangle on the drag's corners at 54, 100, 150 and 300 %,
+  before and after pinch steps; BUILD-LOG §56), but my pinch steps are not a real trackpad's. Please draw a
+  rectangle with the mouse at about 54, 100 and 150 %, **before and after a real pinch**, and say where it lands.
