@@ -1,0 +1,65 @@
+diff --git a/src/ChuvadiReader.Ui/Components/Platform/PlatformText.cs b/src/ChuvadiReader.Ui/Components/Platform/PlatformText.cs
+index fc7191c3..a454bd1e 100644
+--- a/src/ChuvadiReader.Ui/Components/Platform/PlatformText.cs
++++ b/src/ChuvadiReader.Ui/Components/Platform/PlatformText.cs
+@@ -60,11 +60,6 @@ public static class PlatformText
+     /// private key, and the portal never takes one.</summary>
+     public const string CertificateSigningOnPortal = "Certificate signing is in the desktop app. Your private key never leaves your computer.";
+ 
+-    /// <summary>The word a greyed rail button shows where its shortcut would be, for <see cref="CertificateSigningOnPortal"/>
+-    /// (other greyed buttons say "soon"; this one is off, D-27 a). Six characters at most: beside "Sign with
+-    /// certificate", the longest label on the Tools rail, "desktop" already runs 4 px past the rail's edge.</summary>
+-    public const string CertificateSigningTag = "off";
+-
+     /// <summary>The reason "Sign with certificate" is greyed out on this host, or null where it works (every host but Web).</summary>
+     public static string? CertificateSigningOff(IPlatformInfo platform) =>
+         platform.Kind == PlatformKind.Web ? CertificateSigningOnPortal : null;
+diff --git a/src/ChuvadiReader.Ui/Components/Rails/RailButton.razor b/src/ChuvadiReader.Ui/Components/Rails/RailButton.razor
+index 2acce095..296354df 100644
+--- a/src/ChuvadiReader.Ui/Components/Rails/RailButton.razor
++++ b/src/ChuvadiReader.Ui/Components/Rails/RailButton.razor
+@@ -10,7 +10,7 @@
+         @onclick="OnClick">
+     <Icon Name="@Icon" Size="@Size" />
+     <span class="rb-l">@Label</span>
+-    <span class="rb-k">@(DisabledReason is not null ? DisabledTag : ShownKeys)</span>
++    <span class="rb-k">@(DisabledReason is not null ? "soon" : ShownKeys)</span>
+ </button>
+ 
+ @code {
+@@ -23,9 +23,6 @@
+     [Parameter] public bool Disabled { get; set; }
+     [Parameter] public string? DisabledReason { get; set; }
+ 
+-    /// <summary>The word shown where the shortcut would be while <see cref="DisabledReason"/> is set.</summary>
+-    [Parameter] public string DisabledTag { get; set; } = "soon";
+-
+     /// <summary>With <see cref="DisabledReason"/>: the button looks greyed out but still answers a tap, so its
+     /// OnClick can show the reason where a tooltip can't be read (touch screens, D-187).</summary>
+     [Parameter] public bool ReasonOnTap { get; set; }
+diff --git a/src/ChuvadiReader.Ui/Pages/Reader.razor b/src/ChuvadiReader.Ui/Pages/Reader.razor
+index 193ffd68..98fa3232 100644
+--- a/src/ChuvadiReader.Ui/Pages/Reader.razor
++++ b/src/ChuvadiReader.Ui/Pages/Reader.razor
+@@ -1171,7 +1171,7 @@
+                     <RailButton Icon="watermark" Label="Watermark" Active='_card == "stamp" && _stampFocus == "watermark"' OnClick='() => OpenStamp("watermark")' />
+                     <RailButton Icon="compress" Label="Flatten" Disabled="_flattening" OnClick="FlattenNow" />
+                     <RailButton Icon="doc-lock" Label="Password" Active='_card == "password"' OnClick='() => ToggleCard("password")' />
+-                    <RailButton Icon="certification" Label="Sign with certificate" DisabledReason="@ChuvadiReader.Ui.Components.Platform.PlatformText.CertificateSigningOff(Platform)" DisabledTag="@ChuvadiReader.Ui.Components.Platform.PlatformText.CertificateSigningTag" ReasonOnTap="@ChuvadiReader.Ui.Components.Platform.PlatformText.ReasonOnTap(Platform)" Active='_card == "cert"' OnClick='() => ToggleCard("cert")' />
++                    <RailButton Icon="certification" Label="Sign with certificate" DisabledReason="@ChuvadiReader.Ui.Components.Platform.PlatformText.CertificateSigningOff(Platform)" ReasonOnTap="@ChuvadiReader.Ui.Components.Platform.PlatformText.ReasonOnTap(Platform)" Active='_card == "cert"' OnClick='() => ToggleCard("cert")' />
+                     <RailButton Icon="sliders" Label="View" Class="rb-viewfold" Active='_card == "view"' OnClick='() => ToggleCard("view")' />
+                     <RailSpacer />
+                     <RailButton Icon="download" Label="Save redacted copy" Primary="true" OnClick="() => GoRedact(false)" />
+diff --git a/src/ChuvadiReader.Ui/Pages/Redact.razor b/src/ChuvadiReader.Ui/Pages/Redact.razor
+index a2bc2f9f..fee26153 100644
+--- a/src/ChuvadiReader.Ui/Pages/Redact.razor
++++ b/src/ChuvadiReader.Ui/Pages/Redact.razor
+@@ -228,7 +228,7 @@
+             <RailButton Icon="watermark" Label="Watermark" OnClick='() => BackToProtect("watermark")' />
+             <RailButton Icon="compress" Label="Flatten" OnClick='() => BackToProtect("flatten")' />
+             <RailButton Icon="doc-lock" Label="Password" OnClick='() => BackToProtect("password")' />
+-            <RailButton Icon="certification" Label="Sign with certificate" DisabledReason="@ChuvadiReader.Ui.Components.Platform.PlatformText.CertificateSigningOff(Platform)" DisabledTag="@ChuvadiReader.Ui.Components.Platform.PlatformText.CertificateSigningTag" ReasonOnTap="@ChuvadiReader.Ui.Components.Platform.PlatformText.ReasonOnTap(Platform)" OnClick='() => BackToProtect("cert")' />
++            <RailButton Icon="certification" Label="Sign with certificate" DisabledReason="@ChuvadiReader.Ui.Components.Platform.PlatformText.CertificateSigningOff(Platform)" ReasonOnTap="@ChuvadiReader.Ui.Components.Platform.PlatformText.ReasonOnTap(Platform)" OnClick='() => BackToProtect("cert")' />
+             <RailSep />
+             <RailButton Icon="folder" Label="Redact another file…" OnClick="Fetch" />
+             <RailButton Icon="close" Label="Clear all boxes" Disabled="@(!HasAnythingToRedact || _saving)" OnClick="ClearAll" />

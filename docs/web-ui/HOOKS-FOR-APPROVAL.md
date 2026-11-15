@@ -1,6 +1,36 @@
 # Web portal UI — existing-file hooks
 
-## Still to apply — "Sign with certificate" off on the portal, greyed with its reason (U-18 b, D-187)
+## Still to apply — the rail word for "Sign with certificate" on the portal: "soon", not "off" (coordinator 16 Nov 00:40)
+**`proposal/web-ui-portal-certificate-rail-word.patch`**, against foundation **754d1e2** (= foundation-pr 87f95c0 for `src`; applies cleanly). Four files, 3 lines added and 11 removed.
+
+Why it is needed: patch 28 (commit 7b3e1af, 15 Nov 19:00 UTC = 16 Nov 00:30 IST) applied the **first** version of my certificate diff, in which a greyed "Sign with certificate" shows the word "off". The coordinator's decision at 00:40 was to use the word every other unavailable rail item on the portal uses, which is "soon". My updated diff was pushed after the Foundation had applied the first one. This follow-up brings the code to the updated version:
+- `Ui/Components/Rails/RailButton.razor`: the `DisabledTag` parameter goes; a greyed button shows "soon", as before patch 28.
+- `Ui/Components/Platform/PlatformText.cs`: `CertificateSigningTag` goes.
+- `Ui/Pages/Reader.razor`, `Ui/Pages/Redact.razor`: the two buttons no longer pass `DisabledTag`.
+
+Nothing else changes: the sentence, the greyed state, the tap on touch and the card are as in patch 28.
+
+Proofs: with the patch, "Sign with certificate" shows "soon" in the Reader's Protect rail and Redact's Tools rail in Chromium, Firefox and WebKit, ending at x 1204 inside the rail's 1218. Build `-warnaserror` 0 warnings; 539 tests pass (no guard test names the word). Screenshot: `screenshots/chromium-u18-rail-hover.png`.
+
+## Ready if chosen — the hidden-matches line under the sheet instead of above it (found 16 Nov, confirming D-188 / U-19 a; OPTIONS U-20)
+**`proposal/web-ui-xlsx-hidden-matches-under-sheet.patch`**, against foundation **754d1e2** (applies cleanly, also together with the rail-word patch). Two files, 8 lines added and 6 removed:
+- `Ui/Components/Viewers/XlsxView.razor`: the `xv-hiddenhits` block moves from above the value bar to just above the sheet tabs.
+- `Ui/Components/Viewers/XlsxView.razor.css`: its border goes on the top edge instead of the bottom.
+
+What it cures: the Find box (`.rfind`, `position: absolute; top: 12px`, centred) floats over the top of the viewer, where patch 28 puts the line. Share of the sentence's text covered by the Find box (`layout.xlsx`, Find "hidden"; measured from the text's own rectangles):
+
+| Size | Patch 28 (line above the sheet) | With this patch (line under the sheet) |
+|---|---|---|
+| Desktop 1280×720 | 10% ("C6 (hid…" is cut) | 0% |
+| Desktop 1920×1080 | 0% | 0% |
+| Tablet 1024×768 | 18–20% | 0% |
+| Phone 390×844 | 43–48% (only "2 mat" and "colu" can be read) | 0% |
+
+The same in Chromium, Firefox and WebKit. Screenshots: `screenshots/webkit-u19-line-under-find-box.png` (patch 28), `screenshots/webkit-u19-line-under-sheet.png` (with this patch).
+
+## Applied by the Foundation (patch 28, commit 7b3e1af; checked on 754d1e2) — "Sign with certificate" off on the portal, greyed with its reason (U-18 b, D-187)
+**As the first version sent (rail word "off"); see the follow-up above.** Checked in the portal on 754d1e2: 12 of 12 cases behave as D-187 says (three browsers × portal desktop, tablet, phone and the Windows profile). The text below describes the updated version of the diff.
+
 **`proposal/web-ui-portal-certificate-off.patch`**, against foundation **7fd806f** (patch 27; applies cleanly; independent of the Find-focus patch below, and the two apply together). Nine files, 39 lines added and 6 removed. **Updated 16 Nov 00:40**: the rail word is the existing "soon", so `RailButton` no longer gets a word parameter.
 
 | File | Change |
@@ -29,7 +59,9 @@ Re-run on the final patch over foundation 7fd806f: 12 of 12 cases as decided (th
 
 Not changed: the placed-signature card's note "For a certificate signature use Protect › Sign with certificate" still reads true (the button is there, with its reason). The Web host's `AllowCertificateUpload` stays as it is (off).
 
-## Still to apply — the Find box in Word, Excel, Markdown and text files takes the cursor (coordinator 15 Nov, D-187)
+## Applied by the Foundation (patch 28; checked on 754d1e2) — the Find box in Word, Excel, Markdown and text files takes the cursor (coordinator 15 Nov, D-187)
+In exactly as sent (`git apply -R --check` succeeds). With the Foundation's own Ctrl F change (63828b8) the key now opens the viewers' Find too. Checked on 754d1e2: 54 of 54 cases focus the box, and for Excel and Word typing without a click finds "4 found" / "1 found" (three browsers; left bar Find, Ctrl F, phone ⋮ › Find; portal desktop, tablet, phone and the Windows profile).
+
 **`proposal/web-ui-office-find-focus.patch`**, against foundation **7fd806f** (applies cleanly; unchanged since 15 Nov). Two files, 12 lines added:
 - `Ui/Pages/Reader.razor`: the viewers' Find box gets `@ref="_viewerFindBoxRef"`; `OnAfterRenderAsync` focuses it once after the render that draws it (`_focusViewerFind`), the same call the PDF Find box gets in `OpenFind`.
 - `Ui/Pages/Reader.Shell.cs`: `OpenViewerFind` sets `_focusViewerFind`.

@@ -216,3 +216,19 @@ Diff sent to the Foundation: `proposal/web-ui-portal-certificate-off.patch` (HOO
 
 ## ✔ sent to the Foundation as a task (coordinator 16 Nov 00:40) — Ctrl F does nothing on Word, Excel, Markdown and text files (found 15 Nov; old, every platform)
 The Find button's tooltip says "Find (Ctrl F)", and for a PDF the key opens Find. For the other formats it opens nothing. The key handler lives in `reader.js` `init(deskEl, …)` (line 280), which runs only when a PDF's desk is set up (`Reader.razor` line 3480), and it calls `OpenFind`, the PDF Find. I tried routing `OpenFind` to the viewers' Find for view-only formats: no effect, because the handler isn't attached at all while an Office file is shown. So this is a piece of its own (attach the keys for the viewers too); it is **not** in my Find-focus patch. The same in Chromium, Firefox and WebKit, on the Web and Windows profiles.
+
+## U-20 The hidden-matches line sits under the Find box (found 16 Nov, confirming patch 28)
+**What happens.** Patch 28 draws "2 matches are in hidden cells: A5 (hidden row), C6 (hidden column)" above the sheet (D-188, U-19 a). The Find box floats over the top centre of the viewer, on the same strip. Measured share of the sentence covered: 10% at 1280 px (the end is cut), about 20% on a tablet, 43–48% on a phone, where it can't be read; 0% only on a very wide screen (1920 px). The same in three browsers. Screenshot: `screenshots/webkit-u19-line-under-find-box.png`.
+
+**Options** (the file is the Foundation's `XlsxView`):
+- **(a) Move the line under the sheet, just above the sheet tabs.** Diff ready and measured: `proposal/web-ui-xlsx-hidden-matches-under-sheet.patch` (HOOKS).
+  - Pros: 0% covered at every size; it sits next to the tabs' match counts, which report the same thing; 8 lines; nothing else moves.
+  - Cons: it is at the bottom, away from the Find box where the person has just typed.
+- **(b) Keep it on top, and push it below the Find box while Find is open** (top padding as tall as the box, about 60 px).
+  - Pros: it stays near the Find box.
+  - Cons: the sheet jumps down about 60 px whenever such a match exists; the viewer has to know the Find box's height, which belongs to the Reader.
+- **(c) Put the sentence inside the Find box, as a second line under the count** (what I first proposed for U-19 a).
+  - Pros: it is exactly where the person is looking; never covered.
+  - Cons: the most plumbing: the Find box belongs to the Reader and the sentence is worked out in the Excel viewer, so it needs a callback between them; the box grows on a phone.
+
+**Recommendation: (a).** It is the smallest change that makes the line readable everywhere, and it is ready. (c) is the nicest place and fits with (b) of U-19 (next / previous) later.

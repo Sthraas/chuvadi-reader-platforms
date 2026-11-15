@@ -418,3 +418,23 @@ Coordinator: use what other unavailable rail items on the portal use. I listed e
 
 ### 5. Answers recorded
 D-188: U-19 (a) now, (b) later. Ctrl F on Office files: a Foundation task. Both marked in OPTIONS.
+
+## 2026-11-16 — session 24 (coordinator 02:45: merge patch 28 and confirm its four changes in the portal)
+
+### 1. Branches and merge
+Checked all: `platform/foundation-pr` 87f95c0 (patch 28), `platform/foundation` 7354215 (**two commits past patch 28**: the encoding picker's Core side, and the Excel title bar's sheet arrows), `main` f361e03, `platform/web` eab426b, `platform/web-test` 7f0b5c1, `platform/mobile-ui` cbdef77. The coordinator asked for 87f95c0, so I merged **754d1e2**, the commit on `platform/foundation` with the same `src`, `tests`, `tools`, `ci` and `global.json` as foundation-pr 87f95c0, and left the two later commits for their own patch. Clean merge; `src` equals foundation-pr's.
+
+### 2. Build and tests
+Build `-warnaserror` 0 warnings. Tests 382 + 16 + 41 + 100 = **539 pass**, 0 fail, 6 skipped (the Foundation's).
+
+### 3. The four changes, in the portal, Chromium / Firefox / WebKit
+1. **Sign with certificate greyed with its reason (D-187)**: 12 of 12 cases as decided (portal desktop: disabled, tooltip with the sentence; tablet and phone: greyed, answers a tap, card shows the sentence with no fields; Windows profile: enabled, full card). **One thing off: the rail word is "off".** Patch 28 took the first version of my diff, twenty minutes before the updated one. Follow-up diff: `proposal/web-ui-portal-certificate-rail-word.patch` (HOOKS).
+2. **Find box takes the cursor in Excel and Word**: in exactly as sent. 54 of 54 cases.
+3. **Hidden Find matches named above the sheet (D-188, U-19 a)**: the line appears in 9 of 9 cases with the right words ("2 matches are in hidden cells: A5 (hidden row), C6 (hidden column)"), and not before a search, for a visible-only match, on the hidden sheet, or after clearing. **But the Find box covers it**: 10% of the sentence at 1280 px, about 20% on a tablet, 43–48% on a phone. Options in OPTIONS U-20, with a measured diff ready for the one I recommend (the line under the sheet: 0% covered at every size).
+4. **Ctrl F opens the viewers' Find**: on Excel and Word, portal and Windows profiles, three browsers: the box opens and has the cursor (part of the 54).
+
+### 4. Portal surfaces against session 22's clean screenshots
+63 screenshots: text identical in all. Pixels: the Redact rail's "Sign with certificate" at desktop and tablet sizes (greyed, intended) and the known flaky Chromium chip sliver. Drop overlay 6 of 6.
+
+### 5. The two follow-up diffs
+Each applies to 754d1e2 alone and together. With the rail-word one applied: build 0 warnings, 539 tests pass.
