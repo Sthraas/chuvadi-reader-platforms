@@ -448,6 +448,15 @@ Each saved file was pulled off the device and read back with a separate PDF read
 
 Not exercised by anyone yet: snapshot image, desk session file, Split, Merge, Export pages as images, Lift, Combine.
 No crash or ANR in any save run.
+**Round 11 (run 43755713592).** Tablet: every row of the table above passes again, plus Bind all by drag (AT-20) and a mark made
+at a pinched zoom (saved within 0.1 pt of where it was drawn). Reduce file size is now understood and is its own bug, **AT-23**.
+Phone: Mark › Save as new PDF now works (AT-22) — text box, rectangle and filled form saved and read back. **The phone run then went
+wrong:** after the third Save as, Home › Open stopped bringing up Android's picker (4 tries, ~5 min each, screen stayed on Home), and
+about half an hour later the emulator stopped answering `adb` altogether. So on the phone the password copy, Reduce, Bind all, rotated
+page, pinch and the drift and AT-13 suites did **not** run in round 11. This is the third phone run to end this way (10c, 11a, 11);
+the two that did not (10, 10b) never got a Mark › Save as through on the phone. I can't yet say whether that is the app, Android's
+picker or the CI emulator — no log survived. Round 12 runs the phone with a live log, a device health check after every case, and
+the mark saves last.
 
 ## AT-19 · S2 · Android (build) / Foundation · **verified, closed** R11 run 43755713592: `global.json` is in the repo (SDK 10.0.403, workload set 10.0.403, rollForward disable), the clean build uses it: 0 errors, 0 warnings, runtime pack 10.0.14 — The clean build breaks on the .NET SDK patch released 10 Nov (10.0.404): the toolchain isn't pinned
 **Steps:** clean runner, `actions/setup-dotnet` with `10.0.x` (what the Android workflow and mine use), `dotnet workload install
@@ -506,7 +515,7 @@ themselves are in the chosen folder and correct. (Run 42951440189, Android ce890
 "saved to …" message that prints a path (Export, Scatter, Press) should be checked the same way.
 **Round 11a / 11 (tablet):** verified with P-09 applied by Android's composition. It stays "pending" only in the sense that P-09 is not yet in Foundation; Press's own message was not checked (see AT-23).
 
-## AT-22 · S2 · Mobile UI (phone look) / Foundation if the card is shared · open, needs one confirming look — Phone: after drawing a mark, its property card covers **Save as new PDF**, and the card has no close control
+## AT-22 · S2 · Mobile UI · **verified** R11 run 43755713592 (Mobile UI 5a49864): with the mark's card up, Save as new PDF sits above it and works — 3 of 3 on the phone (text box, rectangle, form), files read back — Phone: after drawing a mark, its property card covers **Save as new PDF**, and the card has no close control
 **Steps:** phone API 36, open a PDF, Mark › Rectangle (or Text), draw on the page. The mark's card ("Rectangle" / "Text box":
 stroke, fill, rotation, Duplicate, Delete) slides up over the lower half of the screen.
 **Expected:** the person can still reach Save as new PDF, or the card has an obvious way to be put away.
@@ -523,6 +532,9 @@ discovers a gesture", pending that one look.
   hides. *Cons:* crowds a small screen.
 - (c) Make the card a short peek (title row only) that expands on tap. *Pros:* page stays visible while marking. *Cons:* more work.
 - **Recommendation: (a) now, (c) when there is time.**
+**Round 11 (phone):** fixed. With the card up the Save button is at the card's top edge, not under it
+(`screenshots/r11/r11-phone-save-above-card-then-home.png`, frames 1–2); `sv-text-edited.pdf`, `sv-shape-edited.pdf` and
+`sv-form-edited.pdf` were written through Android's picker and carry the mark (and the form's values).
 
 ## AT-23 · S2 · Android (host) · open — Reduce file size (Press) writes the smaller PDF into the app's private cache, where the person can't find it
 **Steps:** tablet API 36, open `Download/sv-compress.pdf` › Document › **Reduce file size (Press)** › **Press →**.

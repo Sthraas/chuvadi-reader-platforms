@@ -209,6 +209,28 @@ launches with 0 crashes on phone and tablet.
 no results came back. The 10c changes it carried (putting the mark card away, password fields one at a time, folder picker for
 Bind) are therefore unproven on the phone. One run, read, not retried.
 
+## Round 11a / 11 (runs 43748557072 on Android 070af93; 43755713592 on Android a2c022c = 39a623b, Foundation 57a63c5 patch 27, Mobile UI 5a49864; Release, API 36)
+Build from clean with the repo's `global.json`: 0 errors, 0 warnings, runtime pack 10.0.14; `.aab` 42.75 MB, `.apk` 43.13 MB;
+as-built Release launches, 0 crashes.
+
+| Area | Phone | Tablet |
+|---|---|---|
+| AT-22 Save as with the mark card up | PASS, 3 of 3 saved and read back | n/a (card is beside the page) |
+| AT-20 shelf drag + desk reorder (portrait) | not reached | PASS 2 of 2, 1 of 1 |
+| AT-21 Bind message | not reached | PASS ("Bound 1 desk into Download/at-bind") |
+| Save suite | 8 of 18: device stopped answering after the third Save as | 27 of 30: Reduce file size → AT-23; two n/a |
+| Pinch out / in | not reached | PASS (page 596 → 1,907 → 596 px wide) |
+| Mark by finger at that zoom, saved | not reached | PASS, within 0.1 pt of where it was drawn |
+| Drift suite incl. AT-16 | not reached | 7 of 7 |
+| Function | 19 of 19 | 17 of 19 (my old print step; print passes in the save suite) |
+| Design / touch targets | 42 of 42 | 29 of 30 (two shelf tools 43 dp — AT-06) |
+| AT-13 | not reached | 5 of 5 (5.1–5.8 s) |
+| As-built cold start → ready (12 runs, median) | 2,212 ms | 2,650 ms |
+| As-built cold Open with → ready | 5,036 ms (worst 5,430) | 5,370 ms (worst 6,279) |
+| Trace build, cold Open with → page 1 painted | 4,586 ms | 6,505 ms |
+
+"Warm ready" in `startup.py` records nothing (n = 0) on both: my probe, not the app; warm first frame is 305 ms on the tablet.
+
 ## Blocked in CI: Reader on Android 15 (API 35)
 The API 35 image ships WebView 124, so the app correctly shows only its update screen (D-105). Updating it in CI from the API 36
 image's WebView failed twice: that WebView needs the Trichrome static library, which my donor job couldn't locate on the API 36
