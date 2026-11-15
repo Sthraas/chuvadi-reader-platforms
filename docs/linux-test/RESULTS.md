@@ -446,7 +446,7 @@ is green. This replaces the bf60da9 sign-off above.
   (library side) and B-11a, and SH-L2 to SH-L6.
 - The real-machine checks still need a real desktop.
 
-## Sign-off — Linux 7cd960c (16 Nov): ready for Arun, with one thing to know
+## Sign-off — Linux 7cd960c (16 Nov): ready for Arun, with one thing to know (carried to 9a38f62 below)
 
 **Build and CI.** Built from source. [CI run 42940105350](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/42940105350)
 is green. This replaces the 90895ef sign-off above. Details and numbers are in BUGS.md.
@@ -472,9 +472,24 @@ stored value offered on hover and in copy is wrong (-0.25 for 0.75). It is a Chu
 - For a real machine: a trackpad pinch, marks under display scaling other than 100 %, start-up timing, and the
   real-machine checks above.
 
-## Arun's check — Linux 7cd960c
+## Sign-off — Linux 9a38f62 (16 Nov): ready for Arun, with one thing to know
 
-**Get the package.** GitHub → `Sthraas/chuvadi-reader-platforms` → Actions → run **Linux** on `7cd960c` ([run 42940105350](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/42940105350), green) → Artifacts → **linux-x64** (ARM machine: `linux-arm64`). Unzip it and use **`deb/chuvadi-reader_1.0.0~preview_amd64.deb`** — the self-contained one (37.9 MB, needs no .NET; artifacts kept until 9 Feb 2027). SHA-256 `b6ba158d6254fdb23eecd50dbfc39dcbfc1a7380d76dd76df890a95ea52977fb`. (`deb-framework-dependent/` is the smaller variant that pulls in Microsoft's .NET runtime package.) Or with the CLI: `gh run download 42940105350 -R Sthraas/chuvadi-reader-platforms -n linux-x64`.
+9a38f62 has the same app code as 7cd960c (it adds a UI test and build-log notes), so the 7cd960c sign-off above
+stands in full. [CI run 43744136829](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/43744136829) is green.
+
+Checked again on this head:
+
+| Check | Result |
+|---|---|
+| Marks after a pinch ✅ | Rectangle and Text at 55, 100 and 150 % reached by pinch steps, unrotated and `/Rotate 90` pages: exactly under the pointer on screen, within 1–3 pt in the saved file |
+| Pinch itself ✅ (test verb only) | Zooms the page both ways; bars don't scale; nothing happens on Home |
+| Quick regression ✅ | B-24 + B-08b, B-25, owner-password printing, single instance, drops, print, `/Rotate` |
+
+**Ready**, with B-31 (Excel time-only cells) known. A real trackpad pinch still needs a real machine.
+
+## Arun's check — Linux 9a38f62
+
+**Get the package.** GitHub → `Sthraas/chuvadi-reader-platforms` → Actions → run **Linux** on `9a38f62` ([run 43744136829](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/43744136829), green) → Artifacts → **linux-x64** (ARM machine: `linux-arm64`). Unzip it and use **`deb/chuvadi-reader_1.0.0~preview_amd64.deb`** — the self-contained one (37.9 MB, needs no .NET; artifacts kept until 13 Feb 2027). SHA-256 `306c3e8789a539cde17ce3038322ce7343127632d5d21c8bc1f07a12f48a8e22`. (`deb-framework-dependent/` is the smaller variant that pulls in Microsoft's .NET runtime package.) Or with the CLI: `gh run download 43744136829 -R Sthraas/chuvadi-reader-platforms -n linux-x64`.
 
 **Install** (Ubuntu 24.04 or 26.04, desktop):
 ```

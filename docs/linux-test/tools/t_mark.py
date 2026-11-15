@@ -46,6 +46,14 @@ try:
         a.xdo("keydown", "ctrl")
         for _ in range(abs(n)): a.xdo("click", "4" if n > 0 else "5"); time.sleep(0.25)
         a.xdo("keyup", "ctrl"); time.sleep(1)
+    if os.environ.get("PINCH"):   # pinch steps through the host's test verb (the gesture's own path; no real pinch under Xvfb)
+        target = float(os.environ["PINCH"]); pr0 = prect(0); d0 = a.rect(".rdesk"); steps = 0
+        px, py = int(d0[0] + d0[2] / 2), int(d0[1] + d0[3] / 2)
+        for _ in range(60):
+            z = float(a.js(ZL).strip("%"))
+            if abs(z - target) <= 1: break
+            a.send(f"pinch {px} {py} {max(1 / 1.12, min(1.12, target / z))}"); time.sleep(0.25); steps += 1
+        print("PINCHED", steps, "steps to", a.js(ZL), "| chrome", a.js("return [Math.round(document.querySelector('.topbar').getBoundingClientRect().height), Math.round(document.querySelector('.leftbar').getBoundingClientRect().width)]"), flush=True)
     zoom = a.js(ZL); desk = a.rect(".rdesk")
     for i in (0, 1):
         goto(i + 1); pr = prect(i)
@@ -67,7 +75,7 @@ try:
         dom = newest(i, n0)
         rows.append({"zoom": zoom, "page": i + 1, "tool": "Text", "pointer": [cx, cy], "dom": dom, "page_pts": disp(i, pr, cx, cy)})
         # Draw: a diagonal stroke D -> E
-        (dx, dy), (ex, ey) = P(0.55, 0.6), P(0.8, 0.85); h.click_label(".srail", "Draw"); h.focus_main(); n0 = marks(i)
+        (dx, dy), (ex, ey) = P(0.62, 0.76), P(0.85, 0.96); h.click_label(".srail", "Draw"); h.focus_main(); n0 = marks(i)
         a.xdo("mousemove", str(dx), str(dy)); a.xdo("mousedown", "1")
         for k in range(1, 11): a.xdo("mousemove", str(int(dx + (ex - dx) * k / 10)), str(int(dy + (ey - dy) * k / 10))); time.sleep(0.04)
         a.xdo("mouseup", "1"); time.sleep(0.8); dom = newest(i, n0)
@@ -75,7 +83,7 @@ try:
         a.key("Escape"); a.xdo("mousemove", *park); a.xdo("click", "1"); time.sleep(0.6); s1 = a.shot(f"m{i}-1")
         print("SCREEN", json.dumps({"zoom": zoom, "page": i + 1, "changed": sorted(comps(s0, s1, [vx0 - 12, vy0 - 12, vx1 - vx0 + 24, vy1 - vy0 + 24]))}), flush=True)
     for r in rows: print("MARK", json.dumps(r), flush=True)
-    out = os.path.join(OUT, f"marked-{zoom.strip('%')}.pdf")
+    out = os.path.join(OUT, f"marked-{zoom.strip('%')}{'-pinch' if os.environ.get('PINCH') else ''}.pdf")
     if os.path.exists(out): os.remove(out)
     h.click_label(".srail", "Save as new PDF"); h.file_dialog("Save", out)
     a.wait(lambda: os.path.exists(out) and os.path.getsize(out) > 0, 20, "saved"); time.sleep(1)

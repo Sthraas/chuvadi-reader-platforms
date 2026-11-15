@@ -768,3 +768,26 @@ The mark is gone once the app shows. Real-machine timing, cold and warm, still n
 
 **Quick regression ✅.** B-24 + B-08b Cancel (`.pdf`, `.xlsx`, `.docx`); B-25; owner-password printing; single
 instance (1 window, 4 tabs); drops; print byte-identical; CropBox pages 1, 3 and 4; Ctrl+F; no files left in `/tmp`.
+
+
+---
+## Linux Test — 16 Nov, short re-check on `platform/linux` 9a38f62 (standing watch)
+9a38f62 changes only Linux's UI test (step 38) and build log; the app's code is the same as 7cd960c. Built from
+source; CI run 43744136829 is green. `tools/t_mark.py` now takes `PINCH=<zoom %>`.
+
+**Marks after a pinch ✅.** The zoom was reached with pinch steps sent through the host's test verb (`pinch x y ratio`,
+the gesture's own path; a real pinch can't be made under Xvfb). Then a Rectangle and a Text mark by mouse, on the
+unrotated and the `/Rotate 90` page of `mark-rot.pdf`, saved and rendered.
+
+| Zoom reached by pinch | On screen | In the saved file |
+|---|---|---|
+| 55 % (4 steps down from Fit) | Rectangle and Text exactly under the pointer, both pages | within 1–2 pt, both pages |
+| 100 % (2 steps up) | exactly under the pointer, both pages | within 1–3 pt |
+| 150 % (5 steps up) | exactly under the pointer, both pages | within 1–3 pt |
+
+**Pinch itself, as far as the runner allows ✅.** Four pinch steps out and four back on a page: 86 % → 126 % → 86 %.
+The top bar (40 px) and side bar (208 px) don't change, and the page's own scale stays 1. Four pinch steps on Home
+change nothing. A real trackpad pinch still needs a real machine.
+
+**Quick regression ✅.** B-24 + B-08b Cancel; B-25; owner-password printing; single instance (1 window, 4 tabs);
+drops; print byte-identical; `/Rotate` 0, 90, 180, 270 on screen; no files left in `/tmp`. B-31 is unchanged (open).
