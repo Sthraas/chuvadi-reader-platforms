@@ -877,3 +877,7 @@ same screen; no crash), smoke pass. With round 6 (API 36 phone and tablet, all c
 - **Run 43750628461** (phone API 36, full, 6487cf4): **all green** — gestures 11/11, platform 29/29 (AT-11 pass: new
   process, back on /reader, same tab, 5 tabs, page "1 / 3"), Release launch pass. With 43748779082, all four emulators
   are green on this composition. Head for Android Test round 11: 6487cf4.
+
+### 65. Foundation 87f95c0 (patch 28) + Mobile UI cbdef77 — coordinator, 16 Nov 02:45 IST
+- Composition clean; P-09 still pending in Foundation, applied here. Sandbox: Android Debug and Release `-warnaserror`
+  0 warnings; Release manifest 14/14; Core 382 (+6 skipped), Hosting 101, MobileUi 16, WebUi 41 pass.

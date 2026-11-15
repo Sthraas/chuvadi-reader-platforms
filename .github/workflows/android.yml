@@ -26,10 +26,10 @@ on:
         options: [full, smoke, timeline]
 
 env:
-  # platform/foundation-pr: patch 27 (shared pinch entry, engine-independent mark placement, repo global.json) on Reader main 04d97d7.
-  FOUNDATION_REF: 57a63c5f82756f7784b392cf8c110cb328ac4dc1
-  # platform/mobile-ui: AT-22 (the mark card leaves Save reachable), AT-20 long-press arms before 400 ms.
-  MOBILEUI_REF: 5a49864c643ceba2bb28e4e3ea22e315f79e475c
+  # platform/foundation-pr: patch 28 (mark card close control, Find and Fit on turned pages, hidden Find matches, Find box in Excel and Word) on Reader main 814f755.
+  FOUNDATION_REF: 87f95c0a36a8366ce3da4f8f6494ac05e7bce59d
+  # platform/mobile-ui: Foundation 57a63c5 merged; H-25 pinch in Mark leaves no mark.
+  MOBILEUI_REF: cbdef7729d603018fcde0f4e72910d98cff50b95
   DOTNET_NOLOGO: '1'
   DOTNET_CLI_TELEMETRY_OPTOUT: '1'
 
