@@ -52,7 +52,22 @@ jobs:
       - name: Driver compiles (fail fast)
         run: swiftc -O harness/tests/mac/macdrive.swift -o macdrive && ./macdrive trust
 
+      # Test-side only (16 Nov): the app's global.json (patch 27) names workload set 10.0.403, whose Mac Catalyst pack
+      # needs Xcode 27.1; this runner has 26.6. Build with set 10.0.401 instead — the same one-line change as the Mac
+      # chat's docs/mac/foundation/global-json-mac-workload-10.0.401.patch. Recorded in RESULTS next to the run.
+      - name: global.json → workload set 10.0.401 (runner has no Xcode 27.1)
+        if: ${{ hashFiles('app/global.json') != '' }}
+        working-directory: app
+        run: |
+          cat global.json
+          sed -i '' 's/"workloadVersion": "10.0.403"/"workloadVersion": "10.0.401"/' global.json
+          echo "::notice::app built with global.json workloadVersion 10.0.401 (test-side change)"; cat global.json
       - uses: actions/setup-dotnet@v6
+        if: ${{ hashFiles('app/global.json') != '' }}
+        with:
+          global-json-file: app/global.json
+      - uses: actions/setup-dotnet@v6
+        if: ${{ hashFiles('app/global.json') == '' }}
         with:
           dotnet-version: '10.0.4xx'
 
