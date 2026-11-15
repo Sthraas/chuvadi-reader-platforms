@@ -883,3 +883,9 @@ same screen; no crash), smoke pass. With round 6 (API 36 phone and tablet, all c
   0 warnings; Release manifest 14/14; Core 382 (+6 skipped), Hosting 101, MobileUi 16, WebUi 41 pass.
 - **Run 43762818990** (all four, full, ccda2d8): **all green** — API 35 WebView gate 4/4 on both; gestures 11/11 and
   13/13; platform 29/29 and 27/27; Release launch pass on all four.
+
+### 66. P-09 approved (D-190) — coordinator, 16 Nov 03:15 IST
+- Arun approved P-09; Foundation builds it into its next PR from `proposal/P-09-folder-messages.patch`. When that lands,
+  compose reports it "already in Foundation", the patch moves to `proposal/applied/`, and Android Test verifies AT-21.
+- For the record: Arun confirmed on his Windows PC that pinch zoom works and a rectangle drawn at a zoom lands under the
+  pointer.
