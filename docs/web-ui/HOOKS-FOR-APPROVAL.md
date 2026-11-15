@@ -1,36 +1,36 @@
 # Web portal UI — existing-file hooks
 
 ## Still to apply — "Sign with certificate" off on the portal, greyed with its reason (U-18 b, D-187)
-**`proposal/web-ui-portal-certificate-off.patch`**, against foundation **20030cb** (applies cleanly; independent of the Find-focus patch below, and the two apply together). Nine files, 48 lines added and 7 removed:
+**`proposal/web-ui-portal-certificate-off.patch`**, against foundation **7fd806f** (patch 27; applies cleanly; independent of the Find-focus patch below, and the two apply together). Nine files, 39 lines added and 6 removed. **Updated 16 Nov 00:40**: the rail word is the existing "soon", so `RailButton` no longer gets a word parameter.
 
 | File | Change |
 |---|---|
-| `Ui/Components/Platform/PlatformText.cs` | The sentence (`CertificateSigningOnPortal`), the rail word (`CertificateSigningTag = "off"`), `CertificateSigningOff(platform)` (the sentence on Web, null elsewhere) and `ReasonOnTap(platform)` (true where `Input` has Touch) |
-| `Ui/Components/Rails/RailButton.razor` | Two optional parameters. `DisabledTag` (default "soon") is the word shown where the shortcut would be. `ReasonOnTap`: with a `DisabledReason`, the button is not `disabled` but gets class `off` and `aria-disabled="true"`, so it looks greyed and still runs `OnClick`. Defaults leave every existing button as it is |
+| `Ui/Components/Platform/PlatformText.cs` | The sentence (`CertificateSigningOnPortal`), `CertificateSigningOff(platform)` (the sentence on Web, null elsewhere) and `ReasonOnTap(platform)` (true where `Input` has Touch) |
+| `Ui/Components/Rails/RailButton.razor` | One optional parameter, `ReasonOnTap`: with a `DisabledReason`, the button is not `disabled` but gets class `off` and `aria-disabled="true"`, so it looks greyed and still runs `OnClick`. The default leaves every existing button as it is |
 | `Ui/wwwroot/css/shell.css` | `.rb.off { opacity: 0.38; }`, the same grey as `.rb:disabled` |
-| `Ui/Pages/Reader.razor` | Protect rail's button gets the three parameters. The "cert" card: where signing is off it shows the sentence in place of the certificate, password, reason, location and Save controls |
-| `Ui/Pages/Redact.razor` | Tools rail's button gets the same three parameters |
+| `Ui/Pages/Reader.razor` | Protect rail's button gets `DisabledReason` and `ReasonOnTap`. The "cert" card: where signing is off it shows the sentence in place of the certificate, password, reason, location and Save controls |
+| `Ui/Pages/Redact.razor` | Tools rail's button gets the same two parameters |
 | `Ui/Pages/Reader.Shell.cs` | Command `p.cert` (Ctrl K, phone Protect strip): greyed with the reason; on a touch screen it runs and is marked `Dimmed` |
 | `Core/Reader/ShellService.cs` | `ShellCommand.Dimmed` (init-only, default false): shown greyed although it runs |
 | `Ui/Components/Platform/Phone/PhoneToolStrip.razor`, `Ui/wwwroot/css/mobile.css` | A `Dimmed` command's tool gets class `dim`; `.ph-tool.dim { opacity: .38; }` |
 
-Wording choice to confirm: the rail word is **"off"**. "soon" would be untrue, and "desktop app" and "desktop" don't fit: beside "Sign with certificate", the longest label on the Tools rail, "desktop" ends 4 px past the rail's edge in all three browsers. "off" ends at the same x as the shortcut letters above it (1204 of 1218). At most six characters fit.
+Rail word (coordinator 16 Nov 00:40: use what other unavailable rail items on the portal already use): every greyed rail item on the portal has the same state and word. It is `disabled`, with the reason in the tooltip and "soon" where the shortcut would be: Highlight, Note and Fill form ("Coming soon"), and on Office files Print ("Convert to PDF first") and Convert to PDF ("Coming with the Layout library"). The same on the Windows profile. So "Sign with certificate" shows **"soon"** too. It fits: it ends at x 1204 of the rail's 1218 in all three browsers.
 
 Proofs (preview; Chromium / Firefox / WebKit; the same in all three):
 
 | Profile | Button | On click or tap |
 |---|---|---|
-| Portal, desktop 1280×720, mouse | Reader Protect rail and Redact Tools rail: `disabled`, opacity 0.38, tooltip "Sign with certificate — Certificate signing is in the desktop app. Your private key never leaves your computer.", word "off" | Nothing (disabled) |
+| Portal, desktop 1280×720, mouse | Reader Protect rail and Redact Tools rail: `disabled`, opacity 0.38, tooltip "Sign with certificate — Certificate signing is in the desktop app. Your private key never leaves your computer.", word "soon" | Nothing (disabled) |
 | Portal, tablet 1024×768, touch | Both rails: not disabled, class `off`, `aria-disabled="true"`, opacity 0.38 | The card opens with the sentence; no "Choose certificate", no password box, no "Save signed copy" |
 | Portal, phone 390×844, touch | Protect strip "Sign": not disabled, class `dim`, opacity 0.38 | The card opens with the sentence; no fields |
 | Windows 1280×720 | Enabled, opacity 1, no word | The full card, as before |
 
-Windows profile pixel check and the portal sweep: see the build log, session 22. Screenshots: `screenshots/chromium-u18-rail-hover.png`, `screenshots/webkit-u18-tablet-card.png`, `screenshots/webkit-u18-phone-card.png`.
+Re-run on the final patch over foundation 7fd806f: 12 of 12 cases as decided (three browsers × the four profiles above). Windows profile pixel check and the portal sweep: see the build log, sessions 22 and 23. Screenshots: `screenshots/chromium-u18-rail-hover.png`, `screenshots/webkit-u18-tablet-card.png`, `screenshots/webkit-u18-phone-card.png`.
 
 Not changed: the placed-signature card's note "For a certificate signature use Protect › Sign with certificate" still reads true (the button is there, with its reason). The Web host's `AllowCertificateUpload` stays as it is (off).
 
 ## Still to apply — the Find box in Word, Excel, Markdown and text files takes the cursor (coordinator 15 Nov, D-187)
-**`proposal/web-ui-office-find-focus.patch`**, against foundation **20030cb** (applies cleanly). Two files, 12 lines added:
+**`proposal/web-ui-office-find-focus.patch`**, against foundation **7fd806f** (applies cleanly; unchanged since 15 Nov). Two files, 12 lines added:
 - `Ui/Pages/Reader.razor`: the viewers' Find box gets `@ref="_viewerFindBoxRef"`; `OnAfterRenderAsync` focuses it once after the render that draws it (`_focusViewerFind`), the same call the PDF Find box gets in `OpenFind`.
 - `Ui/Pages/Reader.Shell.cs`: `OpenViewerFind` sets `_focusViewerFind`.
 

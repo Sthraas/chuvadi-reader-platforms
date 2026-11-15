@@ -401,3 +401,20 @@ How a person sees Find matches that sit in hidden rows and columns: three option
 ### 6. Build and tests
 - Merged tree as pushed (the Foundation's files untouched): build `-warnaserror` 0 warnings.
 - With both patches applied: build `-warnaserror` 0 warnings; tests 374 + 16 + 41 + 97 = **528 pass**, 0 fail, 6 skipped (the Foundation's). Each patch applies alone and in either order.
+
+## 2026-11-16 — session 23 (coordinator 00:15 and 00:40: merge patch 27; rail word; U-19 and Ctrl F answers)
+
+### 1. Branches and merge
+Checked all: `platform/foundation-pr` 57a63c5, `platform/foundation` 7fd806f, `main` e578a80, `platform/web` 4803bfa, `platform/web-test` aa25188 (unchanged), `platform/mobile-ui` 5a49864. Merged **`platform/foundation` 7fd806f** (`src`, `tests`, `tools`, `ci` and `global.json` identical to foundation-pr 57a63c5; foundation-pr itself conflicts, as before). Session 22 already had patch 27's code (pinch, M-27 mark placement); new here are `global.json`, the workflows that read it, and one line in the solution file. No app code changed.
+
+### 2. Strict `global.json` (D-178, D-186)
+The SDK here is 10.0.403. The first build failed on every project with `MSB4242` ("Workload version 10.0.403 … was not found"): the file pins the workload set as well. Cure, as the Foundation's log says: `dotnet workload update` once in the repo folder (4 s). After that, `dotnet workload --info` reports 10.0.403.
+
+### 3. Build, tests, portal
+Build `-warnaserror` 0 warnings. Tests 374 + 16 + 41 + 97 = **528 pass**, 0 fail, 6 skipped. Portal sweep against session 22's clean screenshots: text identical in all 63; pixels identical apart from the known flaky Chromium chip sliver. Drop overlay 6 of 6.
+
+### 4. Rail word for U-18: "soon"
+Coordinator: use what other unavailable rail items on the portal use. I listed every greyed rail button with a reason on the portal (Reader Read / Mark / Protect, Arrange, Redact, an Excel file): all are `disabled` with the word "soon" (Highlight, Note, Fill form, Print, Convert to PDF), the same as on Windows. `proposal/web-ui-portal-certificate-off.patch` is regenerated without the word parameter (now +39 / −6, nine files). Re-proved: 12 of 12 cases as decided; "soon" ends at 1204 of 1218 in three browsers. With both patches applied over 7fd806f: build 0 warnings, 528 tests pass; each applies alone and together.
+
+### 5. Answers recorded
+D-188: U-19 (a) now, (b) later. Ctrl F on Office files: a Foundation task. Both marked in OPTIONS.

@@ -27,10 +27,10 @@ index d3602cd3..981ff93c 100644
                  @onclick="() => OnPick.InvokeAsync(p)">
              <Icon Name="@p.Item.Icon" Size="19" />
 diff --git a/src/ChuvadiReader.Ui/Components/Platform/PlatformText.cs b/src/ChuvadiReader.Ui/Components/Platform/PlatformText.cs
-index 9b629a97..fc7191c3 100644
+index 9b629a97..a454bd1e 100644
 --- a/src/ChuvadiReader.Ui/Components/Platform/PlatformText.cs
 +++ b/src/ChuvadiReader.Ui/Components/Platform/PlatformText.cs
-@@ -55,4 +55,21 @@ public static class PlatformText
+@@ -55,4 +55,16 @@ public static class PlatformText
      /// Android get <paramref name="desktop"/>, character for character.</summary>
      public static string FetchOrUpload(IPlatformInfo platform, string desktop, string portal) =>
          platform.Kind == PlatformKind.Web ? portal : desktop;
@@ -38,11 +38,6 @@ index 9b629a97..fc7191c3 100644
 +    /// <summary>Why "Sign with certificate" is off on the Web portal (D-27 a, D-187): a .pfx holds the person's
 +    /// private key, and the portal never takes one.</summary>
 +    public const string CertificateSigningOnPortal = "Certificate signing is in the desktop app. Your private key never leaves your computer.";
-+
-+    /// <summary>The word a greyed rail button shows where its shortcut would be, for <see cref="CertificateSigningOnPortal"/>
-+    /// (other greyed buttons say "soon"; this one is off, D-27 a). Six characters at most: beside "Sign with
-+    /// certificate", the longest label on the Tools rail, "desktop" already runs 4 px past the rail's edge.</summary>
-+    public const string CertificateSigningTag = "off";
 +
 +    /// <summary>The reason "Sign with certificate" is greyed out on this host, or null where it works (every host but Web).</summary>
 +    public static string? CertificateSigningOff(IPlatformInfo platform) =>
@@ -53,10 +48,10 @@ index 9b629a97..fc7191c3 100644
 +    public static bool ReasonOnTap(IPlatformInfo platform) => platform.Input.HasFlag(InputKinds.Touch);
  }
 diff --git a/src/ChuvadiReader.Ui/Components/Rails/RailButton.razor b/src/ChuvadiReader.Ui/Components/Rails/RailButton.razor
-index 9877ad5f..2acce095 100644
+index 9877ad5f..296354df 100644
 --- a/src/ChuvadiReader.Ui/Components/Rails/RailButton.razor
 +++ b/src/ChuvadiReader.Ui/Components/Rails/RailButton.razor
-@@ -4,13 +4,13 @@
+@@ -4,8 +4,8 @@
      then the label and shortcut show. Unbuilt features pass DisabledReason: the button is
      greyed out and the reason is its tooltip (the owner wants them visible, not hidden).
  *@
@@ -67,19 +62,10 @@ index 9877ad5f..2acce095 100644
          title="@Tip" aria-label="@Label" aria-pressed="@(Active ? "true" : null)"
          @onclick="OnClick">
      <Icon Name="@Icon" Size="@Size" />
-     <span class="rb-l">@Label</span>
--    <span class="rb-k">@(DisabledReason is not null ? "soon" : ShownKeys)</span>
-+    <span class="rb-k">@(DisabledReason is not null ? DisabledTag : ShownKeys)</span>
- </button>
- 
- @code {
-@@ -22,6 +22,13 @@
+@@ -22,6 +22,10 @@
      [Parameter] public bool Danger { get; set; }
      [Parameter] public bool Disabled { get; set; }
      [Parameter] public string? DisabledReason { get; set; }
-+
-+    /// <summary>The word shown where the shortcut would be while <see cref="DisabledReason"/> is set.</summary>
-+    [Parameter] public string DisabledTag { get; set; } = "soon";
 +
 +    /// <summary>With <see cref="DisabledReason"/>: the button looks greyed out but still answers a tap, so its
 +    /// OnClick can show the reason where a tooltip can't be read (touch screens, D-187).</summary>
@@ -87,7 +73,7 @@ index 9877ad5f..2acce095 100644
      [Parameter] public string? Class { get; set; }
      [Parameter] public int Size { get; set; } = 19;
      [Parameter] public EventCallback OnClick { get; set; }
-@@ -30,5 +37,7 @@
+@@ -30,5 +34,7 @@
          ? $"{Label} — {DisabledReason}"
          : string.IsNullOrEmpty(Keys) ? Label : $"{Label} ({ShownKeys})";
  
@@ -112,7 +98,7 @@ index 76b56816..13f1ff4c 100644
          // View
          yield return new("v.zoomin", "Zoom in", "View", "zoom-in", null, T(ZoomIn));
 diff --git a/src/ChuvadiReader.Ui/Pages/Reader.razor b/src/ChuvadiReader.Ui/Pages/Reader.razor
-index e45ae46b..52d4c246 100644
+index e45ae46b..579a1aee 100644
 --- a/src/ChuvadiReader.Ui/Pages/Reader.razor
 +++ b/src/ChuvadiReader.Ui/Pages/Reader.razor
 @@ -799,6 +799,12 @@
@@ -133,12 +119,12 @@ index e45ae46b..52d4c246 100644
                      <RailButton Icon="compress" Label="Flatten" Disabled="_flattening" OnClick="FlattenNow" />
                      <RailButton Icon="doc-lock" Label="Password" Active='_card == "password"' OnClick='() => ToggleCard("password")' />
 -                    <RailButton Icon="certification" Label="Sign with certificate" Active='_card == "cert"' OnClick='() => ToggleCard("cert")' />
-+                    <RailButton Icon="certification" Label="Sign with certificate" DisabledReason="@ChuvadiReader.Ui.Components.Platform.PlatformText.CertificateSigningOff(Platform)" DisabledTag="@ChuvadiReader.Ui.Components.Platform.PlatformText.CertificateSigningTag" ReasonOnTap="@ChuvadiReader.Ui.Components.Platform.PlatformText.ReasonOnTap(Platform)" Active='_card == "cert"' OnClick='() => ToggleCard("cert")' />
++                    <RailButton Icon="certification" Label="Sign with certificate" DisabledReason="@ChuvadiReader.Ui.Components.Platform.PlatformText.CertificateSigningOff(Platform)" ReasonOnTap="@ChuvadiReader.Ui.Components.Platform.PlatformText.ReasonOnTap(Platform)" Active='_card == "cert"' OnClick='() => ToggleCard("cert")' />
                      <RailButton Icon="sliders" Label="View" Class="rb-viewfold" Active='_card == "view"' OnClick='() => ToggleCard("view")' />
                      <RailSpacer />
                      <RailButton Icon="download" Label="Save redacted copy" Primary="true" OnClick="() => GoRedact(false)" />
 diff --git a/src/ChuvadiReader.Ui/Pages/Redact.razor b/src/ChuvadiReader.Ui/Pages/Redact.razor
-index a8c2e057..a2bc2f9f 100644
+index a8c2e057..fee26153 100644
 --- a/src/ChuvadiReader.Ui/Pages/Redact.razor
 +++ b/src/ChuvadiReader.Ui/Pages/Redact.razor
 @@ -228,7 +228,7 @@
@@ -146,7 +132,7 @@ index a8c2e057..a2bc2f9f 100644
              <RailButton Icon="compress" Label="Flatten" OnClick='() => BackToProtect("flatten")' />
              <RailButton Icon="doc-lock" Label="Password" OnClick='() => BackToProtect("password")' />
 -            <RailButton Icon="certification" Label="Sign with certificate" OnClick='() => BackToProtect("cert")' />
-+            <RailButton Icon="certification" Label="Sign with certificate" DisabledReason="@ChuvadiReader.Ui.Components.Platform.PlatformText.CertificateSigningOff(Platform)" DisabledTag="@ChuvadiReader.Ui.Components.Platform.PlatformText.CertificateSigningTag" ReasonOnTap="@ChuvadiReader.Ui.Components.Platform.PlatformText.ReasonOnTap(Platform)" OnClick='() => BackToProtect("cert")' />
++            <RailButton Icon="certification" Label="Sign with certificate" DisabledReason="@ChuvadiReader.Ui.Components.Platform.PlatformText.CertificateSigningOff(Platform)" ReasonOnTap="@ChuvadiReader.Ui.Components.Platform.PlatformText.ReasonOnTap(Platform)" OnClick='() => BackToProtect("cert")' />
              <RailSep />
              <RailButton Icon="folder" Label="Redact another file…" OnClick="Fetch" />
              <RailButton Icon="close" Label="Clear all boxes" Disabled="@(!HasAnythingToRedact || _saving)" OnClick="ClearAll" />
