@@ -1,9 +1,24 @@
-# Mobile app UI → Foundation: hooks and hand-off (updated 11 Nov)
+# Mobile app UI → Foundation: hooks and hand-off (updated 15 Nov)
 
-## Outstanding for Foundation: nothing
-There is no outstanding hooks patch. Everything in `proposal/` is under `proposal/landed/`; with Foundation
-07ed3ca (patch 26) this branch builds and runs with no shared-file diff at all. Android's `compose.sh` has
-nothing to apply for round 10.
+## Outstanding for Foundation: H-24 (`proposal/mobile-ui-hooks-10.patch`)
+One diff, against foundation-pr 07ed3ca. `proposal/H24-reader-mark-card-close-on-touch.patch` is the same
+diff on its own. Android's `compose.sh` applies `mobile-ui-hooks-10.patch` for round 11.
+
+### H-24: a selected mark's card has a close control on tablet and phone (AT-22)
+(`Ui/Pages/Reader.razor`, +9 / −3)
+- The Text box, shape (Rectangle, Ellipse, Line, Arrow, Draw) and Image cards are the only float cards
+  with no `OnClose`. On desktop the card sits in the gutter and nothing is under it. On the phone it is a
+  bottom sheet: after drawing a mark it covered the floating Save as new PDF, and nothing on screen
+  dismissed it (a tap on the empty page doesn't deselect; there is no Esc key).
+- The three cards get `OnClose="MarkCardClose"`. `MarkCardClose` is an `EventCallback` that clears
+  `_selText`, `_selShape` and `_selImage` when `Platform.FormFactor` isn't Desktop, and `default` on
+  desktop — so `FloatCard` draws no × there (`OnClose.HasDelegate` is false).
+- Closing drops the selection only; the mark stays on the page and can be tapped again.
+- **For:** the card can be put away on touch; desktop markup is unchanged (checked: Mark with a
+  rectangle selected is pixel-identical before and after at 1440×900, no × in the card).
+- **Against:** the three cards behave slightly differently by form factor; one more property in Reader.
+- Other way considered: let a tap on the empty page deselect (all platforms). Rejected for now: with a
+  drawing tool on, that tap is the start of the next mark, and it would change desktop behaviour.
 
 ## Two things seen while checking patch 26 on touch (Foundation's files; not changed here)
 Both are in Reader code, on every platform, so they're reported, not patched.

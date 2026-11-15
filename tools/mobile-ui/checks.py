@@ -5,6 +5,7 @@
 #   * Redact on a phone opens at fit width: page within the screen, no sideways overflow (H-7)
 #   * a tap just outside a small control reaches it (D-37); Arrange keeps Document ▾ (H-18);
 #     Find brings the match on screen (H-19)
+#   * a drawn mark's card leaves Save reachable and has a close control (AT-22, H-24)
 #   checks.py <url> <width> <height>     → PASS/FAIL per check, exit 1 on any FAIL
 import asyncio, sys
 from playwright.async_api import async_playwright
@@ -247,6 +248,50 @@ async def main():
             await pg.locator(".tb-doc").click(); await pg.wait_for_timeout(400)
             await pg.locator(".pop-item", has_text="Close").first.click()
         await pg.wait_for_timeout(1200)
+        await pg.context.close()
+
+        # 11. AT-22: after drawing a mark its card must not cover Save, and it has a close control (H-24).
+        pg = await fresh(); cdp = await pg.context.new_cdp_session(pg)
+        async def touch(kind, pts):
+            await cdp.send("Input.dispatchTouchEvent", {"type": kind, "touchPoints": [{"x": x, "y": y, "id": 0} for x, y in pts]})
+        if phone:
+            await pg.locator(".ph-nav-b:nth-child(2)").click(); await pg.wait_for_timeout(1200)
+            await pg.locator(".ph-strip button", has_text="Box").first.tap()
+        else:
+            await pg.locator(".lb-mode:nth-of-type(2)").click(); await pg.wait_for_timeout(1200)
+            await pg.locator('.srail .rb[aria-label="Rectangle"]').tap()
+        await pg.wait_for_timeout(500)
+        pb = await pg.locator(".mk-layer").first.bounding_box()
+        x0, y0 = pb["x"] + pb["width"] * 0.3, max(pb["y"], 60) + 40
+        x1, y1 = x0 + min(120, pb["width"] * 0.3), y0 + 60
+        await touch("touchStart", [(x0, y0)])
+        for k in range(1, 9):
+            await touch("touchMove", [(x0 + (x1 - x0) * k / 8, y0 + (y1 - y0) * k / 8)]); await pg.wait_for_timeout(30)
+        await touch("touchEnd", []); await pg.wait_for_timeout(1000)
+        r = await pg.evaluate("""(() => {
+            const top = e => { const r = e.getBoundingClientRect(); const t = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return e === t || e.contains(t); };
+            const saves = [...document.querySelectorAll('.ph-fab, .srail .rb')].filter(e => /^Save/.test(e.getAttribute('aria-label') || '') && e.getBoundingClientRect().width > 0);
+            const tools = [...document.querySelectorAll('.ph-strip button')];
+            const x = document.querySelector('.fcard .fcard-x'); const xr = x && x.getBoundingClientRect();
+            return { card: !!document.querySelector('.fcard'), saves: saves.length, savesOnTop: saves.every(top),
+                     toolsOnTop: tools.filter(e => e.getBoundingClientRect().right <= innerWidth).every(top),
+                     close: xr ? [Math.round(xr.width), Math.round(xr.height)] : null }; })()""")
+        ok = r["card"] and r["saves"] >= 1 and r["savesOnTop"] and r["toolsOnTop"] and r["close"] and min(r["close"]) >= 44
+        marks0 = await pg.locator(".mk-layer .mk-shape").count()
+        if r["close"]:
+            await pg.locator(".fcard .fcard-x").tap(); await pg.wait_for_timeout(700)
+            r["cardAfterClose"] = await pg.locator(".fcard").count()
+            r["marks"] = [marks0, await pg.locator(".mk-layer .mk-shape").count()]
+            ok = ok and r["cardAfterClose"] == 0 and r["marks"][1] == r["marks"][0] and r["marks"][0] > 0
+            # Take the mark away again (select it by its top edge, Delete on its card), so runs don't pile marks up.
+            await pg.touchscreen.tap((x0 + x1) / 2, y0); await pg.wait_for_timeout(700)
+            if await pg.locator(".fcard .fc-btn", has_text="Delete").count():
+                await pg.locator(".fcard .fc-btn", has_text="Delete").tap(); await pg.wait_for_timeout(500)
+            r["left"] = await pg.locator(".mk-layer .mk-shape").count()
+        report("a drawn mark's card leaves Save and the tools reachable and closes with its own control (AT-22)", ok, r)
+        if phone: await pg.locator(".ph-nav-b:nth-child(1)").click()
+        else: await pg.locator(".lb-mode:nth-of-type(1)").click()
+        await pg.wait_for_timeout(600)
         await pg.context.close()
         await b.close()
     sys.exit(1 if fails else 0)

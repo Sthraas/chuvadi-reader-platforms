@@ -560,3 +560,33 @@ Evidence:
   two, 4 pixels differ by 1 or 2 colour levels — and the same 4 pixels differ between two runs of the
   "after" build itself, so it is drawing noise, not a change. (The first pass showed the same kind of
   1-level pixels on Arrange and the Excel view; a repeat on fresh hosts was clean.)
+
+## 15 Nov, 23:30: Android Test round 10 — AT-22 (mark card over Save) and AT-20 (Shelf drag on the tablet)
+- Coordinator: 44 px for the tablet Home recent rows is confirmed (the touch rule holds everywhere). F-1 and
+  F-2 are with Foundation.
+- **AT-22** (phone: a drawn mark's card covers Save as new PDF and can't be closed). Reproduced at 412×915:
+  the card covered the floating Save and the tool strip, ran 18 px under the bottom bar, and had no ×.
+  - mobile.css (mine): in Mark and Protect the card now sits above the tool strip, so the tools stay usable;
+    while any card is open the floating Save rides 12 px above the card's top edge (CSS anchor positioning;
+    where a WebView doesn't have it, Save sits under the top bar instead); the card's height leaves room
+    for Save in landscape too.
+  - H-24 (Foundation's Reader.razor, as a diff): the Text box, shape and Image cards get a close control
+    on tablet and phone. Closing drops the selection; the mark stays.
+  - Tablet: the card never covered the rail's two Saves; its × (all cards) was 25×15 and is now a 45 px box
+    drawn on the same pixels.
+  - checks.py check 11: draw a rectangle; Save and the tools are the top element at their centres; × is
+    ≥ 44 px; × closes the card and the mark is still there; then the mark is deleted again.
+- **AT-20** (tablet portrait: long-press drag from the Shelf doesn't land). My side was part of it: the
+  drag armed after 450 ms, and Android's own long-press time is 400 ms — `input draganddrop` starts moving
+  at 400 ms, so the move came first and was taken as a scroll. Measured at 800×1280 with the sheet open,
+  page 3 to the middle of the desk: holds of 380, 400 and 430 ms failed, 470 and 520 ms landed.
+  - mobile.js: `LONG_PRESS_MS` 450 → 350. gestures.py's Shelf drag now holds 400 ms.
+  - For: a drag at the platform's own timing lands, phone and tablet. Against: a finger that rests 350 ms
+    on a page before scrolling now picks the page up instead of scrolling (was 450 ms).
+  - The raw touch script not following the tablet's rotation is Android Test's side, as its note says.
+- Results (with hooks-10 applied): 522 tests pass, 6 skipped by Foundation: 374 + 91 + 41 + 16; touch at
+  800×1280, 1280×800, 412×915, 915×412: 82 checks pass (gestures 8/8/9/9, checks 12 each), box audit clean
+  at all four; desktop before (07ed3ca) / after at 1440×900: Read, Mark, Mark with a rectangle selected,
+  Arrange and the desk menu identical apart from the clock; Home shows the same 4 noise pixels as on 11 Nov
+  (they also differ between two runs of one build).
+

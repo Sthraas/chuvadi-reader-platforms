@@ -467,7 +467,23 @@ html[data-shell="phone"] .fcards {
     max-height: 60dvh; gap: 0; overflow-y: auto;
 }
 html[data-shell="phone"] .ph-shell[data-mode="mark"] .fcards,
-html[data-shell="phone"] .ph-shell[data-mode="protect"] .fcards { bottom: var(--ph-strip); }
+html[data-shell="phone"] .ph-shell[data-mode="protect"] .fcards {
+    /* Above the tool strip (the strip stays usable), and never so tall that Save has no room over it. */
+    bottom: calc(var(--ph-nav) + var(--ph-strip) + env(safe-area-inset-bottom));
+    max-height: min(60dvh, calc(100dvh - var(--ph-bar) - var(--ph-nav) - var(--ph-strip) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 76px));
+}
+/* AT-22: an open card used to cover the floating Save. While a card is open the Save button rides on
+   the card's top edge; where the WebView has no anchor positioning it sits under the top bar instead. */
+html[data-shell="phone"] .fcards:has(.fcard) { anchor-name: --ph-card; }
+html[data-shell="phone"] .ph-shell:has(.fcards .fcard) .ph-fab {
+    position: fixed; z-index: 41; bottom: auto;
+    top: calc(var(--ph-bar) + env(safe-area-inset-top) + 10px);
+}
+@supports (anchor-name: --ph-card) {
+    html[data-shell="phone"] .ph-shell:has(.fcards .fcard) .ph-fab {
+        position-anchor: --ph-card; top: auto; bottom: calc(anchor(top) + 12px);
+    }
+}
 html[data-shell="phone"] .fcard {
     width: auto !important; border-radius: 22px 22px 0 0; border-left: none; border-right: none; border-bottom: none;
     box-shadow: 0 -10px 30px rgba(0, 0, 0, .14); padding: 14px 16px;
@@ -478,6 +494,8 @@ html[data-shell="phone"] .fc-in,
 html[data-shell="phone"] .fc-sel,
 html[data-shell="phone"] .fc-seg > button { min-height: 44px; }
 html[data-shell="phone"] .fcard-x { min-width: 44px; min-height: 44px; align-items: center; justify-content: center; }
+/* Tablet: a card's close control is a 44 px box too, drawn where it was (the margins take the growth back). */
+html[data-shell="tablet"] .fcard-x { min-width: 45px; min-height: 45px; align-items: center; justify-content: center; margin: -15px -10px; }
 
 /* Messages: above the bottom bar (and strip). */
 html[data-shell="phone"] .msgs { left: 12px; right: 12px; bottom: calc(var(--ph-nav) + 12px + env(safe-area-inset-bottom)); align-items: stretch; }

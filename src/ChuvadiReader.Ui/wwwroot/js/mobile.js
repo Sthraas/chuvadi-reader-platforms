@@ -30,7 +30,7 @@ let fitTimer = 0;
 const TAP_SLOP = 10;
 const SWIPE_MIN = 60;
 const SWIPE_MS = 600;
-const LONG_PRESS_MS = 450;
+const LONG_PRESS_MS = 350;      // under Android's own long-press time (400 ms): its drag gestures start moving at 400
 
 export function initTouch(dotnetRef) {
     net = dotnetRef || net;

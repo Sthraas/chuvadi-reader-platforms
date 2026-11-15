@@ -152,7 +152,7 @@ async def main():
         await pg.evaluate("window.__ev=[]")
         if src and dst:
             await drag(cdp, src["x"] + src["width"] / 2, src["y"] + src["height"] / 2,
-                       dst["x"] + dst["width"] / 2, dst["y"] + min(60, dst["height"] / 2), steps=14, hold_ms=650, step_ms=30,
+                       dst["x"] + dst["width"] / 2, dst["y"] + min(60, dst["height"] / 2), steps=14, hold_ms=400, step_ms=30,   # 400 ms: Android's own long-press time (AT-20)
                        jitter=JITTER)
         await pg.wait_for_timeout(1200)
         after = await pg.evaluate("document.querySelectorAll('.desk [data-bench-id]').length")
