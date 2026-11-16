@@ -122,6 +122,27 @@ time.sleep(2)
 s = watch(6)
 screencap(os.path.join(OUT, "after-find.png"))
 R.check("DR-7 (AT-16) after Find jumps to the match on page 3: box says 3, page 3 on screen, steady", steady(s, 3), {"find_control": f_, "(box, on screen)": brief(s)})
+
+# AT-24: the same jump four more times, each from somewhere else in the document — n of 5 on the match's page.
+landed = [brief(s)[-1] if brief(s) else None]
+w_, h_ = [int(v) for v in re.findall(r"(\d+)x(\d+)", sh("wm size"))[-1]]
+for k in range(4):
+    for _ in range(10):
+        sh("input keyevent KEYCODE_DEL")
+    time.sleep(0.6)
+    for _ in range(2 + k):
+        sh(f"input swipe {w_ // 2} {int(h_ * 0.40)} {w_ // 2} {int(h_ * 0.22)} 250")
+        time.sleep(0.5)
+    away = brief(watch(1))[-1:]
+    for ch in "zephyrine":
+        sh(f"input text {ch}")
+        time.sleep(0.25)
+    sh("input keyevent KEYCODE_ENTER")
+    time.sleep(2)
+    w5 = brief(watch(3))
+    landed.append(w5[-1] if w5 else None)
+    screencap(os.path.join(OUT, f"after-find-{k + 2}.png"))
+R.check("DR-7x5 (AT-24) Find lands on page 3 every time, 5 of 5", all(x and list(x) == [3, 3] for x in landed), {"(box, on screen) after each Find": landed})
 sh("input keyevent KEYCODE_BACK")
 time.sleep(1)
 cdp.js("document.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', bubbles: true}))")
