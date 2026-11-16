@@ -661,3 +661,23 @@ second attempt **0 failed** — see the last point.
   was at zoom 1.000 from the start (fit is 0.502) and two pinch steps left it at 1.000. Second attempt: 0.502 →
   0.753 → 0.377. Mac pinch code unchanged since the last green run on patch 28. Log: run 43843112648 attempt 1,
   artifact `mac-test-results/smoke-many.log`.
+
+### 2026-11-16 (night) — D-195: minimum macOS 14; builds on xcode-27 from the repo pin; patch 30
+Rebased onto foundation-pr 4b704c8 (patch 30).
+- **What the trial found** (runs 43898330078, 43898743282): the `xcode-27` runner (arm64, macOS 27.0.1, Xcode 27.1
+  default) installs workload set 10.0.403 from the repo `global.json` with no swap. Its Mac Catalyst pack
+  (27.0.10742) refuses a minimum below Mac Catalyst 17.0: "The SupportedOSPlatformVersion value '15.0' … is lower than
+  the minimum value '17.0'". With 17.0 the universal app builds; `LSMinimumSystemVersion` 14.0, `minos 17.0`,
+  `sdk 27.0` on both slices. Unit tests on all four runners: Core 447 passed, 6 skipped; Mac 23 passed.
+- **D-195 (Arun):** the Mac minimum is macOS 14 Sonoma. `SupportedOSPlatformVersion` 17.0 in
+  `src/ChuvadiReader.Mac/ChuvadiReader.Mac.csproj` (Info.plist's minimum is written from it; the workflow checks it
+  reads 14.0); README says macOS 14. Nothing else in the repo named macOS 12 or 13 — no shared file states a Mac
+  minimum, so there is no patch for Foundation. The 10.0.401 runner swap and its patch file are retired.
+- **Workflow:** job `build` on `xcode-27` builds once — the Intel slice is compiled on the arm64 runner and merged
+  into the universal bundle, as it always was on macos-26 — and uploads the zip; job `check` unpacks that same zip on
+  `macos-26`, `macos-15`, `macos-15-intel` and `xcode-27`, runs the Core and Mac tests and the smoke; job `publish`
+  hands out `Chuvadi-mac-universal-unsigned` only after the checks. `macos-26` decides the run, as before; the other
+  three report without failing it until each has been seen green.
+- **Fallback if the preview image changes:** see README, "If the build runner changes" — the exact Xcode 27.1 app is
+  named when present; an Xcode older than 27.1 stops the build with a plain message; the `build_runner` input takes
+  another label with no file change; failing that, a Mac with Xcode 27.1. An older workload set is not a fallback.

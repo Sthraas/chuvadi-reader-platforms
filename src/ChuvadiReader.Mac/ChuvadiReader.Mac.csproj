@@ -19,8 +19,10 @@
     <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
     <ApplicationVersion>1</ApplicationVersion>
 
-    <!-- Mac Catalyst 15.0 = macOS 12 Monterey and later. -->
-    <SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
+    <!-- D-195: Mac Catalyst 17.0 = macOS 14 Sonoma and later. The Mac Catalyst pack of the repo's workload set
+         (10.0.403, Mac Catalyst 27.0) builds nothing lower. Info.plist's LSMinimumSystemVersion (14.0) is written
+         from this value at build time. -->
+    <SupportedOSPlatformVersion>17.0</SupportedOSPlatformVersion>
 
     <!-- Universal app: Apple Silicon + Intel in one bundle (Arun approved). -->
     <RuntimeIdentifiers>maccatalyst-arm64;maccatalyst-x64</RuntimeIdentifiers>

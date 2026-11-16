@@ -1,7 +1,7 @@
 # Chuvadi Reader for macOS
 
 .NET MAUI Blazor Hybrid on Mac Catalyst. One universal app for Apple Silicon and Intel Macs,
-macOS 12 Monterey or later. Project: `src/ChuvadiReader.Mac`.
+macOS 14 Sonoma or later (D-195). Project: `src/ChuvadiReader.Mac`.
 
 ## Build (on a Mac)
 Needs the .NET 10 SDK and Xcode (the version the .NET 10 Mac Catalyst workload requires; CI uses the
@@ -15,7 +15,19 @@ codesign --force --deep --sign - src/ChuvadiReader.Mac/bin/Release/net10.0-macca
 ```
 Run: `open src/ChuvadiReader.Mac/bin/Release/net10.0-maccatalyst/Chuvadi.app` (always through `open` or Finder — a Mac Catalyst app started by running its binary directly aborts).
 
-CI pins: the repo `global.json` (SDK 10.0.403 and its workload set) and `/Applications/Xcode_26.6.app`. Set 10.0.403 needs Xcode 27.1, which the runner lacks; set 10.0.401 (Mac Catalyst 26.5.10318) builds — see BUILD-LOG 2026-11-16.
+CI pins: the repo `global.json` as pushed (SDK 10.0.403, workload set 10.0.403 = Mac Catalyst 27.0) and Xcode 27.1,
+on the `xcode-27` runner (arm64, macOS 27; a GitHub public-preview image). Building by hand needs the same: Xcode 27.1
+or later, on an Apple Silicon or Intel Mac. One build makes both slices — the Intel (x86_64) slice is compiled on the
+arm64 runner (`RuntimeIdentifiers` maccatalyst-arm64;maccatalyst-x64) and merged with the arm64 slice into one
+universal bundle. That one zip is then tested on `macos-26`, `macos-15`, `macos-15-intel` and `xcode-27`.
+
+**If the build runner changes** (it is a preview image): the workflow names `/Applications/Xcode_27.1.app` when the
+image has it, so a new default Xcode does not change the build, and it stops with a plain message if Xcode is older
+than 27.1. If the `xcode-27` label goes away, run the workflow with its `build_runner` input set to any label that
+carries Xcode 27.1 or later (the regular macOS 27 image once GitHub ships it) — no file changes. If no hosted image
+has it, the build needs a Mac with Xcode 27.1 (a self-hosted runner or by hand, steps above) until one does; the tests
+and smoke on macOS 26 and 15 are not affected. Building on an older workload set is not a fallback: the 10.0.401
+runner swap was retired with D-195.
 
 Without a Mac: run the **Mac** workflow by hand (Actions → Mac → Run workflow, branch `platform/mac`) — it
 builds, tests, verifies the bundle layout, smoke-launches and uploads `Chuvadi-mac-universal-unsigned.zip`.

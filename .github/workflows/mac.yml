@@ -13,7 +13,7 @@ on:
         required: false
         default: ''
       build_runner:
-        description: 'Runner that builds the app. xcode-27 (preview image, Xcode 27.1) builds the repo global.json as pushed. Fallback if that image goes away: macos-26 together with try_patch docs/mac/foundation/global-json-mac-workload-10.0.401.patch.'
+        description: 'Runner that builds the app. It must carry Xcode 27.1 or later (workload set 10.0.403). xcode-27 is a preview image; if it changes, name another label here — see docs/mac/README.md, "If the build runner changes".'
         required: false
         default: 'xcode-27'
 
@@ -44,18 +44,17 @@ jobs:
         with:
           global-json-file: global.json   # the repo's strict pin (patch 27): SDK and workload set
 
-      # Workload set 10.0.403 (Mac Catalyst 27.0) needs Xcode 27.1 — the default on the xcode-27 image.
-      # Fallback (macos-26, set 10.0.401, Mac Catalyst 26.5): that image carries two Xcode 26.6 installs and
-      # Xcode_26.6.0.app fails the build's SDK lookup, so the exact app is named.
+      # Workload set 10.0.403 (Mac Catalyst 27.0) needs Xcode 27.1. The exact app is named when the image has it, so
+      # a change of the image's default Xcode does not change the build; otherwise the default must be 27.1 or later.
       - name: Select Xcode
         run: |
           ls -d /Applications/Xcode*.app
-          if [ "${{ inputs.build_runner }}" = "macos-26" ]; then
-            sudo xcode-select -s /Applications/Xcode_26.6.app
-            sudo xcodebuild -runFirstLaunch
-          fi
+          if [ -d /Applications/Xcode_27.1.app ]; then sudo xcode-select -s /Applications/Xcode_27.1.app; fi
           xcode-select -p
           xcodebuild -version
+          V=$(xcodebuild -version | awk '/^Xcode/{print $2}')
+          python3 -c 'import sys; v=tuple(int(x) for x in sys.argv[1].split(".")[:2]); sys.exit(0 if v>=(27,1) else 1)' "$V" \
+            || { echo "::error::Xcode $V on this runner; workload set 10.0.403 needs 27.1 or later"; exit 1; }
           xcrun --sdk macosx --show-sdk-version
           xcodebuild -sdk "$(xcrun --sdk macosx --show-sdk-path)" -find actool
           sw_vers; uname -m
@@ -157,11 +156,12 @@ jobs:
           codesign --force --deep --sign - --entitlements src/ChuvadiReader.Mac/Platforms/MacCatalyst/Entitlements.plist "$APP"
           codesign --verify --deep --strict --verbose=2 "$APP"
 
-      # The oldest macOS the app says it runs on must not move with the SDK it was built with.
+      # D-195: macOS 14 Sonoma is the oldest macOS the app runs on, whatever SDK it was built with.
       - name: Minimum macOS of the bundle
         run: |
           MIN=$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$APP/Contents/Info.plist")
           echo "LSMinimumSystemVersion: $MIN"
+          [ "$MIN" = "14.0" ] || { echo "::error::the bundle's minimum macOS is $MIN, not 14.0 (D-195)"; exit 1; }
           for a in arm64 x86_64; do echo "-- $a"; vtool -arch $a -show-build "$BIN" | grep -E "platform|minos|sdk"; done
           grep -E "SupportedOSPlatformVersion" src/ChuvadiReader.Mac/ChuvadiReader.Mac.csproj
           {
