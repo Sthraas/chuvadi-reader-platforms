@@ -228,7 +228,7 @@
             <RailButton Icon="watermark" Label="Watermark" OnClick='() => BackToProtect("watermark")' />
             <RailButton Icon="compress" Label="Flatten" OnClick='() => BackToProtect("flatten")' />
             <RailButton Icon="doc-lock" Label="Password" OnClick='() => BackToProtect("password")' />
-            <RailButton Icon="certification" Label="Sign with certificate" DisabledReason="@ChuvadiReader.Ui.Components.Platform.PlatformText.CertificateSigningOff(Platform)" DisabledTag="@ChuvadiReader.Ui.Components.Platform.PlatformText.CertificateSigningTag" ReasonOnTap="@ChuvadiReader.Ui.Components.Platform.PlatformText.ReasonOnTap(Platform)" OnClick='() => BackToProtect("cert")' />
+            <RailButton Icon="certification" Label="Sign with certificate" DisabledReason="@ChuvadiReader.Ui.Components.Platform.PlatformText.CertificateSigningOff(Platform)" ReasonOnTap="@ChuvadiReader.Ui.Components.Platform.PlatformText.ReasonOnTap(Platform)" OnClick='() => BackToProtect("cert")' />
             <RailSep />
             <RailButton Icon="folder" Label="Redact another file…" OnClick="Fetch" />
             <RailButton Icon="close" Label="Clear all boxes" Disabled="@(!HasAnythingToRedact || _saving)" OnClick="ClearAll" />

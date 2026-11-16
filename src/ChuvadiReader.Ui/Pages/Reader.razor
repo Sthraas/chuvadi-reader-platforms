@@ -1171,7 +1171,7 @@
                     <RailButton Icon="watermark" Label="Watermark" Active='_card == "stamp" && _stampFocus == "watermark"' OnClick='() => OpenStamp("watermark")' />
                     <RailButton Icon="compress" Label="Flatten" Disabled="_flattening" OnClick="FlattenNow" />
                     <RailButton Icon="doc-lock" Label="Password" Active='_card == "password"' OnClick='() => ToggleCard("password")' />
-                    <RailButton Icon="certification" Label="Sign with certificate" DisabledReason="@ChuvadiReader.Ui.Components.Platform.PlatformText.CertificateSigningOff(Platform)" DisabledTag="@ChuvadiReader.Ui.Components.Platform.PlatformText.CertificateSigningTag" ReasonOnTap="@ChuvadiReader.Ui.Components.Platform.PlatformText.ReasonOnTap(Platform)" Active='_card == "cert"' OnClick='() => ToggleCard("cert")' />
+                    <RailButton Icon="certification" Label="Sign with certificate" DisabledReason="@ChuvadiReader.Ui.Components.Platform.PlatformText.CertificateSigningOff(Platform)" ReasonOnTap="@ChuvadiReader.Ui.Components.Platform.PlatformText.ReasonOnTap(Platform)" Active='_card == "cert"' OnClick='() => ToggleCard("cert")' />
                     <RailButton Icon="sliders" Label="View" Class="rb-viewfold" Active='_card == "view"' OnClick='() => ToggleCard("view")' />
                     <RailSpacer />
                     <RailButton Icon="download" Label="Save redacted copy" Primary="true" OnClick="() => GoRedact(false)" />
@@ -2523,9 +2523,34 @@
 
     private Task MkDown(PointerEventArgs e, int page) => _mkPress = MkDownPress(e, page);
 
+    // Two fingers are a pinch (reader.js zooms the page). The second finger's press drops whatever the
+    // first one began, and the rest of that gesture is ignored, so zooming in Mark leaves no mark behind.
+    private bool _mkPinch;
+    private static bool IsSecondFinger(PointerEventArgs e) => e.PointerType == "touch" && !e.IsPrimary;
+
+    // A finger of a pinch lifts: nothing is placed. The first finger's lift ends the pinch.
+    private bool MkUpOfPinch(PointerEventArgs e)
+    {
+        if (IsSecondFinger(e)) return true;
+        if (!_mkPinch) return false;
+        MkDropForPinch();
+        _mkPinch = false;
+        MkEndGesture();
+        return true;
+    }
+
+    private void MkDropForPinch()
+    {
+        _mkPinch = true;
+        _mkMode = MkMode.None;
+        _textDraft = null; _shapeDraft = null; _freehandPts = null;
+    }
+
     private async Task MkDownPress(PointerEventArgs e, int page)
     {
         if (!_markup || e.Button != 0) return;
+        if (IsSecondFinger(e)) { MkDropForPinch(); return; }
+        _mkPinch = false;
         EnsureMarkupDoc();
         MkBeginGesture();
         if (!await CacheLayerRect(page)) return;
@@ -2560,7 +2585,7 @@
 
     private void MkMove(PointerEventArgs e)
     {
-        if (_mkMode == MkMode.None) return;
+        if (_mkPinch || IsSecondFinger(e) || _mkMode == MkMode.None) return;
         MkBeginGesture();
         var cx = Clamp01((e.ClientX - _mkRect.L) / _mkRect.W);
         var cy = Clamp01((e.ClientY - _mkRect.T) / _mkRect.H);
@@ -2682,6 +2707,7 @@
             await _mkPress;
             MkMove(e);
         }
+        if (MkUpOfPinch(e)) return;
         MkUpCore(e);
         MkEndGesture();
     }

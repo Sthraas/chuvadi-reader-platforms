@@ -360,6 +360,20 @@ public sealed class MemoryAfterCloseTests
     }
 
     [Fact]
+    public async Task A_page_asked_for_as_the_worker_goes_idle_is_drawn_not_answered_empty()
+    {
+        // The failure Mac saw once: the worker, on its way out, answered a render asked for in that instant with the
+        // closed document's empty page. Here the instant is made certain: the next page is asked for exactly then.
+        using var session = (ChuvadiPdfSession)await new ChuvadiPdfReader().OpenAsync(StrokedSheets(pages: 2, strokes: 50), "idle.pdf");
+        Task<string>? asked = null;
+        session.WorkerIdleForTests = () => asked ??= session.RenderPageSvgAsync(1);
+
+        Assert.Contains("<svg", await session.RenderPageSvgAsync(0).WaitAsync(TimeSpan.FromSeconds(30)));
+        Assert.True(SpinWait.SpinUntil(() => asked is not null, TimeSpan.FromSeconds(10)));
+        Assert.Contains("<svg", await asked!.WaitAsync(TimeSpan.FromSeconds(30)));
+    }
+
+    [Fact]
     public async Task Paging_never_runs_a_collection_only_closing_a_heavy_document_does()
     {
         // Part 3 (Linux, 64 MB drawing line): everything paging does (draw, drop a page that left the view, drop the
