@@ -836,3 +836,23 @@ No app change: one UI step added (38). Build under test: 7cd960c5.
 - Foundation's patch 31 (6c85f066, not merged here yet) keys each viewer by its tab and keeps the reference when
   the new tab is a viewer tab: the same second cause, and another way round the first. To be checked on Linux
   with step 40.
+
+### 61. Patch 31 merged (b895750): B-33 gone on Linux; the encoding picker works in the Linux app (16 Nov)
+- **Merge of `platform/foundation-pr` b895750** (PR 22, Reader main 24b2bac): clean; shared `src` and `tests`
+  identical to b895750. No Linux host change. Release build `-warnaserror` clean on SDK 10.0.403. Unit tests:
+  Reader 438 passed / 6 skipped, host kit 102, Linux 68, Web Ui 41, Mobile Ui 16. Full UI pass under Xvfb:
+  **129/129** (steps 40 and 41 new in the pass).
+- **B-33 is gone.** UI step 40, real clicks and typing: Next, Previous and a typed sheet number change the sheet
+  from Home, with a PDF already open, on a second workbook, and back on the first; a tab press and the arrows
+  stay in step. Foundation's fix (6c85f066: each viewer keyed by its tab, the reference kept when the new tab is
+  a viewer tab) covers both causes in §60. `PROPOSAL-b33-sheet-pager.md` is marked superseded; its diff is not to
+  be applied.
+- **Encoding picker (D-191), UI step 41**, files of known bytes written by the step:
+  - a Windows-1252 text file reads right on Automatic, and the status bar's button says "Windows-1252";
+  - read as UTF-8 the accents go, the card says "8 bytes don't fit UTF-8", the button says UTF-8;
+  - close the tab and open the file again: still UTF-8 (remembered with Recents); Automatic puts it right;
+  - the Document menu's "Text encoding…" (`doc.encoding`) opens the same card; Windows-1252 and UTF-16 LE re-read;
+  - a UTF-8 Markdown file and a Windows-1252 HTML file have it too; a PDF offers neither button nor entry;
+  - the three files are byte-for-byte as written afterwards.
+- Not checked by hand beyond the pass: the outline after moving between viewer tabs, the first key in a new text
+  box, the close card keeping the keyboard.
