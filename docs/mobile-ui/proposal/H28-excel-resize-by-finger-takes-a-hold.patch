@@ -1,0 +1,86 @@
+diff --git a/src/ChuvadiReader.Ui/wwwroot/js/viewers.js b/src/ChuvadiReader.Ui/wwwroot/js/viewers.js
+index 551efcfc..cd49c920 100644
+--- a/src/ChuvadiReader.Ui/wwwroot/js/viewers.js
++++ b/src/ChuvadiReader.Ui/wwwroot/js/viewers.js
+@@ -234,27 +234,54 @@ export function gridResize(el, dotnetRef) {
+         if (commit && d.moved) st.dotnet.invokeMethodAsync('OnGridResize', d.column, d.index, sizeNow(d, e)).catch(() => { });
+     };
+ 
++    // D-193: by finger, an edge is taken by resting on it (HOLD_MS); a finger that moves at once scrolls the sheet.
++    // The guide line appears when the hold has taken. Mouse and pen take the edge at once, as before.
++    const HOLD_MS = 350, HOLD_SLOP = 8;
++    const dropHold = () => { if (st.hold) { clearTimeout(st.hold.timer); st.hold = null; } };
++    const take = (edge, id, x, y) => {
++        const rtl = getComputedStyle(el).direction === 'rtl';
++        st.drag = { column: edge.column, index: edge.index, size: edge.size, scale: edge.scale, id,
++            start: edge.column ? x : y, dir: edge.column && rtl ? -1 : 1, moved: false, line: null };
++        try { el.setPointerCapture(id); } catch { }
++        el.classList.add('xv-resizing');
++    };
++
+     el.addEventListener('pointerdown', (e) => {
++        // A second finger while an edge is held is a pinch (the sheet zooms): the resize is dropped, nothing changes size.
++        if (st.drag && e.pointerType === 'touch' && e.pointerId !== st.drag.id) { st.lastPress = null; finish(false, e); return; }
++        if (st.hold && e.pointerId !== st.hold.id) { st.lastPress = null; dropHold(); return; }
+         if (e.button > 0 || st.drag) return;
+         const edge = edgeAt(e);
+         if (!edge) { st.lastPress = null; return; }
+-        e.preventDefault();
++        const finger = e.pointerType === 'touch';
++        if (!finger) e.preventDefault();
+         const now = performance.now(), last = st.lastPress;
+         if (last && last.column === edge.column && last.index === edge.index && now - last.time < 450) {
+             // The second press on the same edge: fit it.
+             st.lastPress = null;
++            dropHold();
++            e.preventDefault();
+             st.dotnet.invokeMethodAsync('OnGridFit', edge.column, edge.index).catch(() => { });
+             return;
+         }
+         st.lastPress = { column: edge.column, index: edge.index, time: now };
+-        const rtl = getComputedStyle(el).direction === 'rtl';
+-        st.drag = { column: edge.column, index: edge.index, size: edge.size, scale: edge.scale, id: e.pointerId,
+-            start: edge.column ? e.clientX : e.clientY, dir: edge.column && rtl ? -1 : 1, moved: false, line: null };
+-        try { el.setPointerCapture(e.pointerId); } catch { }
+-        el.classList.add('xv-resizing');
++        if (finger) {
++            const id = e.pointerId, x = e.clientX, y = e.clientY;
++            dropHold();
++            st.hold = { id, x, y, timer: setTimeout(() => {
++                if (!st.hold || st.hold.id !== id) return;
++                st.hold = null;
++                take(edge, id, x, y);
++                guide(st.drag, st.drag.start);      // the hold has taken: the line shows it
++            }, HOLD_MS) };
++            return;
++        }
++        take(edge, e.pointerId, e.clientX, e.clientY);
+     });
+ 
+     el.addEventListener('pointermove', (e) => {
++        // A finger that moves before the hold has taken is scrolling: the edge is let go.
++        if (st.hold && e.pointerId === st.hold.id && Math.hypot(e.clientX - st.hold.x, e.clientY - st.hold.y) > HOLD_SLOP) { dropHold(); st.lastPress = null; }
+         const d = st.drag;
+         if (!d) {
+             if (e.pointerType === 'mouse') {
+@@ -274,14 +301,13 @@ export function gridResize(el, dotnetRef) {
+         guide(d, edgeNow);
+     });
+ 
+-    el.addEventListener('pointerup', (e) => { if (st.drag && e.pointerId === st.drag.id) finish(true, e); });
+-    el.addEventListener('pointercancel', (e) => { if (st.drag && e.pointerId === st.drag.id) finish(false, e); });
++    el.addEventListener('pointerup', (e) => { if (st.hold && e.pointerId === st.hold.id) dropHold(); if (st.drag && e.pointerId === st.drag.id) finish(true, e); });
++    el.addEventListener('pointercancel', (e) => { if (st.hold && e.pointerId === st.hold.id) dropHold(); if (st.drag && e.pointerId === st.drag.id) finish(false, e); });
+     el.addEventListener('keydown', (e) => { if (e.key === 'Escape' && st.drag) finish(false, e); });
+-    // A finger that starts on an edge resizes; it must not scroll the sheet instead.
+-    el.addEventListener('touchstart', (e) => {
+-        const t = e.touches && e.touches[0];
+-        if (t && edgeAt({ target: e.target, clientX: t.clientX, clientY: t.clientY, pointerType: 'touch' })) e.preventDefault();
+-    }, { passive: false });
++    // Once a finger has taken an edge its moves resize; they must not scroll the sheet as well. Until then they may.
++    el.addEventListener('touchmove', (e) => { if (st.drag) e.preventDefault(); }, { passive: false });
++    // A long rest on an edge is the resize, not the browser's long-press menu.
++    el.addEventListener('contextmenu', (e) => { if (st.hold || st.drag) e.preventDefault(); });
+     return true;
+ }
+ 

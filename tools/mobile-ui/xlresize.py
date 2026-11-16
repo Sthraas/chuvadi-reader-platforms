@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 # TESTING ONLY. D-190 on touch sizes: Excel column widths and row heights by finger.
-#   * a finger dragging a column's edge widens it by the drag and does not scroll the sheet; the same for a row
+#   * D-193: a finger that rests about 350 ms on a column's or row's edge takes it (the guide line shows it) and
+#     then widens it by the drag, the sheet not scrolling; a finger that moves at once scrolls; a mouse takes
+#     the edge at once
 #   * two taps on an edge fit it
 #   * a finger that starts in the middle of a column letter, or on a row number, scrolls and resizes nothing
 #   * a two-finger pinch that starts with a finger on an edge zooms and resizes nothing
 #   * a pinch on the cells still zooms after a resize; "File's own sizes" is a 44 px box and puts the sizes back
 #   xlresize.py <url> <width> <height>     → PASS/FAIL per check, exit 1 on any FAIL
-# A line that starts with OPEN is a known, reported conflict (FOR-FOUNDATION.md F-4); it does not fail the run.
 # It opens tests/…/Fixtures/Office/layout.xlsx, puts the file's own sizes back and closes the tab again.
 import asyncio, os, sys, urllib.parse, urllib.request
 from playwright.async_api import async_playwright
@@ -32,8 +33,12 @@ async def main():
 
         async def touch(kind, pts):
             await cdp.send("Input.dispatchTouchEvent", {"type": kind, "touchPoints": [{"x": x, "y": y, "id": i} for i, (x, y) in enumerate(pts)]})
-        async def drag(x0, y0, x1, y1, steps=8):
-            await touch("touchStart", [(x0, y0)]); await asyncio.sleep(0.05)
+        GUIDE = "[...document.body.children].some(e => e.style.position === 'fixed' && e.style.pointerEvents === 'none' && (e.style.width === '1px' || e.style.height === '1px'))"
+        seen = {"guide": None}
+        async def drag(x0, y0, x1, y1, steps=8, hold=0.45):
+            # hold: how long the finger rests before it moves (D-193: about 350 ms takes the edge; 0.03 is "moves at once")
+            await touch("touchStart", [(x0, y0)]); await asyncio.sleep(hold)
+            seen["guide"] = await pg.evaluate(GUIDE)
             for k in range(1, steps + 1):
                 await touch("touchMove", [(x0 + (x1 - x0) * k / steps, y0 + (y1 - y0) * k / steps)]); await asyncio.sleep(0.03)
             await touch("touchEnd", []); await pg.wait_for_timeout(800)
@@ -51,12 +56,31 @@ async def main():
         B = await hdr("col", 2); s0 = await scroll()
         await drag(B["right"] - 2, B["top"] + B["h"] / 2, B["right"] - 2 + 60, B["top"] + B["h"] / 2)
         B2 = await hdr("col", 2); s1 = await scroll()
-        report("a finger dragging column B's edge 60 px widens B by 60 px", near(B2["w"], B["w"] + 60) and B2["own"], f'{B["w"]:.0f} → {B2["w"]:.0f} px')
+        report("a finger that rests on column B's edge, then drags 60 px, widens B by 60 px; the guide line shows when the hold has taken",
+               near(B2["w"], B["w"] + 60) and B2["own"] and seen["guide"] is True, f'{B["w"]:.0f} → {B2["w"]:.0f} px, guide line after the hold: {seen["guide"]}')
         report("… and the sheet did not scroll under the finger", s1 == s0, f"{s0} → {s1}")
         # the finger need not be exact: 10 px off the edge still takes it
         await drag(B2["right"] + 10, B2["top"] + B2["h"] / 2, B2["right"] + 10 - 30, B2["top"] + B2["h"] / 2)
         B3 = await hdr("col", 2)
         report("a finger 10 px off the edge still takes it (30 px narrower)", near(B3["w"], B2["w"] - 30), f'{B2["w"]:.0f} → {B3["w"]:.0f} px')
+
+        # ── D-193: a finger that moves at once on an edge scrolls; it does not resize ──
+        g0 = await pg.evaluate("(() => { const g = document.querySelector('.xv-gridwrap'); return { sw: g.scrollWidth - g.clientWidth, sh: g.scrollHeight - g.clientHeight }; })()")
+        n0 = await owns(); s0 = await scroll(); Bq = await hdr("col", 2)
+        if g0["sw"] > 40:
+            await drag(Bq["right"] - 2, Bq["top"] + Bq["h"] / 2, Bq["right"] - 2 - 70, Bq["top"] + Bq["h"] / 2, hold=0.03)
+            s1 = await scroll(); Bq2 = await hdr("col", 2)
+            report("a finger that moves at once on a column's edge scrolls the sheet sideways; nothing is resized, no guide line",
+                   s1[0] > s0[0] + 20 and near(Bq2["w"], Bq["w"], 0.6) and seen["guide"] is False, f'scroll {s0} → {s1}; B {Bq["w"]:.0f} → {Bq2["w"]:.0f} px')
+            await pg.evaluate("document.querySelector('.xv-gridwrap').scrollLeft = 0"); await pg.wait_for_timeout(300)
+        else:
+            print("NOTE a quick sideways drag on an edge not checked: the sheet is not wider than the screen here")
+        # a mouse still takes the edge at once
+        Bm = await hdr("col", 2)
+        await pg.mouse.move(Bm["right"] - 1, Bm["top"] + Bm["h"] / 2); await pg.mouse.down(); await pg.mouse.move(Bm["right"] - 1 + 20, Bm["top"] + Bm["h"] / 2, steps=4); await pg.mouse.up(); await pg.wait_for_timeout(700)
+        Bm2 = await hdr("col", 2)
+        report("a mouse still takes the edge at once (20 px wider, no hold)", near(Bm2["w"], Bm["w"] + 20), f'{Bm["w"]:.0f} → {Bm2["w"]:.0f} px')
+        B3 = await hdr("col", 2)
 
         # ── two taps on the edge fit it ──
         await tap(B3["right"] - 2, B3["top"] + B3["h"] / 2); await asyncio.sleep(0.12); await tap(B3["right"] - 2, B3["top"] + B3["h"] / 2); await pg.wait_for_timeout(1000)
@@ -75,7 +99,7 @@ async def main():
         g = await pg.evaluate("(() => { const g = document.querySelector('.xv-gridwrap'); const r = g.getBoundingClientRect(); return { l: r.left, t: r.top, w: r.width, h: r.height, sw: g.scrollWidth - g.clientWidth, sh: g.scrollHeight - g.clientHeight }; })()")
         if g["sw"] > 40:
             mid = (D["left"] + D["right"]) / 2
-            await drag(mid, D["top"] + D["h"] / 2, mid - 80, D["top"] + D["h"] / 2); s1 = await scroll(); n1 = await owns()
+            await drag(mid, D["top"] + D["h"] / 2, mid - 80, D["top"] + D["h"] / 2, hold=0.03); s1 = await scroll(); n1 = await owns()
             report("a finger that starts in the middle of a column letter scrolls the sheet sideways and resizes nothing",
                    s1[0] > s0[0] + 20 and n1 == n0, f"scroll {s0} → {s1}, changed headers {n0} → {n1}, letter {D['w']:.0f} px wide")
             await pg.evaluate("document.querySelector('.xv-gridwrap').scrollLeft = 0"); await pg.wait_for_timeout(300)
@@ -86,11 +110,9 @@ async def main():
         plain = [r for r in rows if not r["own"] and r["top"] > g["t"] + g["h"] * 0.45 and r["top"] + r["h"] < g["t"] + g["h"] - 10]
         if g["sh"] > 40 and plain:
             r = plain[0]; x = r["left"] + r["w"] / 2; y = r["top"] + r["h"] / 2
-            await drag(x, y, x, y - 90); s1 = await scroll(); n1 = await owns()
-            ok = s1[1] > s0[1] + 20 and n1 == n0
-            what = f"scroll {s0} → {s1}, changed headers {n0} → {n1}, row number {r['h']:.0f} px high (the edge takes 14 px each way)"
-            if ok or r["h"] > 30: report("a finger that starts on a row number and moves up scrolls the sheet and resizes nothing", ok, what)
-            else: print("OPEN (F-4, with Foundation) a finger that starts on an ordinary row number resizes that row instead of scrolling the sheet", what)
+            await drag(x, y, x, y - 90, hold=0.03); s1 = await scroll(); n1 = await owns()
+            report("a finger that starts on a row number and moves up at once scrolls the sheet and resizes nothing (F-4, D-193)",
+                   s1[1] > s0[1] + 20 and n1 == n0, f"scroll {s0} → {s1}, changed headers {n0} → {n1}, row number {r['h']:.0f} px high")
             await pg.evaluate("document.querySelector('.xv-gridwrap').scrollTop = 0"); await pg.wait_for_timeout(300)
         else:
             print("NOTE downward scroll not checked: the sheet is not taller than the screen here")
@@ -104,7 +126,7 @@ async def main():
             await touch("touchMove", [(ex - 4 * k, ey), (ex + 80 + 6 * k, ey + 120 + 8 * k)]); await asyncio.sleep(0.03)
         await touch("touchEnd", []); await pg.wait_for_timeout(1000)
         z1 = await zoom(); Bq = await hdr("col", 2)
-        report("a pinch whose first finger is on a column's edge zooms the sheet and resizes nothing",
+        report("a pinch whose first finger lands on a column's edge zooms the sheet and resizes nothing",
                z1 > z0 * 1.1 and near(Bq["w"] / z1, w0 / z0, 1.5), f"zoom {z0} → {z1}; B {w0 / z0:.0f} → {Bq['w'] / z1:.0f} px at 100 %")
         r = await pg.locator(".xv-gridwrap").bounding_box(); cx, cy = r["x"] + r["width"] / 2, r["y"] + r["height"] * 0.6
         z1 = await zoom()

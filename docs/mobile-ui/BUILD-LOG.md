@@ -675,3 +675,43 @@ Evidence:
   (71754e1) / after at 1440×900: Read, Mark, a selected rectangle's card, the ask-before-closing card,
   Arrange and the desk menu identical apart from the clock; Home has the known 1-level noise pixels.
 
+## 16 Nov, 21:25: Foundation 4b704c8 (patch 30) merged; Android Test round 12 (AT-25 to AT-28); D-193
+- Merged platform/foundation-pr 4b704c8: no conflicts. H-25 and H-26 are in: their patches and hooks-13
+  moved to `proposal/landed/`.
+- Round 12 was run on Mobile UI ca152c4, one commit before the card and Excel fixes of ae6ae6d.
+- **AT-27** (pinch in Mark draws a rectangle): on patch 30 with no hooks patch for it, Rectangle armed, both
+  fingers on the page, landing 5, 30 and 120 ms apart, one lifting first: phone 388 → 1164 → 388 px,
+  tablet 596 → 1787 → 596 px; 0 marks each time, no card comes up, the pinch back works. Closed by H-25
+  as landed. pinchmarks.py keeps checking it.
+- **AT-26** (tablet close-card buttons 30 px): 44 px since ae6ae6d (the tablet card rule covers `.closeq`);
+  now also 12 px between the answers (Save 51×44, Save as… 79×44, Discard 67×44, Cancel 63×44; Discard is
+  12 px from Save as…). closecard.py checks it at both tablet sizes.
+- **AT-25** ("File's own sizes" 24 px): a 44 px box since ae6ae6d (111×44), checked in xlresize.py.
+- **AT-28** (Export card, Merge page 16 to 34 px). Reproduced, and wider than filed: the Press card (chips,
+  slider 16, tick rows 19, number boxes 25 and 29), the Merge rows' move and remove buttons (26), the
+  Split page ("change" 16, number boxes, ± steppers 30×34), "dashboard" back links (16).
+  - Merge and Split are class-based: fixed in mobile.css (mine).
+  - The Export and Press cards are inline-styled with no classes → **H-29** (class names only, shared
+    Reader.razor), and mobile.css rules on those names. Without H-29 the two cards stay as they were.
+  - All drawn as before: with and without my rules every control of the Press card keeps its centre and
+    the card its height (422 px); tablet screenshots differ by 142 to 499 pixels of corner antialiasing.
+  - New tool `tools/mobile-ui/cards.py`: opens the Export card, the Press card (Custom, target size on), the
+    Merge page (two files added) and the Split page (page range), and fails on any control under 44 px,
+    covered, or off screen. 13 + 13 + 10 + 11 controls.
+- **D-193** (F-4 decided: B). **H-28**: by finger an Excel edge is taken by resting on it about 350 ms, the
+  guide line showing when; a finger that moves at once scrolls; two taps fit; mouse and pen as before.
+  xlresize.py is rewritten for it (15 checks, no OPEN line left): the row-number scroll that failed at
+  three sizes now passes at all four.
+- hooks-13 is replaced by `mobile-ui-hooks-14.patch` = H-27 + H-28 (viewers.js) + H-29 (Reader.razor).
+- Not done: the real Android build. What I can run is the same shared UI in the phone and tablet shells in
+  headless Chrome; the 44 px rules are plain CSS on `html[data-shell]`, so the same rules load in the
+  WebView, but the measurement on the emulator is Android Test's.
+- Results (hooks-14 applied): 597 tests pass, 6 skipped by Foundation: 438 + 102 + 41 + 16; touch at
+  800×1280, 1280×800, 412×915, 915×412: 306 checks pass, 0 fail (gestures 8/8/9/9, checks 12, pinchmarks 18,
+  xlresize 15, cards 4, turned 13, closecard 6 each), box audit clean at all four; desktop before (4b704c8) /
+  after at 1440×900: Mark, a selected rectangle's card, the ask-before-closing card, the Export card, the
+  Press card, the Merge page, the Split page, Arrange and the desk menu identical apart from the clock; Read
+  and Home show the known 1 to 2 level noise pixels in the same places as before.
+  (cards.py first failed at 915×412 on controls further down a scrolling card; the audit now scrolls each
+  control into view before it tests it, and passes at all four.)
+

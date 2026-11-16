@@ -1,72 +1,53 @@
-# Mobile app UI → Foundation: hooks and hand-off (updated 16 Nov, patch 29)
+# Mobile app UI → Foundation: hooks and hand-off (updated 16 Nov, patch 30)
 
-## Outstanding for Foundation: H-25, H-26 and H-27 (`proposal/mobile-ui-hooks-13.patch`)
-Against foundation-pr 71754e1 (patch 29). `mobile-ui-hooks-13.patch` is the three together (what Android's
-`compose.sh` applies); each is also on its own beside it:
-`proposal/H25-reader-pinch-in-mark-leaves-no-mark.patch`,
-`proposal/H26-find-stays-on-the-match-page-when-pages-snap.patch`,
-`proposal/H27-excel-resize-gives-way-to-a-pinch.patch`.
+## Outstanding for Foundation: H-27, H-28 and H-29 (`proposal/mobile-ui-hooks-14.patch`)
+Against foundation-pr 4b704c8 (patch 30). H-25 and H-26 landed in patch 30 (`proposal/landed/`).
+`mobile-ui-hooks-14.patch` is what Android's `compose.sh` applies: the `viewers.js` diff (H-27 and H-28 together,
+they touch the same function) and the `Reader.razor` diff (H-29). On their own:
+`proposal/H27-excel-resize-gives-way-to-a-pinch.patch` (H-27 alone),
+`proposal/H28-excel-resize-by-finger-takes-a-hold.patch` (H-27 + H-28: take this one if both are wanted),
+`proposal/H29-export-and-press-cards-get-class-names.patch`.
+
+### H-28: by finger, an Excel edge is taken by resting on it (D-193; settles F-4)
+(`Ui/wwwroot/js/viewers.js`, `gridResize`; with H-27: +38 / −13)
+- Decided by the coordinator (D-193, option B of F-4): a hold of about 350 ms on a header edge starts a
+  resize, the guide line showing when the hold has taken; a finger that moves at once scrolls; two taps to
+  fit stay; mouse and pen unchanged.
+- The change: for a touch pointer, `pointerdown` on an edge starts a 350 ms hold instead of the drag. A move
+  of more than 8 px, a lift, a cancel or a second finger before it ends lets the edge go. When it ends the
+  drag begins as before and the guide line is drawn at once. The `touchstart` that blocked scrolling on an
+  edge is replaced by a `touchmove` that blocks it only once a drag has been taken, and the browser's
+  long-press menu is suppressed while an edge is held. Two presses within 450 ms still fit.
+- Checked by finger at 412×915, 915×412, 800×1280, 1280×800 (`tools/mobile-ui/xlresize.py`, 15 checks):
+  rest then drag 60 px → 60 px wider, guide line there after the hold, sheet not scrolling; a finger that
+  moves at once on an edge scrolls sideways and resizes nothing; a finger on an ordinary 20 px row number
+  scrolls (this was F-4); two taps fit; a mouse still takes the edge at once; a pinch from an edge only zooms.
+- **For:** scroll and resize can't be confused; the full 14 px finger edge stays. **Against:** resizing by
+  finger takes a moment longer and has to be found (the line is the cue).
+- Not run here: Foundation's own `tools/PixelProof/excel-resize.js` (mouse); the mouse path is unchanged
+  and one mouse drag is in my checks.
 
 ### H-27: Excel resize gives way to a pinch (D-190, by finger)
-(`Ui/wwwroot/js/viewers.js`, `gridResize`, +2 / −0)
-- A pinch whose first finger lands on a column's or row's edge both zooms the sheet and resizes: the first
-  finger has started a resize and keeps it while the second finger zooms. Measured on 71754e1 at 412×915
-  and 800×1280: zoom 1 → 1.69 and column B 108 → 76 px (at 100 %).
-- The change: a second touch pointer down while an edge is held drops the resize (`finish(false)`), so
-  nothing changes size and the pinch goes on.
-- **For:** pinch always only zooms. **Against:** as with H-25, a second finger that lands outside the grid
-  isn't seen by this listener.
+(`Ui/wwwroot/js/viewers.js`, `gridResize`, +2 / −0; inside H-28's diff too)
+- A pinch whose first finger lands on a column's or row's edge both zoomed the sheet and resized it
+  (71754e1, 412×915 and 800×1280: zoom 1 → 1.69, column B 108 → 76 px at 100 %).
+- A second touch pointer down while an edge is held drops the resize. With H-28 the same holds while the
+  hold is still running.
+- **Against:** a second finger that lands outside the grid isn't seen by this listener.
 
-### F-4 (a choice, not a diff yet): a finger on a row number resizes instead of scrolling
-- For a finger the edge takes 14 px each way. An ordinary row number is 20 px high, so all of it is "edge":
-  a finger that starts anywhere on the row-number column and moves up or down resizes a row; the sheet
-  does not scroll. Seen at 800×1280, 1280×800 and 915×412 (scroll 0 → 0, one more row marked as changed).
-  At 412×915 the row picked happened to be 64 px high, and it scrolled.
-- Column letters at 64 px: the middle 36 px scrolls sideways, the 14 px at each side resizes.
-- Ways to settle it:
-  - **A. A smaller edge on small headers** (for a finger, no more than a quarter of the header's size).
-    For: two lines. Against: on a 20 px row the edge is 5 px, hard to hit with a finger, and the rest
-    is still only 10 px of "scroll".
-  - **B. A finger must rest on the edge for a moment (about 350 ms) before it resizes;** a finger that
-    moves at once scrolls. Two taps to fit stay as they are. For: scroll and resize can't be confused, and
-    the full 14 px edge can stay. Against: resizing by finger is slower and has to be learnt (the guide
-    line could show when the hold has taken). Mouse and pen unchanged.
-  - **C. Leave it.** For: nothing to do. Against: on a tablet the left strip of every sheet doesn't scroll.
-  - I'd take B. I can write it as a diff once it is chosen.
-
-### H-26: page at a time, Find lands on the next page when the match is low on its page
-(`Ui/wwwroot/js/reader.js`, `scrollToMatch`, +7 / −1) — found re-checking F-1 on the tablet
-- Where pages snap (page at a time, not zoomed), `scrollToMatch` still aims a third of the way above the
-  match and leaves the snap to settle it. For a match in roughly the bottom sixth of its page that point
-  is nearer the next page's snap line, so the desk settles on the next page and the match is off screen.
-- Seen at 1280×800 on the four-turns PDF: Find `rotmark180` (the word is near the foot of the upside-down
-  page 3) left the desk on page 4, the highlight 72 px above the desk. Before patch 28 the highlight was
-  drawn elsewhere, so F-1's fix is what made it show; the scroll rule itself is older and is the same for
-  any match low on a page, turned or not, on every platform.
-- The change: when the desk snaps, the target is the match's own page top.
-- **For:** the match's page is the one shown (st 1496 instead of 2244 in the case above; highlight on screen);
-  nothing changes where pages don't snap. **Against:** none that I can see; in this layout a page is one
-  screen, so there is nowhere else on it to scroll to.
-
-### H-25: a two-finger pinch in Mark leaves no mark behind (found checking patch 27 by finger)
-(`Ui/Pages/Reader.razor`, +24 / −1)
-- Today, in Mark on a touchscreen, every pinch zooms **and** places a mark: the first finger's press starts
-  a text box (Text is the tool when none is picked) or a shape, and its lift commits it. Measured at 412×915
-  and 800×1280 on 57a63c5: no tool picked → 1 stray text box per pinch; Rectangle on → 1 stray rectangle
-  per pinch (and its card opens); Text on → 1 stray text box. Not new in patch 27 (`MkDown` is unchanged);
-  it shows now because pinch is the way to zoom in before placing a mark.
-- The change: a touch pointer that isn't the primary one is a second finger. Its press (`MkDownPress`) drops
-  the draft the first finger began and marks the gesture as a pinch; `MkMove` ignores moves while that
-  holds and from any second finger; `MkUp` places nothing for a pinch and the first finger's lift ends it.
-  `MkUp` still opens with the `_mkPress` wait (TouchMarkupTests holds).
-- Mouse and pen: untouched (`PointerType == "touch"` only; a mouse is always primary).
-- **For:** pinch in Mark zooms and nothing else, with any tool; 4 sizes × (no tool, Rectangle, Text, Draw),
-  fingers together and 80 ms apart: 0 stray marks, zoom as asked. Marks by finger and by mouse still land
-  under the pointer at the fit zoom and at ×1.6.
-- **Against / not covered:** it relies on the second finger's press reaching the mark layer. A second finger
-  that lands off the page, or on an existing mark (those handlers stop the press before the layer), isn't
-  seen, so that pinch can still leave a mark. A fuller way is for reader.js to tell the Reader when its
-  pinch begins and have the Reader drop the draft there — Foundation's choice; this diff is the small one.
+### H-29: the Export as image and Press cards get class names (AT-28)
+(`Ui/Pages/Reader.razor`, 20 lines changed, markup only: `class="…"` added, no style touched)
+- Both cards are written with inline styles and no classes, so nothing outside can address their controls.
+  Android Test measured them at 16 to 34 px on phone and tablet (AT-28).
+- Added: `rdlg` on each card; `rdlg-chip` (and `on` when chosen) on the format, pages, resolution and preset
+  chips; `rdlg-x` on Close; `rdlg-link` on "change…"; `rdlg-go` on Export → and Press →; `rdlg-open` on
+  "Open result"; `rdlg-num`, `rdlg-range` on the number boxes and the slider; `rdlg-check` on the two tick rows.
+- No rule in the shared CSS uses these names, so desktop is unchanged (checked: both cards pixel-identical
+  before and after at 1440×900). mobile.css (mine) uses them on the phone and tablet to make every control a
+  44 px box drawn as before.
+- **For:** the cards can be styled per platform without touching Reader.razor again. **Against:** names that
+  only touch uses today. A fuller clean-up (move the inline styles into the stylesheet) is Foundation's call;
+  my rules need `!important` where they replace an inline value, and would get simpler with it.
 
 ## Seen on touch, for Foundation to weigh (not patched)
 ### F-3: the Find bar lies over the top of the desk, so a match under it is hidden (tablet, desktop)

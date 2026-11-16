@@ -880,3 +880,88 @@ html[data-shell="tablet"] .xv-resetsizes {
     box-sizing: border-box; height: 44px; margin-block: -10px; border-style: solid; border-color: transparent; border-width: 10px 0;
     padding-inline: 10px; background-clip: padding-box; border-radius: 6px / 16px; box-shadow: inset 0 0 0 1px var(--chvd-binding);
 }
+
+/* AT-28. The Export as image and Press cards (their controls carry class names from H-29; the look itself is
+   written inline in Reader.razor, so what is replaced here needs !important) and the Merge and Split pages.
+   Every control is a 44 px box on touch, drawn as before: transparent bands above and below that the margins
+   take back, the outline as an inset shadow where there was a border. */
+html[data-shell="phone"] .rdlg-chip,
+html[data-shell="phone"] .rdlg-open,
+html[data-shell="tablet"] .rdlg-chip,
+html[data-shell="tablet"] .rdlg-open {
+    box-sizing: border-box; min-height: 44px; margin-block: -8px;
+    border-style: solid !important; border-color: transparent !important; border-width: 8px 0 !important;
+    padding: calc(6px + var(--mu-line)) calc(12px + var(--mu-line)) !important;
+    background-clip: padding-box !important; border-radius: 8px / 16px !important;
+    box-shadow: inset 0 0 0 var(--mu-line) var(--chvd-border);
+}
+html[data-shell="phone"] .rdlg-chip.on,
+html[data-shell="phone"] .rdlg-open,
+html[data-shell="tablet"] .rdlg-chip.on,
+html[data-shell="tablet"] .rdlg-open { box-shadow: inset 0 0 0 var(--mu-line) var(--chvd-binding); }
+html[data-shell="phone"] .rdlg-open,
+html[data-shell="tablet"] .rdlg-open { margin-block: 1px -9px !important; border-width: 9px 0 !important; padding-block: calc(5px + var(--mu-line)) !important; border-radius: 6px / 15px !important; }
+html[data-shell="phone"] .rdlg-go,
+html[data-shell="tablet"] .rdlg-go {
+    box-sizing: border-box; min-height: 44px; margin-block: -6px;
+    border: solid transparent !important; border-width: 6px 0 !important; background-clip: padding-box !important; border-radius: 8px / 14px !important;
+}
+html[data-shell="phone"] .rdlg-x,
+html[data-shell="tablet"] .rdlg-x { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; margin: -12.3px -8px; }
+html[data-shell="phone"] .rdlg-link,
+html[data-shell="tablet"] .rdlg-link { display: inline-flex; align-items: center; min-height: 44px; margin-block: -14px; }
+html[data-shell="phone"] .rdlg-range,
+html[data-shell="tablet"] .rdlg-range { height: 44px; margin-block: -12px; }   /* a range keeps its own 2 px margin */
+html[data-shell="phone"] label > .rdlg-num,
+html[data-shell="tablet"] label > .rdlg-num {
+    margin: -7px 0 -10px !important; border-style: solid !important; border-color: transparent !important; border-width: 10px 0 !important;
+    padding: calc(4px + var(--mu-line)) calc(6px + var(--mu-line)) !important; background-clip: padding-box !important; border-radius: 6px / 16px !important;
+    box-shadow: inset 0 0 0 var(--mu-line) var(--chvd-border);
+}
+html[data-shell="phone"] div > .rdlg-num,
+html[data-shell="tablet"] div > .rdlg-num {
+    margin-block: -8px !important; border-style: solid !important; border-color: transparent !important; border-width: 8px 0 !important;
+    padding: calc(5px + var(--mu-line)) calc(8px + var(--mu-line)) !important; background-clip: padding-box !important; border-radius: 6px / 14px !important;
+    box-shadow: inset 0 0 0 var(--mu-line) var(--chvd-border);
+}
+/* The tick rows: 13 px more above and below; the rows' own bottom margins (10, 14 or 8 px, inline) give it back. */
+html[data-shell="phone"] .rdlg-check,
+html[data-shell="tablet"] .rdlg-check { box-sizing: border-box; min-height: 45px; margin-top: -13px; margin-bottom: -3px !important; }
+html[data-shell="phone"] .rdlg > .rdlg-check,
+html[data-shell="tablet"] .rdlg > .rdlg-check { margin-bottom: 1px !important; }
+html[data-shell="phone"] .rdlg > .rdlg-check:has(input:checked),
+html[data-shell="tablet"] .rdlg > .rdlg-check:has(input:checked) { margin-bottom: -5px !important; }
+html[data-shell="phone"] .tbtn,
+html[data-shell="tablet"] .tbtn {
+    box-sizing: border-box; min-height: 44px; margin-block: -6px; border-style: solid; border-color: transparent; border-width: 6px 0;
+    padding: calc(8px + var(--mu-line)) calc(14px + var(--mu-line)); background-clip: padding-box; border-radius: 8px / 14px;
+    box-shadow: inset 0 0 0 var(--mu-line) var(--chvd-border);
+}
+html[data-shell="phone"] .tbtn:hover:not(:disabled):not(.tbtn-go),
+html[data-shell="tablet"] .tbtn:hover:not(:disabled):not(.tbtn-go) { border-color: transparent; box-shadow: inset 0 0 0 var(--mu-line) var(--chvd-binding); }
+html[data-shell="phone"] .tbtn-go:hover:not(:disabled),
+html[data-shell="tablet"] .tbtn-go:hover:not(:disabled) { border-color: transparent; }
+html[data-shell="phone"] .tbtn-go,
+html[data-shell="tablet"] .tbtn-go { border-color: transparent; background-clip: padding-box; box-shadow: none; }
+html[data-shell="phone"] .mico,
+html[data-shell="tablet"] .mico { box-sizing: border-box; width: 44px; height: 44px; margin: -9px; border: 9px solid transparent; background-clip: padding-box; }
+html[data-shell="phone"] .mico:hover:not(:disabled),
+html[data-shell="phone"] .mico-x:hover,
+html[data-shell="tablet"] .mico:hover:not(:disabled),
+html[data-shell="tablet"] .mico-x:hover { background-clip: padding-box; }
+html[data-shell="phone"] .tool-back,
+html[data-shell="phone"] .slink,
+html[data-shell="tablet"] .tool-back,
+html[data-shell="tablet"] .slink { display: inline-flex; align-items: center; min-height: 44px; margin-block: -14px; }
+html[data-shell="phone"] .snum,
+html[data-shell="tablet"] .snum {
+    box-sizing: border-box; min-height: 44px; margin-block: -8px; border-style: solid; border-color: transparent; border-width: 8px 0;
+    padding: calc(6px + var(--mu-line)) calc(8px + var(--mu-line)); background-clip: padding-box; border-radius: 6px / 14px;
+    box-shadow: inset 0 0 0 var(--mu-line) var(--chvd-border);
+}
+html[data-shell="phone"] .snum-step,
+html[data-shell="tablet"] .snum-step { box-sizing: border-box; width: 44px; height: 44px; margin: -5px -7px; border: solid transparent; border-width: 5px 7px; background-clip: padding-box; border-radius: 14px / 12px; box-shadow: inset 0 0 0 var(--mu-line) var(--chvd-border); }
+/* Tablet: the ask-before-closing card. Discard sat 2 px from Save as… (AT-26): the answers keep 12 px apart. */
+html[data-shell="tablet"] .closeq-btns { gap: 12px; }
+html[data-shell="phone"] .snum-step:hover,
+html[data-shell="tablet"] .snum-step:hover { border-color: transparent; background-clip: padding-box; box-shadow: inset 0 0 0 var(--mu-line) var(--chvd-binding); }
