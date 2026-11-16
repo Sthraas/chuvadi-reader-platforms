@@ -2338,7 +2338,81 @@
 
     // ── Bookmarks panel (#41): read, navigate, edit, save ────────────────────────
     private bool _bm;
-    private List<BookmarkNode>? _bmTree;
+
+    // D-195: the bookmarks as edited belong to the tab, like the marks. They were dropped on every tab switch and
+    // every reopening of the panel; now they stay until they are saved, discarded, or the tab closes.
+    private BookmarkEdits _bmEdits = new();
+    private List<BookmarkNode>? _bmTree { get => _bmEdits.Tree; set => _bmEdits.Tree = value; }
+
+    /// <summary>One tab's bookmarks as the person has edited them.</summary>
+    private sealed class BookmarkEdits : ITabUnsaved
+    {
+        public List<BookmarkNode>? Tree;
+
+        /// <summary>The file they were read from; another file in the same tab starts again.</summary>
+        public string? Path;
+
+        /// <summary>The bookmarks as the file holds them (as read, or as last saved).</summary>
+        public string? InFile;
+
+        public int Count => Tree is null ? 0 : CountOf(Tree);
+
+        public bool HasUnsaved => Tree is not null && InFile is not null && Signature(Tree) != InFile;
+
+        public void Discard()
+        {
+            Tree = null;
+            InFile = null;
+        }
+
+        private static int CountOf(List<BookmarkNode> nodes) => nodes.Sum(n => 1 + CountOf(n.Children));
+
+        public static string Signature(List<BookmarkNode> nodes)
+        {
+            var sb = new System.Text.StringBuilder();
+            void Walk(List<BookmarkNode> ns, int depth)
+            {
+                foreach (var n in ns)
+                {
+                    sb.Append(depth).Append('|').Append(n.PageIndex).Append('|').Append(n.Title).Append('\n');
+                    Walk(n.Children, depth + 1);
+                }
+            }
+
+            Walk(nodes, 0);
+            return sb.ToString();
+        }
+    }
+
+    /// <summary>Makes <see cref="_bmEdits"/> the bookmarks kept with this tab (an empty set for a tab or a file
+    /// that has none yet; they are read from the file when first needed).</summary>
+    private void UseBookmarksOf(ReaderTab? tab)
+    {
+        var edits = tab?.Bookmarks as BookmarkEdits;
+        if (edits is null || edits.Path != tab!.Path)
+        {
+            edits = new BookmarkEdits { Path = tab?.Path };
+            if (tab is not null) tab.Bookmarks = edits;
+        }
+
+        if (!ReferenceEquals(edits, _bmEdits))
+        {
+            _bmEdits = edits;
+            _bmSel = null; _bmRenaming = null; _bmStatus = null;
+        }
+
+        _bmLoadedFor = edits.Tree is not null ? tab?.Path : null;
+    }
+
+    /// <summary>D-195: the close question's "Save bookmarks", for the tab in front. Null: saved. Otherwise why not.</summary>
+    private async Task<string?> SaveBookmarksForCloseAsync()
+    {
+        UseBookmarksOf(Tabs.Active);
+        if (!_bmEdits.HasUnsaved) return null;
+        await BmSave();
+        return _bmEdits.HasUnsaved ? _bmStatus ?? "The bookmarks couldn't be saved." : null;
+    }
+
     private BookmarkNode? _bmSel;
     private BookmarkNode? _bmRenaming;
     private string? _bmStatus;
@@ -2353,10 +2427,14 @@
 
     private void LoadBookmarks()
     {
+        if (_bmEdits.HasUnsaved) return;   // D-195: edits not yet saved are not thrown away by reading the file again
         _bmStatus = null; _bmSel = null; _bmRenaming = null;
         var path = Tab?.Path;
         try { _bmTree = path is null ? new() : _outline.Read(path).Select(n => n.Clone()).ToList(); }
         catch { _bmTree = new(); }
+        _bmEdits.Path = path;
+        _bmEdits.InFile = BookmarkEdits.Signature(_bmTree);
+        if (Tab is { } tab) tab.Bookmarks = _bmEdits;
     }
 
     private IEnumerable<(BookmarkNode node, int depth)> BmFlat()
@@ -2463,6 +2541,7 @@
                 await Task.CompletedTask;
             });
             await WriteBack.DeliverOrThrowAsync(path);
+            _bmEdits.InFile = BookmarkEdits.Signature(_bmTree);   // the file holds them now
             _bmStatus = $"Saved {BmFlat().Count()} bookmark(s)";
         }
         catch (Exception ex) { _bmStatus = ex.Message; }

@@ -69,6 +69,7 @@ public partial class Reader
     private Stack<MkState> _mkRedo => _marks.Redo;
     private MkState? _pendingSnap;
     private Func<bool, Task<string?>>? _saveMarksHandler;
+    private Func<Task<string?>>? _saveBookmarksHandler;
     private bool _unsavedTold;
 
     private sealed record MkState(
@@ -86,6 +87,8 @@ public partial class Reader
         Shell.CounterHandler = _counterHandler;
         _saveMarksHandler = SaveMarksForCloseAsync;   // called by the shell's close question, on the dispatcher
         Shell.SaveMarksHandler = _saveMarksHandler;
+        _saveBookmarksHandler = SaveBookmarksForCloseAsync;
+        Shell.SaveBookmarksHandler = _saveBookmarksHandler;
         Shell.FindHandler = _findHandler;
         _findTextHandler = q => InvokeAsync(() => FindTextAsync(q));
         Shell.FindTextHandler = _findTextHandler;
@@ -170,6 +173,11 @@ public partial class Reader
             Shell.SaveMarksHandler = null;
         }
 
+        if (Shell.SaveBookmarksHandler == _saveBookmarksHandler)
+        {
+            Shell.SaveBookmarksHandler = null;
+        }
+
         if (Shell.CounterHandler == _counterHandler)
         {
             Shell.CounterHandler = null;
@@ -218,7 +226,7 @@ public partial class Reader
         _viewerStatus = null;
         _viewerEncoding = null;
         _showSource = false;
-        _bmLoadedFor = null;
+        UseBookmarksOf(tab);   // D-195: this tab's own bookmark edits, or none yet (then read from the file)
         if (_pagesDrawer && tab is not null && !tab.Format.IsViewOnly())
         {
             EnsureBookmarksLoaded();
@@ -352,7 +360,7 @@ public partial class Reader
         }
 
         // D-194: hosts that must act before a close is under way (Linux holds a sign-out) hear when this changes.
-        bool unsavedNow = _marks.HasUnsaved;
+        bool unsavedNow = _marks.HasUnsaved || _bmEdits.HasUnsaved;
         if (unsavedNow != _unsavedTold)
         {
             _unsavedTold = unsavedNow;

@@ -262,7 +262,57 @@
     private string _pageInput = "1";
     private double _zoom = 1.0;
 
-    private readonly Dictionary<int, List<NormBox>> _redactions = new();
+    // D-195: the redaction areas (drawn, found and accepted, and the patterns chosen) belong to the file, not to
+    // this page: they are kept with the file's tab (or, for a file open only here, with a stand-in for it), so
+    // leaving Protect loses nothing and closing the tab or the app asks first. Memory only.
+    private RedactWork _work = new();
+    private Dictionary<int, List<NormBox>> _redactions => _work.Boxes;
+    private bool _unsavedTold;
+
+    /// <summary>One file's redaction work that is not in a redacted copy yet.</summary>
+    private sealed class RedactWork : ITabUnsaved
+    {
+        public readonly Dictionary<int, List<NormBox>> Boxes = new();
+        public List<MatchVm> Matches = new();
+        public Dictionary<int, List<MatchVm>> ByPage = new();
+        public readonly HashSet<string> Presets = new(StringComparer.OrdinalIgnoreCase);
+        public string Query = "";
+
+        /// <summary>The work as the last redacted copy was made from it: until it changes, nothing is unsaved.</summary>
+        public string? Applied;
+
+        /// <summary>The areas a redacted copy would cover: drawn boxes and accepted matches.</summary>
+        public int Count => Boxes.Values.Sum(v => v.Count) + Matches.Count(m => m.Accepted);
+
+        public bool HasUnsaved => (Count > 0 || Presets.Count > 0) && (Applied is null || Signature() != Applied);
+
+        public void Discard()
+        {
+            Boxes.Clear();
+            Matches = new();
+            ByPage = new();
+            Presets.Clear();
+            Query = "";
+            Applied = null;
+        }
+
+        public string Signature()
+        {
+            var sb = new System.Text.StringBuilder();
+            foreach (var (page, list) in Boxes.OrderBy(k => k.Key))
+            {
+                foreach (var b in list) sb.Append('b').Append(page).Append(':').Append(b.X).Append(',').Append(b.Y).Append(',').Append(b.W).Append(',').Append(b.H).Append('|');
+            }
+
+            foreach (var m in Matches)
+            {
+                if (m.Accepted) sb.Append('m').Append(m.PageIndex).Append(':').Append(m.Snippet).Append(':').Append(m.Boxes.Count).Append('|');
+            }
+
+            foreach (var p in Presets.OrderBy(x => x, StringComparer.OrdinalIgnoreCase)) sb.Append('p').Append(p).Append('|');
+            return sb.ToString();
+        }
+    }
     private readonly HashSet<(IPdfSession Session, int Page)> _rendering = new(); // in flight; forgotten when done (AT-13)
 
     private string _color = "#000000";
@@ -296,18 +346,18 @@
     }
 
     private bool _findOpen;
-    private string _query = "";
+    private string _query { get => _work.Query; set => _work.Query = value; }
     private bool _caseSensitive;
     private bool _wholeWord;
     private bool _rangeAll = true;
     private string _fromInput = "1";
     private string _toInput = "1";
-    private readonly HashSet<string> _presets = new(StringComparer.OrdinalIgnoreCase);
+    private HashSet<string> _presets => _work.Presets;
     private bool _glyphOnly;            // false = Box (default)
     private bool _searching;
     private string? _findStatus;
-    private List<MatchVm> _matches = new();
-    private Dictionary<int, List<MatchVm>> _matchesByPage = new();
+    private List<MatchVm> _matches { get => _work.Matches; set => _work.Matches = value; }
+    private Dictionary<int, List<MatchVm>> _matchesByPage { get => _work.ByPage; set => _work.ByPage = value; }
     private MatchVm? _currentMatch;
 
     private int AcceptedMatchCount => _matches.Count(m => m.Accepted);
@@ -351,6 +401,13 @@
             Handoff.Clear();
             await OpenAsync(path, name);
         }
+        else if (Tabs.ProtectPath is { } last
+                 && Tabs.WorkHolderFor(last, System.IO.Path.GetFileName(last)) is { Redactions.HasUnsaved: true } holder)
+        {
+            // D-195: nothing was handed over, and the file Protect last had open still has areas that are in no
+            // redacted copy: it opens again with them, so leaving Protect and coming back loses nothing.
+            await OpenAsync(holder.Path, holder.FileName);
+        }
     }
 
     private async Task Fetch()
@@ -365,7 +422,12 @@
         _loading = true; _error = null; _status = null; _savedPath = null; _statusErr = false;
         _session?.Dispose();
         _session = null;
-        _redactions.Clear();
+        // D-195: this file's own areas, kept with its tab (or its stand-in); a file opened for the first time has none.
+        var holder = Tabs.WorkHolderFor(path, name);
+        _work = holder.Redactions as RedactWork ?? new RedactWork();
+        holder.Redactions = _work;
+        Tabs.ProtectPath = path;
+        _currentMatch = null;
         _rendering.Clear();
         _observed = false;
         StateHasChanged();
@@ -400,6 +462,14 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         ShellPublish();
+        // D-194: a host that must act before a close is under way hears when unsaved work appears or goes.
+        bool unsavedNow = _work.HasUnsaved;
+        if (unsavedNow != _unsavedTold)
+        {
+            _unsavedTold = unsavedNow;
+            Tabs.NoteUnsavedMarksChanged();
+        }
+
         if (_session is null) return;
 
         if (_js is null)
@@ -606,6 +676,7 @@
 
             await RedactSvc.ApplyAsync(_path, output!, boxesArg, patterns, _glyphOnly, _color, padding: 1.5);
             await WriteBack.DeliverOrThrowAsync(output);
+            _work.Applied = _work.Signature();   // D-195: these areas are in a redacted copy now
             _savedPath = output;
             _status = $"Saved → {System.IO.Path.GetFileName(output)}";
             _statusErr = false;
