@@ -101,6 +101,25 @@ public sealed class HostingTests
         Assert.Empty(leaks);
     }
 
+    /// <summary>
+    /// AT-21 drift guard: a status message never prints a folder or path as it is ("Bound 2 desks into
+    /// /data/user/0/…/cache/work/folder/…" on Android) — it goes through <see cref="IPathLabels"/> or names
+    /// the file alone (<c>Path.GetFileName</c>).
+    /// </summary>
+    [Fact]
+    public void Ui_messages_name_folders_through_path_labels()
+    {
+        var dir = Path.Combine(AppContext.BaseDirectory, "UiSources");
+        var raw = new System.Text.RegularExpressions.Regex(
+            @"\$"".*\{(?:dir|folder|path|[\w.]*(?:Folder|Path|Dir))\}");
+        var leaks = Directory.GetFiles(dir, "*.razor", SearchOption.AllDirectories)
+            .SelectMany(f => File.ReadLines(f).Select((line, i) => (f, i, line)))
+            .Where(x => raw.IsMatch(x.line))
+            .Select(x => $"{Path.GetRelativePath(dir, x.f)}:{x.i + 1}: {x.line.Trim()}")
+            .ToList();
+        Assert.Empty(leaks);
+    }
+
     private sealed class TestWriteBack : IFileWriteBack
     {
         public bool IsNeeded => true;

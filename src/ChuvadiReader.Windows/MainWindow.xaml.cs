@@ -38,6 +38,83 @@ public partial class MainWindow : Window
         Drop += OnFileDrop;
     }
 
+    // ── D-190: ask before the window closes with unsaved marks ─────────────────────────────────
+    private bool _closeConfirmed;
+    private bool _closeAsking;
+
+    /// <summary>The close button, Alt F4 and the in-app close all arrive here. With nothing unsaved the close
+    /// goes on at once, exactly as before. Otherwise it is held, the Ui asks about each file, and the window
+    /// closes only when the person has answered for all of them.</summary>
+    protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+    {
+        base.OnClosing(e);
+        if (e.Cancel || _closeConfirmed)
+        {
+            return;
+        }
+
+        if (_services.GetService(typeof(ChuvadiReader.Platform.IUnsavedWork)) is not ChuvadiReader.Platform.IUnsavedWork work
+            || !work.HasUnsavedWork)
+        {
+            return;
+        }
+
+        e.Cancel = true;
+        AskThenClose(work);
+    }
+
+    /// <summary>Signing out or shutting down with unsaved marks: Windows is told to wait and the question is
+    /// shown (Windows then says this app is holding the shutdown, as it does for any app with unsaved work).</summary>
+    internal void OnSessionEnding(SessionEndingCancelEventArgs e)
+    {
+        if (_closeConfirmed
+            || _services.GetService(typeof(ChuvadiReader.Platform.IUnsavedWork)) is not ChuvadiReader.Platform.IUnsavedWork work
+            || !work.HasUnsavedWork)
+        {
+            return;
+        }
+
+        e.Cancel = true;
+        AskThenClose(work);
+    }
+
+    private async void AskThenClose(ChuvadiReader.Platform.IUnsavedWork work)
+    {
+        if (WindowState == WindowState.Minimized)
+        {
+            WindowState = WindowState.Normal;
+        }
+
+        Activate();
+        if (_closeAsking)
+        {
+            return; // the question is already on screen
+        }
+
+        _closeAsking = true;
+        bool go;
+        try
+        {
+            go = await work.ConfirmCloseAsync();
+        }
+        catch (Exception)
+        {
+            // The question could not be shown. Never trap the person in the app: the next close goes through.
+            _closeConfirmed = true;
+            return;
+        }
+        finally
+        {
+            _closeAsking = false;
+        }
+
+        if (go)
+        {
+            _closeConfirmed = true;
+            Close();
+        }
+    }
+
     // Same list as the Open dialog (Core: DocumentFormatExtensions.OpenableExtensions).
     private static bool IsSupportedFile(string path)
         => ChuvadiReader.Core.Documents.DocumentFormatExtensions.IsOpenable(path);

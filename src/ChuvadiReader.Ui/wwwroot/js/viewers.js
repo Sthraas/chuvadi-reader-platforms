@@ -150,6 +150,149 @@ export function scrollGridToCell(el, x, y, headW, headH) {
     }
 }
 
+// ── D-190: column widths and row heights for viewing only ───────────────────────────────────────────────────────
+// Drag the far edge of a column letter or the bottom edge of a row number to resize it; press that edge twice to fit
+// it. Nothing is written to the file: the new size goes to .NET (OnGridResize / OnGridFit), which redraws the grid.
+// One set of listeners on the grid; nothing per header. Mouse, pen and finger (a finger gets a wider edge).
+
+// Some engines (older WebKit) report an element's rectangle under CSS zoom in its own unzoomed pixels; pointer
+// events are in screen pixels. The engine is asked once which it does (as reader.js does for marks, M-27).
+let chvdUnzoomedRects = null;
+function screenRect(el) {
+    if (chvdUnzoomedRects === null) {
+        const probe = document.createElement('div');
+        probe.style.cssText = 'position:fixed;left:0;top:0;width:10px;height:10px;zoom:2;visibility:hidden;pointer-events:none';
+        document.body.appendChild(probe);
+        chvdUnzoomedRects = Math.abs(probe.getBoundingClientRect().width - 10) < 0.5;
+        probe.remove();
+    }
+    const r = el.getBoundingClientRect();
+    if (!chvdUnzoomedRects) return { left: r.left, top: r.top, width: r.width, height: r.height };
+    let zoom = 1;
+    for (let e = el; e && e.nodeType === 1; e = e.parentElement) {
+        const z = parseFloat(getComputedStyle(e).zoom);
+        if (isFinite(z) && z > 0) zoom *= z;
+    }
+    return { left: r.left * zoom, top: r.top * zoom, width: r.width * zoom, height: r.height * zoom };
+}
+
+export function gridResize(el, dotnetRef) {
+    if (!el || !el.isConnected) return false;
+    if (el._chvdResize) { el._chvdResize.dotnet = dotnetRef; return true; }
+    const st = el._chvdResize = { dotnet: dotnetRef, drag: null, lastPress: null };
+    const SMALLEST = 8;
+
+    // The header edge under a point: { column, index, hdr, size (screen px), scale (screen px per px at 100 %) }.
+    const edgeAt = (e) => {
+        const hdr = e.target && e.target.closest ? e.target.closest('.xv-colhdr, .xv-rowhdr') : null;
+        if (!hdr || !el.contains(hdr)) return null;
+        const column = hdr.classList.contains('xv-colhdr');
+        const reach = e.pointerType === 'touch' ? 14 : 5;
+        const rtl = getComputedStyle(el).direction === 'rtl';
+        const pick = (h) => {
+            const r = screenRect(h), own = parseFloat(column ? h.style.width : h.style.height);
+            const size = column ? r.width : r.height;
+            return { column, hdr: h, index: parseInt(h.getAttribute(column ? 'data-c' : 'data-r'), 10), size, scale: own > 0 ? size / own : 1, rect: r };
+        };
+        const me = pick(hdr);
+        if (!(me.index > 0)) return null;
+        const far = column ? (rtl ? me.rect.left : me.rect.left + me.rect.width) : me.rect.top + me.rect.height;
+        const near = column ? (rtl ? me.rect.left + me.rect.width : me.rect.left) : me.rect.top;
+        const at = column ? e.clientX : e.clientY;
+        if (Math.abs(at - far) <= reach) return me;
+        // Just past the edge of the one before (still inside this header): that edge belongs to the one before.
+        if (Math.abs(at - near) <= reach) {
+            const before = hdr.previousElementSibling;
+            if (before && before.classList.contains(column ? 'xv-colhdr' : 'xv-rowhdr')) { const b = pick(before); if (b.index > 0) return b; }
+        }
+        return null;
+    };
+
+    const guide = (d, at) => {
+        if (!d.line) {
+            d.line = document.createElement('div');
+            d.line.style.cssText = 'position:fixed;z-index:50;background:var(--chvd-binding,#8a3b12);pointer-events:none';
+            document.body.appendChild(d.line);
+        }
+        const w = el.getBoundingClientRect();
+        if (d.column) d.line.style.cssText += `;left:${at}px;top:${w.top}px;width:1px;height:${w.height}px`;
+        else d.line.style.cssText += `;top:${at}px;left:${w.left}px;height:1px;width:${w.width}px`;
+    };
+
+    const sizeNow = (d, e) => {
+        const moved = d.column ? (e.clientX - d.start) * d.dir : e.clientY - d.start;
+        return Math.max(SMALLEST, (d.size + moved) / d.scale);
+    };
+
+    const finish = (commit, e) => {
+        const d = st.drag;
+        if (!d) return;
+        st.drag = null;
+        if (d.line) d.line.remove();
+        el.classList.remove('xv-resizing');
+        try { el.releasePointerCapture(d.id); } catch { }
+        if (commit && d.moved) st.dotnet.invokeMethodAsync('OnGridResize', d.column, d.index, sizeNow(d, e)).catch(() => { });
+    };
+
+    el.addEventListener('pointerdown', (e) => {
+        if (e.button > 0 || st.drag) return;
+        const edge = edgeAt(e);
+        if (!edge) { st.lastPress = null; return; }
+        e.preventDefault();
+        const now = performance.now(), last = st.lastPress;
+        if (last && last.column === edge.column && last.index === edge.index && now - last.time < 450) {
+            // The second press on the same edge: fit it.
+            st.lastPress = null;
+            st.dotnet.invokeMethodAsync('OnGridFit', edge.column, edge.index).catch(() => { });
+            return;
+        }
+        st.lastPress = { column: edge.column, index: edge.index, time: now };
+        const rtl = getComputedStyle(el).direction === 'rtl';
+        st.drag = { column: edge.column, index: edge.index, size: edge.size, scale: edge.scale, id: e.pointerId,
+            start: edge.column ? e.clientX : e.clientY, dir: edge.column && rtl ? -1 : 1, moved: false, line: null };
+        try { el.setPointerCapture(e.pointerId); } catch { }
+        el.classList.add('xv-resizing');
+    });
+
+    el.addEventListener('pointermove', (e) => {
+        const d = st.drag;
+        if (!d) {
+            if (e.pointerType === 'mouse') {
+                const edge = edgeAt(e);
+                el.style.cursor = edge ? (edge.column ? 'col-resize' : 'row-resize') : '';
+            }
+            return;
+        }
+        if (e.pointerId !== d.id) return;
+        const at = d.column ? e.clientX : e.clientY;
+        if (!d.moved && Math.abs(at - d.start) < 3) return;   // a press, not a drag (it may become a double press)
+        d.moved = true;
+        st.lastPress = null;
+        e.preventDefault();
+        // The line shows where the edge will be; it stops where the smallest size is.
+        const edgeNow = d.start + (sizeNow(d, e) * d.scale - d.size) * (d.column ? d.dir : 1);
+        guide(d, edgeNow);
+    });
+
+    el.addEventListener('pointerup', (e) => { if (st.drag && e.pointerId === st.drag.id) finish(true, e); });
+    el.addEventListener('pointercancel', (e) => { if (st.drag && e.pointerId === st.drag.id) finish(false, e); });
+    el.addEventListener('keydown', (e) => { if (e.key === 'Escape' && st.drag) finish(false, e); });
+    // A finger that starts on an edge resizes; it must not scroll the sheet instead.
+    el.addEventListener('touchstart', (e) => {
+        const t = e.touches && e.touches[0];
+        if (t && edgeAt({ target: e.target, clientX: t.clientX, clientY: t.clientY, pointerType: 'touch' })) e.preventDefault();
+    }, { passive: false });
+    return true;
+}
+
+// The room the cells in the measuring box need, at 100 %: the widest (a column) or the tallest (a row). 0: none.
+export function gridMeasure(box, column) {
+    if (!box || !box.isConnected) return 0;
+    let need = 0;
+    for (const item of box.children) need = Math.max(need, column ? item.offsetWidth : item.offsetHeight);
+    return need;
+}
+
 // D-161: a spreadsheet cell shows its display text; clicking or tapping it shows the value the file stores in the bar
 // above the grid (hovering shows it too, as the cell's title). One listener on the grid, nothing per cell.
 // Returns true once the listener is on, so the caller can ask again after a render that had no grid yet.
