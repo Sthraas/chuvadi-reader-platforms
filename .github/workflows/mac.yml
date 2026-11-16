@@ -1,7 +1,7 @@
 name: Mac
 
-# Builds the Mac Catalyst host (universal: Apple Silicon + Intel), runs the test suite on macOS,
-# launches the app once as a smoke test (records startup timings), and uploads the unsigned
+# Builds the Mac Catalyst host (universal: Apple Silicon + Intel) once, then on each macOS runner runs the test suite,
+# launches that same app as a smoke test (records startup timings) and runs the smoke checks, and uploads the unsigned
 # (ad-hoc signed) .app as a zip for manual testing. No Apple Developer account is used.
 
 # Manual only (D-90: macOS minutes cost 10× Linux; Mac runs only when the coordinator confirms).
@@ -12,15 +12,20 @@ on:
         description: 'Try a patch for shared code on the runner only (path in the repo, e.g. docs/mac/foundation/X.patch). Nothing is committed.'
         required: false
         default: ''
+      build_runner:
+        description: 'Runner that builds the app. xcode-27 (preview image, Xcode 27.1) builds the repo global.json as pushed. Fallback if that image goes away: macos-26 together with try_patch docs/mac/foundation/global-json-mac-workload-10.0.401.patch.'
+        required: false
+        default: 'xcode-27'
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  DOTNET_NOLOGO: '1'
 
 jobs:
-  mac:
-    name: build, test, smoke, package
-    runs-on: macos-26
+  build:
+    name: build the universal app
+    runs-on: ${{ inputs.build_runner }}
     timeout-minutes: 60
-    env:
-      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
-      DOTNET_NOLOGO: '1'
 
     steps:
       - uses: actions/checkout@v7
@@ -39,28 +44,22 @@ jobs:
         with:
           global-json-file: global.json   # the repo's strict pin (patch 27): SDK and workload set
 
-      # Newest installed Xcode that has a macOS SDK and actool (some images carry Xcode
-      # versions without the macOS platform). Must be 26.5 or later for the pinned workload.
-      # The pinned Mac Catalyst pack (26.5.10318) requires Xcode 26.6. The image carries two 26.6
-      # installs; Xcode_26.6.0.app fails the build's SDK lookup, so the exact app is named here.
+      # Workload set 10.0.403 (Mac Catalyst 27.0) needs Xcode 27.1 — the default on the xcode-27 image.
+      # Fallback (macos-26, set 10.0.401, Mac Catalyst 26.5): that image carries two Xcode 26.6 installs and
+      # Xcode_26.6.0.app fails the build's SDK lookup, so the exact app is named.
       - name: Select Xcode
-        env:
-          XCODE_APP: /Applications/Xcode_26.6.app
         run: |
           ls -d /Applications/Xcode*.app
-          XC="$XCODE_APP"
-          [ -d "$XC" ] || { echo "$XC not on this runner image"; exit 1; }
-          sudo xcode-select -s "$XC"
-          sudo xcodebuild -runFirstLaunch
-          ls -la "$XC/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs"
+          if [ "${{ inputs.build_runner }}" = "macos-26" ]; then
+            sudo xcode-select -s /Applications/Xcode_26.6.app
+            sudo xcodebuild -runFirstLaunch
+          fi
           xcode-select -p
           xcodebuild -version
           xcrun --sdk macosx --show-sdk-version
           xcodebuild -sdk "$(xcrun --sdk macosx --show-sdk-path)" -find actool
-          sw_vers
+          sw_vers; uname -m
 
-      # The workload set comes from the repo's global.json (workloadVersion), as the SDK does. Its Mac Catalyst
-      # pack must build with the Xcode chosen above; if a newer set needs a newer Xcode, this step or the build says so.
       - name: Install MAUI Mac Catalyst workload (pinned)
         run: |
           dotnet --version
@@ -69,16 +68,10 @@ jobs:
           dotnet workload list
 
       - name: Restore
-        run: |
-          dotnet restore tests/ChuvadiReader.Tests/ChuvadiReader.Tests.csproj --configfile ci/nuget.config
-          dotnet restore tests/ChuvadiReader.Mac.Tests/ChuvadiReader.Mac.Tests.csproj --configfile ci/nuget.config
-          dotnet restore src/ChuvadiReader.Mac/ChuvadiReader.Mac.csproj --configfile ci/nuget.config
+        run: dotnet restore src/ChuvadiReader.Mac/ChuvadiReader.Mac.csproj --configfile ci/nuget.config
 
-      - name: Test (Core, on macOS)
-        run: |
-          dotnet test tests/ChuvadiReader.Tests/ChuvadiReader.Tests.csproj -c Release --no-restore --logger "trx;LogFileName=test-results.trx"
-          dotnet test tests/ChuvadiReader.Mac.Tests/ChuvadiReader.Mac.Tests.csproj -c Release --no-restore --logger "trx;LogFileName=mac-test-results.trx"
-
+      # One build makes both slices: the arm64 runner compiles the Intel (x86_64) slice too (RuntimeIdentifiers
+      # maccatalyst-arm64;maccatalyst-x64), and the two are merged into one universal bundle.
       - name: Build universal app
         run: dotnet build src/ChuvadiReader.Mac/ChuvadiReader.Mac.csproj -c Release --no-restore
 
@@ -164,6 +157,88 @@ jobs:
           codesign --force --deep --sign - --entitlements src/ChuvadiReader.Mac/Platforms/MacCatalyst/Entitlements.plist "$APP"
           codesign --verify --deep --strict --verbose=2 "$APP"
 
+      # The oldest macOS the app says it runs on must not move with the SDK it was built with.
+      - name: Minimum macOS of the bundle
+        run: |
+          MIN=$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$APP/Contents/Info.plist")
+          echo "LSMinimumSystemVersion: $MIN"
+          for a in arm64 x86_64; do echo "-- $a"; vtool -arch $a -show-build "$BIN" | grep -E "platform|minos|sdk"; done
+          grep -E "SupportedOSPlatformVersion" src/ChuvadiReader.Mac/ChuvadiReader.Mac.csproj
+          {
+            echo "### Built on $(sw_vers -productVersion) with $(xcodebuild -version | tr '\n' ' ')"
+            echo "LSMinimumSystemVersion: $MIN"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Package
+        run: |
+          mkdir -p out
+          ditto -c -k --keepParent "$APP" out/Chuvadi-mac-universal-unsigned.zip
+          shasum -a 256 out/Chuvadi-mac-universal-unsigned.zip | tee out/SHA256.txt
+
+      # For the check jobs below. The zip people are handed is uploaded only after the checks pass (job publish).
+      - name: Upload the built app for the checks
+        uses: actions/upload-artifact@v7
+        with:
+          name: mac-app-build
+          path: out/
+          retention-days: 3
+
+  check:
+    name: tests and smoke on ${{ matrix.os }}
+    needs: build
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    # macos-26 decides, as before. The others run the same checks on the same app and report, without failing the run,
+    # until each has been seen green once (Mac Test owns the full pass on them).
+    continue-on-error: ${{ matrix.os != 'macos-26' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-26, macos-15, macos-15-intel, xcode-27]
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Try a shared-code patch (this run only)
+        if: ${{ inputs.try_patch != '' }}
+        env:
+          TRY_PATCH: ${{ inputs.try_patch }}
+        run: for f in $TRY_PATCH; do git apply --verbose "$f"; done
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Test (Core and Mac, on this macOS)
+        run: |
+          sw_vers; uname -m
+          dotnet workload update    # the workload set global.json names; no workload itself is needed for the tests
+          dotnet restore tests/ChuvadiReader.Tests/ChuvadiReader.Tests.csproj --configfile ci/nuget.config
+          dotnet restore tests/ChuvadiReader.Mac.Tests/ChuvadiReader.Mac.Tests.csproj --configfile ci/nuget.config
+          dotnet test tests/ChuvadiReader.Tests/ChuvadiReader.Tests.csproj -c Release --no-restore --logger "trx;LogFileName=test-results.trx"
+          dotnet test tests/ChuvadiReader.Mac.Tests/ChuvadiReader.Mac.Tests.csproj -c Release --no-restore --logger "trx;LogFileName=mac-test-results.trx"
+
+      - name: Fetch the built app
+        if: ${{ !cancelled() }}
+        uses: actions/download-artifact@v7
+        with:
+          name: mac-app-build
+          path: out
+
+      - name: Unpack the built app
+        if: ${{ !cancelled() }}
+        run: |
+          (cd out && shasum -a 256 -c SHA256.txt)
+          mkdir -p app && ditto -x -k out/Chuvadi-mac-universal-unsigned.zip app
+          APP=$(find "$PWD/app" -maxdepth 1 -name '*.app' -type d | head -1)
+          [ -n "$APP" ] || { echo "no .app in the zip"; exit 1; }
+          EXE=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Contents/Info.plist")
+          echo "APP=$APP" >> "$GITHUB_ENV"
+          echo "BIN=$APP/Contents/MacOS/$EXE" >> "$GITHUB_ENV"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          echo "runs here as: $(uname -m) of $(lipo -archs "$APP/Contents/MacOS/$EXE")"
+
       - name: Smoke run (launch to first render, record startup)
         if: ${{ !cancelled() }}
         run: |
@@ -206,24 +281,11 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           exit $RC
 
-      - name: Package
-        run: |
-          mkdir -p out
-          ditto -c -k --keepParent "$APP" out/Chuvadi-mac-universal-unsigned.zip
-          shasum -a 256 out/Chuvadi-mac-universal-unsigned.zip | tee out/SHA256.txt
-
-      - name: Upload app
-        if: ${{ inputs.try_patch == '' }}   # a run that tried a patch is not the branch's build; never hand it out
-        uses: actions/upload-artifact@v7
-        with:
-          name: Chuvadi-mac-universal-unsigned
-          path: out/
-
       - name: Upload test results and smoke log
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: mac-test-results
+          name: mac-test-results-${{ matrix.os }}
           path: |
             **/test-results.trx
             smoke.log
@@ -243,3 +305,18 @@ jobs:
             chuvadi-logs/
             smoke-checks.txt
           if-no-files-found: ignore
+
+  publish:
+    name: hand out the app
+    needs: [build, check]
+    if: ${{ inputs.try_patch == '' }}   # a run that tried a patch is not the branch's build; never hand it out
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: mac-app-build
+          path: out
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Chuvadi-mac-universal-unsigned
+          path: out/
