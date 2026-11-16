@@ -1962,9 +1962,19 @@ def p29():
     x = {"A": xa, "B_before": xb}
     if xa and xb:
         edge = (xa[0] + xb[0]) // 2 + 4   # letters are centred, so the edge between A and B is halfway
-        drive("drag", edge, xa[1] + 8, edge + 60, xa[1] + 8)
-        time.sleep(1.5)
-        x["B_after_drag"] = col_x("p29-xlsx-1", "B")
+        x["attempts"] = []
+        for attempt, pause in (("straight", 0), ("hover first, 5 s later", 5)):
+            if pause:
+                time.sleep(pause)
+                drive("move", edge, xa[1] + 8)
+                time.sleep(0.8)
+            drive("drag", edge, xa[1] + 8, edge + 60, xa[1] + 8)
+            time.sleep(1.5)
+            x["B_after_drag"] = col_x("p29-xlsx-1", "B")
+            moved = (x["B_after_drag"][0] - xb[0]) if x["B_after_drag"] else None
+            x["attempts"].append({"how": attempt, "moved_px": moved})
+            if moved:
+                break
         x["resized_shot"] = shot("p29-xlsx-resized")
         x["moved_px"] = (x["B_after_drag"][0] - xb[0]) if x["B_after_drag"] else None
         rc, o = press("File's own sizes", role="AXButton")
