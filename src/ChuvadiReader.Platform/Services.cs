@@ -185,6 +185,24 @@ public interface IAppLifecycle
     event Func<bool>? BackRequested;
 }
 
+/// <summary>
+/// D-190: work that closing the app would lose (marks drawn on a PDF and not saved). The kit fills this; a host
+/// only reads it. Before its window closes (the close button, Alt F4, Cmd Q, the last Back on Android) a host
+/// checks <see cref="HasUnsavedWork"/> and, when it is true, holds the close and awaits
+/// <see cref="ConfirmCloseAsync"/>: the Ui shows each such file and asks Save / Save as / Discard / Cancel.
+/// True: close now. False: the person chose Cancel, or the question is already on screen; stay open.
+/// A close the host cannot hold (the computer shutting down, the app swiped away) cannot be asked about.
+/// </summary>
+public interface IUnsavedWork
+{
+    /// <summary>True when closing now would lose something. Cheap; safe to read from any thread.</summary>
+    bool HasUnsavedWork { get; }
+
+    /// <summary>Asks the person. Callable from any thread (the Ui moves to its own dispatcher); the task
+    /// completes when the person has answered. Bring the window to the front first if it is not.</summary>
+    Task<bool> ConfirmCloseAsync();
+}
+
 /// <summary>One command the Ui offers (the same list the Ctrl K command bar shows).</summary>
 /// <param name="Id">Stable id, e.g. "doc.print".</param>
 /// <param name="Label">User-facing label.</param>
