@@ -30,7 +30,7 @@ with sync_playwright() as p:
         t0 = open_file(pg, path); outcome = "timeout"; peak = 0
         while time.time() - t0 < 180:
             peak = max(peak, worker_rss())
-            if pg.query_selector("td.xv-cell"): outcome = "grid"; break
+            if pg.query_selector(".xv-cell"): outcome = "grid"; break
             txt = pg.evaluate("document.body.innerText")
             msg = [l for l in txt.splitlines() if any(k in l.lower() for k in ("too large", "too many", "couldn't open", "can't open", "damaged", "limit"))]
             if msg: outcome = "refused: " + msg[0][:150]; break
@@ -38,7 +38,7 @@ with sync_playwright() as p:
         ms = round((time.time() - t0) * 1000)
         extra = ""
         if outcome == "grid":
-            extra = " | last row shown: " + str(pg.evaluate("[...document.querySelectorAll('tr')].slice(-1)[0]?.innerText.split('\\t')[0]"))
+            extra = " | last row shown: " + str(pg.evaluate("[...document.querySelectorAll('.xv-rowhdr')].slice(-1)[0]?.innerText"))
         print(f"[{engine}] {f}: {outcome} in {ms} ms | peak worker {peak} MB{extra}", flush=True)
         pg.screenshot(path=f"/tmp/explore/bigx-{engine}-{f}.png"); c.close()
     if cancel:
@@ -52,7 +52,7 @@ with sync_playwright() as p:
                     if not pg.query_selector("text=Opening…"): break
                     pg.wait_for_timeout(100)
                 stopped = (shown, round((time.time() - t1) * 1000)); break
-            if pg.query_selector("td.xv-cell"): break
+            if pg.query_selector(".xv-cell"): break
             pg.wait_for_timeout(100)
         after = pg.evaluate("document.body.innerText")
         print(f"[{engine}] Cancel on {cancel}: {'Stop shown at %d ms, opening ended %d ms after the click' % stopped if stopped else 'no Stop button seen (opened first?)'}"

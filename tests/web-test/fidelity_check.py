@@ -16,13 +16,13 @@ with sync_playwright() as p:
     b = getattr(p, engine).launch()
     for f in files:
         user = f"fid-{engine}-{os.path.basename(f).replace('.', '-')}"
-        c = b.new_context(viewport={"width": 1440, "height": 900}, extra_http_headers={"X-Dev-User": user})
+        c = b.new_context(viewport={"width": 1440, "height": 900}, extra_http_headers={"X-Dev-User": user}); c.add_cookies([{"name": "chvd-dev-user", "value": user, "url": base}])
         c.add_init_script("window.print = function () {};")
         pg = c.new_page(); pg.goto(base + "/"); pg.wait_for_selector("text=Upload", timeout=60000)
         with pg.expect_file_chooser() as fc: pg.locator("text=Upload").first.click()
         t0 = time.time(); fc.value.set_files(f)
         try:
-            pg.wait_for_selector(".rpage svg text", timeout=60000)
+            pg.wait_for_selector(".rpage svg text, .xv-cell, .dv-sheet", timeout=60000)
         except Exception:
             body = pg.evaluate("document.body.innerText")
             print(f"[{engine}] {os.path.basename(f)}: DID NOT OPEN — {[l for l in body.splitlines() if 'open' in l.lower() or 'couldn' in l.lower()][:3]}")
@@ -32,8 +32,11 @@ with sync_playwright() as p:
         n = pg.evaluate("document.querySelectorAll('.rpage-wrap').length")
         for i in range(n):
             pg.evaluate(f"document.querySelector('.rpage-wrap[data-page=\"{i}\"]').scrollIntoView()"); pg.wait_for_timeout(250)
-        svg = pg.evaluate("""() => [...document.querySelectorAll('.rpage svg')].map(s =>
-            [...s.querySelectorAll('text')].map(t => t.textContent).join('\\n')).join('\\n')""")
+        svg = pg.evaluate("""() => [
+            ...[...document.querySelectorAll('.rpage svg text')].map(t => t.textContent),
+            ...[...document.querySelectorAll('.dv-sheet p, .dv-sheet td, .dv-sheet li, .dv-sheet h1, .dv-sheet h2, .dv-sheet h3')].map(t => t.textContent),
+            ...[...document.querySelectorAll('.xv-cell')].map(c => (c.querySelector('.xv-s')?.textContent ?? '') + '\\n' + (c.getAttribute('data-v') ?? ''))
+          ].join('\\n')""")
         pg.screenshot(path=os.path.join(out, f"{engine}-{os.path.basename(f)}.png"), full_page=False)
         # server print PDF (all pages)
         pdf_text = ""

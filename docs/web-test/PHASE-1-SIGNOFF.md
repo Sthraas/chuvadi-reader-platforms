@@ -1,25 +1,24 @@
 # Web — what remains for a Phase 1 sign-off (Web Test chat)
 
-> **Updated 16 Nov 2026, 15:45 IST** — tested heads **eab426b** (patch 27) and **a0a2f7c** (patch 28). The section below supersedes §1–§3 of the 11 Nov text that follows.
+> **Updated 16 Nov 2026, 17:30 IST** — sign-off pass on **3f80768** (patch 29). The section below supersedes §1–§3 of the 11 Nov text that follows.
 
-## Status on 16 Nov (eab426b)
-**Fixed and verified:** M-27 (Chromium, Firefox, WebKit 26.6 and WebKit 17.4; Rectangle, Text box, move, resize, Redact box at a zoom), WT-19 (Excel close and cancelled open give the memory back), WT-22, WT-21, WT-17, WT-20, the Leave-site question (D-181). 22 of 24 numbered bugs closed.
+## Verdict on 3f80768: not signed off — one High bug open (WT-24)
+Everything else in the Phase 1 scope passes on this head in Chrome, Firefox and WebKit (and WebKit 17.4 for marks); table in `RESULTS.md`.
+
+**Fixed and verified:** WT-01 to WT-23 (all of them), M-27, LIB-1, LIB-2; the close card (D-186, D-190), Excel resize, sheet pager, hidden-cell Find line.
 
 **Blocks the sign-off**
 | # | What | Owner |
 |---|---|---|
-| **WT-24** | **High.** The session-expiry pass can hang for good; after that no session on the portal expires and no worker is freed until a restart (reproduced 2 runs in 9 on a0a2f7c) | Web fixes; Web Test re-tests |
-| WT-25 | Low. Files stay 60–80 s past the session's end when the browser left without a clean close | Web: confirm the timer, fix or state it |
-| WT-23 | Unsaved marks on a tab that isn't showing are lost on reload. Decided: fix (D-186, D-190 — marks kept with the tab; ask-before-closing card) | Foundation builds; Web merges; Web Test re-tests |
-| WT-18 | Oversized Excel part / zip bomb still called "damaged" | Foundation / library |
-| Patch 29 head | WT-23 fix and close card, WT-18 fix, Excel resize, M-27 again (current engines + WebKit 17.4) — M-27 already re-verified on patch 28 (a0a2f7c) | Web merges; Web Test re-tests |
-| Skipped tests | 6 skipped (PDF-L1, L2, L6, L7, L8, SH-L1) — the written reason for each | Foundation (in hand) |
+| **WT-24** | **High.** The session-expiry pass can hang for good; after that no session on the portal expires and no worker is freed until a restart. 2 runs in 9 on a0a2f7c, 0 in 20 on 3f80768, code unchanged — a race | Web fixes (time limit on gateway → worker calls); Web Test re-tests, including a forced stop of the worker mid-call |
+| WT-25 | Low. Browser closed or killed with a tab open: worker and files stay about 60 s past the session's end | Web: confirm the timer; fix or state it |
+| Skipped tests | 6 skipped in the Reader tests — the written reasons | Foundation (in hand) |
 
-**Decisions:** all settled (D-161, D-162, D-171, D-172, patch 26) — none open.
+**For the coordinator to decide (small):** Excel sizes set by dragging go on a page reload — accept and state, or keep with the session's tab (BUGS.md; I'd accept for Phase 1).
 
-**Then, on the sign-off head:** the final full pass (clean build incl. the `dotnet workload update` step, all suites × 3 engines + WebKit 17.4 for marks, hostile corpus, fidelity, design screenshots against the handout, tablet portrait frame, sandbox speed re-run).
+**Honest gaps in this pass:** no frame-by-frame comparison of the screenshots with the handout (layout looked through only; Firefox and WebKit desktop not re-shot); the close card not checked at phone width; lines, images and signature at a zoom on old WebKit left to the Phase 2 device script; speed at 20 people is not meaningful on this 2-core sandbox.
 
-**Phase 2 unchanged:** 40-person load (also: sessions kept 30 min after a browser is closed count against `MaxWorkers = 40`), V-1 to V-7, https back-channel, M-1 to M-4 (add Safari 17/18 devices for marks, lines, images, signature at a zoom), G-12.
+**Phase 2 unchanged:** 40-person load (sessions kept 30 min after a browser is closed count against `MaxWorkers = 40`), V-1 to V-7, https back-channel, M-1 to M-4 (add Safari 17/18 devices), G-12. One build note for the runbook: `dotnet workload update` once per machine.
 
 ---
 

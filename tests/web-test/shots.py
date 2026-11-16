@@ -34,13 +34,13 @@ with sync_playwright() as p:
                 shot(pg, f"{eng}-{size}-12a-{scheme}"); c.close()
             c = b.new_context(extra_http_headers={"X-Dev-User": f"shots-{eng}-{size}"}, **kw); pg = c.new_page()
             errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
-            pg.goto(dev + "/"); pg.wait_for_selector("text=Upload", timeout=60000)
+            pg.goto(dev + "/"); pg.locator("text=Upload >> visible=true").first.wait_for(timeout=60000)
             for t in THEMES:
                 pg.evaluate(f"window.chuvadiTheme.set('{t}')"); shot(pg, f"{eng}-{size}-home-{t}")
             pg.evaluate("window.chuvadiTheme.set('light')")
             try:
                 with pg.expect_file_chooser(timeout=15000) as fc:
-                    pg.locator("text=Upload").first.click()
+                    pg.locator("text=Upload >> visible=true").first.click()
                 fc.value.set_files(pdf); pg.wait_for_selector(".rpage svg", timeout=60000)
             except Exception as e:
                 notes.append((eng, size, "upload", str(e).splitlines()[0])); c.close(); continue

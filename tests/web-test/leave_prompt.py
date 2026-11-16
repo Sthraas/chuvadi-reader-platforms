@@ -36,7 +36,7 @@ with sync_playwright() as p:
         d.value.path(); pg.wait_for_timeout(1200); saved = True
     except Exception as e: saved = False
     a = reload_asks()
-    check("after Save as new PDF the question still comes (stated limit, build log §36)", saved and a == ["beforeunload"], (saved, a))
+    check("after Save as new PDF: reload asks nothing (since patch 29)", saved and a == [], (saved, a))
     pg.wait_for_selector("nav.leftbar"); pg.wait_for_timeout(2500)
     pg.locator("body").press("2"); pg.wait_for_timeout(800); pg.mouse.move(700, 300)
     try:

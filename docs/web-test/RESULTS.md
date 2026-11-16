@@ -297,3 +297,27 @@ With **real Sangam rc.16** (gateway, short idle): owner with cookie 200; **the f
 - **Regression:** `flows.py` 10/10, `page_images.py` 7/7, `reload.py` 11/11, `leave_guard.py` 7/7 (Firefox 6/6), `office_limits.py` 6/6, `sangam_signin.py` 18/18, `expiry.py` 12/12 — each × Chrome, Firefox, WebKit; `leave_prompt.py` 5/5 × 3; `reload_tabs.py` 11/11 × 3; `comeback.py` 5/5 Chrome, WebKit; **Firefox 2 of 7 runs** → WT-25.
 - **WT-18** ✗ unchanged (fix is in patch 29). **WT-23** not on this head (patch 29).
 - **WT-24 (new, High):** the expiry pass hangs for good when a session ends just as its worker stops; 2 fresh-portal runs in 9. **WT-25 (new, Low):** files stay 60–80 s past the session's end after an unclean leave. Both in BUGS.md.
+
+## 16 Nov 2026 — sign-off pass on `platform/web` @ **3f80768** (Foundation patch 29)
+**Build from clean:** 0 warnings; Reader **434** (+6 skipped), Hosting **102**, Mobile UI **16**, Web UI **41**; Web **182/182**; `check-package.sh` PASS; no third-party assemblies.
+
+| Area | Result |
+|---|---|
+| **WT-23 / close card** (D-186, D-190) | ✅ `close_card_probe.py` 10/10 × Chromium, Firefox, WebKit; Web's `close_card.py` 14/14 × 3. Details in BUGS.md |
+| **WT-18** | ✅ ratio-600.xlsx, zip-bomb.xlsx → "too large to open" (0.3 s). big-100k.xlsx opens in 3.6 s, rows-1048576.xlsx in 5.8 s (peak worker 1,023 MB) |
+| **M-27** | ✅ `mark_position.py`: Chromium 16/16, WebKit 26.6 16/16, **WebKit 17.4 16/16**, Firefox 14/16 (two `goto` time-outs); worst 0.9 px on screen, 0.4 % of the page saved (`evidence/p29/mp-*.txt`). `zoom_tools.py` 5/5 on all four. `mark_zoom.py` 9/9 × 3 |
+| **Excel, patch 28/29** (`excel_p29.py`, 12/12 × 3) | ✅ title-bar arrows and number box change the sheet shown; a sheet tab moves the pager; column edge shows the resize cursor, a 90 px drag widens by 90 px, a 40 px row drag by 40 px; sizes kept across sheet changes; Find "needle" → "2 matches are in hidden cells: A5 (hidden row), C6 (hidden column)" and the visible match outlined. Sizes go on a page reload → note in BUGS.md |
+| **Leave site** | ✅ `leave_prompt.py` 5/5 × 3 (after Save as new PDF no question now); `leave_guard.py` 7/7 Chrome, WebKit, 6/6 Firefox |
+| **Reload / sessions** | ✅ `reload_tabs.py` 11/11 × 3; `reload.py` 11/11 × 3; `expiry.py` 12/12 × 3; `comeback.py` 5/5 × 3 |
+| **Sign-in (real Sangam rc.16)** | ✅ `sangam_signin.py` 18/18 × Chrome, Firefox, WebKit |
+| **Page images** | ✅ `page_images.py` 7/7 × 3; `page_image_sec.py` 19/19 × 3 |
+| **Earlier fixes** | ✅ `verify_fixes.py` 12/12 Chromium, Firefox; WebKit 10/10 (the two print checks can't run in headless WebKit, as before) |
+| **Isolation and hostile files** (`sec_browser.py`) | ✅ 20/20: print ticket not readable by another person; vector print; 11 hostile names, no path escape, no script; 13 hostile documents each refused with one message while a second person's next page stayed **69–146 ms** |
+| **Word / Excel fidelity** (`fidelity_check.py`, updated for the new viewers) | ✅ fid.docx, fid-lo.docx 14/14; fid.xlsx, fid-lo.xlsx 23/23 — Chromium, Firefox, WebKit (Excel compared on shown text and stored value) |
+| **Everyday flows** | ✅ `flows.py` 10/10, `office_limits.py` 6/6 — × Chrome, Firefox, WebKit |
+| **Design** | Screenshots taken on this head: Chromium desktop (five themes × Home, Read, Mark, Arrange, Protect; 12a light/dark; account, Settings, Library), Chromium and WebKit tablet portrait and phone (same set). Looked through for layout: tablet portrait has the Tools rail only (View rail hidden) ✅, phone shell ✅. **Not done:** a frame-by-frame comparison with the handout, Firefox, WebKit desktop, the close card at phone width |
+| **Speed** (`perf.py`, Chromium, 2-core sandbox; medians, ms) | 1 person: first page **430**, next page **66**. 10: first page 3,359, next 638. 20: first page 10,350, next 2,906 (p90 6,281); no errors; 159–162 MB per worker. Against session 1: equal or better at 1 and 10; at 20 next page is slower (was 368; p90 2,067) on a saturated sandbox — to settle on the Phase 2 server, not here |
+| **WT-24** | ✗ open: 0 stalls in 20 fresh-portal runs on this head, 2 in 9 on a0a2f7c; the expiry code is unchanged |
+| **WT-25** | Firefox tab close 42 s ✅; browser closed with the tab open 100–102 s ✗ |
+
+Tooling fixed in this pass (stale selectors after the viewer changes, not product faults): `large_xlsx_check.py`, `fidelity_check.py`, `shots.py`, `verify_fixes.py` (Measure card), `sec_browser.py` (the watcher ran off the last page), `leave_prompt.py`.

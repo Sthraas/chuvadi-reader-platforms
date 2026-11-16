@@ -112,7 +112,8 @@ with sync_playwright() as p:
     def watcher_turn():
         t0 = time.time()
         try:
-            w.click("button.tb-pg-btn[aria-label='Next page']", timeout=30000)
+            nxt = w.locator("button.tb-pg-btn[aria-label='Next page']")
+            (nxt if nxt.is_enabled() else w.locator("button.tb-pg-btn[aria-label='Previous page']")).click(timeout=30000)
             w.wait_for_timeout(50)
             return round((time.time() - t0) * 1000)
         except Exception as e: return str(e).splitlines()[0]

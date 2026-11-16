@@ -58,8 +58,8 @@ with sync_playwright() as p:
     pg.locator("body").press("1"); pg.wait_for_timeout(300)
     try:
         pg.click("button[aria-label='Measure']", timeout=5000); pg.wait_for_timeout(800)
-        mt = pg.evaluate("""() => { const h = [...document.querySelectorAll('*')].find(e => e.children.length === 0 && e.textContent.trim() === 'Measure' && e.getBoundingClientRect().x > 900);
-            let n = h; for (let i = 0; i < 4 && n; i++) n = n.parentElement; return n ? n.innerText : ''; }""")
+        mt = pg.evaluate("""() => { const h = [...document.querySelectorAll('*')].find(e => e.children.length === 0 && e.textContent.trim() === 'Measure' && e.getBoundingClientRect().x > 900 && e.getBoundingClientRect().y < 200);
+            return h && h.parentElement ? h.parentElement.innerText : ''; }""")
         lab = re.findall(r"[Pp]age \d+", mt)
         pg.screenshot(path=os.path.join(out, f"measure-{engine}.png"))
         check("WT-02 Measure card names the page shown (5)", any(x.endswith(" 5") for x in lab) and not any(x.endswith(" 6") for x in lab), lab[:6])
