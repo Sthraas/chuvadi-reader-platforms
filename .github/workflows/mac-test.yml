@@ -15,6 +15,9 @@ on:
       build_runner:
         description: "Runner that builds the app: xcode-27 (preview image, Xcode 27.1, global.json as pushed) or macos-26 (Xcode 26.6, workload set swapped to 10.0.401, test-side)"
         default: xcode-27
+      app_patch:
+        description: "Optional, test-side only: a patch file inside the app repo to apply before building (e.g. docs/mac/trial-min-macos-14.patch)"
+        default: ''
       only:
         description: "all | windows (Windows startup probe only) | print / pw / shared (those cases only, all runners)"
         default: all
@@ -51,6 +54,15 @@ jobs:
         with:
           ref: ${{ env.APP_REF }}
           path: app
+
+      - name: Apply the trial patch named in app_patch (test-side only)
+        if: ${{ inputs.app_patch != '' }}
+        working-directory: app
+        run: |
+          cat "${{ inputs.app_patch }}"
+          git apply "${{ inputs.app_patch }}"
+          echo "::notice::app built with ${{ inputs.app_patch }} applied (test-side)"
+          echo "### Built with ${{ inputs.app_patch }} applied" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Driver compiles (fail fast)
         run: swiftc -O harness/tests/mac/macdrive.swift -o macdrive && (./macdrive trust || true)
