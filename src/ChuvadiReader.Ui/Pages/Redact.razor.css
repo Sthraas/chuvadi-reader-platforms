@@ -131,6 +131,10 @@
 /* redaction draw layer + boxes */
 .mk-layer { position: absolute; inset: 0; z-index: 5; touch-action: none; }
 .mk-layer.drawmode { cursor: crosshair; }
+/* The page under the layer is selectable text (app.css), and the layer inherited that: drawing one area selected
+   the text beneath it, and the next press then began the browser's own drag of that selection instead of a new
+   area, which was lost. A drawing surface selects nothing. */
+.mk-layer.drawmode, .mk-layer.drawmode * { user-select: none; -webkit-user-select: none; }
 .mk-box {
     position: absolute; box-sizing: border-box;
     box-shadow: 0 0 0 1px rgba(130, 130, 130, 0.9);
