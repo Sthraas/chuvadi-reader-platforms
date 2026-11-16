@@ -116,6 +116,7 @@ internal static class MacSmoke
             {
                 // The smoke script watches for this line and posts the real key (keys.swift), so the key travels
                 // macOS → UIKit → WKWebView as a person's does (M-21). Recorded page keys show what arrived.
+                Log("responders " + Responders());
                 Log("native-key " + arg);
                 // Report 2 s after the key's effect was logged (a slow runner posts the key seconds late, and the Ui
                 // needs a moment to show the result), or after 10 s if nothing came of it.
@@ -520,6 +521,48 @@ internal static class MacSmoke
         catch (Exception ex)
         {
             return "failed: " + ex.Message;
+        }
+    }
+
+    /// <summary>Which window is key and which view holds the keyboard, in every window of the app.</summary>
+    internal static string Responders()
+    {
+        try
+        {
+            var parts = new List<string>();
+            foreach (var scene in UIApplication.SharedApplication.ConnectedScenes.OfType<UIWindowScene>())
+            {
+                foreach (var window in scene.Windows)
+                {
+                    var first = FirstIn(window);
+                    parts.Add(window.GetType().Name + (window.IsKeyWindow ? "*" : string.Empty) + (window.Hidden ? "(hidden)" : string.Empty)
+                        + ":" + (first is null ? "-" : first.Class.Name));
+                }
+            }
+
+            return string.Join(" ", parts);
+        }
+        catch (Exception ex)
+        {
+            return "failed " + ex.GetType().Name;
+        }
+
+        static UIView? FirstIn(UIView view)
+        {
+            if (view.IsFirstResponder)
+            {
+                return view;
+            }
+
+            foreach (var child in view.Subviews)
+            {
+                if (FirstIn(child) is { } found)
+                {
+                    return found;
+                }
+            }
+
+            return null;
         }
     }
 
