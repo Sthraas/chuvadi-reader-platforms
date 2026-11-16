@@ -17,7 +17,7 @@ namespace ChuvadiReader.Mac.Platform;
 /// and passes every call it does not hold on to UIKit's own, so nothing else changes. If either hook cannot be placed
 /// (a later macOS names things differently), it says so in the log and that close goes on unasked, as before D-190.
 /// </summary>
-internal static unsafe class MacCloseGuard
+internal static class MacCloseGuard
 {
     private const string LibObjC = "/usr/lib/libobjc.dylib";
     private const nuint TerminateCancel = 0, TerminateNow = 1;
@@ -42,7 +42,7 @@ internal static unsafe class MacCloseGuard
     }
 
     /// <summary>Places the hooks; safe to call again (the window may not be up the first time).</summary>
-    public static void Install()
+    public static unsafe void Install()
     {
         try
         {
@@ -86,7 +86,7 @@ internal static unsafe class MacCloseGuard
         => IPlatformApplication.Current?.Services.GetService(typeof(IUnsavedWork)) as IUnsavedWork;
 
     [UnmanagedCallersOnly]
-    private static nuint ShouldTerminate(IntPtr self, IntPtr sel, IntPtr sender)
+    private static unsafe nuint ShouldTerminate(IntPtr self, IntPtr sel, IntPtr sender)
     {
         try
         {
@@ -107,7 +107,7 @@ internal static unsafe class MacCloseGuard
     }
 
     [UnmanagedCallersOnly]
-    private static byte ShouldClose(IntPtr self, IntPtr sel, IntPtr window)
+    private static unsafe byte ShouldClose(IntPtr self, IntPtr sel, IntPtr window)
     {
         try
         {
