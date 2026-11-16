@@ -31,7 +31,7 @@ on:
 
 env:
   # platform/foundation-pr: patch 30 (AT-27 pinch in Mark, Find stays on the match page, hidden-matches line, a rare blank page) on Reader main fc54ece.
-  FOUNDATION_REF: 4b704c8f9ddbd1e45b8d3b10ad15c785adf2f466
+  FOUNDATION_REF: 4b704c8d3d32c9c21c5c20bb77ba7d1b5fb14391
   # platform/mobile-ui: Foundation 71754e1 merged; close card and Excel resize on touch; tablet cards 44 px.
   MOBILEUI_REF: ae6ae6dca7bd7f5c02cd71e5e27634f687e0a1ff
   DOTNET_NOLOGO: '1'
