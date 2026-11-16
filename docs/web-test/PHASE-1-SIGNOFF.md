@@ -1,24 +1,30 @@
 # Web — what remains for a Phase 1 sign-off (Web Test chat)
 
-> **Updated 16 Nov 2026, 17:30 IST** — sign-off pass on **3f80768** (patch 29). The section below supersedes §1–§3 of the 11 Nov text that follows.
+> **Updated 17 Nov 2026, 02:15 IST** — head **21665a3** (patch 30 with Web's WT-24 and WT-25 fixes). The section below supersedes everything after it.
 
-## Verdict on 3f80768: not signed off — one High bug open (WT-24)
-Everything else in the Phase 1 scope passes on this head in Chrome, Firefox and WebKit (and WebKit 17.4 for marks); table in `RESULTS.md`.
+## Phase 1 sign-off for Web — signed off on 21665a3, with the limits below
+**Web Test's finding:** on `platform/web` 21665a3 the Web portal does what Phase 1 asks, in Chrome, Firefox and WebKit, with marks also checked on WebKit 17.4. Every bug I raised is fixed and re-verified: **WT-01 to WT-25, M-27, LIB-1, LIB-2 — none open.** Results table: `RESULTS.md`, 17 Nov (and 16 Nov on 3f80768 for design and speed).
 
-**Fixed and verified:** WT-01 to WT-23 (all of them), M-27, LIB-1, LIB-2; the close card (D-186, D-190), Excel resize, sheet pager, hidden-cell Find line.
+**What the sign-off rests on**
+- Build from clean, 0 warnings, all tests pass, package holds only .NET / ASP.NET Core and the product's own assemblies.
+- Sign-in against a real Sangam (rc.16), sessions, idle and 8-hour expiry, reload, come-back — including a worker killed or frozen while a session ends.
+- One person can't reach another's files, page images or print tickets; hostile files are refused cleanly while others keep working.
+- PDF, Word and Excel open and show the file's own content; marks land under the pointer at every zoom; save, print, redact, close card.
 
-**Blocks the sign-off**
-| # | What | Owner |
-|---|---|---|
-| **WT-24** | **High.** The session-expiry pass can hang for good; after that no session on the portal expires and no worker is freed until a restart. 2 runs in 9 on a0a2f7c, 0 in 20 on 3f80768, code unchanged — a race | Web fixes (time limit on gateway → worker calls); Web Test re-tests, including a forced stop of the worker mid-call |
-| WT-25 | Low. Browser closed or killed with a tab open: worker and files stay about 60 s past the session's end | Web: confirm the timer; fix or state it |
-| Skipped tests | 6 skipped in the Reader tests — the written reasons | Foundation (in hand) |
+**Limits of this sign-off — what I did not prove**
+1. **Design:** screenshots taken and looked through for layout on 3f80768; no frame-by-frame comparison with the handout; Firefox and WebKit desktop not re-shot; the close card not checked at phone width.
+2. **Touch details from patches 28 and 30** (close control on a mark's card, pinch in Mark, Find on a turned page) — not checked by me; Mobile UI's tests cover them.
+3. **Old Safari:** marks, move, resize, Redact verified on WebKit 17.4; lines, images, signature at a zoom are in the Phase 2 device script.
+4. **Speed and load:** fine for 1 and 10 people on a 2-core sandbox; 20 people is not meaningful here.
+5. **A frozen worker** delays other people's session end by up to 10 s (bounded, logged) — note in BUGS.md, not a bug.
+6. **Library limits that stay** (six skipped tests, `docs/foundation/SKIPPED-TESTS.md`): header/footer and watermark on cropped or turned pages, a picture placed with a turn, Excel time-only values. These are visible to people and wait on library releases.
 
-**For the coordinator to decide (small):** Excel sizes set by dragging go on a page reload — accept and state, or keep with the session's tab (BUGS.md; I'd accept for Phase 1).
-
-**Honest gaps in this pass:** no frame-by-frame comparison of the screenshots with the handout (layout looked through only; Firefox and WebKit desktop not re-shot); the close card not checked at phone width; lines, images and signature at a zoom on old WebKit left to the Phase 2 device script; speed at 20 people is not meaningful on this 2-core sandbox.
-
-**Phase 2 unchanged:** 40-person load (sessions kept 30 min after a browser is closed count against `MaxWorkers = 40`), V-1 to V-7, https back-channel, M-1 to M-4 (add Safari 17/18 devices), G-12. One build note for the runbook: `dotnet workload update` once per machine.
+**Left to do**
+| When | What |
+|---|---|
+| Patch 32 head | Close card with Save as only, also on Sign out (D-194) — re-test with regression; the sign-off moves to that head |
+| Phase 2, production server | 40-person load (sessions kept 30 min after a browser closes count against `MaxWorkers = 40`), V-1 to V-7, https back-channel, M-1 to M-4 incl. Safari 17/18 devices, G-12, speed at 20–40 people |
+| Runbook | `dotnet workload update` once per build machine; `Workers:ControlTimeout` (10 s) is a new setting |
 
 ---
 

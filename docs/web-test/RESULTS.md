@@ -321,3 +321,20 @@ With **real Sangam rc.16** (gateway, short idle): owner with cookie 200; **the f
 | **WT-25** | Firefox tab close 42 s ✅; browser closed with the tab open 100–102 s ✗ |
 
 Tooling fixed in this pass (stale selectors after the viewer changes, not product faults): `large_xlsx_check.py`, `fidelity_check.py`, `shots.py`, `verify_fixes.py` (Measure card), `sec_browser.py` (the watcher ran off the last page), `leave_prompt.py`.
+
+## 17 Nov 2026 — `platform/web` @ **21665a3** (Foundation patch 30; Web's WT-24 and WT-25 fixes) — the Phase 1 sign-off head
+**Build from clean:** 0 warnings; Reader **438** (+6 skipped, reasons in `docs/foundation/SKIPPED-TESTS.md`), Hosting **102**, Mobile UI **16**, Web UI **41**; Web **190/190**; `check-package.sh` PASS; no third-party assemblies.
+
+| Area | Result |
+|---|---|
+| **WT-24** | ✅ 80 of 80 session ends over 10 rounds with the race met 22 times; 20 of 20 fresh-portal runs; worker killed mid-call 5/5 × 3; worker frozen: others end, logged, later people expire — others delayed to 45 s (note in BUGS.md) |
+| **WT-25** | ✅ browser closed or killed with the tab open: 42 s (Chromium, Firefox); `gone_browser.py` 4/4 + 4/4 × 3 |
+| **M-27** | ✅ Chromium 16/16, WebKit 26.6 16/16, WebKit 17.4 16/16, Firefox 13/16 (three `goto` time-outs, OBS-1); worst 0.9 px, 0.4 %. `zoom_tools.py` 5/5 × 4; `mark_zoom.py` 9/9 × 3 |
+| **WT-23 / close card** | ✅ `close_card_probe.py` 10/10 × 3; `close_card.py` 14/14 × 3 |
+| **WT-18, large Excel** | ✅ four over-limit files "too large to open" (0.3–1.6 s); 100k rows in 2.9 s, 1,048,576 rows in 4.7 s |
+| **Excel pager, resize, hidden-cell Find** | ✅ `excel_p29.py` 11/11 × 3 |
+| **Sessions, reload, Leave site** | ✅ `expiry.py` 12/12 × 3; `comeback.py` 5/5 Chrome, WebKit (Firefox: OBS-1); `reload.py` 11/11 × 3; `reload_tabs.py` 11/11 × 3; `leave_prompt.py` 5/5 × 3; `leave_guard.py` 7/7, 6/6 Firefox |
+| **Sign-in (real Sangam rc.16)** | ✅ `sangam_signin.py` 18/18 × 3 |
+| **Page images, isolation, hostile files** | ✅ `page_images.py` 7/7 × 3; `page_image_sec.py` 19/19 × 3; `sec_browser.py` 20/20, second person's next page 68–90 ms through 13 hostile files |
+| **Earlier fixes, flows, fidelity** | ✅ `verify_fixes.py` 12/12 Chromium, Firefox, 10/10 WebKit (print checks can't run in headless WebKit); `flows.py` 10/10, `office_limits.py` 6/6 × 3; Word 14/14 and Excel 23/23 on four files × 3 engines |
+| Not re-run on this head | design screenshots and speed (taken on 3f80768; no change to those paths since) |

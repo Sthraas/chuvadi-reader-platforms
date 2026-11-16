@@ -1,0 +1,33 @@
+cat: /tmp/portal-5693.pid: No such file or directory
+PASS round 1: 8 of 8 sessions ended (last at 36 s; limit 40 s); worker folders left 0; 'pass failed' lines 0, 'given up' 0, 'wasn\'t reached' 1
+PASS round 2: 8 of 8 sessions ended (last at 38 s; limit 40 s); worker folders left 0; 'pass failed' lines 0, 'given up' 0, 'wasn\'t reached' 1
+PASS round 3: 8 of 8 sessions ended (last at 38 s; limit 40 s); worker folders left 0; 'pass failed' lines 0, 'given up' 0, 'wasn\'t reached' 1
+PASS round 4: 8 of 8 sessions ended (last at 37 s; limit 40 s); worker folders left 0; 'pass failed' lines 0, 'given up' 0, 'wasn\'t reached' 3
+PASS round 5: 8 of 8 sessions ended (last at 38 s; limit 40 s); worker folders left 0; 'pass failed' lines 0, 'given up' 0, 'wasn\'t reached' 5
+PASS round 6: 8 of 8 sessions ended (last at 38 s; limit 40 s); worker folders left 0; 'pass failed' lines 0, 'given up' 0, 'wasn\'t reached' 6
+PASS round 7: 8 of 8 sessions ended (last at 37 s; limit 40 s); worker folders left 0; 'pass failed' lines 0, 'given up' 0, 'wasn\'t reached' 9
+PASS round 8: 8 of 8 sessions ended (last at 36 s; limit 40 s); worker folders left 0; 'pass failed' lines 0, 'given up' 0, 'wasn\'t reached' 13
+PASS round 9: 8 of 8 sessions ended (last at 36 s; limit 40 s); worker folders left 0; 'pass failed' lines 0, 'given up' 0, 'wasn\'t reached' 17
+PASS round 10: 8 of 8 sessions ended (last at 38 s; limit 40 s); worker folders left 0; 'pass failed' lines 0, 'given up' 0, 'wasn\'t reached' 22
+SUMMARY 10 of 10 rounds clean
+trial 1: [chromium] same browser, visit 1: session ended after 38 s (limit 40 s) 
+trial 2: [chromium] same browser, visit 1: session ended after 38 s (limit 40 s) 
+trial 3: [chromium] same browser, visit 1: session ended after 38 s (limit 40 s) 
+trial 4: [chromium] same browser, visit 1: session ended after 38 s (limit 40 s) 
+trial 5: [chromium] same browser, visit 1: session ended after 38 s (limit 40 s) 
+trial 6: [chromium] same browser, visit 1: session ended after 38 s (limit 40 s) 
+trial 7: [chromium] same browser, visit 1: session ended after 38 s (limit 40 s) 
+trial 8: [chromium] same browser, visit 1: session ended after 38 s (limit 40 s) 
+trial 9: [chromium] same browser, visit 1: session ended after 38 s (limit 40 s) 
+trial 10: [chromium] same browser, visit 1: session ended after 38 s (limit 40 s) 
+trial 11: [chromium] same browser, visit 1: session ended after 38 s (limit 40 s) 
+trial 12: [chromium] same browser, visit 1: session ended after 38 s (limit 40 s) 
+trial 13: [chromium] same browser, visit 1: session ended after 38 s (limit 40 s) 
+trial 14: [chromium] same browser, visit 1: session ended after 38 s (limit 40 s) 
+trial 15: [chromium] same browser, visit 1: session ended after 38 s (limit 40 s) 
+trial 16: [chromium] same browser, visit 1: session ended after 38 s (limit 40 s) 
+trial 17: [chromium] same browser, visit 1: session ended after 38 s (limit 40 s) 
+trial 18: [chromium] same browser, visit 1: session ended after 38 s (limit 40 s) 
+trial 19: [chromium] same browser, visit 1: session ended after 38 s (limit 40 s) 
+trial 20: [chromium] same browser, visit 1: session ended after 38 s (limit 40 s) 
+DONE-15A
