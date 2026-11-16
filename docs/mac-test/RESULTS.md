@@ -11,6 +11,38 @@ Runs (one each, read before the next — no retries):
 | 3 | 42494662734 | ⌘O found not to open a panel → the Open button; app stdout per launch; diagnostic exception build |
 | 4 | 42517758923 | panel path set through Accessibility (typing into the Go-to field was lossy) → documents open; timing sets skipped |
 
+## platform/mac 684c479 (16 Nov, Foundation patch 29) — every test passes; sign-off waits only for a head that builds as pushed
+
+**Where it stands.** On 684c479 nothing I test fails on any runner, and every bug M-01 to M-28 is closed except the
+ones listed below. What I cannot yet do is point Arun at an app to download: as pushed, the head's `global.json` names
+workload set 10.0.403 (needs Xcode 27.1; the runner has 26.6), so my runs build it with set 10.0.401 and the Mac
+workflow's runs upload no app. Arun has chosen 10.0.401 for everyone; when Foundation changes the file I run the suites
+once more on that head and the sign-off moves there with the download link. **Until then the last signed-off build
+(e2a1cc8) stays withdrawn for macOS 15 (M-27).**
+
+Runs: **43837485467** (shared, 03c05d5), **43839483442** (full, 03c05d5), **43848385969** (shared incl. patch-29 case,
+f53dd82), **43852567799** (full, 684c479 = f53dd82 + docs). All three runners each. fbf8263 did not compile
+(`MacCloseGuard.cs` CS4004); f53dd82 fixed it.
+
+| Check | macOS 26 | macOS 15 | 15 Intel | Note |
+|---|---|---|---|---|
+| M-26 rotated page prints whole, **vector** (0 images, embedded fonts, text selectable) | ✅ | ✅ | ✅ | |
+| M-28 ⌘F right after opening a file | ✅ | ✅ | ✅ | |
+| M-27 mark under the pointer at 54, 79, 104, 154 % | ✅ | ✅ | ✅ | |
+| **Patch 29** — marks kept with their tab (switch away and back) | ✅ | ✅ | ✅ | |
+| Patch 29 — "Save the marks on …?" asked on: close tab, Close inactive tabs, Close all tabs, the window's close button, ⌘Q | ✅ ×5 | ✅ ×5 | ✅ ×5 | text: "It has 1 mark that is not saved…"; buttons Save · Save as… · Discard · Cancel |
+| Patch 29 — Cancel keeps both tabs and the app; Discard on Quit quits, file untouched; Save on Quit quits, file changed | ✅ | ✅ | ✅ | |
+| Patch 29 — Excel: drag a column edge (+60 px exactly), "File's own sizes" puts it back | ✅ | ✅ | ✅ | row resize not driven |
+| Patch 29 — Excel: Next sheet shows sheet 2 (number and content) | ✅ | ✅ | ✅ | |
+| M-24 several files at once, name order; M-08 / M-23 tab keys; stall check | ✅ | ✅ | ✅ | |
+| Rotated page on screen, Excel grid / hidden sheet / Find, pinch (synthetic) | ✅ (pinch –) | ✅ | ✅ | |
+| Full regression | ✅ | ✅ | ✅ | only my two test-side items on 26; no crash report |
+
+**Open, not blocking** (unchanged): M-06 startup (real Mac), M-20 heavy vector page (library, B-27), M-18 Apple
+Feedback, M-25 Intel-only intermittent ⌘O (not seen since e2a1cc8; real Intel Mac), recovery-message style, licence
+text marked DRAFT. Not tested here: multi-file question ("File 1 of 2"), Save as… from the question, row resize,
+a real trackpad, a real printer, Retina, macOS 12–14.
+
 ## Re-test on platform/mac 0e7c70d (16 Nov, Foundation patch 27) — NOT signed off: M-26, M-28 and the build
 
 Runs **43754035832** (shared), **43756197743** (marking, four zooms), **43756373634** (full). All three runners.
