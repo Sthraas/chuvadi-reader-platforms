@@ -70,12 +70,16 @@ public static class DocumentFormatExtensions
 }
 
 /// <summary>A document that was recently opened.</summary>
+/// <param name="TextCodePage">D-191: the encoding the person chose for reading this text file (a
+/// <see cref="TextEncodings"/> code page), or null for Automatic. Kept on this machine with the recent entry,
+/// never written into the file; it goes when the file leaves Recents.</param>
 public sealed record RecentItem(
     string FileName,
     string Path,
     DocumentFormat Format,
     DateTimeOffset LastOpened,
-    bool IsEncrypted);
+    bool IsEncrypted,
+    int? TextCodePage = null);
 
 /// <summary>A pinned document or folder the user wants quick access to.</summary>
 public sealed record PinnedItem(
