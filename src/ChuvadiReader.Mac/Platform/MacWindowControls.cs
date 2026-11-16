@@ -78,6 +78,7 @@ public sealed class MacWindowControls : IWindowControls, IDisposable
         AppKitBridge.HideTitlebar(window);
         AppKitBridge.SetRestorable(window, false);
         MacCloseGuard.Install(); // D-190: the question before quitting or closing the window
+        MacTabKeyMonitor.Install(); // M-08 on macOS 15: ⌃Tab while a text box of the page has the keyboard
         if (!_sized && window != IntPtr.Zero)
         {
             _sized = true;

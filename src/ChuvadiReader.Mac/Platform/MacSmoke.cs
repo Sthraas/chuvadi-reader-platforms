@@ -125,7 +125,9 @@ internal static class MacSmoke
                 {
                     var now = DateTime.UtcNow;
                     var seen = _lastKeyAt > asked;
-                    if ((seen && now - _lastKeyAt >= TimeSpan.FromSeconds(2)) || now - asked >= TimeSpan.FromSeconds(seen ? 14 : 10))
+                    // A click, an Accessibility press or ending the content process logs no key: report at 4 s, as before.
+                    var isKey = !(arg.StartsWith("click", StringComparison.Ordinal) || arg.StartsWith("ax-", StringComparison.Ordinal) || arg.StartsWith("kill", StringComparison.Ordinal));
+                    if (!isKey || (seen && now - _lastKeyAt >= TimeSpan.FromSeconds(2)) || now - asked >= TimeSpan.FromSeconds(seen ? 14 : 10))
                     {
                         _ = Report();
                         return;
