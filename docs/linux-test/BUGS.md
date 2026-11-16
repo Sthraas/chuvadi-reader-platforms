@@ -42,7 +42,7 @@ Every bug gets fixed; I re-verify on the fixing commit and mark it here.
 | B-30 | S2 (perf) | **shared Ui/Core + Foundation** | Memory isn't given back after closing the CAD drawing: 1.43–1.77 GB stays for 60 s+, and 680 MB of managed heap is still live after a full collection | **verified fixed bf60da9; re-verified 90895ef, 7cd960c** — app 249 MB before, 937 MB with 5 sheets, 265 MB 2 s after closing. Recorded: WebKit 221 → ~587 MB and stays |
 | B-31 | S2 | **library** (Chuvadi.Sheets, SH-L1) | Excel time-only cells (stored 0 to 1, e.g. 6:00 PM) show `########`, and the stored value on hover, in the value bar and in copy is wrong (0.75 reads as -0.25). On bf60da9 they showed `1899-12-30 18:00` | **open** — still on 7cd960c: `########`, stored value shown as -0.25 for 0.75 |
 | B-32 | S2 | **library + shared Ui/Core** | A PDF page's `/Rotate` (90, 180, 270) is ignored on screen: the page shows unrotated. Same on bf60da9 | **verified fixed 7cd960c** (86996dd) — 90, 180 and 270 turned as the file says, on vector pages, on a cropped page and on heavy raster sheets (Arun's CAD sheets are `/Rotate 270` and now show landscape) |
-| B-33 | S2 | **shared Ui/Core** (Foundation's B-33) | Excel: the title bar's sheet arrows do nothing, and typing a sheet number moves the number but not the sheet shown. Patch 29 says this is fixed; on Linux it is not | **open** — b0e5608 |
+| B-33 | S2 | **shared Ui/Core** (Foundation's B-33) | Excel: the title bar's sheet arrows do nothing, and typing a sheet number moves the number but not the sheet shown. Patch 29 says this is fixed; on Linux it is not | **open** — still on fc20516. Linux traced it to the shared Reader page (build log 60); Foundation's patch 31 has a fix, not merged to `platform/linux` yet |
 | K-01 | — | Linux | GNOME close-only layout showed all three buttons (known, 7 Nov) | **verified fixed f7d0034, re-verified f3d5978** (6 layouts) |
 
 Routing (coordinator, 8 Nov): **Linux** → the Linux chat. **shared Ui/Core** → Foundation's combined patch, as exact diffs from the Linux chat or Foundation. **library** → the coordinator compiles them for Arun (library coordinator).
@@ -923,3 +923,27 @@ wouldn't show it. The data is unaffected.
 the saved file); pinch on PDF, Excel and Word; Find and Fit on turned pages; hidden Excel matches named; B-24 +
 B-08b Cancel; B-25; owner-password printing; single instance (1 window, 4 tabs); drops; print byte-identical;
 `/Rotate` on screen; no files left in `/tmp`. B-31 is unchanged (open).
+
+
+---
+## Linux Test — 16 Nov, patch 30 on `platform/linux` fc20516 (standing watch)
+Patch 30: a rare blank page fixed, Find stays on the match's page, a pinch in Mark leaves no mark, the hidden-matches
+line moved under the sheet. Built from source with SDK 10.0.114 (`global.json` set aside in my test copy only).
+CI run 43910045202 is green. New tools: `tools/t_pager.py`, `t_pinchmark.py`.
+
+**B-33 still open.** On `three-sheets.xlsx`: Next sheet (mouse and scripted click) changes nothing; typing 2 and
+Enter moves the number but sheet One stays; after pressing the tab "Two", Previous does nothing. The same as on
+b0e5608. Linux's build log 60 traces it to the shared Reader page losing its reference to the tab's viewer, and
+says Foundation's patch 31 fixes it; that patch isn't on this head.
+
+**A pinch in Mark leaves no mark ✅.** With Rectangle, Draw and Text selected in turn, a pinch (test verb) zoomed
+the page 86 % → 121 % and left 0 marks each time.
+
+**Patch 29, run again ✅.** Marks kept with the tab; the ask-before-closing card on a tab's x, Close all, Close
+inactive, Alt F4 and the title bar's close, with every button; Save and Save as… write the mark where it was drawn
+(103, 121 – 202, 185 pt and 155, 121 – 254, 185 pt); Excel resize by dragging leaves the file byte-identical.
+
+**Quick regression ✅.** Marks after pinch steps to 55, 100 and 150 % (18 exact on screen, within 2–3 pt saved);
+pinch on PDF, Excel and Word; Find and Fit on turned pages; the hidden-matches line is shown; B-24 + B-08b Cancel;
+B-25; owner-password printing; single instance (1 window, 4 tabs); drops; print byte-identical; `/Rotate` on
+screen; no files left in `/tmp`. B-31 is unchanged (open).

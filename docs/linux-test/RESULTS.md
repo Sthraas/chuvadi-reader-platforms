@@ -517,7 +517,7 @@ Checked again on this head:
 
 **Ready**, with B-31 (Excel time-only cells) known. A real trackpad pinch still needs a real machine.
 
-## Sign-off — Linux b0e5608 (16 Nov, patch 29): ready for Arun, with two things to know
+## Sign-off — Linux b0e5608 (16 Nov, patch 29) — carried to fc20516 below
 
 | Check | Result |
 |---|---|
@@ -538,9 +538,26 @@ Checked again on this head:
 
 **Ready for Arun's check**, with B-33 and B-31 known. Neither touches the data in a file.
 
-## Arun's check — Linux b0e5608
+## Sign-off — Linux fc20516 (16 Nov, patch 30): ready for Arun, with two things to know
 
-**Get the package.** GitHub → `Sthraas/chuvadi-reader-platforms` → Actions → run **Linux** on `b0e5608` ([run 43841811974](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/43841811974), green) → Artifacts → **linux-x64** (ARM machine: `linux-arm64`). Unzip it and use **`deb/chuvadi-reader_1.0.0~preview_amd64.deb`** — the self-contained one (37.9 MB, needs no .NET; artifacts kept until 14 Feb 2027). SHA-256 `08cf91d3a6c79f6da1be0e094473cd68e3c7c9d074f8cfdbd3b04718ecb7a43a`. (`deb-framework-dependent/` is the smaller variant that pulls in Microsoft's .NET runtime package.) Or with the CLI: `gh run download 43841811974 -R Sthraas/chuvadi-reader-platforms -n linux-x64`.
+[CI run 43910045202](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/43910045202) is green, and
+Arun's checklist below uses its package. My test copy is built with SDK 10.0.114 (`global.json` set aside).
+
+| Check | Result |
+|---|---|
+| A pinch in Mark leaves no mark ✅ | With Rectangle, Draw or Text selected, a pinch zooms the page and adds nothing |
+| Patch 29 again ✅ | Marks kept with the tab; ask before closing on every way of closing; Excel resize by dragging |
+| Excel sheet pager ✗ | **B-33 still open** on this head (the fix is in Foundation's patch 31, not merged here yet) |
+| Quick regression ✅ | Marks after a pinch, pinch, patch 28 checks, B-24 + B-08b, B-25, owner-password printing, single instance, drops, print, `/Rotate` |
+
+**The two things to know:** B-33 (the title bar's sheet arrows and number box don't change the Excel sheet; the
+sheet tabs work) and B-31 (Excel time-only cells, library). Neither touches the data in a file.
+
+**Ready for Arun's check**, with B-33 and B-31 known.
+
+## Arun's check — Linux fc20516
+
+**Get the package.** GitHub → `Sthraas/chuvadi-reader-platforms` → Actions → run **Linux** on `fc20516` ([run 43910045202](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/43910045202), green) → Artifacts → **linux-x64** (ARM machine: `linux-arm64`). Unzip it and use **`deb/chuvadi-reader_1.0.0~preview_amd64.deb`** — the self-contained one (37.9 MB, needs no .NET; artifacts kept until 14 Feb 2027). SHA-256 `4175b45da49219182ae1b1b6ab93398b1d34b58343a501352a8a818a78e2dad2`. (`deb-framework-dependent/` is the smaller variant that pulls in Microsoft's .NET runtime package.) Or with the CLI: `gh run download 43910045202 -R Sthraas/chuvadi-reader-platforms -n linux-x64`.
 
 **Install** (Ubuntu 24.04 or 26.04, desktop):
 ```
