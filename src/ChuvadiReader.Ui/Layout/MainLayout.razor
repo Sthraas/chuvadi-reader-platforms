@@ -274,6 +274,10 @@
     {
         <div class="closeq-scrim"></div>
         <div class="closeq" role="alertdialog" aria-modal="true" aria-labelledby="closeq-title" @onkeydown="OnCloseAskKey">
+            @* The keyboard stays in the card while it asks: Shift Tab from the first button goes to Cancel and Tab
+               from Cancel to the first button. Without these two stops Tab went on to the page behind the scrim,
+               where Esc no longer cancelled and Enter worked the control underneath. *@
+            <span class="closeq-edge" tabindex="0" aria-hidden="true" @onfocus="() => FocusCloseAskAsync(last: true)"></span>
             <div class="closeq-title" id="closeq-title">Save the marks on <b>@ask.Tab.FileName</b>?</div>
             <div class="closeq-text">
                 @(ask.Tab.Marks?.Count == 1 ? "It has 1 mark that is not saved. It is lost" : $"It has {ask.Tab.Marks?.Count} marks that are not saved. They are lost") if you close without saving.
@@ -298,8 +302,9 @@
                 }
                 <button class="fc-btn danger" disabled="@_closeAskBusy" @onclick="() => AnswerClose(CloseAnswer.Discard)">Discard</button>
                 <span class="closeq-gap"></span>
-                <button class="fc-btn" disabled="@_closeAskBusy" @onclick="() => AnswerClose(CloseAnswer.Cancel)">Cancel</button>
+                <button class="fc-btn" @ref="_closeAskLast" disabled="@_closeAskBusy" @onclick="() => AnswerClose(CloseAnswer.Cancel)">Cancel</button>
             </div>
+            <span class="closeq-edge" tabindex="0" aria-hidden="true" @onfocus="() => FocusCloseAskAsync(last: false)"></span>
         </div>
     }
 </div>
@@ -356,6 +361,7 @@
     private bool _closeAskBusy;
     private bool _closeAskFocus;
     private ElementReference _closeAskFirst;
+    private ElementReference _closeAskLast;
 
     /// <summary>TabsService.CloseGuard. Shows each tab in turn and asks. Marks chosen to be saved are saved at once;
     /// marks chosen to be discarded are dropped only when every tab has an answer, so Cancel loses nothing.</summary>
@@ -441,6 +447,12 @@
     }
 
     private void AnswerClose(CloseAnswer answer) => _closeAnswer?.TrySetResult(answer);
+
+    private async Task FocusCloseAskAsync(bool last)
+    {
+        try { await (last ? _closeAskLast : _closeAskFirst).FocusAsync(); }
+        catch (Exception ex) when (ex is JSException or InvalidOperationException or JSDisconnectedException) { }   // the card closed meanwhile
+    }
 
     private void OnCloseAskKey(KeyboardEventArgs e)
     {

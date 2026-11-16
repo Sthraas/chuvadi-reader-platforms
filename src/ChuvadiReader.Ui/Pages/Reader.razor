@@ -346,25 +346,29 @@
     else if (viewOnly)
     {
         <div class="rviewer" @ref="_viewerHost" data-zoom="@_textSize">
+            @* B-33: each viewer is keyed by its tab. Without the key, going from one Word (or Excel, or text) tab to
+               another kept the same viewer component and only changed its file; the reference to it (_viewer) had
+               just been cleared for the new tab and is only ever set when a viewer is created, so it stayed empty:
+               the title bar's arrows and number box, and the outline, did nothing from then on. *@
             @* A text-type file waits for the remembered encodings (read once, a few ms), so it is read one time. *@
             @switch (HasEncoding(tab.Format) && !_encReady ? DocumentFormat.Pdf : tab.Format)
             {
                 case DocumentFormat.Docx:
-                    <DocxView @ref="_viewer" Path="@tab.Path" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" OnStopOpening="StopOpening" />
+                    <DocxView @key="tab.Id" @ref="_viewer" Path="@tab.Path" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" OnStopOpening="StopOpening" />
                     break;
                 case DocumentFormat.Xlsx:
-                    <XlsxView @ref="_viewer" Path="@tab.Path" Sizes="@tab.SheetSizes" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" OnStopOpening="StopOpening" />
+                    <XlsxView @key="tab.Id" @ref="_viewer" Path="@tab.Path" Sizes="@tab.SheetSizes" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" OnStopOpening="StopOpening" />
                     break;
                 case DocumentFormat.Markdown:
-                    <MarkdownView @ref="_viewer" Path="@tab.Path" CodePage="@EncodingFor(tab)" OnEncoding="OnViewerEncoding" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" OnStopOpening="StopOpening" />
+                    <MarkdownView @key="tab.Id" @ref="_viewer" Path="@tab.Path" CodePage="@EncodingFor(tab)" OnEncoding="OnViewerEncoding" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" OnStopOpening="StopOpening" />
                     break;
                 case DocumentFormat.Html:
-                    <HtmlView @ref="_viewer" Path="@tab.Path" CodePage="@EncodingFor(tab)" OnEncoding="OnViewerEncoding" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" OnStopOpening="StopOpening" />
+                    <HtmlView @key="tab.Id" @ref="_viewer" Path="@tab.Path" CodePage="@EncodingFor(tab)" OnEncoding="OnViewerEncoding" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" OnStopOpening="StopOpening" />
                     break;
                 case DocumentFormat.Pdf:
                     break;
                 default:
-                    <TextView @ref="_viewer" Path="@tab.Path" CodePage="@EncodingFor(tab)" OnEncoding="OnViewerEncoding" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" OnStopOpening="StopOpening" />
+                    <TextView @key="tab.Id" @ref="_viewer" Path="@tab.Path" CodePage="@EncodingFor(tab)" OnEncoding="OnViewerEncoding" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" OnStopOpening="StopOpening" />
                     break;
             }
         </div>

@@ -81,8 +81,15 @@ public sealed class MemoryStorage : IAppStorage
 {
     private readonly ConcurrentDictionary<string, string> _values = new();
 
-    public Task<string?> GetAsync(string key, CancellationToken ct = default) =>
-        Task.FromResult(_values.TryGetValue(key, out var v) ? v : null);
+    // CHVD_SLOW_STORAGE=<ms>: answer after a wait, as a real host's storage (a file, a browser store) does. A page
+    // then draws once before its first read returns, which is the order real hosts run in (B-33 on Linux).
+    private static readonly int SlowMs = int.TryParse(Environment.GetEnvironmentVariable("CHVD_SLOW_STORAGE"), out var ms) ? ms : 0;
+
+    public async Task<string?> GetAsync(string key, CancellationToken ct = default)
+    {
+        if (SlowMs > 0) await Task.Delay(SlowMs, ct);
+        return _values.TryGetValue(key, out var v) ? v : null;
+    }
 
     public Task SetAsync(string key, string value, CancellationToken ct = default)
     {

@@ -109,3 +109,6 @@
     flex: 0 0 auto; height: 24px; padding: 0 9px; border: 1px solid var(--chvd-binding); border-radius: 6px;
     background: var(--chvd-binding-soft); color: var(--chvd-binding); font: 600 12px/1 var(--chvd-font-ui, system-ui, sans-serif); cursor: pointer;
 }
+
+/* AT-25: a finger-sized "File's own sizes" on the touch shells, like every other control there. */
+html[data-shell="tablet"] .xv-resetsizes, html[data-shell="phone"] .xv-resetsizes { height: 44px; padding: 0 14px; font-size: 13.5px; }
