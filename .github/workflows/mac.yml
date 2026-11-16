@@ -229,7 +229,7 @@ jobs:
       - name: Unpack the built app
         if: ${{ !cancelled() }}
         run: |
-          (cd out && shasum -a 256 -c SHA256.txt)
+          shasum -a 256 -c out/SHA256.txt
           mkdir -p app && ditto -x -k out/Chuvadi-mac-universal-unsigned.zip app
           APP=$(find "$PWD/app" -maxdepth 1 -name '*.app' -type d | head -1)
           [ -n "$APP" ] || { echo "no .app in the zip"; exit 1; }
