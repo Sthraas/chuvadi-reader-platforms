@@ -217,7 +217,9 @@ Diff sent to the Foundation: `proposal/web-ui-portal-certificate-off.patch` (HOO
 ## ✔ sent to the Foundation as a task (coordinator 16 Nov 00:40) — Ctrl F does nothing on Word, Excel, Markdown and text files (found 15 Nov; old, every platform)
 The Find button's tooltip says "Find (Ctrl F)", and for a PDF the key opens Find. For the other formats it opens nothing. The key handler lives in `reader.js` `init(deskEl, …)` (line 280), which runs only when a PDF's desk is set up (`Reader.razor` line 3480), and it calls `OpenFind`, the PDF Find. I tried routing `OpenFind` to the viewers' Find for view-only formats: no effect, because the handler isn't attached at all while an Office file is shown. So this is a piece of its own (attach the keys for the viewers too); it is **not** in my Find-focus patch. The same in Chromium, Firefox and WebKit, on the Web and Windows profiles.
 
-## U-20 The hidden-matches line sits under the Find box (found 16 Nov, confirming patch 28)
+## ✔ decided (a), D-192 — U-20 The hidden-matches line sits under the Find box (found 16 Nov, confirming patch 28)
+Routed to the Foundation by the coordinator, 16 Nov 14:33. The diff is regenerated against patch 29 (HOOKS).
+
 **What happens.** Patch 28 draws "2 matches are in hidden cells: A5 (hidden row), C6 (hidden column)" above the sheet (D-188, U-19 a). The Find box floats over the top centre of the viewer, on the same strip. Measured share of the sentence covered: 10% at 1280 px (the end is cut), about 20% on a tablet, 43–48% on a phone, where it can't be read; 0% only on a very wide screen (1920 px). The same in three browsers. Screenshot: `screenshots/webkit-u19-line-under-find-box.png`.
 
 **Options** (the file is the Foundation's `XlsxView`):
@@ -232,3 +234,21 @@ The Find button's tooltip says "Find (Ctrl F)", and for a PDF the key opens Find
   - Cons: the most plumbing: the Find box belongs to the Reader and the sentence is worked out in the Excel viewer, so it needs a callback between them; the box grows on a phone.
 
 **Recommendation: (a).** It is the smallest change that makes the line readable everywhere, and it is ready. (c) is the nicest place and fits with (b) of U-19 (next / previous) later.
+
+## Observations from the patch 29 check (16 Nov): the ask-before-closing card and the Excel resize
+**The card against D-190** (three browsers × portal desktop, tablet, phone and the Windows profile; all the same unless said):
+- Button order: Save · Save as… · Discard · (gap) · Cancel, on one row. Save is the primary button and Discard is in the danger colour. A file that can't be written offers Save as… · Discard · Cancel, with Save as… primary. ✔
+- Focus: on Save when the card opens (on Save as… for a read-only file). ✔
+- Enter (focus on Save): the marks are written into the file and the tab closes. Esc: the card goes, the tab and its mark stay, the file is untouched. Discard: the tab closes, the file is untouched. Cancel: as Esc. ✔
+- The page behind doesn't answer a click or a tap (scrim). ✔
+- **Tab is not held in the card** → diff in HOOKS (`web-ui-close-card-keeps-focus.patch`).
+- **Wording differs from the words quoted in D-190.** D-190 says: a card "This file has unsaved marks". The card says: title "Save the marks on **<file name>**?", text "It has 1 mark that is not saved. It is lost if you close without saving." (plural: "It has 3 marks that are not saved. They are lost if you close without saving."), and with several files " File 2 of 3." The meaning is the same and it names the file, which helps when several are closing. For the coordinator to accept or change.
+- Phone (390 px): the card sits at the bottom, inside the screen, with 44 px buttons; **"Save as…" wraps onto two lines inside its button**. Small; a shorter gap or a second row would cure it.
+
+**Excel resize against D-190** (same 12 cases; `layout.xlsx`):
+- Drag a column's edge: B 64 → 124 px for a 60 px drag, and the columns after it move by 60. Drag a row's edge: row 9 20 → 44 px, rows below move by 24. A guide line shows while dragging; the mouse cursor is `col-resize`. With touch-type pointer events on the tablet and phone profiles the same. ✔
+- Press twice on an edge: the column fits its content (A 140 → 327 px; 328 in Firefox). Smallest size 8 px. ✔
+- For viewing only: the file's bytes are unchanged after all of it. Kept with the tab: after another sheet and back, the sizes are still there. ✔
+- The way back: "File's own sizes" appears beside the sheet tabs once something is resized; it restores every size and goes away. ✔
+- A cell still shows its value in the value bar after a resize; no sideways scroll; no page errors. ✔
+- What I could not do here: a real finger. The touch cases use pointer events of type "touch" sent by script, which exercise the 14 px reach but not the browser's own gesture handling.

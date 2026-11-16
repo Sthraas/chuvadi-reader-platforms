@@ -438,3 +438,26 @@ Build `-warnaserror` 0 warnings. Tests 382 + 16 + 41 + 100 = **539 pass**, 0 fai
 
 ### 5. The two follow-up diffs
 Each applies to 754d1e2 alone and together. With the rail-word one applied: build 0 warnings, 539 tests pass.
+
+## 2026-11-16 — session 25 (coordinator 14:40: merge patch 29; the ask-before-closing card and the Excel resize in the portal)
+
+### 1. Branches and merge
+Checked all: `platform/foundation-pr` 71754e1, `platform/foundation` 7c0b4bc, `main` 33ca3b8 (D-190 to D-192), `platform/web` a0a2f7c, `platform/web-test` 4ac4521, `platform/mobile-ui` ca152c4. `platform/foundation` 7c0b4bc has the same `src`, `tests`, `tools`, `ci` and `global.json` as foundation-pr 71754e1; merged it (clean). `src` equals foundation-pr's.
+
+### 2. Build and tests
+Build `-warnaserror` 0 warnings. Tests 434 + 16 + 41 + 102 = **593 pass**, 0 fail, 6 skipped (the Foundation's).
+
+### 3. The ask-before-closing card (D-190)
+Three browsers × portal desktop, tablet, phone and the Windows profile, each case on its own copy of a PDF with one rectangle mark placed: wording, button order, focus, Enter, Esc, Tab, Discard, Cancel, a read-only file, and the scrim. Closing the tab: the × on desktop and Windows, Document ▾ › Close on the tablet (12d), the tab list's Close on the phone. Results in OPTIONS. Everything is as D-190 says except: Tab leaves the card (diff sent), the title's words differ from the ones D-190 quotes (for the coordinator), and "Save as…" wraps on the phone.
+
+### 4. Excel resize (D-190)
+The same 12 cases on copies of `layout.xlsx`: all pass (OPTIONS has the numbers).
+
+### 5. Diffs for the Foundation, all against 7c0b4bc
+- New: `proposal/web-ui-close-card-keeps-focus.patch`.
+- Regenerated: `proposal/web-ui-xlsx-hidden-matches-under-sheet.patch` (D-192); the 754d1e2 version no longer applied.
+- Unchanged, still applies: `proposal/web-ui-portal-certificate-rail-word.patch`.
+With all three applied together: build 0 warnings, 593 tests pass; the hidden-matches line is 0% covered at every size and the rail word is "soon" in three browsers. Each applies alone.
+
+### 6. Portal surfaces against patch 28's screenshots
+63 screenshots: text identical in all. Pixels differ only in Home's greeting ("Good evening" at 21:34, "Good morning" at 09:38 on the container's clock). Drop overlay 6 of 6.

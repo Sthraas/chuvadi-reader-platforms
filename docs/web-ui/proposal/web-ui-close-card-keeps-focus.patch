@@ -1,0 +1,59 @@
+diff --git a/src/ChuvadiReader.Ui/Layout/MainLayout.razor b/src/ChuvadiReader.Ui/Layout/MainLayout.razor
+index 516d5ca8..d357027b 100644
+--- a/src/ChuvadiReader.Ui/Layout/MainLayout.razor
++++ b/src/ChuvadiReader.Ui/Layout/MainLayout.razor
+@@ -264,6 +264,10 @@
+     {
+         <div class="closeq-scrim"></div>
+         <div class="closeq" role="alertdialog" aria-modal="true" aria-labelledby="closeq-title" @onkeydown="OnCloseAskKey">
++            @* The keyboard stays in the card while it asks: Shift Tab from the first button goes to Cancel and Tab
++               from Cancel to the first button. Without these two stops Tab went on to the page behind the scrim,
++               where Esc no longer cancelled and Enter worked the control underneath. *@
++            <span class="closeq-edge" tabindex="0" aria-hidden="true" @onfocus="() => FocusCloseAskAsync(last: true)"></span>
+             <div class="closeq-title" id="closeq-title">Save the marks on <b>@ask.Tab.FileName</b>?</div>
+             <div class="closeq-text">
+                 @(ask.Tab.Marks?.Count == 1 ? "It has 1 mark that is not saved. It is lost" : $"It has {ask.Tab.Marks?.Count} marks that are not saved. They are lost") if you close without saving.
+@@ -288,8 +292,9 @@
+                 }
+                 <button class="fc-btn danger" disabled="@_closeAskBusy" @onclick="() => AnswerClose(CloseAnswer.Discard)">Discard</button>
+                 <span class="closeq-gap"></span>
+-                <button class="fc-btn" disabled="@_closeAskBusy" @onclick="() => AnswerClose(CloseAnswer.Cancel)">Cancel</button>
++                <button class="fc-btn" @ref="_closeAskLast" disabled="@_closeAskBusy" @onclick="() => AnswerClose(CloseAnswer.Cancel)">Cancel</button>
+             </div>
++            <span class="closeq-edge" tabindex="0" aria-hidden="true" @onfocus="() => FocusCloseAskAsync(last: false)"></span>
+         </div>
+     }
+ </div>
+@@ -346,6 +351,7 @@
+     private bool _closeAskBusy;
+     private bool _closeAskFocus;
+     private ElementReference _closeAskFirst;
++    private ElementReference _closeAskLast;
+ 
+     /// <summary>TabsService.CloseGuard. Shows each tab in turn and asks. Marks chosen to be saved are saved at once;
+     /// marks chosen to be discarded are dropped only when every tab has an answer, so Cancel loses nothing.</summary>
+@@ -432,6 +438,12 @@
+ 
+     private void AnswerClose(CloseAnswer answer) => _closeAnswer?.TrySetResult(answer);
+ 
++    private async Task FocusCloseAskAsync(bool last)
++    {
++        try { await (last ? _closeAskLast : _closeAskFirst).FocusAsync(); }
++        catch { }   // the card closed meanwhile
++    }
++
+     private void OnCloseAskKey(KeyboardEventArgs e)
+     {
+         if (e.Key == "Escape" && !_closeAskBusy) AnswerClose(CloseAnswer.Cancel);
+diff --git a/src/ChuvadiReader.Ui/wwwroot/css/shell.css b/src/ChuvadiReader.Ui/wwwroot/css/shell.css
+index ed749067..e6828889 100644
+--- a/src/ChuvadiReader.Ui/wwwroot/css/shell.css
++++ b/src/ChuvadiReader.Ui/wwwroot/css/shell.css
+@@ -459,6 +459,7 @@ html[data-platform] .psi-or span { height: 0; background: none; border-top: 0.5p
+ .closeq-err { margin-top: 8px; font-size: 12.5px; color: var(--chvd-danger); overflow-wrap: anywhere; }
+ .closeq-btns { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+ .closeq-gap { flex: 1; }
++.closeq-edge { position: absolute; width: 0; height: 0; outline: none; }   /* focus stops that keep Tab inside the card */
+ html[data-shell="phone"] .closeq { top: auto; bottom: calc(16px + env(safe-area-inset-bottom)); }
+ html[data-shell="phone"] .closeq .fc-btn { min-height: 44px; flex: 1; }
+ html[data-shell="phone"] .closeq-gap { display: none; }

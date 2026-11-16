@@ -1,5 +1,5 @@
 diff --git a/src/ChuvadiReader.Ui/Components/Viewers/XlsxView.razor b/src/ChuvadiReader.Ui/Components/Viewers/XlsxView.razor
-index efdfc51b..57476197 100644
+index 68ee37a5..0a1b7bfd 100644
 --- a/src/ChuvadiReader.Ui/Components/Viewers/XlsxView.razor
 +++ b/src/ChuvadiReader.Ui/Components/Viewers/XlsxView.razor
 @@ -28,11 +28,6 @@
@@ -14,27 +14,31 @@ index efdfc51b..57476197 100644
          <div class="xv-valbar" hidden aria-live="polite"><span class="xv-val-addr"></span><span class="xv-val-text"></span><span class="xv-val-more"></span></div>
          @* The grid is drawn as a window onto the sheet: only the rows and columns on screen exist as elements
             (B-09/B-10, E-05), each cell placed at the offset its row heights and column widths give (E-06 to E-08),
-@@ -73,6 +68,13 @@
+@@ -85,6 +80,14 @@
              </div>
-         </div>
+         }
  
 +        @if (HiddenHitsLine(s, g) is { } hiddenHits)
 +        {
 +            @* D-188 (U-19 a): a match in a hidden row or column has nothing to outline on the sheet, so it is named.
-+               It sits under the sheet, next to the tabs' match counts: the Find box floats over the top of the
-+               viewer and covered it there (a tenth of the sentence at 1280 px, nearly half on a phone). *@
++               D-192 (U-20 a): it sits under the sheet, next to the tabs' match counts. Above the sheet the Find box,
++               which floats over the top of the viewer, covered it (a tenth of the sentence at 1280 px, nearly half
++               on a phone). *@
 +            <div class="xv-hiddenhits" role="status">@hiddenHits</div>
 +        }
          <div class="xv-bar">
-             <div class="xv-tabs" role="tablist" aria-label="Sheets">
-                 @for (int i = 0; i < _wb.Sheets.Count; i++)
+             @if (_own is not null)
+             {
 diff --git a/src/ChuvadiReader.Ui/Components/Viewers/XlsxView.razor.css b/src/ChuvadiReader.Ui/Components/Viewers/XlsxView.razor.css
-index 9dc5a6bf..fe393176 100644
+index cb7b89b4..7250a072 100644
 --- a/src/ChuvadiReader.Ui/Components/Viewers/XlsxView.razor.css
 +++ b/src/ChuvadiReader.Ui/Components/Viewers/XlsxView.razor.css
-@@ -93,4 +93,4 @@
+@@ -93,7 +93,7 @@
  .xv-mode-btn:disabled { opacity: .45; cursor: not-allowed; pointer-events: none; }
  
  /* D-188: Find matches in hidden rows and columns, named above the sheet */
 -.xv-hiddenhits { flex: 0 0 auto; padding: 4px 12px; border-bottom: 1px solid var(--chvd-border); background: var(--chvd-surface-raised, var(--chvd-surface)); color: var(--chvd-ink); font-size: 12px; line-height: 1.4; user-select: text; }
 +.xv-hiddenhits { flex: 0 0 auto; padding: 4px 12px; border-top: 1px solid var(--chvd-border); background: var(--chvd-surface-raised, var(--chvd-surface)); color: var(--chvd-ink); font-size: 12px; line-height: 1.4; user-select: text; }
+ 
+ /* D-190: sizes for viewing only. A header whose size is the person's own carries a mark; the measuring box for a
+    fit is out of sight and outside the zoomed sheet, so it reads sizes at 100 %. */
