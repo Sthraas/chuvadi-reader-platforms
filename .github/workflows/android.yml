@@ -30,10 +30,10 @@ on:
         default: ""
 
 env:
-  # platform/foundation-pr: patch 30 (AT-27 pinch in Mark, Find stays on the match page, hidden-matches line, a rare blank page) on Reader main fc54ece.
-  FOUNDATION_REF: 4b704c8d3d32c9c21c5c20bb77ba7d1b5fb14391
-  # platform/mobile-ui: Foundation 71754e1 merged; close card and Excel resize on touch; tablet cards 44 px.
-  MOBILEUI_REF: ae6ae6dca7bd7f5c02cd71e5e27634f687e0a1ff
+  # platform/foundation-pr: patch 31 (AT-10 first key, AT-26/AT-25 close card sizes, sheet pager, encoding picker Ui) on Reader main 24b2bac.
+  FOUNDATION_REF: b895750def9acad78e609f2013099a29f01698ce
+  # platform/mobile-ui: AT-25 to AT-28; Excel resize by finger takes a hold.
+  MOBILEUI_REF: 17209249a9270225a31c98506bec7f46b8400833
   DOTNET_NOLOGO: '1'
   DOTNET_CLI_TELEMETRY_OPTOUT: '1'
 

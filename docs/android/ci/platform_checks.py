@@ -15,6 +15,8 @@ app produced. Screenshots and raw evidence go to the results folder.
      a custom range (2-3) gives a 2-page file; a PDF whose permissions forbid printing is locked (L-8)
   7. Back: closes an open card; on the phone closes a sheet (key and edge gesture); otherwise steps
      back through the app's screens and finally leaves the app; relaunch → same process, same tab
+  7f. Encoding picker (D-191) by touch: a Windows-1252 .txt, Document menu → Text encoding…, UTF-8,
+     Automatic, Back closes the card
   8. Split screen → the app re-lays out to the half window, same process, no sideways overflow;
      back to full screen
 Writes platform.json; exits 1 if any check fails.
@@ -912,6 +914,95 @@ if q1:
     check("Discard lets the Back go on: the app leaves (D-190)", bool(q2) and resumed() != PKG, {"question": q2, "resumed": resumed()})
 launch()
 wait_for(lambda s: s.get("route") is not None, 30, "the app again")
+
+
+# ── 7f. D-191: the encoding picker for a text file, by touch ────────────────
+# A Windows-1252 .txt (accented letters and a euro sign). Open with lists only PDF, Word and Excel on
+# Android, so the file goes to the activity by name (as the in-app picker's result would arrive).
+ENC_TXT, ENC_LINE = "chuvadi-1252.txt", "Café crème — €4.50"
+with open(os.path.join(OUT, ENC_TXT), "wb") as f:
+    f.write(("\n".join([ENC_LINE, "Déjà vu à la française.", "Naïve façade, Zoë's reçu."]) + "\n").encode("cp1252"))
+adb("push", os.path.join(OUT, ENC_TXT), f"/sdcard/Download/{ENC_TXT}")
+enc_uri = media_uri(ENC_TXT)
+comp = (adb("shell", "cmd", "package", "resolve-activity", "--brief", "-c", "android.intent.category.LAUNCHER", PKG)
+        .strip().splitlines() or [""])[-1]
+am_as_shell("start", "-n", comp, "-a", "android.intent.action.VIEW", "-d", str(enc_uri), "-t", "text/plain",
+            "--grant-read-uri-permission")
+
+VIEWER_JS = "(document.querySelector('.rviewer')?.innerText || '').slice(0, 400)"
+ENC_JS = r"""(() => [...document.querySelectorAll('.enc-row')].map(e => ({
+  t: e.innerText.replace(/\s+/g, ' ').trim(), on: e.classList.contains('on'), h: Math.round(e.getBoundingClientRect().height) })))()"""
+
+
+def viewer_text():
+    try:
+        return cdp.evaluate(VIEWER_JS) or ""
+    except SystemExit:
+        return ""
+
+
+def enc_rows():
+    try:
+        return cdp.evaluate(ENC_JS) or []
+    except SystemExit:
+        return []
+
+
+def wait_text(pred, seconds, what):
+    end = time.time() + seconds
+    while time.time() < end:
+        t = viewer_text()
+        if pred(t):
+            return t
+        time.sleep(1)
+    print(f"  timed out waiting for {what}")
+    return viewer_text()
+
+
+t0 = wait_text(lambda t: ENC_LINE in t, 45, "the 1252 text file")
+shot("p11d-text-file")
+check("a Windows-1252 text file reads right automatically (D-191)", ENC_LINE in t0, {"uri": enc_uri, "component": comp, "text": t0[:120]})
+
+if phone():
+    for _ in range(2):
+        tap_el('.ph-bar button[aria-label="More"]')
+        if wait_for(lambda s: s.get("sheet"), 6, "the ⋮ menu").get("sheet"):
+            break
+    shot("p11e-menu")
+    tap_el(".ph-row", "Text encoding")
+else:
+    tap_el(".tb-doc")
+    time.sleep(1)
+    shot("p11e-menu")
+    tap_el(".tb-docmenu .pop-item", "Text encoding")
+time.sleep(1.5)
+rows = enc_rows()
+shot("p11f-encoding-card")
+check("Document menu → Text encoding… opens Read this file as: Automatic (detected Windows-1252, marked) and four more",
+      len(rows) == 5 and rows[0]["t"] == "Automatic Windows-1252" and rows[0]["on"], {"rows": rows})
+
+tap_el(".enc-row", "UTF-8")
+t1 = wait_text(lambda t: "Caf�" in t, 15, "the text read as UTF-8")
+rows1 = enc_rows()
+shot("p11g-utf8")
+check("tapping UTF-8 re-reads the file as UTF-8 (bytes that don't fit shown, the row marked)",
+      "Caf�" in t1 and any(r["t"] == "UTF-8" and r["on"] for r in rows1), {"text": t1[:120], "rows": rows1})
+
+tap_el(".enc-row", "Automatic")
+t2 = wait_text(lambda t: ENC_LINE in t, 15, "the text read automatically again")
+rows2 = enc_rows()
+check("tapping Automatic reads it as Windows-1252 again", ENC_LINE in t2 and bool(rows2) and rows2[0]["on"],
+      {"text": t2[:120], "rows": rows2})
+# Reported, not judged: the rows' height under a finger (the design's min-height is 34 px).
+print("  encoding rows, height in CSS px:", [r["h"] for r in rows2])
+key("KEYCODE_BACK")
+time.sleep(1)
+try:
+    enc_open = cdp.evaluate("!!document.querySelector('.enc-list')")
+except SystemExit:
+    enc_open = None
+check("Back closes the encoding card and stays in the app", enc_open is False and resumed() == PKG,
+      {"open": enc_open, "resumed": resumed()})
 
 
 # ── 8. Split screen ──────────────────────────────────────────────────────────

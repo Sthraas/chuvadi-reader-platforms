@@ -941,3 +941,10 @@ same screen; no crash), smoke pass. With round 6 (API 36 phone and tablet, all c
   "the default save folder is Documents/Chuvadi Documents on the device, not the app's cache" (Settings › Saving).
 
 Step 68, result: run 43899989183 (head 60171388; Foundation 4b704c8d3d32c9c21c5c20bb77ba7d1b5fb14391, Mobile UI ae6ae6d), all four emulators green. Phone API 36: gestures 11/11, platform 33/33; tablet API 36: gestures 13/13, platform 31/31, including the new AT-23 check (Settings shows Documents/Chuvadi Documents) and D-190 Cancel/Discard; API 35 phone and tablet: WebView gate 4/4 (WebView 124). Run 43899911787 was cancelled: its FOUNDATION_REF held a mistyped full SHA (fixed in 60171388).
+
+## Step 69 — patch 31 (Reader main 24b2bac) + Mobile UI 1720924; encoding picker by touch
+
+- Composed platform/foundation-pr b895750 (patch 31: AT-10 first key in a new text box, AT-26/AT-25 close card sizes, sheet pager after moving between tabs, close card keeps the keyboard, the encoding picker Ui for text, Markdown and HTML) with platform/mobile-ui 1720924 (AT-25 to AT-28, Excel resize by finger takes a hold). Merge clean; no Android proposals pending.
+- Sandbox: Debug build 0 warnings (-warnaserror); Core 438 (+6 skipped), Hosting 102, MobileUi 16, WebUi 41.
+- New device check 7f (D-191): a Windows-1252 .txt opened in the activity, then by touch: Document menu (phone ⋮ sheet, tablet Document button) → Text encoding…, check Automatic is marked with Windows-1252, tap UTF-8 (the text shows replacement marks, the row is marked), tap Automatic (right again), Back closes the card. Row heights are printed, not judged.
+- Noted for the coordinator: Open with and Share list only PDF, Word and Excel on Android; text, Markdown and HTML open only through the in-app picker.
