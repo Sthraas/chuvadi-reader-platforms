@@ -84,7 +84,11 @@ jobs:
 
       - name: Workload (pinned 10.0.401)
         working-directory: app   # so the app's global.json picks the SDK (the image now also carries .NET 11)
-        run: dotnet --version && dotnet workload install maui-maccatalyst --version 10.0.401 && dotnet workload list
+        run: |
+          dotnet --version
+          if [ -f global.json ]; then dotnet workload install maui-maccatalyst   # set comes from global.json (10.0.401 after the step above)
+          else dotnet workload install maui-maccatalyst --version 10.0.401; fi
+          dotnet workload list
 
       - name: Restore
         working-directory: app
