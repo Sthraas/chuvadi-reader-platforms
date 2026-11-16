@@ -1,7 +1,7 @@
-# Mobile app UI → Foundation: hooks and hand-off (updated 16 Nov, patch 30)
+# Mobile app UI → Foundation: hooks and hand-off (updated 16 Nov, patch 31)
 
 ## Outstanding for Foundation: H-27, H-28 and H-29 (`proposal/mobile-ui-hooks-14.patch`)
-Against foundation-pr 4b704c8 (patch 30). H-25 and H-26 landed in patch 30 (`proposal/landed/`).
+Checked against foundation-pr b895750 (patch 31): all three still apply. H-25 and H-26 landed in patch 30 (`proposal/landed/`).
 `mobile-ui-hooks-14.patch` is what Android's `compose.sh` applies: the `viewers.js` diff (H-27 and H-28 together,
 they touch the same function) and the `Reader.razor` diff (H-29). On their own:
 `proposal/H27-excel-resize-gives-way-to-a-pinch.patch` (H-27 alone),
@@ -48,6 +48,35 @@ they touch the same function) and the `Reader.razor` diff (H-29). On their own:
 - **For:** the cards can be styled per platform without touching Reader.razor again. **Against:** names that
   only touch uses today. A fuller clean-up (move the inline styles into the stylesheet) is Foundation's call;
   my rules need `!important` where they replace an inline value, and would get simpler with it.
+
+## Patch 31 on touch: two notes and one choice (nothing patched in shared files)
+### N-1: "File's own sizes" is now styled in two places
+- Patch 31 makes it 44 px high on the touch shells in `XlsxView.razor.css` (height 44, padding 0 14, 13.5 px
+  text). mobile.css has had it as a 44 px box drawn 24 px high since ae6ae6d. Both apply now: the box is
+  44 px, the text and side padding are Foundation's, the drawn height and the bar are mine.
+- With Foundation's rule alone the sheet bar grows from 37 to 53 px whenever a size has been changed and
+  shrinks back on reset (the grid moves 16 px); with mine on top the bar stays 37 px. I've kept mine for
+  that. If Foundation would rather own it, say so and I'll take mine out.
+- The same for the tablet's close card: `html[data-shell="tablet"] .closeq .fc-btn { min-height: 44px;
+  min-width: 80px }` (patch 31) sits with my tablet card rule. They agree; the buttons are 80 × 44.
+
+### F-5 (a choice): on the phone and tablet nothing shows which encoding a text file was read as
+- D-191 puts the encoding, and the note when bytes don't fit ("37 bytes don't fit UTF-8"), in the status
+  bar. The phone and the tablet have no status bar (frames 12d to 12j), so there the only way in is
+  Document ▾ / ⋮ › "Text encoding…", and the note is only seen on the card once it is open. The card itself
+  works by finger and is checked (tools/mobile-ui/encpicker.py).
+- When it matters: a file that Automatic reads with bytes that don't fit. On Windows the red note is on
+  screen; on touch the reader sees wrong letters and no hint.
+- Ways (all in my files; `StatusBarSlot` already carries the label, the note and the action):
+  - **A. Leave it.** For: nothing added to the touch screens. Against: the warning is invisible.
+  - **B. Phone: the ⋮ row "Text encoding…" carries the encoding as its value, and the note in red. Tablet:
+    a small chip beside the page box, shown only while there is a note.** For: no new screen furniture
+    in the usual case; the warning is on screen on the tablet. Against: on the phone it is still behind ⋮;
+    one more thing in the tablet's top bar that the handout doesn't draw.
+  - **C. A notice when such a file opens** ("6 bytes don't fit UTF-8 · Read as…"), tapping it opens the card.
+    For: seen exactly when it matters, on both. Against: needs a notice that goes away by itself, which the
+    touch shells don't have yet.
+  - I'd take B. Nothing is built for this yet.
 
 ## Seen on touch, for Foundation to weigh (not patched)
 ### F-3: the Find bar lies over the top of the desk, so a match under it is hidden (tablet, desktop)

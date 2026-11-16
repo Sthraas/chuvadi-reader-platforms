@@ -715,3 +715,30 @@ Evidence:
   (cards.py first failed at 915×412 on controls further down a scrolling card; the audit now scrolls each
   control into view before it tests it, and passes at all four.)
 
+## 16 Nov, 22:50: Foundation b895750 (patch 31) merged; the encoding picker (D-191) on phone and tablet
+- Merged platform/foundation-pr b895750: no conflicts. H-27, H-28 and H-29 still apply; hooks-14 stays.
+- **The picker's three ways in, on touch:**
+  - Status-bar button: not there. The phone and tablet have no status bar (the handout's frames), so neither
+    the encoding nor the "bytes don't fit" note is on screen → F-5, a choice for the coordinator.
+  - Menu entry "Text encoding…": there on the phone (⋮) and the tablet (Document ▾), a 44 px row, for
+    text, Markdown and HTML.
+  - The card "Read this file as": opens from that entry. Phone: a bottom sheet above the bottom bar (412 × 304).
+    Tablet: in the card column (270 × 284).
+- **Found and fixed (mine, mobile.css):** the card's rows were 34 px high. Now 44 px boxes drawn as before
+  (card pixel-identical on the tablet; on the phone only the page behind differs).
+- New tool `tools/mobile-ui/encpicker.py` (11 checks; it writes its own Windows-1252 .txt, .md and .html), at
+  412×915, 915×412, 800×1280, 1280×800:
+  - every row and the close control 44 px, on top, inside the screen; the same with the system bars'
+    insets set (24 top, 48 bottom) and with the keyboard up (a shorter window);
+  - by finger: Automatic names Windows-1252 and the accents read right; a tap on UTF-8 marks that row and
+    the card says "6 bytes don't fit UTF-8"; a tap on Windows-1252 puts it right; × closes.
+  - Stood in for, not seen: a real keyboard and real system bars (as for the close card).
+- **Patch 31's own touch rules** ("File's own sizes" 44 px; the tablet close card 44 × 80) overlap mine:
+  both hold, sizes pass. With Foundation's rule alone the Excel bar grows 37 → 53 px while a size is changed;
+  mine keeps it at 37. Noted for Foundation as N-1.
+- Results (hooks-14 applied): 597 tests pass, 6 skipped by Foundation: 438 + 102 + 41 + 16; touch at the
+  four sizes: 350 checks pass, 0 fail (gestures 8/8/9/9, checks 12, pinchmarks 18, xlresize 15, cards 4,
+  encpicker 11, turned 13, closecard 6 each), box audit clean; desktop before (b895750) / after at 1440×900:
+  Mark, the mark card, the close card, the encoding card, Export, Press, Merge, Split, Arrange and the desk
+  menu identical apart from the clock; Read and Home show the known 1-level noise pixels.
+
