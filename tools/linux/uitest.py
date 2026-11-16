@@ -1490,6 +1490,68 @@ def button_layouts():
 step("35-button-layouts", button_layouts)
 
 
+def sheet_pager():
+    """Linux Test B-33: in an Excel file the title bar's sheet arrows and number box did nothing (the tabs under
+    the sheet worked). Checked from Home, with a PDF already open, and on a second workbook, with real clicks
+    and typing. Needs Foundation's fix in the shared Reader page (docs/linux/PROPOSAL-b33-sheet-pager.md)."""
+    book = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tests", "ChuvadiReader.Tests", "Fixtures", "Office", "layout.xlsx")
+    book = os.path.normpath(book)
+    state = lambda: app.js("var b=document.querySelector('.tb-pg-box'), t=document.querySelector('.xv-tab.on'); return [b ? b.value : null, t ? t.textContent.trim() : null]")
+    names = lambda: app.js("return [...document.querySelectorAll('.xv-tab')].map(t => t.textContent.trim())")
+
+    def check(where):
+        app.wait(lambda: state()[1] is not None, 20, "the workbook shown " + where)
+        time.sleep(0.8)
+        sheets = names()
+        if len(sheets) < 2 or state() != ["1", sheets[0]]:
+            raise AssertionError(f"{where}: starts at {state()}, sheets {sheets}")
+        app.click_real('.tb-pg-btn[aria-label^="Next"]')
+        app.wait(lambda: state() == ["2", sheets[1]], 5, f"{where}: sheet 2 '{sheets[1]}' after Next (now {state()})")
+        app.click_real('.tb-pg-btn[aria-label^="Previous"]')
+        app.wait(lambda: state() == ["1", sheets[0]], 5, f"{where}: sheet 1 after Previous (now {state()})")
+        app.click_real(".tb-pg-box")
+        app.xdo("key", "ctrl+a")
+        app.xdo("type", str(len(sheets)))
+        app.xdo("key", "Return")
+        app.wait(lambda: state() == [str(len(sheets)), sheets[-1]], 5, f"{where}: sheet {len(sheets)} '{sheets[-1]}' after typing its number (now {state()})")
+        # A tab under the sheet, then the arrows again: the two stay in step.
+        app.js("document.querySelectorAll('.xv-tab')[0].click(); return 1")
+        app.wait(lambda: state() == ["1", sheets[0]], 5, f"{where}: sheet 1 after its tab (now {state()})")
+        app.click_real('.tb-pg-btn[aria-label^="Next"]')
+        app.wait(lambda: state() == ["2", sheets[1]], 5, f"{where}: sheet 2 after Next following a tab press (now {state()})")
+        return len(sheets)
+
+    while app.js("return document.querySelectorAll('.rtab').length") > 0:
+        close_active_tab()
+    go_home()
+    open_tab(book)
+    n = check("from Home")
+    close_active_tab()
+    open_tab(PDF)
+    app.wait(lambda: rendered(0), 20, "the PDF drawn")
+    open_tab(book)
+    check("with a PDF already open")
+    open_tab(os.path.join(FIX, "sample.xlsx"))
+    app.wait(lambda: state()[1] is not None and names() and names()[0] == state()[1], 20, "the second workbook shown")
+    time.sleep(0.8)
+    second = names()
+    if len(second) >= 2:
+        app.click_real('.tb-pg-btn[aria-label^="Next"]')
+        app.wait(lambda: state() == ["2", second[1]], 5, f"second workbook: sheet 2 after Next (now {state()})")
+    app.js("var t=[...document.querySelectorAll('.rtab')].find(t => t.textContent.includes('layout.xlsx')); t.click(); return 1")
+    check("back on the first workbook's tab")
+    for _ in range(3):
+        close_active_tab()
+    return (f"Next, Previous and a typed number change the sheet ({n} sheets) from Home, with a PDF already open, and back on the "
+            f"first workbook after a second one ({len(second)} sheet{'s' if len(second) != 1 else ''}); tabs and arrows stay in step")
+
+
+# B-33 is in the shared Reader page: this step fails until Foundation's fix is merged (the exact diff is in
+# docs/linux/PROPOSAL-b33-sheet-pager.md). Run it by name meanwhile: UITEST_ONLY=40.
+if "40" in os.environ.get("UITEST_ONLY", "") or os.environ.get("UITEST_B33") == "1":
+    step("40-sheet-pager", sheet_pager)
+
+
 def ask_before_closing():
     """D-190 on Linux: with unsaved marks, closing a tab, all tabs or the window asks Save / Save as / Discard /
     Cancel. The window is closed the real ways: Alt F4 (the desktop's close request) and the title bar's own
