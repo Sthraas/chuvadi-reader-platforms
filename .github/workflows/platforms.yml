@@ -79,7 +79,8 @@ jobs:
         run: ./trimprobe/TrimProbe
 
   # ── Platform host jobs (added by each platform chat) ─────────────────────────────────────
-  # mac:      runner macos-latest,     build src/ChuvadiReader.Mac/…,     workloads maui-maccatalyst
+  # mac:      runner xcode-27,         build src/ChuvadiReader.Mac/…,     workloads maui-maccatalyst
+  #           (the pinned workload set 10.0.403 carries Mac Catalyst 27.0, which needs Xcode 27.1; macos-latest has 26.6)
   # linux:    runner ubuntu-latest and ubuntu-24.04-arm, build src/ChuvadiReader.Linux/…
   # android:  runner ubuntu-latest,    build src/ChuvadiReader.Android/…, workloads maui-android
   # web:      runner ubuntu-latest,    build src/ChuvadiReader.Web/…
