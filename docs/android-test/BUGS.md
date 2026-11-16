@@ -132,7 +132,7 @@ type `zephyrine`.
 says 2. **Evidence:** R2 run 42533545934 › results-tablet-api36 › function/04-find.png (`screenshots/r1/r2-find-print.png`, left).
 Re-checked next round on phone too (phone typing in R2 was cut short by the test, see notes).
 
-## AT-10 · S2 · Foundation (shared Ui) · **reopened R12 on the tablet**: the first key typed into a new Mark text box is lost in 3 of 4 runs on patch 29 (phone 2 of 2 fine) — The Find box drops typed characters; a plain field doesn't
+## AT-10 · S2 · Foundation (shared Ui) · **watch**: tablet text box typing whole again in R13 (1 of 1 on patch 30) after 3 of 4 lost first keys on patch 29 — The Find box drops typed characters; a plain field doesn't
 **Steps:** API 36, open a PDF, Find, type on the on-screen keyboard path (`adb shell input text`, i.e. real key events through the IME).
 **Expected:** every character arrives, as in any text field.
 **Actual (R3, run 42537723474):**
@@ -157,6 +157,7 @@ phone the same step is whole in both runs, and on the tablet it was whole on eve
 keyboard — but that was equally true on the earlier heads, where nothing was lost. So something in patch 29 (marks kept with the tab?
 the box being re-created once after the first key?) or Mobile UI ca152c4 changed the timing on the tablet shell.
 **Fix:** Foundation to look at what happens to a new text box between focus and the first key on the tablet; I keep the check.
+**Round 13:** "chuvadimark" whole on tablet and phone. One good run does not clear a 3-of-4 fault, so this stays on watch for two more rounds.
 
 ## AT-11 · S2 · Android (host process-death restore; Foundation only if a Ui hook is needed) · **verified** R5 run 42746209649 (Foundation f88f9ef + Mobile UI c5c0b7e + Android 9ce073b, Release): tabs back after a background kill 11 of 11, phone and tablet — On the phone, open tabs are lost when Android ends the app in the background
 **Steps:** phone API 36, several tabs open, Home key, `am kill in.chuvadi.reader` (what Android does to a background app under memory
@@ -422,7 +423,7 @@ Android also raises the keyboard); and don't run one-key shortcuts while a marku
 Blocks: text markup + Save, and the Mark text box part of AT-10.
 **Round 10:** fixed — see the heading. This also clears the Mark text box part of AT-10 (a burst of 11 keys all arrive).
 
-## AT-18 · S1 · Android (host) · **verified on phone and tablet** R12/12b for every path I exercise, files read back — except Reduce file size, which is AT-23 — Nothing that saves to a new file works on Android: the host's save pickers are switched off
+## AT-18 · S1 · Android (host) · **verified, closed** R13 on phone and tablet for every path I exercise, Reduce and Export included — Nothing that saves to a new file works on Android: the host's save pickers are switched off
 **Steps:** Release, phone or tablet. Any of: Mark › draw a rectangle › **Save as new PDF**; Protect › draw a redaction box ›
 **Save redacted copy**; Arrange › pages on a desk › **Bind all**.
 **Expected:** Android's "save to" picker opens, the file is written where the person chose.
@@ -577,7 +578,7 @@ discovers a gesture", pending that one look.
 (`screenshots/r11/r11-phone-save-above-card-then-home.png`, frames 1–2); `sv-text-edited.pdf`, `sv-shape-edited.pdf` and
 `sv-form-edited.pdf` were written through Android's picker and carry the mark (and the form's values).
 
-## AT-23 · S2 · Android (host) · open — Reduce file size **and Export pages as images** write their output into the app's private cache, where the person can't find it (the whole "default save folder" route)
+## AT-23 · S2 · Android (host) · **verified, closed** R13: Reduce file size and Export pages as images now write into `Documents/Chuvadi Documents/…` on the device, where the Files app shows them; the card names that folder — Reduce file size **and Export pages as images** write their output into the app's private cache, where the person can't find it (the whole "default save folder" route)
 **Steps:** tablet API 36, open `Download/sv-compress.pdf` › Document › **Reduce file size (Press)** › **Press →**.
 **Expected:** like every other save to a new file since AT-18: Android's picker asks where, and the file is there afterwards.
 **Actual:** no picker. The card says "23.2 KB → 17.2 KB (25.9% smaller)" with an "open pressed file" link and a folder chip "Compressed".
@@ -602,6 +603,9 @@ Documents. So this is not one command but the route: every action that saves int
 and by the same code very likely Scatter, Lift, Snapshot) ends in the cache on Android. That strengthens option (b) — one visible
 `Chuvadi` folder granted once — over patching each command with a picker; (a) remains the quickest for Phase 1. Coordinator's call.
 Merge reaches its page ("add at least two PDFs"); Split was not reached in this first look. Both still to do.
+**Round 13 (run 43906867066, Android a0b3e66 + Foundation 4b704c8 (patch 30) + Mobile UI ae6ae6d, Release, API 36).** Reduce: `/storage/emulated/0/Documents/Chuvadi Documents/Compressed/sv-compress-pressed.pdf`, 12 pages, text
+kept, nothing left only inside the app; the card's folder chip reads "Documents/Chuvadi Documents/Compressed". Export: the PNG is under
+`Documents/Chuvadi Documents/Export`. Both devices. Closed. (Scatter, Lift, Snapshot go the same route; not separately exercised.)
 
 ## AT-24 · S2 · Foundation / Mobile UI · **verified fixed** R12 (patch 29 + Mobile UI ca152c4): on the phone Find goes to page 3 and stays (DR-7 passes) — Phone: Find jumps to the wrong page and highlights the wrong words
 **Steps:** phone API 36, portrait. Open `drift-doc.pdf` (12 pages; the word "Zephyrine" is on page 3 only). More › Find, type
@@ -616,7 +620,7 @@ the page a match belongs to is being taken one off (page index against the phone
 **Fix:** Foundation; I'll re-run `ci/drift.py` DR-7 and add a check that the highlight rectangle lies inside the page that holds the word.
 **Round 12:** not reproduced — phone drift suite 7 of 7 including the Find jump. Seen only on the patch 28 head (run 43768598611).
 
-## AT-25 · S4 · Foundation (shared Ui, Excel view) / Mobile UI for the touch size · open — Excel: the "File's own sizes" control is 24 px high on phone and tablet
+## AT-25 · S4 · Mobile UI · **verified, closed** R13: "File's own sizes" is 103 × 44 px on phone and tablet — Excel: the "File's own sizes" control is 24 px high on phone and tablet
 **Steps:** phone or tablet, open an `.xlsx`, drag a column edge wider with a finger (works: 64 → 135 px; row 20 → 61 px; the header
 is marked as changed; the file on disk is untouched — md5 equal). The reset control "File's own sizes" appears beside the sheet tabs.
 **Expected:** 44 px touch target like every other control on touch shells (AT-06).
@@ -625,8 +629,9 @@ is marked as changed; the file on disk is untouched — md5 equal). The reset co
 **Also to note, not filed:** the column and row headers that carry the drag edges are 20 px high / 36 px wide; the finger reach of
 14 px either side of an edge made every one of my drags land (4 of 4), so I leave that as it is.
 **Fix:** 44 px min-height on touch shells (Mobile UI's `mobile.css`), or in the component.
+**Round 13:** fixed on both.
 
-## AT-26 · S3 · Mobile UI (tablet look) · open — Tablet: the ask-before-closing card's buttons are 30 px high
+## AT-26 · S3 · Mobile UI · **verified, closed** R13: the tablet close card's buttons are 44 px high (Save 50, Save as… 78, Discard 66, Cancel 62 wide) — Tablet: the ask-before-closing card's buttons are 30 px high
 **Steps:** tablet API 36, portrait. Open a PDF, draw a mark, Document ▾ › Close.
 **Expected:** the card's buttons are touch-sized (44 px), as they are on the phone (80 × 44 each).
 **Actual:** the card is right in every other way — "Save the marks on sv-close.pdf? It has 1 mark that is not saved…", whole on screen,
@@ -634,8 +639,9 @@ nothing over it; Cancel keeps the tab and the mark; Save as… goes through Andr
 and the tab closes — but its buttons measure Save 50 × 30, Save as… 78 × 30, Discard 66 × 30, Cancel 62 × 30. Discard sits 2 px from
 Save as…, so a slip of the finger discards. (Run 43854550313, Android 04c052a + Foundation 71754e1 (patch 29) + Mobile UI ca152c4, Release, API 36.)
 **Fix:** the phone's 44 px rule for `.closeq .fc-btn` on the tablet shell too, with a wider gap before Discard.
+**Round 13:** fixed. Behaviour as before (asks; Cancel keeps; Save as… saves and closes).
 
-## AT-27 · S2 · Mobile UI (H-25) / Foundation (mark gestures) · open, **confirmed** R12e — Pinching in Mark mode with the Rectangle tool armed zooms *and* draws a rectangle (phone and tablet); on the phone the page then cannot be pinched back
+## AT-27 · S2 · Foundation patch 30 · **verified, closed** R13: in Mark mode with Rectangle armed, pinch out and in zoom the page and leave no mark, phone and tablet — Pinching in Mark mode with the Rectangle tool armed zooms *and* draws a rectangle (phone and tablet); on the phone the page then cannot be pinched back
 **What I saw:** phone, Read mode: pinch out zooms (page 388 → 1,242 px, run 43847609716). In **Mark** mode the same gesture left the
 page at the same size twice: a pinch in with the Rectangle tool armed (43847609716) and a pinch out with the Text tool armed
 (43851708067). On the tablet both pinches work in Mark mode. A mark drawn on the phone is saved where drawn (0.4 pt, page 2), and a
@@ -659,6 +665,7 @@ ask-before-closing card, is then asked about saving a mark they never meant to m
 passing — worth comparing which tool it arms (mine: Rectangle).
 **Fix:** when a second finger lands while a shape is being started, drop the shape (and do not select it); let two-finger pinch
 through whatever tool is armed. Mobile UI / Foundation between them.
+**Round 13 (run 43906867066, Android a0b3e66 + Foundation 4b704c8 (patch 30) + Mobile UI ae6ae6d, Release, API 36):** Read and Mark mode both 388 → 1,242 → 388 (phone) and 596 → 1,907 → 596 (tablet), 0 marks before and after. A rectangle drawn on the phone at the pinched zoom is saved within 0.1 pt of where it was drawn (page 2).
 
 ## AT-28 · S3 · Mobile UI · open — Export card and Merge page: controls are 28–34 px high on phone and tablet
 Measured in run 43885159508 (Android 5208bf0): Export as image card — format and range chips SVG / PNG / JPG / BMP, This page /
@@ -667,6 +674,18 @@ Add files, Add open documents, Merge & Save: 32–33 px. The Press card is built
 same components) and my design suite has not been measuring any of these cards, so AT-06's "all pass" covered the shell, not them.
 **Expected:** 44 px on touch shells. **Fix:** the same touch-size rule for card chips, card primary buttons and the page-level
 buttons of Merge / Split; I am adding these cards to `ci/design.py` so they are measured every round.
+**Round 13:** unchanged — Export card chips 28–29 px, **Export →** 34, "change…" 16–17, Close 19; Merge page buttons 32–33 px, on both devices. Still open.
+
+## AT-29 · S3 · Foundation (shared Ui) / Mobile UI · open, intermittent — Phone: turning the phone just after moving to another page can drop back to page 1
+**Steps:** phone API 36, portrait, a 12-page PDF. Next page twice (box "3 / 12"), then turn to landscape at once.
+**Expected:** still page 3. **Actual (R13):** box "1 / 12", page 1 on screen; same tab, same process, nothing lost but the place.
+**How often:** the check (`function.py` F-14) passed in rounds 10, 11 and 12 and failed in 11c and 13 — in 11c with the opposite
+reading (1 before, 3 after), which I put down to my sampling. Round 13 is unambiguous: 3 before, 1 after. The drift check after a
+rotation (box agrees with the page on screen) passes every time, so the box is honest; it is the place that is lost. My guess: the
+turn arrives while the move to page 3 is still settling (pages not yet drawn: "rendered 0" in the before-sample), and the new layout
+starts from the top.
+**Fix:** hold the target page through a layout change (rotation, split screen) until it has been reached. I'll add a second variant
+that waits two seconds before turning, to separate "always" from "only mid-move".
 
 ## D-190 checks (not bugs) — the ask-before-closing card and Excel resize, by touch
 - **Phone, close card:** PASS in R12 and 12b. Tabs sheet › × on a tab with unsaved marks → "Save the marks on sv-close.pdf? It has 2

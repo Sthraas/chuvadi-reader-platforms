@@ -267,6 +267,24 @@ Build from clean: 0 errors, 0 warnings, repo `global.json` (SDK 10.0.403, worklo
 
 The two one-off failures of round 11c (tablet restart, phone rotation sample) did not come back.
 
+## Round 13 (run 43906867066, Android a0b3e66 + Foundation 4b704c8 (patch 30) + Mobile UI ae6ae6d, Release, API 36)
+Build from clean: 0 errors, 0 warnings. As-built Release: 0 crashes, device health normal throughout.
+
+| Area | Phone | Tablet |
+|---|---|---|
+| Save suite | 39 of 43 — one fail is my own (pinch in with a mark's card up), three n/a | 38 of 43 — one fail is my own (page finder after the pinch), four n/a |
+| AT-23 Reduce + Export land in Documents | PASS | PASS |
+| AT-27 pinch in Mark mode, no stray mark | PASS | PASS |
+| AT-26 / AT-25 touch sizes (close card, Excel reset) | PASS | PASS |
+| AT-10 text box typing | whole | whole (watch) |
+| Mark at a pinched zoom, saved in place | PASS (0.1 pt) | not measured this round (my check); PASS in R12 |
+| Close card, Excel resize, Bind all, AT-21, AT-20 | PASS | PASS |
+| Drift suite | 7 of 7 | 7 of 7 |
+| Function | 16 of 19 — rotation lost the page (AT-29) + my old print step | 17 of 19 (my old print step) |
+| Design / touch targets (shell) | 42 of 42 | 30 of 30 |
+| Export card / Merge page control sizes | 28–34 px — AT-28 | 29–34 px — AT-28 |
+| AT-13 | 5 of 5 (5.6–6.2 s) | 5 of 5 (6.9–7.6 s) |
+
 ## Blocked in CI: Reader on Android 15 (API 35)
 The API 35 image ships WebView 124, so the app correctly shows only its update screen (D-105). Updating it in CI from the API 36
 image's WebView failed twice: that WebView needs the Trichrome static library, which my donor job couldn't locate on the API 36
