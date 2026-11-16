@@ -122,3 +122,8 @@ version and the Mac model, and attach a screenshot where it says so.
 - [ ] After using it for a while: ~/Library/Logs/Chuvadi exists, Console.app shows it, and nothing in it names a document or shows its text (D-132).
 - [ ] Trackpad: pinch on a page zooms in and out around the pointer; the bars and rails never scale (MacPinch).
 - [ ] Select several files in Finder and open them together: they become tabs in name order (M-24).
+
+## Before closing (D-190) — on a real Mac
+With a mark drawn and not saved: Quit from the Dock menu, log out, and close the window from Mission Control — each
+should show the question and hold the close. Save and Save as from the card should then let the quit go on. With
+nothing unsaved, each should close at once.

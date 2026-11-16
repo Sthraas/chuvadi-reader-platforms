@@ -638,3 +638,26 @@ only): **0 failed**. Patch 28 carries the keys patch, so M-28 now passes on the 
   first was cancelled (first attempt of run 43766024618); passed on the re-run.
 - **M-24 second cause:** with `docs/mac/foundation/M-24-open-requests-one-at-a-time.patch` tried, both batches in name
   order. Still with Foundation.
+
+### 2026-11-16 (evening) — rebased onto foundation-pr 71754e1 (patch 29); the question before closing (D-190)
+Code head f53dd82. Run 43843112648 (workload set 10.0.401 swapped in on the runner only): first attempt 1 failed,
+second attempt **0 failed** — see the last point.
+- **Close paths:** closing a tab, the other tabs and all tabs ask inside the kit (`TabsService`); the Mac menu items
+  call the shared commands, so the host adds nothing. **Quit** (⌘Q, the Chuvadi menu, the Dock, another app asking,
+  log-out) and **closing the window** (the Ui's red button — `IWindowControls.Close`, AppKit's performClose: — and
+  anything else that closes it) are the host's: `Platform/MacCloseGuard.cs`, through Foundation's `IUnsavedWork`.
+  Nothing unsaved: the close goes on at once, as before. Unsaved marks: the close is held, the window comes forward,
+  the card asks, and the close goes on only on "close now".
+- **How:** Mac Catalyst gives a UIKit app no callback that can hold a quit or a window close. AppKit has both
+  (`applicationShouldTerminate:`, `windowShouldClose:`) on delegates UIKit owns; the guard puts a method in front of
+  each and passes every call it does not hold on to UIKit's own. If a hook cannot be placed it is logged and that
+  close goes on unasked, as before D-190. `AllowUnsafeBlocks` is on in the Mac project for the two function pointers.
+- **Smoke (marks phase):** a mark is drawn, then real ⌘Q → the card, app open; Cancel → app and tab kept; the close
+  button → the card; Cancel → window kept; ⌘Q and Discard → the app quits. All other phases quit with nothing
+  unsaved and no question. Not covered on the runner: Save and Save as from the card on a quit, log-out, the Dock menu.
+- **M-26, vector (Arun's rule):** the smoke now also writes the page, drawn by the print renderer's own code, into a
+  PDF and counts images in it: `pdf-bytes=916 pdf-images=0`.
+- **Seen once, not explained:** first attempt, several-files phase — after ten files the tab on screen (many10.pdf)
+  was at zoom 1.000 from the start (fit is 0.502) and two pinch steps left it at 1.000. Second attempt: 0.502 →
+  0.753 → 0.377. Mac pinch code unchanged since the last green run on patch 28. Log: run 43843112648 attempt 1,
+  artifact `mac-test-results/smoke-many.log`.
