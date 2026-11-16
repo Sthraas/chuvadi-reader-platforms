@@ -1,7 +1,15 @@
 # Web portal UI — existing-file hooks
 
-## Still to apply — the ask-before-closing card keeps the keyboard inside it (found 16 Nov, checking patch 29 / D-190)
-Routed to the Foundation by the coordinator, 16 Nov 21:35. Not in patch 30; it still applies cleanly to **6d80aa3** (patch 30).
+## Still to apply — the encoding picker's rows are finger-sized on tablet and phone (found 16 Nov, checking patch 31 / D-191)
+**`proposal/web-ui-encoding-rows-finger-size.patch`**, against foundation-pr **b895750** (applies cleanly). One file, `Ui/wwwroot/css/shell.css`, 2 lines added after the `.enc-*` rules:
+`html[data-shell="tablet"] .enc-row, html[data-shell="phone"] .enc-row { min-height: 44px; }`, the same pattern as AT-25 and AT-26 in patch 31.
+
+Why: the five rows of "Read this file as" are 34 px tall on every profile. On the tablet and the phone they are worked by a finger, where the app's other rows are 44 px (`.pop-item`, the phone's tools) to 48 px.
+
+Measured (Chromium / Firefox / WebKit; the same in all three): rows 34 → **44 px** on portal tablet and portal phone; **34 px, unchanged**, on portal desktop and the Windows profile; the card stays inside the screen (phone: 410–764 of 844 px). Screenshot: `screenshots/webkit-encoding-rows-finger-phone.png`.
+
+## Applied by the Foundation (patch 31, commit 6f7790e, with AT-26's finger-sized buttons; checked on b895750) — the ask-before-closing card keeps the keyboard inside it (D-190)
+The two focus stops and `FocusCloseAskAsync` are in as sent. Checked on b895750: Tab goes Save › Save as… › Discard › Cancel › Save, Shift Tab the other way, and Esc cancels, in three browsers on the portal and Windows profiles.
 
 **`proposal/web-ui-close-card-keeps-focus.patch`**, against foundation **7c0b4bc** (= foundation-pr 71754e1 for `src`; applies cleanly, alone and with the two diffs below). Two files, 14 lines added and 1 removed:
 - `Ui/Layout/MainLayout.razor`: two focus stops (`<span class="closeq-edge" tabindex="0" aria-hidden="true">`), one before the first button and one after Cancel. The first sends focus to Cancel, the second to the first button (`FocusCloseAskAsync`); Cancel gets a `@ref`.

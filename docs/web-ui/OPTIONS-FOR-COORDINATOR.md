@@ -258,3 +258,24 @@ The question (coming to Arun from Web): on the portal the card's Save writes the
 1. **Save should download, as Ctrl S does on the portal, and the tab closes once the download has been handed to the browser.** D-03 already says that on the Web "Save = browser download", and the Web host delivers Save and Save as as downloads. One word should do one thing (the WT-10 rule).
 2. **Not "as is".** A Save that only updates the server's copy and then closes the tab looks finished but leaves nothing on the person's computer, and 12a promises that copy is wiped at sign-out. It is the one path where the card loses the work it exists to protect.
 3. **Keep D-190's order: Save · Save as… · Discard · Cancel, if Save as… asks for a name on the portal; show Save alone if both would hand over the same download.** Two buttons that do the same thing make the person stop and wonder. "Only Save as…" is safe, but it drops the one-press answer the card is built around.
+
+## Recorded: D-194 (coordinator 16 Nov 22:50)
+On the portal the ask-before-closing card offers only Save as…, also on Sign out; it arrives with patch 32. I will check it in the portal then.
+
+## Observations from the patch 31 check (16 Nov): the encoding picker (D-185, D-191)
+Checked in Chromium, Firefox and WebKit on portal desktop, tablet, phone and the Windows profile, with five small files made for it (UTF-8, Windows-1252 and UTF-16 LE text, UTF-8 Markdown, HTML that declares windows-1252).
+
+**As designed** (the same in all 12 cases unless said):
+- Detection: all five files are read right at once, and the HTML file's own declared charset is honoured.
+- Status bar (desktop and Windows; the tablet and phone have no status bar): a small button with the encoding's name and a chevron, tooltip "Read this file as…", read out as "Read this file as… Now Windows-1252".
+- Other ways in: Document ▾ › "Text encoding…" (desktop, tablet, Windows), ⋮ › "Text encoding…" (phone).
+- The card: title "Read this file as" with the file type; rows Automatic (with what was detected), UTF-8, Windows-1252, UTF-16 LE, UTF-16 BE; exactly one chosen; footer "The file itself is never changed. Your choice is remembered while the file is in Recents." LiPi Sans 12.5 px, the same card as the other tools; a bottom sheet on the phone; always inside the screen.
+- Choosing: UTF-8 on the Windows-1252 file re-reads it at once ("Caf� …"), shows "9 bytes don't fit UTF-8" in the card, and the status button says UTF-8. Windows-1252 puts it right and the note goes. Automatic returns to detection. The file's bytes never change.
+- Keyboard: Enter on the status button opens the card; Enter or Space on a row chooses it; Tab goes down the rows in order; Esc closes the card from anywhere.
+- Kept without a reload: after going to Home and back to the tab, the choice and the text are still there.
+
+**For the coordinator to decide or pass on:**
+1. **Rows are 34 px on tablet and phone** → small diff in HOOKS (`web-ui-encoding-rows-finger-size.patch`).
+2. **Two names for one thing.** The status button and the card say "Read this file as…"; the Document and ⋮ menus say "Text encoding…". By the WT-10 rule (one word for one action) the menu entry could read "Read this file as…" too. Pros: one name everywhere. Cons: "Text encoding…" is the word a person who knows the term looks for in a menu, and Ctrl K still finds it by "encoding" either way (the command keeps those keywords).
+3. **The keyboard doesn't land in the card.** Opened from the status button, the focus stays on that button, and the first row is 20 Tabs away (22 on the Windows profile), because the status bar is last on the page. Arrow keys don't move between the rows. Both are how every card and radio group in the app behaves today (FloatCard has no focus handling; Print's page range and the Settings segments are the same), so the picker is consistent with the design language; the gap is the app's, not the picker's. A fix belongs in FloatCard, for all cards at once.
+4. **Not provable in my preview: the choice after a page reload.** Here a reload forgets it, because the preview has no session storage. On the real portal Recents live in the session's storage on the server (`SessionAppStorage`), so the choice should survive F5. For Web Test: choose an encoding, press F5, expect it kept.

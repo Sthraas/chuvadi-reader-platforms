@@ -484,3 +484,24 @@ Build `-warnaserror` 0 warnings. Tests 438 + 16 + 41 + 102 = **597 pass**, 0 fai
 
 ### 6. View on the card's Save on the portal
 Three lines in OPTIONS: Save should download as Ctrl S does (D-03), not stay as it is.
+
+## 2026-11-16 — session 27 (coordinator 22:50: merge patch 31 and the encoding picker Ui; check the picker in the portal)
+
+### 1. Last time's CI
+Run on f685f8c: all nine jobs green (the two macOS jobs ran after I reported).
+
+### 2. Branches and merge
+Checked all: `platform/foundation-pr` b895750, `platform/foundation` 9bef505, `main` f88a6f6 (D-194 to D-196), `platform/web` 21665a3, `platform/web-test` 9e4cc6a, `platform/mobile-ui` 1720924.
+This time no commit on `platform/foundation` has foundation-pr's code: the encoding picker Ui (f222811, PR 23) went into Reader main and was merged from there into foundation-pr. foundation-pr itself conflicts with this branch in 39 paths (its squashed history). So: merged `platform/foundation` 9bef505 (clean), then cherry-picked f222811. That stopped on one conflict (`Reader.razor`, patch 31 and the picker next to each other), which the Foundation had already resolved in b895750, so I took the Foundation's resolved files (`src`, `tests`, `ci`, `global.json`, `tools/PixelProof`) from b895750 as they are. Result: those are **byte-identical to foundation-pr b895750**; this branch still differs only by the design handoff, the coordination docs and the CI workflows it keeps.
+
+### 3. Build and tests
+Build `-warnaserror` 0 warnings. Tests 438 + 16 + 41 + 102 = **597 pass**, 0 fail, 6 skipped (the Foundation's).
+
+### 4. The encoding picker in the portal
+Three browsers × four profiles on copies of a Windows-1252 text file, plus the five-file detection check. Results and four points in OPTIONS. One diff: `proposal/web-ui-encoding-rows-finger-size.patch`.
+
+### 5. My keep-focus diff
+In patch 31 (6f7790e). Re-checked: Tab and Shift Tab cycle inside the card and Esc cancels, three browsers, portal and Windows profiles.
+
+### 6. Portal surfaces against patch 30's screenshots
+63 screenshots: text identical; pixels identical apart from the known flaky Chromium chip sliver (Home's date and greeting masked). Drop overlay 6 of 6.
