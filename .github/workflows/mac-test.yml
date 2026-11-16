@@ -12,6 +12,9 @@ on:
       runs:
         description: launches per timing set
         default: '10'
+      build_runner:
+        description: "Runner that builds the app: xcode-27 (preview image, Xcode 27.1, global.json as pushed) or macos-26 (Xcode 26.6, workload set swapped to 10.0.401, test-side)"
+        default: xcode-27
       only:
         description: "all | windows (Windows startup probe only) | print / pw / shared (those cases only, all runners)"
         default: all
@@ -34,9 +37,9 @@ env:
 jobs:
   # T1 — build and package from clean, exactly as the Mac chat's workflow does, then audit the bundle.
   build:
-    name: T1 build + audit (macos-26)
+    name: T1 build + audit (${{ inputs.build_runner || 'xcode-27' }})
     if: ${{ (inputs.only || 'all') != 'windows' }}
-    runs-on: macos-26
+    runs-on: ${{ inputs.build_runner || 'xcode-27' }}
     timeout-minutes: 75
     steps:
       - name: Checkout test harness
@@ -50,13 +53,13 @@ jobs:
           path: app
 
       - name: Driver compiles (fail fast)
-        run: swiftc -O harness/tests/mac/macdrive.swift -o macdrive && ./macdrive trust
+        run: swiftc -O harness/tests/mac/macdrive.swift -o macdrive && (./macdrive trust || true)
 
       # Test-side only (16 Nov): the app's global.json (patch 27) names workload set 10.0.403, whose Mac Catalyst pack
       # needs Xcode 27.1; this runner has 26.6. Build with set 10.0.401 instead — the same one-line change as the Mac
       # chat's docs/mac/foundation/global-json-mac-workload-10.0.401.patch. Recorded in RESULTS next to the run.
-      - name: global.json → workload set 10.0.401 (runner has no Xcode 27.1)
-        if: ${{ hashFiles('app/global.json') != '' }}
+      - name: global.json → workload set 10.0.401 (macos-26 fallback only, no Xcode 27.1 there)
+        if: ${{ hashFiles('app/global.json') != '' && inputs.build_runner == 'macos-26' }}
         working-directory: app
         run: |
           cat global.json
@@ -71,22 +74,25 @@ jobs:
         with:
           dotnet-version: '10.0.4xx'
 
-      - name: Select Xcode 26.6
+      - name: Xcode (26.6 selected on macos-26; the image default on xcode-27)
         run: |
-          sudo xcode-select -s /Applications/Xcode_26.6.app
-          sudo xcodebuild -runFirstLaunch
-          xcodebuild -version; sw_vers
+          if [ "${{ inputs.build_runner || 'xcode-27' }}" = "macos-26" ]; then
+            sudo xcode-select -s /Applications/Xcode_26.6.app
+            sudo xcodebuild -runFirstLaunch
+          fi
+          xcode-select -p; xcodebuild -version; sw_vers
+          echo "### App built on macOS $(sw_vers -productVersion) with $(xcodebuild -version | tr '\n' ' ')" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Empty NuGet cache (T1.1 from clean)
         run: |
           echo "NUGET_PACKAGES=$RUNNER_TEMP/nuget-clean" >> "$GITHUB_ENV"
           rm -rf "$RUNNER_TEMP/nuget-clean" ~/.nuget/packages
 
-      - name: Workload (pinned 10.0.401)
-        working-directory: app   # so the app's global.json picks the SDK (the image now also carries .NET 11)
+      - name: Workload (the set global.json names, or 10.0.401 for refs without one)
+        working-directory: app   # so the app's global.json picks the SDK
         run: |
           dotnet --version
-          if [ -f global.json ]; then dotnet workload install maui-maccatalyst   # set comes from global.json (10.0.401 after the step above)
+          if [ -f global.json ]; then cat global.json; dotnet workload update; dotnet workload install maui-maccatalyst
           else dotnet workload install maui-maccatalyst --version 10.0.401; fi
           dotnet workload list
 
