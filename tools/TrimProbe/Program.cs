@@ -28,4 +28,21 @@ foreach (var type in services.Select(d => d.ServiceType).Distinct())
 }
 
 Console.WriteLine($"{services.Count} registrations, {services.Select(d => d.ServiceType).Distinct().Count()} services, {failed} could not be built");
-return failed == 0 ? 0 : 1;
+
+// The older code pages must not be switched on by startup, and must all still be there in a trimmed build.
+bool onAtStartup = ChuvadiReader.Core.Documents.TextEncodings.CodePagesOn;
+var missing = 0;
+foreach (var choice in ChuvadiReader.Core.Documents.TextEncodings.All)
+{
+    try
+    {
+        _ = ChuvadiReader.Core.Documents.TextEncodings.Decode("plain"u8, choice.CodePage, out _);
+    }
+    catch (Exception e)
+    {
+        missing++;
+        Console.WriteLine($"FAIL encoding {choice.Name}: {e.GetType().Name}: {e.Message}");
+    }
+}
+Console.WriteLine($"{ChuvadiReader.Core.Documents.TextEncodings.All.Count} encodings, {missing} missing, code pages on at startup: {onAtStartup}");
+return failed == 0 && missing == 0 && !onAtStartup ? 0 : 1;

@@ -212,7 +212,7 @@
             {
                 var n = await Tools.SplitToFolderAsync(_sourcePath, dir);
                 if (n > 0) await WriteBack.DeliverOrThrowAsync(dir);
-                _status = $"Wrote {n} files to {dir}.";
+                _status = $"Wrote {n} files to {PathLabels.Describe(dir)}.";
             }
             catch (Exception ex)
             {

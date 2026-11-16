@@ -2166,7 +2166,7 @@
         {
             var n = await BenchSvc.BindAllAsync(folder!);
             if (n > 0) await WriteBack.DeliverOrThrowAsync(folder);
-            _status = n == 0 ? "Nothing to bind." : $"Bound {n} desk{(n == 1 ? "" : "s")} into {folder}";
+            _status = n == 0 ? "Nothing to bind." : $"Bound {n} desk{(n == 1 ? "" : "s")} into {PathLabels.Describe(folder)}";
             _resultPath = null;
         }
         catch (Exception ex) { _status = ex.Message; _error = true; }
@@ -2727,7 +2727,7 @@
             var n = await BenchSvc.ScatterDeskAsync(deskId, _scatterFolder);
             if (n > 0) await WriteBack.DeliverOrThrowAsync(_scatterFolder);
             _scatterDesk = null;
-            _status = $"Scattered {n} page{(n == 1 ? "" : "s")} into {_scatterFolder}";
+            _status = $"Scattered {n} page{(n == 1 ? "" : "s")} into {PathLabels.Describe(_scatterFolder)}";
             _error = false; _resultPath = null;
         }
         catch (Exception ex) { _status = ex.Message; _error = true; }
@@ -2797,7 +2797,7 @@
             var n = await BenchSvc.ExportDeskAsync(deskId, _expFolder, _expFormat, _expDpi, _expSelectedOnly);
             if (n > 0) await WriteBack.DeliverOrThrowAsync(_expFolder);
             _expDesk = null;
-            _status = $"Exported {n} image{(n == 1 ? "" : "s")} into {_expFolder}";
+            _status = $"Exported {n} image{(n == 1 ? "" : "s")} into {PathLabels.Describe(_expFolder)}";
             _error = false; _resultPath = null;
         }
         catch (Exception ex) { _status = ex.Message; _error = true; }

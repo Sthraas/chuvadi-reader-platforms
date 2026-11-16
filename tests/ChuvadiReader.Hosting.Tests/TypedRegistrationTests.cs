@@ -51,6 +51,7 @@ public sealed class TypedRegistrationTests
         "IAppReadySignal = AppReadySignal",
         "IAppCommands = ShellAppCommands",
         "IncomingFiles = IncomingFiles",
+        "IUnsavedWork = TabsUnsavedWork", // D-190
         "IUiScale = NoopUiScale",
         "IExternalLinks = NoExternalLinks",
         "IWindowControls = NoopWindowControls",

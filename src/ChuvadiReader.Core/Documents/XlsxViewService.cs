@@ -176,6 +176,35 @@ public sealed class XlsxViewService
         }
     }
 
+    private const string TooLargeText =
+        "This Excel workbook is too large to open: it goes beyond what Chuvadi allows. It may be damaged.";
+
+    /// <summary>WT-18: true when the sizes the file itself declares (its zip table of contents, read with .NET's
+    /// own zip reader) go beyond the library's limits: a part's size, the total, the number of parts, or the
+    /// compression ratio. Asked only after the library has refused the file, to word that refusal; it never
+    /// refuses a file by itself. A file that is not a zip (or whose table cannot be read) is not "too large".</summary>
+    internal static bool BeyondPackageLimits(string path, XlsxReaderOptions limits)
+    {
+        try
+        {
+            using var zip = System.IO.Compression.ZipFile.OpenRead(path);
+            if (zip.Entries.Count > limits.MaxPackageEntries) return true;
+            long total = 0;
+            foreach (var entry in zip.Entries)
+            {
+                if (entry.Length > limits.MaxPartBytes) return true;
+                if (entry.CompressedLength > 0 && entry.Length / entry.CompressedLength > limits.MaxCompressionRatio) return true;
+                total += entry.Length;
+                if (total > limits.MaxTotalUncompressedBytes) return true;
+            }
+            return false;
+        }
+        catch (Exception ex) when (ex is InvalidDataException or IOException or UnauthorizedAccessException or NotSupportedException)
+        {
+            return false;
+        }
+    }
+
     private WorkbookView LoadCore(string path, string? password, CancellationToken cancellationToken)
     {
         Workbook wb;
@@ -185,13 +214,18 @@ public sealed class XlsxViewService
         }
         catch (XlsxLimitExceededException ex)
         {
-            throw new DocumentViewException(ViewErrorReason.TooLarge,
-                "This Excel workbook is too large to open: it goes beyond what Chuvadi allows. It may be damaged.", ex);
+            throw new DocumentViewException(ViewErrorReason.TooLarge, TooLargeText, ex);
         }
         catch (XlsxPasswordRequiredException ex)
         {
             throw new DocumentViewException(ViewErrorReason.PasswordProtected,
                 "This workbook is password-protected.", ex);
+        }
+        catch (InvalidDataException ex) when (BeyondPackageLimits(path, ReadOptions(default)))
+        {
+            // WT-18: the library refuses a part that is too big with a plain "invalid data" error (library item
+            // SH-L2), which reads as "damaged". The file's own table of contents says whether it is a size refusal.
+            throw new DocumentViewException(ViewErrorReason.TooLarge, TooLargeText, ex);
         }
         catch (XlsxFormatException ex)
         {
