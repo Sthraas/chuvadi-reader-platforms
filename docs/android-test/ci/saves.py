@@ -1108,11 +1108,17 @@ def sv14_excel_resize():
     touch("swipe", a[0], a[1], b[0], b[1], 700)
     time.sleep(1.5)
     c1 = cdp.js(COL)
+    how = "plain drag"
+    if c1 and c1["w"] - c0["w"] <= 40:
+        touch("longdrag", a[0], a[1], b[0], b[1], 700, 900)     # Mobile UI 1720924: resize by finger takes a hold
+        time.sleep(1.5)
+        c1 = cdp.js(COL)
+        how = "hold, then drag"
     shot("sv14-column-wider")
-    R.check("SV-14a dragging column A's right edge with a finger makes it wider (about 70 px)", bool(c1 and c1["w"] - c0["w"] > 40), {"width_before": round(c0["w"]), "width_after": round(c1["w"]) if c1 else None, "marked_own": c1 and c1["own"], "header_h": round(c0["h"])})
+    R.check("SV-14a dragging column A's right edge with a finger makes it wider (about 70 px)", bool(c1 and c1["w"] - c0["w"] > 40), {"width_before": round(c0["w"]), "width_after": round(c1["w"]) if c1 else None, "marked_own": c1 and c1["own"], "header_h": round(c0["h"]), "gesture": how})
     r0 = cdp.js(ROW)
     a, b = to_screen((r0["left"] + r0["right"]) / 2, r0["bottom"] - 1), to_screen((r0["left"] + r0["right"]) / 2, r0["bottom"] + 40)
-    touch("swipe", a[0], a[1], b[0], b[1], 700)
+    touch("longdrag" if how != "plain drag" else "swipe", a[0], a[1], b[0], b[1], 700, *([900] if how != "plain drag" else []))
     time.sleep(1.5)
     r1 = cdp.js(ROW)
     R.check("SV-14b dragging row 2's lower edge with a finger makes it taller (about 40 px)", bool(r1 and r1["h"] - r0["h"] > 20), {"height_before": round(r0["h"]), "height_after": round(r1["h"]) if r1 else None, "marked_own": r1 and r1["own"], "header_w": round(r0["w"])})

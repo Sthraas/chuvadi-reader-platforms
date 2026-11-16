@@ -338,16 +338,36 @@ esc()
 # F-14 Rotation with an open document and a card open
 open_with(uris["doc-12p.pdf"])
 wait_state(lambda s: (s.get("tab") or "").lower().startswith("doc-12p"), 30, "doc")
+time.sleep(3)
 tap("Next page")
+time.sleep(2.5)                      # settled: the move to the next page is over before the turn (AT-29)
 before = state()
 set_rotation(1 - portrait_rotation())
-time.sleep(2)
+time.sleep(3)
 after = wait_state(lambda s: s.get("rendered", 0) >= 1, 20, "after rotation")
 shot("rotated")
 R.check("F-14 rotation keeps the document, page and process",
         after.get("counter") == before.get("counter") and after.get("tab") == before.get("tab"),
-        {"before": before, "after": after})
+        {"before": {k: before.get(k) for k in ("counter", "tab", "rendered")}, "after": {k: after.get(k) for k in ("counter", "tab", "rendered")}})
 set_rotation(portrait_rotation())
+time.sleep(3)
+# F-14b (AT-29): the turn comes at once after a page move
+tap("Next page")
+b2 = state()
+set_rotation(1 - portrait_rotation())
+time.sleep(4)
+mid = state()
+set_rotation(portrait_rotation())
+time.sleep(3)
+a2 = state()
+want = None
+try:
+    want = int(str(before.get("counter")).split("/")[0]) + 1
+except Exception:
+    pass
+got = [str(x.get("counter")).split("/")[0].strip() for x in (mid, a2)]
+R.check("F-14b (AT-29) turning at once after a page move keeps the page moved to", want is not None and got == [str(want), str(want)],
+        {"page_wanted": want, "sample_at_the_turn": b2.get("counter"), "in_landscape": mid.get("counter"), "back_in_portrait": a2.get("counter")})
 
 # F-15 Process death and restore
 p_before = pid()
