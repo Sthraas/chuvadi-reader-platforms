@@ -628,7 +628,7 @@ and the tab closes — but its buttons measure Save 50 × 30, Save as… 78 × 3
 Save as…, so a slip of the finger discards. (Run 43854550313, Android 04c052a + Foundation 71754e1 (patch 29) + Mobile UI ca152c4, Release, API 36.)
 **Fix:** the phone's 44 px rule for `.closeq .fc-btn` on the tablet shell too, with a wider gap before Discard.
 
-## AT-27 · S3 · Mobile UI · open, **needs one confirming look** — Phone: two-finger pinch does not zoom while in Mark mode
+## AT-27 · S2 · Mobile UI (H-25) / Foundation (mark gestures) · open, **confirmed** R12e — Pinching in Mark mode with the Rectangle tool armed zooms *and* draws a rectangle (phone and tablet); on the phone the page then cannot be pinched back
 **What I saw:** phone, Read mode: pinch out zooms (page 388 → 1,242 px, run 43847609716). In **Mark** mode the same gesture left the
 page at the same size twice: a pinch in with the Rectangle tool armed (43847609716) and a pinch out with the Text tool armed
 (43851708067). On the tablet both pinches work in Mark mode. A mark drawn on the phone is saved where drawn (0.4 pt, page 2), and a
@@ -636,6 +636,22 @@ zoom set in Read mode is kept when switching to Mark — so the route "zoom, the
 **What I have not shown:** that my two fingers were on the page and not on the phone's mark card in the first case, and whether this
 is the intended reading of H-25 ("pinch in Mark leaves no mark") — if pinch is meant to be swallowed in Mark mode on the phone, say
 so and I'll close this. Next round runs the clean case (Mark mode, no card up, pinch out and in on the page).
+**Round 12e — the clean case (run 43875203343, Android 5208bf0 = same app as round 12; phone and tablet, portrait).** Fresh file,
+no marks, both fingers on the page, no card up.
+| | Read mode | Mark mode, Rectangle armed |
+|---|---|---|
+| Phone | 388 → 1,242 → 388 px, no mark — PASS | 388 → 1,242, **a rectangle is drawn** ("1 shape · unsaved"), its card comes up, and the pinch in leaves the page at 1,242 |
+| Tablet | 596 → 1,907 → 596, no mark — PASS | 596 → 1,907 → 596, **a rectangle is drawn** and selected |
+
+`screenshots/r12/r12e-pinch-in-mark-mode-leaves-a-rectangle.png`.
+So the earlier wording was wrong in one respect: pinch does zoom in Mark mode. The faults are (1) the first finger of a pinch starts a
+shape and the shape is kept — H-25 says it should not be; (2) on the phone the stray shape's card then takes the lower half of the
+screen, and the pinch back does nothing. A person who pinches while marking gets an unwanted rectangle each time and, with the
+ask-before-closing card, is then asked about saving a mark they never meant to make.
+**Caveat:** my two fingers land a few milliseconds apart, as real fingers do. The Android chat's own gesture check reports H-25 as
+passing — worth comparing which tool it arms (mine: Rectangle).
+**Fix:** when a second finger lands while a shape is being started, drop the shape (and do not select it); let two-finger pinch
+through whatever tool is armed. Mobile UI / Foundation between them.
 
 ## D-190 checks (not bugs) — the ask-before-closing card and Excel resize, by touch
 - **Phone, close card:** PASS in R12 and 12b. Tabs sheet › × on a tab with unsaved marks → "Save the marks on sv-close.pdf? It has 2

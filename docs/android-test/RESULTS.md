@@ -257,7 +257,8 @@ Build from clean: 0 errors, 0 warnings, repo `global.json` (SDK 10.0.403, worklo
 | Excel resize by finger (D-190) | PASS | PASS |
 | Pinch out | PASS (388 → 1,242 px) | PASS (596 → 1,907) |
 | Mark at a zoom, saved in place | at zoom 1: PASS (0.4 pt, 12c); at a pinched zoom not shown yet — AT-27 | PASS (0.1 pt) |
-| Pinch while in Mark mode | no zoom, 2 of 2 tries — AT-27, to confirm | PASS, out and in |
+| Pinch while in Mark mode (12e, clean case) | zooms out but draws a rectangle and won't pinch back — AT-27 | zooms out and in but draws a rectangle — AT-27 |
+| Pinch in Read mode (12e) | PASS, out and in, no mark | PASS |
 | Text box typing (11 keys) | whole, 2 of 2 | first key lost 3 of 4 — AT-10 reopened |
 | Drift suite incl. AT-16, AT-24 | 7 of 7 | 7 of 7 |
 | Function | 17 of 19 (my old print step; print passes in the save suite) | 17 of 19 (same) |
