@@ -1051,7 +1051,17 @@ export async function scrollToMatch(deskEl, index) {
                 : deskEl.scrollLeft;
             const w = deskEl.querySelector('.rpage-wrap[data-page="' + index + '"]');
             // Snapping pages place themselves; otherwise (a zoomed or tall page) the view is the match's.
-            if (w && !/^(y|both|block)/.test(getComputedStyle(deskEl).scrollSnapType || '')) {
+            const snaps = /^(y|both|block)/.test(getComputedStyle(deskEl).scrollSnapType || '');
+            if (w && snaps) {
+                // Page at a time: the target is the match's own page. A point a third of the way above a match low
+                // on its page is nearer the next page's snap line, and the desk settled there, the match off screen.
+                // (Mobile UI H-26.) Where the page is taller than the view (fit to width on a wide screen) and the
+                // match is below the first screenful, the page's top would leave it off screen: there the match's
+                // own place is kept, never above the page's top.
+                const wTop = deskEl.scrollTop + (w.getBoundingClientRect().top - d.top);
+                top = hTop + h.height <= wTop + view ? wTop : Math.max(wTop, top);
+            }
+            if (w && !snaps) {
                 const r = w.getBoundingClientRect(), wTop = deskEl.scrollTop + (r.top - d.top), wEnd = wTop + r.height;
                 // Stay on the match's page where the match allows (AT-09: a match at a page's foot, a third of the
                 // way down, left the next page covering most of the view, and the page box said that page).

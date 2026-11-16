@@ -92,8 +92,8 @@
 .xv-mode-btn.on { background: var(--chvd-surface-hi); color: var(--chvd-ink); font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.08); cursor: default; }
 .xv-mode-btn:disabled { opacity: .45; cursor: not-allowed; pointer-events: none; }
 
-/* D-188: Find matches in hidden rows and columns, named above the sheet */
-.xv-hiddenhits { flex: 0 0 auto; padding: 4px 12px; border-bottom: 1px solid var(--chvd-border); background: var(--chvd-surface-raised, var(--chvd-surface)); color: var(--chvd-ink); font-size: 12px; line-height: 1.4; user-select: text; }
+/* D-188, D-192: Find matches in hidden rows and columns, named under the sheet (the Find box covers the top) */
+.xv-hiddenhits { flex: 0 0 auto; padding: 4px 12px; border-top: 1px solid var(--chvd-border); background: var(--chvd-surface-raised, var(--chvd-surface)); color: var(--chvd-ink); font-size: 12px; line-height: 1.4; user-select: text; }
 
 /* D-190: sizes for viewing only. A header whose size is the person's own carries a mark; the measuring box for a
    fit is out of sight and outside the zoomed sheet, so it reads sizes at 100 %. */

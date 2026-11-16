@@ -70,6 +70,26 @@ public static class TextEncodings
         new(1258, "Vietnamese (Windows-1258)", "South-East Asian"),
     ];
 
+    /// <summary>D-191: the encodings the first picker offers, after "Automatic" (which is no code page: null).
+    /// All four are .NET's own or the Reader's own table, so choosing any of them never switches the code-pages
+    /// provider on. <see cref="All"/> is the longer list for "More encodings", when that is decided.</summary>
+    public static IReadOnlyList<TextEncodingChoice> FirstChoices { get; } =
+    [
+        new(Utf8, "UTF-8", "Unicode"),
+        new(Windows1252, "Windows-1252", "Western"),
+        new(Utf16Le, "UTF-16 LE", "Unicode"),
+        new(Utf16Be, "UTF-16 BE", "Unicode"),
+    ];
+
+    /// <summary>The name to show for a code page: the short one where the first picker has it (so "Windows-1252"
+    /// reads the same whether it was chosen or worked out), else the long list's, else the number.</summary>
+    public static string NameOf(int codePage)
+    {
+        foreach (var choice in FirstChoices)
+            if (choice.CodePage == codePage) return choice.Name;
+        return Find(codePage)?.Name ?? "Code page " + codePage.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    }
+
     /// <summary>The list entry for a code page number, or null when it is not one of ours.</summary>
     public static TextEncodingChoice? Find(int codePage)
     {
