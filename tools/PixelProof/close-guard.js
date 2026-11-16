@@ -49,6 +49,13 @@ const post = (path) => fetch(base + path, { method: 'POST' }).then(r => r.json()
   let c = await card();
   check(!!c && c.title.includes(name(A)) && JSON.stringify(c.buttons) === JSON.stringify(['Save', 'Save as…', 'Discard', 'Cancel']), 'closing a tab with marks asks: Save / Save as / Discard / Cancel', JSON.stringify(c));
   check(await active() === name(A), 'the file asked about is the one on screen');
+  // The keyboard stays in the card (Web portal UI): Tab and Shift Tab go round its buttons, never to the page behind.
+  const focused = () => p.evaluate(() => { const a = document.activeElement; return a && a.closest('.closeq') ? a.textContent.trim() : 'OUTSIDE:' + (a ? a.tagName + '.' + a.className : 'none'); });
+  const round = [await focused()];
+  for (let i = 0; i < 5; i++) { await p.keyboard.press('Tab'); await p.waitForTimeout(120); round.push(await focused()); }
+  const back = [];
+  for (let i = 0; i < 5; i++) { await p.keyboard.press('Shift+Tab'); await p.waitForTimeout(120); back.push(await focused()); }
+  check(![...round, ...back].some(f => f.startsWith('OUTSIDE')) && round[4] === round[0] && new Set(round).size === 4, 'Tab and Shift Tab go round the card\'s four buttons and never leave it', JSON.stringify(round) + ' ' + JSON.stringify(back));
   await p.keyboard.press('Escape'); await p.waitForTimeout(500);
   check(!(await card()) && (await tabNames()).includes(name(A)) && await shapes() === 1, 'Escape is Cancel: the tab stays, the mark stays');
   await closeX(A); await answer('Cancel');
