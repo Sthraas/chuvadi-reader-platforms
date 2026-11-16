@@ -285,6 +285,23 @@ Build from clean: 0 errors, 0 warnings. As-built Release: 0 crashes, device heal
 | Export card / Merge page control sizes | 28–34 px — AT-28 | 29–34 px — AT-28 |
 | AT-13 | 5 of 5 (5.6–6.2 s) | 5 of 5 (6.9–7.6 s) |
 
+## Round 14 (run 43925116452, Android 582b3be + Foundation b895750 (patch 31) + Mobile UI 1720924, Release, API 36)
+Build from clean: 0 errors, 0 warnings. As-built Release: 0 crashes, device health normal throughout.
+
+| Area | Phone | Tablet |
+|---|---|---|
+| Save suite | 39 of 43 — one fail is my own (pinch in with a mark's card up), three n/a | 40 of 44 — no failures, four n/a |
+| Drift suite | 6 of 7 — **Find lands on page 4 again (AT-24 reopened)** | 7 of 7 |
+| AT-10 text box typing | whole | whole |
+| Rotation keeps the page (settled) | PASS | PASS |
+| Excel resize by finger | PASS (plain drag still works) | PASS |
+| Reduce / Export land in Documents (AT-23) | PASS | PASS |
+| Merge page button sizes | 44 px | 45 px |
+| Export card control sizes | 28–34 px — AT-28 | 29–34 px — AT-28 |
+| Function | 20 of 23 — my old print step ×2, my at-once rotation variant | 18 of 20 — my old print step ×2 |
+| Design / touch targets (shell) | 42 of 42 | 30 of 30 |
+| AT-13 | 5 of 5 (4.0–4.1 s) | 5 of 5 (6.9–7.5 s) |
+
 ## Blocked in CI: Reader on Android 15 (API 35)
 The API 35 image ships WebView 124, so the app correctly shows only its update screen (D-105). Updating it in CI from the API 36
 image's WebView failed twice: that WebView needs the Trichrome static library, which my donor job couldn't locate on the API 36

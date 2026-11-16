@@ -132,7 +132,7 @@ type `zephyrine`.
 says 2. **Evidence:** R2 run 42533545934 › results-tablet-api36 › function/04-find.png (`screenshots/r1/r2-find-print.png`, left).
 Re-checked next round on phone too (phone typing in R2 was cut short by the test, see notes).
 
-## AT-10 · S2 · Foundation (shared Ui) · **watch**: tablet text box typing whole again in R13 (1 of 1 on patch 30) after 3 of 4 lost first keys on patch 29 — The Find box drops typed characters; a plain field doesn't
+## AT-10 · S2 · Foundation (patch 31: first key) · **verified** R13 and R14: the text box holds all 11 keys on tablet and phone; one more round on watch — The Find box drops typed characters; a plain field doesn't
 **Steps:** API 36, open a PDF, Find, type on the on-screen keyboard path (`adb shell input text`, i.e. real key events through the IME).
 **Expected:** every character arrives, as in any text field.
 **Actual (R3, run 42537723474):**
@@ -158,6 +158,7 @@ keyboard — but that was equally true on the earlier heads, where nothing was l
 the box being re-created once after the first key?) or Mobile UI ca152c4 changed the timing on the tablet shell.
 **Fix:** Foundation to look at what happens to a new text box between focus and the first key on the tablet; I keep the check.
 **Round 13:** "chuvadimark" whole on tablet and phone. One good run does not clear a 3-of-4 fault, so this stays on watch for two more rounds.
+**Round 14:** whole again on both. Two clean rounds since patch 30/31.
 
 ## AT-11 · S2 · Android (host process-death restore; Foundation only if a Ui hook is needed) · **verified** R5 run 42746209649 (Foundation f88f9ef + Mobile UI c5c0b7e + Android 9ce073b, Release): tabs back after a background kill 11 of 11, phone and tablet — On the phone, open tabs are lost when Android ends the app in the background
 **Steps:** phone API 36, several tabs open, Home key, `am kill in.chuvadi.reader` (what Android does to a background app under memory
@@ -607,7 +608,7 @@ Merge reaches its page ("add at least two PDFs"); Split was not reached in this 
 kept, nothing left only inside the app; the card's folder chip reads "Documents/Chuvadi Documents/Compressed". Export: the PNG is under
 `Documents/Chuvadi Documents/Export`. Both devices. Closed. (Scatter, Lift, Snapshot go the same route; not separately exercised.)
 
-## AT-24 · S2 · Foundation / Mobile UI · **verified fixed** R12 (patch 29 + Mobile UI ca152c4): on the phone Find goes to page 3 and stays (DR-7 passes) — Phone: Find jumps to the wrong page and highlights the wrong words
+## AT-24 · S2 · Foundation (shared Ui, Find) · **reopened R14 — intermittent on the phone**: wrong page in rounds 11c and 14, right page in rounds 12 and 13 (tablet right every time) — Phone: Find jumps to the wrong page and highlights the wrong words
 **Steps:** phone API 36, portrait. Open `drift-doc.pdf` (12 pages; the word "Zephyrine" is on page 3 only). More › Find, type
 `Zephyrine`.
 **Expected:** the view goes to page 3 and "Zephyrine" is highlighted (round 11, patch 27: box 3, page 3 — passed).
@@ -619,6 +620,16 @@ match itself is placed one page on. Steady for the whole 6 s watch. `screenshots
 the page a match belongs to is being taken one off (page index against the phone's page list?).
 **Fix:** Foundation; I'll re-run `ci/drift.py` DR-7 and add a check that the highlight rectangle lies inside the page that holds the word.
 **Round 12:** not reproduced — phone drift suite 7 of 7 including the Find jump. Seen only on the patch 28 head (run 43768598611).
+**Round 14 (run 43925116452, Android 582b3be + Foundation b895750 (patch 31) + Mobile UI 1720924, Release, API 36) — back, same picture as patch 28.** Phone, Find "Zephyrine" (page 3 only): counter 1/1, view on **page 4**,
+highlight on "…discharg**ed admitt**ed…" there, steady for the whole watch. `screenshots/r14/r14-phone-find-page-4-again.png`.
+Tally on the phone: 11c wrong, 12 right, 13 right, 14 wrong — so it was never fixed, it comes and goes, and patch 30's "Find stays
+on the match page" did not remove it. Tablet: right in all four.
+**What that points to:** a race, not a rule. The highlight is at the word's place *within* the page but drawn on the next page, and the
+jump goes to that same wrong page — so the page a match belongs to is being resolved against a page list that is one short at that
+moment (the phone draws pages lazily; the tablet has them sooner). Likely window: Find runs while the page list is still being built
+after open. In my check Find is typed about 6 s after the file opens.
+**Ask for Foundation:** resolve a match's page from the document's page number, never from the position in the list of drawn pages;
+then I can stop treating a pass as proof. I'll run the Find jump five times per round from now on and report n of 5.
 
 ## AT-25 · S4 · Mobile UI · **verified, closed** R13: "File's own sizes" is 103 × 44 px on phone and tablet — Excel: the "File's own sizes" control is 24 px high on phone and tablet
 **Steps:** phone or tablet, open an `.xlsx`, drag a column edge wider with a finger (works: 64 → 135 px; row 20 → 61 px; the header
@@ -667,7 +678,7 @@ passing — worth comparing which tool it arms (mine: Rectangle).
 through whatever tool is armed. Mobile UI / Foundation between them.
 **Round 13 (run 43906867066, Android a0b3e66 + Foundation 4b704c8 (patch 30) + Mobile UI ae6ae6d, Release, API 36):** Read and Mark mode both 388 → 1,242 → 388 (phone) and 596 → 1,907 → 596 (tablet), 0 marks before and after. A rectangle drawn on the phone at the pinched zoom is saved within 0.1 pt of where it was drawn (page 2).
 
-## AT-28 · S3 · Mobile UI · open — Export card and Merge page: controls are 28–34 px high on phone and tablet
+## AT-28 · S3 · Mobile UI · **partly fixed** R14: Merge page buttons are 44–45 px; the Export card is unchanged (chips 28–29, Export → 34, change… 16–17, Close 19) on phone and tablet — Export card and Merge page: controls are 28–34 px high on phone and tablet
 Measured in run 43885159508 (Android 5208bf0): Export as image card — format and range chips SVG / PNG / JPG / BMP, This page /
 All pages, 96–600 dpi: 28 px (phone), 29 px (tablet); **Export →** 34 px; "change…" 16–17 px; the card's Close 19 px. Merge page —
 Add files, Add open documents, Merge & Save: 32–33 px. The Press card is built the same way (its "change…" and **Press →** are the
@@ -675,8 +686,9 @@ same components) and my design suite has not been measuring any of these cards, 
 **Expected:** 44 px on touch shells. **Fix:** the same touch-size rule for card chips, card primary buttons and the page-level
 buttons of Merge / Split; I am adding these cards to `ci/design.py` so they are measured every round.
 **Round 13:** unchanged — Export card chips 28–29 px, **Export →** 34, "change…" 16–17, Close 19; Merge page buttons 32–33 px, on both devices. Still open.
+**Round 14 (run 43925116452, Android 582b3be + Foundation b895750 (patch 31) + Mobile UI 1720924, Release, API 36):** Merge: Add files, Add open documents, Merge & Save 44 px (phone), 45 px (tablet) — fixed. Export as image card: no change on either device. Still open for the Export card (and, built the same way, the Press card — to be measured).
 
-## AT-29 · S3 · Foundation (shared Ui) / Mobile UI · open, intermittent — Phone: turning the phone just after moving to another page can drop back to page 1
+## AT-29 · S3 · Foundation / Mobile UI · **not reproduced** R14 with the page move settled before the turn (page 3 kept on the phone, page 2 on the tablet); stays on watch — Phone: turning the phone just after moving to another page can drop back to page 1
 **Steps:** phone API 36, portrait, a 12-page PDF. Next page twice (box "3 / 12"), then turn to landscape at once.
 **Expected:** still page 3. **Actual (R13):** box "1 / 12", page 1 on screen; same tab, same process, nothing lost but the place.
 **How often:** the check (`function.py` F-14) passed in rounds 10, 11 and 12 and failed in 11c and 13 — in 11c with the opposite
@@ -686,6 +698,9 @@ turn arrives while the move to page 3 is still settling (pages not yet drawn: "r
 starts from the top.
 **Fix:** hold the target page through a layout change (rotation, split screen) until it has been reached. I'll add a second variant
 that waits two seconds before turning, to separate "always" from "only mid-move".
+**Round 14:** with 2.5 s between the page move and the turn, the page is kept on both devices (phone 3 → 3, tablet 2 → 2). My
+"at once" variant passed on the tablet (3 → 3 → 3) and proved nothing on the phone (the page move itself had not registered before the
+turn, so there was no place to lose). Round 13's 3 → 1 therefore stands as one unexplained case in five; not a blocker on its own.
 
 ## D-190 checks (not bugs) — the ask-before-closing card and Excel resize, by touch
 - **Phone, close card:** PASS in R12 and 12b. Tabs sheet › × on a tab with unsaved marks → "Save the marks on sv-close.pdf? It has 2
