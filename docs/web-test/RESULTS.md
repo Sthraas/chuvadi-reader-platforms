@@ -338,3 +338,16 @@ Tooling fixed in this pass (stale selectors after the viewer changes, not produc
 | **Page images, isolation, hostile files** | ✅ `page_images.py` 7/7 × 3; `page_image_sec.py` 19/19 × 3; `sec_browser.py` 20/20, second person's next page 68–90 ms through 13 hostile files |
 | **Earlier fixes, flows, fidelity** | ✅ `verify_fixes.py` 12/12 Chromium, Firefox, 10/10 WebKit (print checks can't run in headless WebKit); `flows.py` 10/10, `office_limits.py` 6/6 × 3; Word 14/14 and Excel 23/23 on four files × 3 engines |
 | Not re-run on this head | design screenshots and speed (taken on 3f80768; no change to those paths since) |
+
+## 17 Nov 2026 — `platform/web` @ **35a7add** (Foundation patch 31: encoding picker; close card keyboard; pager after tab change)
+**Build from clean:** 0 warnings; Reader **438** (+6 skipped), Hosting **102**, Mobile UI **16**, Web UI **41**; Web **191/191**; `check-package.sh` PASS.
+
+| Area | Result |
+|---|---|
+| **Encoding picker (D-185, D-191)** | ✅ Web's `encoding_picker.py` 12/12 × Chrome, Firefox, WebKit (choice applied, survives reload, not seen by a second person, gone after sign-out). Mine, `encoding_probe.py` 9/10 × 3: a Windows-1252 text file is read as Windows-1252 on Automatic, every character right; a second tab keeps its own reading; UTF-8 Markdown right; Windows-1252 HTML right and its script does not run. ✗ **UTF-16 files are refused at upload → WT-26** |
+| **M-27** | ✅ Chromium, WebKit 26.6, WebKit 17.4 16/16; Firefox 15/16 (one `goto` time-out); worst 0.9 px, 0.4 %. `zoom_tools.py` 5/5 × 4; `mark_zoom.py` 9/9 × 3 |
+| **WT-24 / WT-25** | ✅ still: `gone_browser.py` 4/4 + 4/4 × 3; `linger.py` 40–44 s in all six cases; `expiry.py` 12/12 × 3; `comeback.py` 5/5 × 3 |
+| **Close card, WT-23** | ✅ `close_card_probe.py` 10/10 × 3; `close_card.py` 14/14 × 3 |
+| **Excel** | ✅ `excel_p29.py` 11/11 × 3; large files and the four over-limit refusals as before |
+| **Regression** | ✅ `page_images.py` 7/7, `reload.py` 11/11, `leave_guard.py`, `office_limits.py` 6/6, `sangam_signin.py` 18/18 — × 3; `reload_tabs.py` 11/11, `leave_prompt.py` 5/5, `page_image_sec.py` 19/19 — × 3; `verify_fixes.py` 12/12 (WebKit 10/10); `sec_browser.py` 20/20 (second person 67–86 ms); fidelity 14/14 and 23/23 × 3. `flows.py` 10/10 Chrome, WebKit; **Firefox 9/10 on a person's first visit → WT-27** |
+| Not checked | B-33 (pager after going from one Excel tab to another), the close card's keyboard trap, finger sizes on tablet |

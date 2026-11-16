@@ -2,8 +2,10 @@
 
 > **Updated 17 Nov 2026, 02:15 IST** — head **21665a3** (patch 30 with Web's WT-24 and WT-25 fixes). The section below supersedes everything after it.
 
+> **17 Nov, 06:30 IST — patch 31 head 35a7add tested.** Regression clean; two new bugs: **WT-26** (Medium: UTF-16 text files refused at upload — also true of 21665a3, I had not tried one) and **WT-27** (Low: Firefox first-moment drop ignored). The sign-off below stays on 21665a3 and now carries these two as open; I move it to a later head when WT-26 is fixed or the coordinator rules on it.
+
 ## Phase 1 sign-off for Web — signed off on 21665a3, with the limits below
-**Web Test's finding:** on `platform/web` 21665a3 the Web portal does what Phase 1 asks, in Chrome, Firefox and WebKit, with marks also checked on WebKit 17.4. Every bug I raised is fixed and re-verified: **WT-01 to WT-25, M-27, LIB-1, LIB-2 — none open.** Results table: `RESULTS.md`, 17 Nov (and 16 Nov on 3f80768 for design and speed).
+**Web Test's finding:** on `platform/web` 21665a3 the Web portal does what Phase 1 asks, in Chrome, Firefox and WebKit, with marks also checked on WebKit 17.4. Every bug I raised is fixed and re-verified: **WT-01 to WT-25, M-27, LIB-1, LIB-2 — fixed.** Open since: WT-26, WT-27 (found on patch 31). Results table: `RESULTS.md`, 17 Nov (and 16 Nov on 3f80768 for design and speed).
 
 **What the sign-off rests on**
 - Build from clean, 0 warnings, all tests pass, package holds only .NET / ASP.NET Core and the product's own assemblies.
