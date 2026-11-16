@@ -689,3 +689,26 @@ Rebased onto foundation-pr 4b704c8 (patch 30).
   states — the locked PDF's password prompt (keys phase) and an Excel file just opened — while it worked there with no
   first responder and after a click on a page, and ⌘1 worked in the same phase. Intel only, in addition: the window
   62 pt off vertical centre (M-07) and ⌘1 once not showing the first tab (M-23). On macOS 26 and 27 all of these pass.
+
+### 2026-11-17 — patch 31; the macOS 15 smoke failures: cause and fix
+Rebased onto foundation-pr b895750 (patch 31). Code head 5ccb12c. Run 43924145732, as pushed, built on `xcode-27`:
+**0 failed on macos-26, macos-15, macos-15-intel and xcode-27**; unit tests passed on all four; zip handed out.
+- **Not the SDK:** the same head built the old way (Xcode 26.6, workload set 10.0.401; run 43914242507) failed the same
+  ⌃Tab checks on macOS 15. The workflow keeps a `compare_old_build` input for such a comparison (diagnosis only,
+  nothing handed out) and a `check_runners` input to pick the test runners.
+- **⌃Tab on macOS 15 — the app (M-08):** with the page's content view holding the keyboard and a text box of the page
+  focused (the password prompt; after Find), a real ⌃Tab or ⌃⇧Tab reached neither the key commands, nor the Window
+  menu items, nor the page (the smoke's page report now shows `focus`, the raw keydowns the page received, and
+  before each real key which view holds the keyboard). With no view holding the keyboard it worked, and on macOS 26
+  and 27 it works in every state. Which part of macOS 15 takes the key was not found. Fix:
+  `Platform/MacTabKeyMonitor.cs` — an NSEvent local monitor takes ⌃Tab / ⌃⇧Tab key-downs in the app's own window
+  before anything else and sends the page the same keydown as the key command did; one press, one tab. The key
+  commands and menu items stay as the fallback.
+- **M-07 on Intel — the check:** the app uses `-[NSWindow center]`, which on a screen with room (the Intel runner:
+  1920×1080) puts a window a little above the middle, as macOS does for every window; the other runners' screens are
+  too small to show it. The check now accepts AppKit's placement. Behaviour unchanged; exact middle would be a
+  design decision.
+- **M-23 on Intel — the check:** the key arrived 4 s late on the slow runner and the report was read 8 ms after it.
+  The real-key step now reports 2 s after the key's effect is logged (10 s at most); clicks, Accessibility presses
+  and ending the content process report at 4 s as before.
+- **D-158 page image failed once on Intel** (run 43914220133) and not again; not traced.
