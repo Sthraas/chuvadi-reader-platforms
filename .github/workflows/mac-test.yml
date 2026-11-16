@@ -83,7 +83,8 @@ jobs:
           rm -rf "$RUNNER_TEMP/nuget-clean" ~/.nuget/packages
 
       - name: Workload (pinned 10.0.401)
-        run: dotnet workload install maui-maccatalyst --version 10.0.401 && dotnet workload list
+        working-directory: app   # so the app's global.json picks the SDK (the image now also carries .NET 11)
+        run: dotnet --version && dotnet workload install maui-maccatalyst --version 10.0.401 && dotnet workload list
 
       - name: Restore
         working-directory: app
