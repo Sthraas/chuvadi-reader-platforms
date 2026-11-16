@@ -386,7 +386,7 @@ cdp.wait("!!(window.Blazor && Blazor.navigateTo) && document.getElementById('app
 ORIG = {}
 for fx, nm in (("doc-12p.pdf", "sv-text.pdf"), ("doc-12p.pdf", "sv-shape.pdf"), ("form-filled.pdf", "sv-form.pdf"),
                ("doc-12p.pdf", "sv-redact.pdf"), ("doc-12p.pdf", "sv-arrange.pdf"), ("doc-12p.pdf", "sv-print.pdf"),
-               ("doc-12p.pdf", "sv-pass.pdf"), ("doc-12p.pdf", "sv-compress.pdf"), ("doc-12p.pdf", "sv-flatten.pdf"), ("rotated.pdf", "sv-rotated.pdf"), ("doc-12p.pdf", "sv-zoom.pdf"), ("doc-12p.pdf", "sv-close.pdf"), ("doc-12p.pdf", "sv-pinch.pdf")):
+               ("doc-12p.pdf", "sv-pass.pdf"), ("doc-12p.pdf", "sv-compress.pdf"), ("doc-12p.pdf", "sv-flatten.pdf"), ("rotated.pdf", "sv-rotated.pdf"), ("doc-12p.pdf", "sv-zoom.pdf"), ("doc-12p.pdf", "sv-close.pdf"), ("doc-12p.pdf", "sv-pinch.pdf"), ("doc-12p.pdf", "sv-more.pdf")):
     ORIG[nm] = push(fx, nm)
 time.sleep(3)
 
@@ -930,6 +930,42 @@ def sv15_pinch_modes():
                 r1[2] > r0[2] * 1.15 and r2[2] < r1[2] * 0.9 and out[m]["marks_after"] == n0, out[m])
 
 
+def sv16_other_outputs():
+    """First look at the other save-to-new-file paths: where does the output go, and can the person find it?"""
+    if not pick_open("sv-more.pdf")["opened"]:
+        R.check("SV-16 file opened through the picker", False, None)
+        return
+    for key, names in (("Export pages as images", ("Export pages as images",)), ("Split pages", ("Split pages…", "Split pages")), ("Merge files", ("Merge files…", "Merge files"))):
+        cdp.js("Blazor.navigateTo('/reader')")
+        time.sleep(1.5)
+        mark_time()
+        act = doc_action(*names)
+        time.sleep(2.5)
+        where = cdp.js("location.pathname")
+        btns = cdp.js("(() => { " + VIS + " return [...document.querySelectorAll('main button, .chvd-card button, [role=dialog] button, .ph-sheet button')].filter(vis).map(b => { const r = b.getBoundingClientRect(); return {t: (b.innerText || b.getAttribute('aria-label') || '').trim().slice(0, 40), x: r.left + r.width / 2, y: r.top + r.height / 2, h: Math.round(r.height), disabled: b.disabled}; }).filter(b => b.t); })()") or []
+        shot("sv16-" + key.split()[0].lower())
+        go = next((b for b in btns if not b["disabled"] and re.match(r"^(export|split|merge|save|scatter|write|create|bind)\b", b["t"], re.I) and "…" not in b["t"][:1]), None)
+        picker = None
+        if go:
+            tap_xy(go["x"], go["y"])
+            time.sleep(2.5)
+            xml = ui_dump()
+            if "documentsui" in xml:
+                picker = "folder" if ("USE THIS FOLDER" in xml.upper() or "at-bind" in xml) else "file"
+                (folder_picker("at-bind", 10) if picker == "folder" else save_picker())
+            time.sleep(6)
+        seen = sh("find /storage/emulated/0/ -type f -newer /data/local/tmp/at-mark 2>/dev/null | grep -v '/Android/' | head -8").strip().splitlines()
+        private = sh("su 0 find /data/user/0/in.chuvadi.reader/cache/work /data/user/0/in.chuvadi.reader/files -type f -newer /data/local/tmp/at-mark 2>/dev/null | grep -v -E 'session|tabs|recent|\\.json$' | head -8").strip().splitlines()
+        lines = [l.strip()[:150] for l in (cdp.js("document.body.innerText") or "").splitlines() if re.search(r"saved|wrote|export|split|merg|/data/|folder|images? ", l, re.I)][:10]
+        shot("sv16-" + key.split()[0].lower() + "-after")
+        R.check(f"SV-16 {key}: output lands where the person can find it (recorded: first look)",
+                "n/a" if not act or not go else bool(seen) and not any("/data/" in l for l in lines),
+                {"menu_item": act, "page": where, "buttons": [(b["t"], b["h"], b["disabled"]) for b in btns][:16], "pressed": go, "android_picker": picker,
+                 "new_files_visible_to_the_person": seen, "new_files_only_inside_the_app": private, "screen_lines": lines})
+        if in_picker():
+            sh("input keyevent KEYCODE_BACK")
+
+
 def sv11_excel():
     adb("push", os.path.join(FX, "test.xlsx"), "/sdcard/Download/sv-sheet.xlsx")
     sh("am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d 'file:///sdcard/Download/sv-sheet.xlsx' >/dev/null")
@@ -1095,7 +1131,7 @@ def sv14_excel_resize():
 
 XLSX_MD5 = None
 CASES = [("SV-1", sv1_text), ("SV-2", sv2_shape), ("SV-3", sv3_form), ("SV-4", sv4_redact), ("SV-7", sv7_password), ("SV-8", sv8_compress),
-         ("SV-9", sv9_flatten), ("SV-10", sv10_rotated), ("SV-12", sv12_zoom), ("SV-11", sv11_excel), ("SV-14", sv14_excel_resize), ("SV-13", sv13_close_card), ("SV-15", sv15_pinch_modes), ("SV-6", sv6_print), ("SV-5", sv5_arrange)]
+         ("SV-9", sv9_flatten), ("SV-10", sv10_rotated), ("SV-12", sv12_zoom), ("SV-11", sv11_excel), ("SV-14", sv14_excel_resize), ("SV-13", sv13_close_card), ("SV-15", sv15_pinch_modes), ("SV-16", sv16_other_outputs), ("SV-6", sv6_print), ("SV-5", sv5_arrange)]
 if phone():
     # Round 11: the phone stopped answering after the third Mark › Save as. Everything else first, so it is covered whatever happens.
     first = ["SV-11", "SV-14", "SV-12", "SV-10", "SV-1", "SV-2", "SV-3", "SV-13"]     # what round 12 did not reach on the phone
