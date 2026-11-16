@@ -187,6 +187,9 @@ public sealed class ChuvadiPdfSession : IPdfSession
     /// <summary>Tests only: runs on the render's thread, inside the gate, before the page is drawn.</summary>
     internal Action<int>? BeforeRenderForTests { get; set; }
 
+    /// <summary>Tests only: called by the render worker when it has gone idle, before it returns.</summary>
+    internal Action? WorkerIdleForTests { get; set; }
+
     // Layers: the file's groups (read once, lazily) and this view's overrides (layer key → visible).
     // Overrides only ever reach the renderers — the document itself is never modified.
     private List<LayerEntry>? _layerEntries;
@@ -483,6 +486,11 @@ public sealed class ChuvadiPdfSession : IPdfSession
     /// <summary>The one worker: takes the next wanted page, draws it inside the gate, answers everyone waiting for it.</summary>
     private async Task DrainAsync()
     {
+        // Renders still waiting when the document closed: they get the closed document's answer, an empty page.
+        // Taken under the same lock that ends this worker. Taking them after it (as before) could take a render asked
+        // for in between, which had just started the next worker, and hand that page an empty answer: a page asked
+        // for at the instant the worker went idle came back blank (seen once on macOS as a test failure).
+        List<QueuedRender>? leftAtClose = null;
         while (true)
         {
             int page;
@@ -491,6 +499,12 @@ public sealed class ChuvadiPdfSession : IPdfSession
                 if (_queue.Count == 0 || _closeRequested)
                 {
                     _draining = false;
+                    if (_closeRequested)
+                    {
+                        leftAtClose = _queue.ToList();
+                        _queue.Clear();
+                    }
+
                     break;
                 }
 
@@ -561,8 +575,8 @@ public sealed class ChuvadiPdfSession : IPdfSession
             }
         }
 
-        // Closed while renders still waited: they get the closed document's answer, an empty page.
-        foreach (var waiting in TakeAll(null))
+        WorkerIdleForTests?.Invoke();
+        foreach (var waiting in leftAtClose ?? [])
         {
             waiting.Cancel.Dispose();
             waiting.Done.TrySetResult(string.Empty);

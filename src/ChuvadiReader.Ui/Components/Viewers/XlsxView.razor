@@ -28,11 +28,6 @@
         var s = _wb.Sheets[_active];
         var g = _grid!;
         var zoom = Zoom(s);
-        @if (HiddenHitsLine(s, g) is { } hiddenHits)
-        {
-            @* D-188 (U-19 a): a match in a hidden row or column has nothing to outline on the sheet, so it is named. *@
-            <div class="xv-hiddenhits" role="status">@hiddenHits</div>
-        }
         <div class="xv-valbar" hidden aria-live="polite"><span class="xv-val-addr"></span><span class="xv-val-text"></span><span class="xv-val-more"></span></div>
         @* The grid is drawn as a window onto the sheet: only the rows and columns on screen exist as elements
            (B-09/B-10, E-05), each cell placed at the offset its row heights and column widths give (E-06 to E-08),
@@ -85,6 +80,13 @@
             </div>
         }
 
+        @if (HiddenHitsLine(s, g) is { } hiddenHits)
+        {
+            @* D-188 (U-19 a): a match in a hidden row or column has nothing to outline on the sheet, so it is named.
+               D-192 (U-20 a): it sits under the sheet, next to the tabs' match counts: the Find box floats over the
+               top of the viewer and covered it there (a tenth of the sentence at 1280 px, nearly half on a phone). *@
+            <div class="xv-hiddenhits" role="status">@hiddenHits</div>
+        }
         <div class="xv-bar">
             @if (_own is not null)
             {
