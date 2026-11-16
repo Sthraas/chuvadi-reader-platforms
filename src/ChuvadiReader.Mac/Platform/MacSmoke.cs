@@ -117,11 +117,29 @@ internal static class MacSmoke
                 // The smoke script watches for this line and posts the real key (keys.swift), so the key travels
                 // macOS → UIKit → WKWebView as a person's does (M-21). Recorded page keys show what arrived.
                 Log("native-key " + arg);
-                Later(4.0, async () =>
+                // Report 2 s after the key's effect was logged (a slow runner posts the key seconds late, and the Ui
+                // needs a moment to show the result), or after 10 s if nothing came of it.
+                var asked = DateTime.UtcNow;
+                void Check()
+                {
+                    var now = DateTime.UtcNow;
+                    var seen = _lastKeyAt > asked;
+                    if ((seen && now - _lastKeyAt >= TimeSpan.FromSeconds(2)) || now - asked >= TimeSpan.FromSeconds(seen ? 14 : 10))
+                    {
+                        _ = Report();
+                        return;
+                    }
+
+                    Later(0.5, Check);
+                }
+
+                async Task Report()
                 {
                     Log($"step {index + 1} native: " + await UiTextAsync(Current(view)) + " sent=" + arg);
                     RunSteps(view, index + 1);
-                });
+                }
+
+                Later(4.0, Check);
                 return;
             }
 
@@ -260,10 +278,17 @@ internal static class MacSmoke
         }
     }
 
+    private static DateTime _lastKeyAt; // when a real key last had an effect the host saw (page key or menu command)
+
     public static void Log(string line)
     {
         if (Enabled)
         {
+            if (line.StartsWith("page-key ", StringComparison.Ordinal) || line.StartsWith("menu-command ", StringComparison.Ordinal))
+            {
+                _lastKeyAt = DateTime.UtcNow;
+            }
+
             Console.WriteLine("CHUVADI " + line);
         }
     }
@@ -463,6 +488,21 @@ internal static class MacSmoke
                   if (!f) { return ''; }
                   var b = f.contentDocument && f.contentDocument.body;
                   return ' frame=' + (b && b.innerText.trim() ? JSON.stringify(b.innerText.trim().slice(0, 40)) : 'empty');
+                })() + (function () {
+                  // Where the keyboard is, and the last keydowns the page itself received (^ Control, @ Command,
+                  // $ Shift; a trailing ! marks one the host sent, not the keyboard): tells a key the page got from
+                  // one that never arrived.
+                  if (!window.__chvdRaw) {
+                    window.__chvdRaw = [];
+                    window.addEventListener('keydown', function (e) {
+                      window.__chvdRaw.push((e.ctrlKey ? '^' : '') + (e.metaKey ? '@' : '') + (e.shiftKey ? '$' : '') + e.key
+                        + '>' + (e.target && e.target.tagName || '?') + (e.isTrusted ? '' : '!'));
+                      if (window.__chvdRaw.length > 6) { window.__chvdRaw.shift(); }
+                    }, true);
+                  }
+                  var a = document.activeElement;
+                  return ' focus=' + (a ? a.tagName + (a.type ? ':' + a.type : '') : '-') + ' docfocus=' + (document.hasFocus() ? 1 : 0)
+                    + ' raw=[' + window.__chvdRaw.join(',') + ']';
                 })();
             })()
             """;

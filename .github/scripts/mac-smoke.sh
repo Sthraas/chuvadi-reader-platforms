@@ -533,8 +533,12 @@ ew=$(( ${sw:-0} < 1100 ? ${sw:-0} : 1100 )); eh=$(( ${sh:-0} < 720 ? ${sh:-0} : 
 tol=0; { [ "$ew" -lt 1100 ] || [ "$eh" -lt 720 ]; } && tol=4
 dw=$(( ${ww:-0} - ew )); dw=${dw#-}; dh=$(( ${wh:-0} - eh )); dh=${dh#-}
 if [ -n "${ww:-}" ] && [ "$dw" -le "$tol" ] && [ "$dh" -le "$tol" ]; then pass "M-07 window ${ww}×${wh} (1100×720 clamped to ${sw}×${sh})"; else fail "M-07 window ${ww:-?}×${wh:-?}, expected ${ew}×${eh}"; fi
-cy=$(( sy + (sh - wh) / 2 - wy )); cy=${cy#-}
-[ -n "${wh:-}" ] && [ "$cy" -le 2 ] && pass "M-07 centred vertically" || fail "M-07 not centred vertically (y off by ${cy:-?})"
+# The app asks AppKit to centre the window (-[NSWindow center]): exactly centred across, and on a screen with room
+# "somewhat above centre", as every Mac window is. y counts from the bottom of the screen: at the centre or above it,
+# wholly on the visible screen.
+up=$(( wy - (sy + (sh - wh) / 2) )); room=$(( sy + sh - wy - wh ))
+[ -n "${wh:-}" ] && [ "$up" -ge -2 ] && [ "$room" -ge -2 ] && pass "M-07 placed as AppKit centres a window (${up} pt above the middle, ${room} pt below the top)" \
+  || fail "M-07 not centred vertically (${up:-?} pt above the middle, ${room:-?} pt below the top)"
 if [ -n "${ww:-}" ] && [ -n "${sw:-}" ]; then
   cx=$(( sx + (sw - ww) / 2 - wx )); cx=${cx#-}
   [ "$cx" -le 2 ] && pass "M-07 centred horizontally" || fail "M-07 not centred (x off by $cx)"

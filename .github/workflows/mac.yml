@@ -17,6 +17,16 @@ on:
         required: false
         default: 'xcode-27'
 
+      check_runners:
+        description: 'Runners that test the built app (a JSON list).'
+        required: false
+        default: '["macos-26","macos-15","macos-15-intel","xcode-27"]'
+      compare_old_build:
+        description: 'Diagnosis only: build the old way (macos-26, Xcode 26.6, workload set 10.0.401) to tell the SDK from the macOS when a check differs. Nothing is handed out.'
+        type: boolean
+        required: false
+        default: false
+
 env:
   DOTNET_CLI_TELEMETRY_OPTOUT: '1'
   DOTNET_NOLOGO: '1'
@@ -24,7 +34,7 @@ env:
 jobs:
   build:
     name: build the universal app
-    runs-on: ${{ inputs.build_runner }}
+    runs-on: ${{ inputs.compare_old_build && 'macos-26' || inputs.build_runner }}
     timeout-minutes: 60
 
     steps:
@@ -39,6 +49,13 @@ jobs:
           for f in $TRY_PATCH; do git apply --verbose "$f"; done   # one or more paths, separated by spaces
           echo "::notice::This run includes $TRY_PATCH, which is not on the branch."
 
+      - name: Diagnosis build the old way (this run only)
+        if: ${{ inputs.compare_old_build }}
+        run: |
+          sed -i '' 's/"workloadVersion": "10.0.403"/"workloadVersion": "10.0.401"/' global.json && cat global.json
+          sudo xcode-select -s /Applications/Xcode_26.6.app && sudo xcodebuild -runFirstLaunch
+          echo "::notice::Diagnosis build: Xcode 26.6, workload set 10.0.401. Not the branch's build."
+
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v6
         with:
@@ -49,6 +66,7 @@ jobs:
       - name: Select Xcode
         run: |
           ls -d /Applications/Xcode*.app
+          if [ "${{ inputs.compare_old_build }}" = "true" ]; then xcodebuild -version; sw_vers; exit 0; fi
           if [ -d /Applications/Xcode_27.1.app ]; then sudo xcode-select -s /Applications/Xcode_27.1.app; fi
           xcode-select -p
           xcodebuild -version
@@ -194,7 +212,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-26, macos-15, macos-15-intel, xcode-27]
+        os: ${{ fromJSON(inputs.check_runners) }}
 
     steps:
       - uses: actions/checkout@v7
@@ -309,7 +327,7 @@ jobs:
   publish:
     name: hand out the app
     needs: [build, check]
-    if: ${{ inputs.try_patch == '' }}   # a run that tried a patch is not the branch's build; never hand it out
+    if: ${{ inputs.try_patch == '' && !inputs.compare_old_build }}   # a run that tried a patch is not the branch's build; never hand it out
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v7
