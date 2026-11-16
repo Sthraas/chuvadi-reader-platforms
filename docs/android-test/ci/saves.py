@@ -374,7 +374,7 @@ cdp.wait("!!(window.Blazor && Blazor.navigateTo) && document.getElementById('app
 ORIG = {}
 for fx, nm in (("doc-12p.pdf", "sv-text.pdf"), ("doc-12p.pdf", "sv-shape.pdf"), ("form-filled.pdf", "sv-form.pdf"),
                ("doc-12p.pdf", "sv-redact.pdf"), ("doc-12p.pdf", "sv-arrange.pdf"), ("doc-12p.pdf", "sv-print.pdf"),
-               ("doc-12p.pdf", "sv-pass.pdf"), ("doc-12p.pdf", "sv-compress.pdf"), ("doc-12p.pdf", "sv-flatten.pdf"), ("rotated.pdf", "sv-rotated.pdf"), ("doc-12p.pdf", "sv-zoom.pdf")):
+               ("doc-12p.pdf", "sv-pass.pdf"), ("doc-12p.pdf", "sv-compress.pdf"), ("doc-12p.pdf", "sv-flatten.pdf"), ("rotated.pdf", "sv-rotated.pdf"), ("doc-12p.pdf", "sv-zoom.pdf"), ("doc-12p.pdf", "sv-close.pdf")):
     ORIG[nm] = push(fx, nm)
 time.sleep(3)
 
@@ -884,6 +884,8 @@ def sv12_zoom():
 def sv11_excel():
     adb("push", os.path.join(FX, "test.xlsx"), "/sdcard/Download/sv-sheet.xlsx")
     sh("am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d 'file:///sdcard/Download/sv-sheet.xlsx' >/dev/null")
+    global XLSX_MD5
+    XLSX_MD5 = sh("md5sum /sdcard/Download/sv-sheet.xlsx").split()[0]
     time.sleep(2)
     cdp.js("Blazor.navigateTo('/')")
     time.sleep(1.5)
@@ -915,8 +917,130 @@ def sv11_excel():
 
 
 
+RECT = lambda sel: cdp.js("(() => { " + VIS + f" const e = [...document.querySelectorAll({sel!r})].filter(vis)[0]; if (!e) return null; const r = e.getBoundingClientRect(); return {{x: r.left + r.width / 2, y: r.top + r.height / 2, w: Math.round(r.width), h: Math.round(r.height), left: r.left, top: r.top, right: r.right, bottom: r.bottom, text: (e.innerText || '').trim().slice(0, 60)}}; }})()")
+CLOSEQ = ("(() => { " + VIS + " const q = [...document.querySelectorAll('.closeq')].filter(vis)[0]; if (!q) return null; const r = q.getBoundingClientRect();"
+          " return {title: (q.querySelector('.closeq-title') || {}).innerText, text: (q.querySelector('.closeq-text') || {}).innerText, inside_screen: r.left >= 0 && r.top >= 0 && r.right <= innerWidth + 1 && r.bottom <= innerHeight + 1,"
+          " buttons: [...q.querySelectorAll('button')].map(b => { const k = b.getBoundingClientRect(); return {t: b.innerText.trim(), x: k.left + k.width / 2, y: k.top + k.height / 2, w: Math.round(k.width), h: Math.round(k.height), top_el: (document.elementFromPoint(k.left + k.width / 2, k.top + k.height / 2) || {}) === b}; })}; })()")
+
+
+def close_tab_by_touch(name):
+    if phone():
+        t = RECT(".ph-t")
+        if t:
+            tap_xy(t["x"], t["y"])
+            time.sleep(1.2)
+        x = RECT(f".ph-tab-x[aria-label='Close {name}']")
+    else:
+        x = RECT(".rtab.active .rtab-x")
+    if x:
+        tap_xy(x["x"], x["y"])
+        time.sleep(1.5)
+    return x
+
+
+def sv13_close_card():
+    """D-190: closing a tab with unsaved marks asks first. All by touch."""
+    name = "sv-close.pdf"
+    if not pick_open(name)["opened"]:
+        R.check("SV-13 file opened through the picker", False, None)
+        return
+    mode("Mark")
+    tool("Mark: Rectangle", "Rectangle", "Box")
+    r = cdp.js(PAGE0)
+    a, b = to_screen(max(r[0], 0) + min(r[2], r[4]) * 0.25, max(r[1], 0) + 150), to_screen(max(r[0], 0) + min(r[2], r[4]) * 0.6, max(r[1], 0) + 250)
+    sh(f"input swipe {a[0]} {a[1]} {b[0]} {b[1]} 600")
+    time.sleep(1.5)
+    marks = "document.querySelectorAll('.mk-layer > *, .mk-layer svg > *').length"
+    n0 = cdp.js(marks)
+    if phone() and cdp.js(FCARD):
+        card_away()
+    x = close_tab_by_touch(name)
+    q = cdp.js(CLOSEQ)
+    shot("sv13-close-card")
+    small = [b for b in (q or {}).get("buttons", []) if b["h"] < 44 or b["w"] < 44]
+    R.check("SV-13a closing a tab with an unsaved mark asks first (card names the file; Save as…, Discard, Cancel)",
+            bool(q and name in (q.get("title") or "") and {"Discard", "Cancel"} <= {b["t"] for b in q["buttons"]} and any(b["t"].startswith("Save") for b in q["buttons"])),
+            {"close_control": x, "marks_on_page": n0, "card": q})
+    if not q:
+        R.check("SV-13 close card shown", False, {"controls": labels()})
+        return
+    R.check("SV-13b the card is whole on screen, its buttons are on top and each is at least 44 px", bool(q["inside_screen"] and not small and all(b["top_el"] for b in q["buttons"])),
+            {"inside_screen": q["inside_screen"], "smaller_than_44": small, "buttons": [(b["t"], b["w"], b["h"], b["top_el"]) for b in q["buttons"]]})
+    c = next(b for b in q["buttons"] if b["t"] == "Cancel")
+    tap_xy(c["x"], c["y"])
+    time.sleep(1.5)
+    still = cdp.js("(() => { const t = [...document.querySelectorAll('.rtab-name, .ph-t, .ph-row-l')].map(e => e.textContent.trim()); return t; })()")
+    R.check("SV-13c Cancel: the card goes, the tab and its mark stay", cdp.js(CLOSEQ) is None and any(name in t for t in still or []) and cdp.js(marks) == n0,
+            {"card_gone": cdp.js(CLOSEQ) is None, "tabs": still, "marks_before": n0, "marks_after": cdp.js(marks)})
+    if phone():
+        h = RECT(".ph-sheet .ph-sheet-a, .ph-handle")
+        if h and not RECT(f".ph-tab-x[aria-label='Close {name}']"):
+            pass
+    # second time: Save as…
+    mark_time()
+    if not cdp.js(CLOSEQ):
+        if phone() and RECT(f".ph-tab-x[aria-label='Close {name}']"):
+            k = RECT(f".ph-tab-x[aria-label='Close {name}']")
+            tap_xy(k["x"], k["y"])
+            time.sleep(1.5)
+        else:
+            close_tab_by_touch(name)
+    q2 = cdp.js(CLOSEQ)
+    sa = next((b for b in (q2 or {}).get("buttons", []) if b["t"].startswith("Save as")), None)
+    picker, files, pages = False, [], None
+    if sa:
+        tap_xy(sa["x"], sa["y"])
+        picker = save_picker()
+        time.sleep(4)
+        files = new_pdfs()
+    got = None
+    if files:
+        rd, pages = read(files[-1], "sv13-closed-saveas.pdf")
+        got = page_marks(rd) if rd else None
+    time.sleep(1.5)
+    tabs = cdp.js("[...document.querySelectorAll('.rtab-name, .ph-row-l, .ph-t')].map(e => e.textContent.trim())")
+    R.check("SV-13d Save as… from the card: Android's picker, the new file has the mark, then the tab closes",
+            bool(files and got and (got["annots"] or got["xobjects"]) and pages == 12 and cdp.js(CLOSEQ) is None and not any(t == name for t in tabs or [])),
+            {"card_again": bool(q2), "picker": picker, "files": files, "pdf": got, "pages": pages, "tabs_after": tabs, "card_still_up": cdp.js(CLOSEQ)})
+    shot("sv13-after-saveas")
+
+
+def sv14_excel_resize():
+    """D-190: Excel columns and rows resized on screen by finger (viewing only). Runs on the sheet SV-11 left open."""
+    if not cdp.js("document.querySelectorAll('.xv-colhdr').length > 0"):
+        R.check("SV-14 Excel sheet on screen", False, {"controls": labels()})
+        return
+    COL = "(() => { const e = [...document.querySelectorAll('.xv-colhdr')].find(e => e.textContent.trim() === 'A'); if (!e) return null; const r = e.getBoundingClientRect(); return {left: r.left, right: r.right, top: r.top, bottom: r.bottom, w: r.width, h: r.height, own: e.classList.contains('own')}; })()"
+    ROW = "(() => { const e = [...document.querySelectorAll('.xv-rowhdr')].find(e => e.textContent.trim() === '2'); if (!e) return null; const r = e.getBoundingClientRect(); return {left: r.left, right: r.right, top: r.top, bottom: r.bottom, w: r.width, h: r.height, own: e.classList.contains('own')}; })()"
+    c0 = cdp.js(COL)
+    a, b = to_screen(c0["right"] - 1, (c0["top"] + c0["bottom"]) / 2), to_screen(c0["right"] + 70, (c0["top"] + c0["bottom"]) / 2)
+    touch("swipe", a[0], a[1], b[0], b[1], 700)
+    time.sleep(1.5)
+    c1 = cdp.js(COL)
+    shot("sv14-column-wider")
+    R.check("SV-14a dragging column A's right edge with a finger makes it wider (about 70 px)", bool(c1 and c1["w"] - c0["w"] > 40), {"width_before": round(c0["w"]), "width_after": round(c1["w"]) if c1 else None, "marked_own": c1 and c1["own"], "header_h": round(c0["h"])})
+    r0 = cdp.js(ROW)
+    a, b = to_screen((r0["left"] + r0["right"]) / 2, r0["bottom"] - 1), to_screen((r0["left"] + r0["right"]) / 2, r0["bottom"] + 40)
+    touch("swipe", a[0], a[1], b[0], b[1], 700)
+    time.sleep(1.5)
+    r1 = cdp.js(ROW)
+    R.check("SV-14b dragging row 2's lower edge with a finger makes it taller (about 40 px)", bool(r1 and r1["h"] - r0["h"] > 20), {"height_before": round(r0["h"]), "height_after": round(r1["h"]) if r1 else None, "marked_own": r1 and r1["own"], "header_w": round(r0["w"])})
+    rs = RECT(".xv-resetsizes")
+    R.check("SV-14c the reset-sizes control is offered and is a touch-sized target (44 px)", bool(rs and rs["h"] >= 44 and rs["w"] >= 44), {"reset": rs})
+    cell = cdp.js("(() => { const e = [...document.querySelectorAll('.xv-cell')].find(e => (e.dataset.v || e.textContent || '').includes('Chuvadi XLSX test cell')); if (!e) return null; const r = e.getBoundingClientRect(); return {w: Math.round(r.width), text_w: Math.round((e.querySelector('.xv-s') || e).getBoundingClientRect().width)}; })()")
+    if rs:
+        tap_xy(rs["x"], rs["y"])
+        time.sleep(1.2)
+        c2 = cdp.js(COL)
+        R.check("SV-14d reset puts the sizes back", bool(c2 and abs(c2["w"] - c0["w"]) < 2), {"width_start": round(c0["w"]), "width_after_reset": round(c2["w"]) if c2 else None, "cell_while_wide": cell})
+    md = sh("md5sum /sdcard/Download/sv-sheet.xlsx").split()[0]
+    R.check("SV-14e the workbook file is not changed by resizing (viewing only)", md == XLSX_MD5, {"md5_before": XLSX_MD5, "md5_after": md})
+
+
+
+XLSX_MD5 = None
 CASES = [("SV-1", sv1_text), ("SV-2", sv2_shape), ("SV-3", sv3_form), ("SV-4", sv4_redact), ("SV-7", sv7_password), ("SV-8", sv8_compress),
-         ("SV-9", sv9_flatten), ("SV-10", sv10_rotated), ("SV-12", sv12_zoom), ("SV-11", sv11_excel), ("SV-6", sv6_print), ("SV-5", sv5_arrange)]
+         ("SV-9", sv9_flatten), ("SV-10", sv10_rotated), ("SV-12", sv12_zoom), ("SV-11", sv11_excel), ("SV-14", sv14_excel_resize), ("SV-13", sv13_close_card), ("SV-6", sv6_print), ("SV-5", sv5_arrange)]
 if os.environ.get("AT_SAVES_ORDER") == "marks-last" or phone():
     # Round 11: the phone stopped answering after the third Mark › Save as. Everything else first, so it is covered whatever happens.
     CASES = [c for c in CASES if c[0] not in ("SV-1", "SV-2", "SV-3", "SV-10", "SV-12")] + [c for c in CASES if c[0] in ("SV-12", "SV-10", "SV-1", "SV-2", "SV-3")]
