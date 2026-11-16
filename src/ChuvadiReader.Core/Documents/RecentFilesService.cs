@@ -79,12 +79,14 @@ public sealed class RecentFilesService
         if (_items[at].TextCodePage != codePage)
         {
             _items[at] = _items[at] with { TextCodePage = codePage };
-            await _storage.SetAsync(StorageKey, JsonSerializer.Serialize(_items), ct).ConfigureAwait(false);
+            await SaveAsync(ct).ConfigureAwait(false);
             Changed?.Invoke();
         }
 
         return true;
     }
+
+    private Task SaveAsync(CancellationToken ct) => _storage.SetAsync(StorageKey, JsonSerializer.Serialize(_items), ct);
 
     private RecentItem? Find(string path) =>
         _items.Find(i => string.Equals(i.Path, path, StringComparison.OrdinalIgnoreCase));
@@ -104,7 +106,7 @@ public sealed class RecentFilesService
             _items.RemoveRange(20, _items.Count - 20);
         }
 
-        await _storage.SetAsync(StorageKey, JsonSerializer.Serialize(_items), ct).ConfigureAwait(false);
+        await SaveAsync(ct).ConfigureAwait(false);
         Changed?.Invoke();
     }
 
