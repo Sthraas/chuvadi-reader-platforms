@@ -66,14 +66,21 @@
         }
 
         Space.Delete();
+        // The browser is sent to the signed-out page without waiting for it (WT-24, WT-25): the files are
+        // deleted and the cookie no longer works, and a browser that is gone would otherwise hold the session's
+        // end (and the gateway's call) for the whole time allowed.
+        _ = SendAwayAsync();
+    }
+
+    private async Task SendAwayAsync()
+    {
         // Our own one-way call (not NavigationManager, whose awaited navigation can be cancelled in a
-        // background tab and then fault the whole circuit). If the browser is gone, nothing is lost:
-        // the files are already deleted and the cookie no longer works.
+        // background tab and then fault the whole circuit).
         try
         {
             await Browser.LeaveAsync(SangamSignIn.SignedOutPath, TimeSpan.FromSeconds(10));
         }
-        catch (Exception ex) when (ex is Microsoft.JSInterop.JSException or Microsoft.JSInterop.JSDisconnectedException or TaskCanceledException or OperationCanceledException)
+        catch (Exception ex) when (ex is Microsoft.JSInterop.JSException or Microsoft.JSInterop.JSDisconnectedException or OperationCanceledException or ObjectDisposedException or InvalidOperationException)
         {
             Log.LogDebug("Couldn't send the ended tab to the signed-out page: {Message}", ex.Message);
         }

@@ -91,18 +91,19 @@ public sealed class OpenTabs : ITabControl
             _notices.TryRemove(Key(sub, sid), out _);
         }
 
-        foreach (var (id, tab) in ending)
+        // All at once: a tab whose browser is gone must not delay the others, or the answer to the gateway.
+        await Task.WhenAll(ending.Select(async entry =>
         {
-            _open.TryRemove(id, out _);
+            _open.TryRemove(entry.Key, out _);
             try
             {
-                await tab.End().ConfigureAwait(false);
+                await entry.Value.End().ConfigureAwait(false);
             }
-            catch (Exception ex) when (ex is ObjectDisposedException or InvalidOperationException or Microsoft.JSInterop.JSDisconnectedException or TaskCanceledException)
+            catch (Exception ex) when (ex is ObjectDisposedException or InvalidOperationException or Microsoft.JSInterop.JSDisconnectedException or OperationCanceledException)
             {
                 // The tab was already going away; its files go with its session, just below.
             }
-        }
+        })).ConfigureAwait(false);
 
         // D-174: the session itself ends, whichever connection is open or none: its page images are freed and
         // its files deleted, including what an earlier connection (before a reload) left behind.

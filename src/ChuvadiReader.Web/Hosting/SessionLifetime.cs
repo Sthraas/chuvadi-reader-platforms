@@ -38,8 +38,37 @@ public sealed class SessionLifetime : CircuitHandler
         await _account.LoadAsync().ConfigureAwait(false);
     }
 
+    private int _up;
+
+    /// <summary>A browser is attached (at the start, and again after a reconnect).</summary>
+    public override Task OnConnectionUpAsync(Circuit circuit, CancellationToken cancellationToken)
+    {
+        if (Interlocked.Exchange(ref _up, 1) == 0)
+        {
+            _circuits.Up();
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>The browser is gone (closed, killed, or the network dropped); the framework keeps the circuit a while.</summary>
+    public override Task OnConnectionDownAsync(Circuit circuit, CancellationToken cancellationToken)
+    {
+        if (Interlocked.Exchange(ref _up, 0) == 1)
+        {
+            _circuits.Down();
+        }
+
+        return Task.CompletedTask;
+    }
+
     public override Task OnCircuitClosedAsync(Circuit circuit, CancellationToken cancellationToken)
     {
+        if (Interlocked.Exchange(ref _up, 0) == 1)
+        {
+            _circuits.Down(); // closed without a "down" first
+        }
+
         _circuits.Closed();
         _registry.ForgetSession(_space.ConnectionId);
         // The documents it had open are closed by the shared Core when the connection's services are disposed,
@@ -78,20 +107,14 @@ public sealed class PortalHousekeeping : BackgroundService
         return base.StartAsync(cancellationToken);
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        using var timer = new PeriodicTimer(TimeSpan.FromMinutes(1));
-        try
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+        => TimedPasses.RunAsync("Housekeeping", TimeSpan.FromMinutes(1), TimeProvider.System, () =>
         {
-            while (await timer.WaitForNextTickAsync(stoppingToken).ConfigureAwait(false))
-            {
-                _registry.Prune();
-                // A safety net behind the session clock: a session nobody is connected to, well past the idle limit.
-                _sessions?.EndAbandoned(_options.Value.IdleTimeout + TimeSpan.FromMinutes(5));
-            }
-        }
-        catch (OperationCanceledException)
-        {
-        }
-    }
+            _registry.Prune();
+            // A safety net behind the session clock, on its own timer in the process that holds the files (in
+            // gateway mode the worker, so nothing in the gateway can hold it up): a session nobody is
+            // connected to, well past the idle limit.
+            _sessions?.EndAbandoned(_options.Value.IdleTimeout + TimeSpan.FromMinutes(5));
+            return Task.CompletedTask;
+        }, _log, stoppingToken);
 }

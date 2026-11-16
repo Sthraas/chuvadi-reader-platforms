@@ -49,7 +49,8 @@ Session files go to `src/ChuvadiReader.Web/.portal-data` (git-ignored) and are d
 | `MaintenanceNoticeFile` | Planned-restart banner in every open tab: line 1 the time with its zone, optional line 2 the text (runbook §9) |
 | `IdleTimeout`, `ExpiryWarning`, `ExpiryCheckInterval` | 30 min, 5 min, 15 s (D-30); the 8-hour limit is `Sangam:AbsoluteSessionLifetime` |
 | `Workers:MaxWorkers`, `Workers:MemoryLimitMB` | 40 people at once, 1536 MB heap cap per worker (size them with the runbook's table) |
-| `Workers:IdleStop`, `Workers:CheckInterval`, `Workers:StartTimeout` | 2 min with no open tab, 30 s, 30 s |
+| `Workers:IdleStop`, `Workers:CheckInterval`, `Workers:StartTimeout` | 2 min with no browser attached and no signed-in session, 30 s, 30 s |
+| `Workers:ControlTimeout` | 10 s: the longest the gateway waits for a worker to answer one of its own calls (end a session, show a warning, announce a restart, health). After it the call is logged and given up, so no other session waits (WT-24) |
 | `Workers:SocketFolder`, `Workers:Command` | Socket folder (production `/run/chuvadi-portal`); the program to start (default: this one, started the same way) |
 | `MaxUploadBytes`, `MaxFilesPerPick`, `UploadChunkBytes` | Upload limits (200 MB, 50 files, 4 MB chunks) |
 | `PickTimeout`, `DownloadLinkLifetime`, `SaveWaitLimit` | 30 min, 10 min, 30 min |

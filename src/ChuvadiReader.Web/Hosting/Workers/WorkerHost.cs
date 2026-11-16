@@ -153,7 +153,7 @@ public static class WorkerHost
     {
         var g = app.MapGroup(ControlPrefix).RequireAuthorization().DisableAntiforgery();
         g.MapGet("/health", (OpenTabs tabs, CircuitCounter circuits, Files.SessionStates sessions)
-            => Results.Json(new { tabs = tabs.Count, circuits = circuits.Count, sessions = sessions.Count, maintenance = tabs.Maintenance?.At }));
+            => Results.Json(new { tabs = tabs.Count, circuits = circuits.Count, connected = circuits.Connected, sessions = sessions.Count, maintenance = tabs.Maintenance?.At }));
         g.MapPost("/end", async (EndRequest r, OpenTabs tabs) => Results.Json(new { ended = await tabs.EndAsync(r.Sub, r.Sid).ConfigureAwait(false) }));
         g.MapPost("/notice", async (NoticeRequest r, OpenTabs tabs) =>
         {
@@ -169,16 +169,30 @@ public static class WorkerHost
     }
 }
 
-/// <summary>Circuits alive in this process (connected or waiting to reconnect). Singleton.</summary>
+/// <summary>
+/// Circuits in this process. Singleton. <see cref="Count"/> is every circuit alive (connected, or kept for a
+/// browser that may reconnect); <see cref="Connected"/> is the ones a browser is attached to right now.
+/// WT-25: the gateway stops a worker by <see cref="Connected"/>, not <see cref="Count"/>. A circuit whose
+/// browser is gone is kept by the framework for minutes; while its session lives the session keeps the worker
+/// (D-174), and once the session has ended that circuit can never be picked up again (the cookie is revoked),
+/// so it must not keep the person's worker and folder alive.
+/// </summary>
 public sealed class CircuitCounter
 {
     private int _count;
+    private int _connected;
 
     public int Count => Volatile.Read(ref _count);
+
+    public int Connected => Volatile.Read(ref _connected);
 
     public void Opened() => Interlocked.Increment(ref _count);
 
     public void Closed() => Interlocked.Decrement(ref _count);
+
+    public void Up() => Interlocked.Increment(ref _connected);
+
+    public void Down() => Interlocked.Decrement(ref _connected);
 }
 
 /// <summary>A worker ends when its gateway does: the gateway holds our standard input, so end of input

@@ -67,7 +67,7 @@ with sync_playwright() as p:
         check("coming back within the session shows the document again", False, str(ex)[:120])
     page.close()
 
-    end = time.time() + 90  # the session expires 40 s after the last activity; then the worker goes
+    end = time.time() + 65  # the session expires 40 s after the last activity; then the worker goes (WT-25: about 45 s in all)
     while time.time() < end and mine & workers():
         time.sleep(2)
     check("after the session expires with no tab open, the worker and files are gone", bool(mine) and not (mine & workers()))

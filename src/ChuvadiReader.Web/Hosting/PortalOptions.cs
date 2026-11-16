@@ -119,4 +119,9 @@ public sealed class WorkerOptions
 
     /// <summary>How often the gateway checks its workers.</summary>
     public TimeSpan CheckInterval { get; set; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>The longest the gateway waits for a worker's answer to one of its own calls (end a session,
+    /// show a warning, announce a restart, health). A worker that hasn't answered by then counts as not
+    /// reached: the call is logged and given up, so nothing else waits behind it (WT-24).</summary>
+    public TimeSpan ControlTimeout { get; set; } = TimeSpan.FromSeconds(10);
 }

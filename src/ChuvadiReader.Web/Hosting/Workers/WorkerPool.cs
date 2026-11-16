@@ -462,18 +462,13 @@ public sealed class WorkerPool : ITabControl, IAsyncDisposable
 
     private async Task SuperviseOneAsync(WorkerProcess worker, CancellationToken ct)
     {
-        Health? health;
-        try
+        var (reached, health) = await ControlAsync<Health>(worker, HttpMethod.Get, "/health", null, ct).ConfigureAwait(false);
+        if (ct.IsCancellationRequested)
         {
-            using var req = new HttpRequestMessage(HttpMethod.Get, WorkerHost.ControlPrefix + "/health");
-            worker.Sign(req, null);
-            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            timeout.CancelAfter(TimeSpan.FromSeconds(10));
-            using var resp = await worker.Client.SendAsync(req, timeout.Token).ConfigureAwait(false);
-            health = await resp.Content.ReadFromJsonAsync<Health>(timeout.Token).ConfigureAwait(false);
-            worker.FailedChecks = 0;
+            return;
         }
-        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or System.Text.Json.JsonException && !ct.IsCancellationRequested)
+
+        if (!reached || health is null)
         {
             if (++worker.FailedChecks >= 3)
             {
@@ -484,15 +479,24 @@ public sealed class WorkerPool : ITabControl, IAsyncDisposable
             return;
         }
 
-        // D-174: a worker that still holds a signed-in session's documents stays, even with no connection (the
-        // person may reload or come back); the session clock ends the session, and then the worker goes.
-        if (health is { Circuits: 0, Sessions: 0 } && DateTimeOffset.UtcNow - worker.LastUsed > _options.IdleStop)
+        worker.FailedChecks = 0;
+
+        if (NobodyLeft(health) && DateTimeOffset.UtcNow - worker.LastUsed > _options.IdleStop)
         {
             await StopAsync(worker.Key).ConfigureAwait(false);
         }
     }
 
-    private sealed record Health(int Tabs, int Circuits, int Sessions);
+    internal sealed record Health(int Tabs, int Circuits, int Sessions, int Connected);
+
+    /// <summary>
+    /// Whether a worker serves nobody any more: no browser attached and no signed-in session's documents.
+    /// D-174: a worker that still holds a session's documents stays, even with no connection (the person may
+    /// reload or come back); the session clock ends the session, and then the worker goes. WT-25: a circuit
+    /// whose browser has gone (closed or killed without a clean goodbye) is kept by the framework for minutes,
+    /// but with its session ended nobody can pick it up again, so it does not keep the worker.
+    /// </summary>
+    internal static bool NobodyLeft(Health health) => health is { Connected: 0, Sessions: 0 };
 
     // ── ITabControl: tabs live in the worker ──────────────────────────────────────────
 
@@ -500,14 +504,10 @@ public sealed class WorkerPool : ITabControl, IAsyncDisposable
     {
         if (sub is null)
         {
-            // A sid alone: ask every worker (a person's sid is in one of them).
-            var total = 0;
-            foreach (var w in Running)
-            {
-                total += await EndInAsync(w, null, sid).ConfigureAwait(false);
-            }
-
-            return total;
+            // A sid alone: ask every worker (a person's sid is in one of them), all at once, so one that
+            // doesn't answer holds up nobody else.
+            var counts = await Task.WhenAll(Running.Select(w => EndInAsync(w, null, sid))).ConfigureAwait(false);
+            return counts.Sum();
         }
 
         return Find(sub) is { } worker ? await EndInAsync(worker, sub, sid).ConfigureAwait(false) : 0;
@@ -515,43 +515,58 @@ public sealed class WorkerPool : ITabControl, IAsyncDisposable
 
     public async Task NoticeAsync(string sub, string? sid, ExpiryNotice? notice)
     {
-        if (Find(sub) is not { } worker)
+        if (Find(sub) is { } worker)
         {
-            return;
-        }
-
-        try
-        {
-            using var req = new HttpRequestMessage(HttpMethod.Post, WorkerHost.ControlPrefix + "/notice")
-            {
-                Content = JsonContent.Create(new WorkerHost.NoticeRequest(sub, sid, notice?.EndsAt, notice?.Reason ?? ExpiryReason.Idle)),
-            };
-            worker.Sign(req, null);
-            using var resp = await worker.Client.SendAsync(req).ConfigureAwait(false);
-        }
-        catch (HttpRequestException ex)
-        {
-            _log.LogDebug("Couldn't reach worker {Key}: {Message}", worker.Key[..8], ex.Message);
+            await ControlAsync<object>(worker, HttpMethod.Post, "/notice",
+                JsonContent.Create(new WorkerHost.NoticeRequest(sub, sid, notice?.EndsAt, notice?.Reason ?? ExpiryReason.Idle)), CancellationToken.None, read: false).ConfigureAwait(false);
         }
     }
 
     private async Task<int> EndInAsync(WorkerProcess worker, string? sub, string? sid)
     {
+        var (_, result) = await ControlAsync<EndResult>(worker, HttpMethod.Post, "/end", JsonContent.Create(new WorkerHost.EndRequest(sub, sid)), CancellationToken.None).ConfigureAwait(false);
+        return result?.Ended ?? 0;
+    }
+
+    /// <summary>
+    /// One of the gateway's own calls to a worker, with a time limit (WT-24). It never throws and never waits
+    /// longer than <see cref="WorkerOptions.ControlTimeout"/>: a worker that is stopping at that moment, has
+    /// stopped, or is stuck counts as "not reached", which is logged. The callers are timer passes that serve
+    /// everyone (session expiry, supervision), so one worker must not be able to hold or end them.
+    /// </summary>
+    private async Task<(bool Reached, T? Result)> ControlAsync<T>(WorkerProcess worker, HttpMethod method, string path, HttpContent? content, CancellationToken ct, bool read = true)
+        where T : class
+    {
+        using var req = new HttpRequestMessage(method, WorkerHost.ControlPrefix + path) { Content = content };
+        using var limit = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        limit.CancelAfter(_options.ControlTimeout);
         try
         {
-            using var req = new HttpRequestMessage(HttpMethod.Post, WorkerHost.ControlPrefix + "/end")
-            {
-                Content = JsonContent.Create(new WorkerHost.EndRequest(sub, sid)),
-            };
             worker.Sign(req, null);
-            using var resp = await worker.Client.SendAsync(req).ConfigureAwait(false);
-            var result = await resp.Content.ReadFromJsonAsync<EndResult>().ConfigureAwait(false);
-            return result?.Ended ?? 0;
+            using var resp = await worker.Client.SendAsync(req, limit.Token).ConfigureAwait(false);
+            if (!resp.IsSuccessStatusCode)
+            {
+                _log.LogWarning("Worker {Key} answered {Status} to {Call}", worker.Key[..8], (int)resp.StatusCode, path);
+                return (false, null);
+            }
+
+            return (true, read ? await resp.Content.ReadFromJsonAsync<T>(limit.Token).ConfigureAwait(false) : null);
         }
-        catch (Exception ex) when (ex is HttpRequestException or System.Text.Json.JsonException)
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
-            _log.LogDebug("Couldn't reach worker {Key}: {Message}", worker.Key[..8], ex.Message);
-            return 0;
+            return (false, null); // the gateway itself is stopping
+        }
+        catch (OperationCanceledException) when (limit.IsCancellationRequested)
+        {
+            _log.LogWarning("Worker {Key} didn't answer {Call} within {Seconds} s; given up", worker.Key[..8], path, _options.ControlTimeout.TotalSeconds);
+            return (false, null);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or ObjectDisposedException or IOException or System.Text.Json.JsonException)
+        {
+            // The worker stopped while the call was on its way (its connection is closed under the call), or
+            // had stopped already. Its sessions went with it.
+            _log.LogInformation("Worker {Key} wasn't reached for {Call} ({Why}); it is stopping or has stopped", worker.Key[..8], path, ex.GetType().Name);
+            return (false, null);
         }
     }
 
@@ -565,22 +580,8 @@ public sealed class WorkerPool : ITabControl, IAsyncDisposable
         await Task.WhenAll(Running.Select(w => AnnounceToAsync(w, notice))).ConfigureAwait(false);
     }
 
-    private async Task AnnounceToAsync(WorkerProcess worker, MaintenanceNotice? notice)
-    {
-        try
-        {
-            using var req = new HttpRequestMessage(HttpMethod.Post, WorkerHost.ControlPrefix + "/maintenance")
-            {
-                Content = JsonContent.Create(new WorkerHost.MaintenanceRequest(notice?.At, notice?.Message)),
-            };
-            worker.Sign(req, null);
-            using var resp = await worker.Client.SendAsync(req).ConfigureAwait(false);
-        }
-        catch (HttpRequestException ex)
-        {
-            _log.LogDebug("Couldn't reach worker {Key}: {Message}", worker.Key[..8], ex.Message);
-        }
-    }
+    private Task AnnounceToAsync(WorkerProcess worker, MaintenanceNotice? notice)
+        => ControlAsync<object>(worker, HttpMethod.Post, "/maintenance", JsonContent.Create(new WorkerHost.MaintenanceRequest(notice?.At, notice?.Message)), CancellationToken.None, read: false);
 
     private WorkerProcess? Find(string sub)
         => _workers.TryGetValue(UserKey.FromSub(sub), out var lazy) && lazy.IsValueCreated && lazy.Value.IsCompletedSuccessfully && !lazy.Value.Result.HasExited
@@ -642,20 +643,8 @@ public sealed class WorkerSupervisor : BackgroundService
         return base.StartAsync(cancellationToken);
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        using var timer = new PeriodicTimer(_options.CheckInterval);
-        try
-        {
-            while (await timer.WaitForNextTickAsync(stoppingToken).ConfigureAwait(false))
-            {
-                await _pool.SuperviseAsync(stoppingToken).ConfigureAwait(false);
-            }
-        }
-        catch (OperationCanceledException)
-        {
-        }
-    }
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+        => TimedPasses.RunAsync("Worker supervision", _options.CheckInterval, TimeProvider.System, () => _pool.SuperviseAsync(stoppingToken), _log, stoppingToken);
 
     public override async Task StopAsync(CancellationToken cancellationToken)
     {

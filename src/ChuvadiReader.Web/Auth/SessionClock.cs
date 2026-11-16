@@ -73,10 +73,16 @@ public sealed class SessionClock
     public (DateTimeOffset EndsAt, ExpiryReason Reason)? EndOf(string sub, string? sid)
         => _entries.TryGetValue(Key(sub, sid), out var e) ? Due(e) : null;
 
-    /// <summary>One pass: warn, take warnings down, end what is due. Run every few seconds.</summary>
-    public async Task TickAsync()
+    /// <summary>
+    /// One pass: warn, take warnings down, end what is due. Run every few seconds. WT-24: every session is
+    /// handled by itself and all at once, each with a time limit, so a session whose worker doesn't answer (or
+    /// stops in the middle of the call) is logged and left behind while the others end on time. A sign-in is
+    /// revoked before anything is awaited, so its cookie stops working whatever happens to the call.
+    /// </summary>
+    public Task TickAsync()
     {
         var now = _time.GetUtcNow();
+        var work = new List<Task>();
         foreach (var (key, e) in _entries)
         {
             if (_sessions.IsRevoked(e.Sub, e.Sid, e.Start))
@@ -96,8 +102,7 @@ public sealed class SessionClock
             if (now >= due.EndsAt)
             {
                 _entries.TryRemove(key, out _);
-                var ended = await _sessions.RevokeAsync(e.Sub, e.Sid).ConfigureAwait(false);
-                _log.LogInformation("Session ended ({Reason}); {Count} open tab(s) closed", due.Reason, ended);
+                work.Add(EndOneAsync(e, due.Reason));
                 continue;
             }
 
@@ -109,8 +114,38 @@ public sealed class SessionClock
                     e.Shown = notice;
                 }
 
-                await _tabs.NoticeAsync(e.Sub, e.Sid, notice).ConfigureAwait(false);
+                work.Add(GuardedAsync("Showing a session's expiry warning", () => _tabs.NoticeAsync(e.Sub, e.Sid, notice)));
             }
+        }
+
+        return Task.WhenAll(work);
+    }
+
+    private Task EndOneAsync(Entry e, ExpiryReason reason)
+        => GuardedAsync("Ending a session (" + reason + ")", async () =>
+        {
+            var ended = await _sessions.RevokeAsync(e.Sub, e.Sid).ConfigureAwait(false);
+            _log.LogInformation("Session ended ({Reason}); {Count} open tab(s) closed", reason, ended);
+        });
+
+    /// <summary>The longest one session's step may take in a pass: the worker call's own limit and half as much again.</summary>
+    internal TimeSpan StepLimit => _portal.Workers.ControlTimeout * 1.5;
+
+    private async Task GuardedAsync(string what, Func<Task> step)
+    {
+        try
+        {
+            await step().WaitAsync(StepLimit, _time).ConfigureAwait(false);
+        }
+        catch (TimeoutException)
+        {
+            _log.LogError("{What} took longer than {Seconds} s; left behind so that no other session waits (the sign-in is already revoked)", what, StepLimit.TotalSeconds);
+        }
+#pragma warning disable CA1031 // by design: one session's failure must not stop the pass for the others
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            _log.LogError(ex, "{What} failed; the other sessions are not affected", what);
         }
     }
 
@@ -140,27 +175,8 @@ public sealed class SessionClockService : BackgroundService
         _log = log;
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        using var timer = new PeriodicTimer(_options.ExpiryCheckInterval, _time);
-        try
-        {
-            while (await timer.WaitForNextTickAsync(stoppingToken).ConfigureAwait(false))
-            {
-                try
-                {
-                    await _clock.TickAsync().ConfigureAwait(false);
-                }
-                catch (Exception ex) when (ex is not OperationCanceledException)
-                {
-                    _log.LogError(ex, "Session expiry pass failed");
-                }
-            }
-        }
-        catch (OperationCanceledException)
-        {
-        }
-    }
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+        => TimedPasses.RunAsync("Session expiry", _options.ExpiryCheckInterval, _time, _clock.TickAsync, _log, stoppingToken);
 }
 
 /// <summary>

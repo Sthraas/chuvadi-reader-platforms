@@ -267,6 +267,42 @@ public sealed class SessionKeepsTabsTests : IDisposable
     }
 
     [Fact]
+    public async Task A_browser_that_left_without_a_goodbye_does_not_keep_its_worker_once_the_session_has_ended()
+    {
+        // WT-25: the framework keeps a circuit whose browser is gone for minutes. While the session lives, the
+        // session keeps the worker (D-174); once it has ended, only an attached browser does.
+        var counter = new ChuvadiReader.Web.Hosting.Workers.CircuitCounter();
+        var c = new Connection(_states, _images, _options, new As("frank", "sid-5"));
+        var life = new SessionLifetime(c.Space, new TransferRegistry(TimeProvider.System), null!, counter, c.Tabs, NullLogger<SessionLifetime>.Instance);
+        counter.Opened();
+        await c.Space.EnsureAsync(default);             // as the circuit's opening does: the session exists
+        await life.OnConnectionUpAsync(null!, default);
+        await life.OnConnectionUpAsync(null!, default); // told twice: counted once
+        Assert.Equal(1, counter.Connected);
+        Assert.False(Stoppable(counter));               // a browser is attached
+
+        await life.OnConnectionDownAsync(null!, default); // the browser is killed
+        Assert.Equal((1, 0), (counter.Count, counter.Connected));
+        Assert.False(Stoppable(counter));               // the session still holds its tabs: the person may come back
+
+        await life.OnConnectionUpAsync(null!, default);   // ... and does (a reconnect)
+        Assert.Equal(1, counter.Connected);
+        await life.OnConnectionDownAsync(null!, default);
+
+        _states.End("frank", "sid-5");                  // the session clock ends the session
+        Assert.Equal(1, counter.Count);                 // the framework still keeps the circuit
+        Assert.True(Stoppable(counter));                // and the worker can go all the same
+
+        await life.OnConnectionUpAsync(null!, default);
+        await life.OnCircuitClosedAsync(null!, default); // closed without a "down" first
+        Assert.Equal((0, 0), (counter.Count, counter.Connected));
+        await c.DisposeAsync();
+    }
+
+    private bool Stoppable(ChuvadiReader.Web.Hosting.Workers.CircuitCounter counter)
+        => ChuvadiReader.Web.Hosting.Workers.WorkerPool.NobodyLeft(new(0, counter.Count, _states.Count, counter.Connected));
+
+    [Fact]
     public async Task An_ended_session_keeps_nothing_a_stale_connection_writes()
     {
         var stale = new Connection(_states, _images, _options, new As("dave", "sid-3"));

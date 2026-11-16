@@ -113,6 +113,8 @@ The Web projects aren't in `ChuvadiReader.Platforms.slnx` on purpose: that solut
 | G-10 | Back-channel token with `sid` only / `sub` only / neither | `sid`: that sign-in; `sub`: every sign-in of the person; neither: refused | U |
 | G-11 | Sangam's development issuer unset (finding 3) | Logout tokens refused (by design) | Noted in SANGAM-INTEGRATION; M on local runs |
 | G-12 | Person in several organisations | Sangam's chooser appears (intended); unit shows the chosen one | **P** a Sangam test person in two organisations |
+| G-13 | The expiry pass cannot be held or ended by one session (WT-24) | A worker that never answers, one that is killed and one that the gateway stops while `/end` is in flight: the call is given up within `Workers:ControlTimeout` and logged; the other sessions end in the same pass; every cookie is revoked; the next pass runs; a later sign-in still expires | U `ExpiryPassResilienceTests`, `WorkerCallLimitTests` (real worker process); E Web Test's `expiry_stall.py` on fresh portals |
+| G-14 | A browser that leaves without a clean close (WT-25) | Browser closed or killed with the tab open: worker and file stay while the session lives; the file goes when the session ends; the worker and its folder go within the worker's idle time and a check, not a minute later | U `SessionKeepsTabsTests`; E `gone_browser.py` (closed: Chrome, Firefox, WebKit; killed: Chromium, Firefox), `comeback.py` |
 
 ## 4. Load and concurrency
 
@@ -122,7 +124,7 @@ The Web projects aren't in `ChuvadiReader.Platforms.slnx` on purpose: that solut
 | L-2 | Same person, many requests at once | Exactly one worker starts | U `Many_requests_at_once…` |
 | L-3 | `MaxWorkers` reached | Newcomers see "The portal is busy"; people already in are unaffected | U |
 | L-4 | Worker crash under load | Only that person is affected; their next request gets a fresh worker; files cleaned | U (crash); M (kill a worker during `load.py`) |
-| L-5 | Everyone leaves | All workers stop within reconnect window + `IdleStop` + check interval (~6 min); data root empty | E (`load.py` then watch `workers/`) |
+| L-5 | Everyone leaves | All workers stop within `IdleStop` + check interval of the session's end or the last browser leaving (WT-25: a connection kept for a reconnect no longer holds a worker whose session is over); data root empty | E (`load.py` then watch `workers/`) |
 | L-6 | Soak: 40 people for 2 hours | No memory growth in the gateway; worker memory returns when people leave; no file left behind | **V-1** on staging |
 | L-7 | Large documents | Upload in chunks completes; rendering stays within the worker's cap; others unaffected | **V-3** on staging |
 | L-8 | Restart under load (planned, with the banner) | Banner shown in advance; restart ends sessions cleanly; people sign in again | M (runbook §9) |
@@ -275,7 +277,15 @@ Found and fixed while running this plan:
 - `expiry.py` 12/12 and `sangam_signin.py` 18/18 in Chrome, Firefox and WebKit; `comeback.py` 5/5 in Chrome and WebKit; `load.py` 3/3.
 - Not run by a portal browser script: Excel resize, the sheet pager and the WT-18 wording for an oversized workbook (the Foundation's own tests and proofs cover them; Web Test's sign-off pass looks at WT-18).
 
+**16 Nov, night (Foundation `4b704c8`, patch 30, merged; WT-24 and WT-25):**
+- Shared solution 0 warnings and its tests (Reader 438 with 6 skipped by the Foundation, Hosting 102, Mobile UI 16, Web UI 41); Web 190/190; package check.
+- WT-24: Web Test's `expiry_stall.py` on ten fresh short-limit portals (Chromium): the session ended at 38 s every time; no "pass failed", "didn't answer" or "took longer" line in the gateway log. It is a race (Web Test saw 2 in 9, then 0 in 20 without a fix), so ten clean runs are not the proof; the proof is the tests that force the race (G-13).
+- WT-25: `gone_browser.py` 4/4: browser closed with the tab open in Chrome, Firefox and WebKit, killed in Chromium and Firefox: files gone 39–41 s after the browser left, worker and folder 41–43 s (before: about 100 s). `comeback.py` 5/5 in Chrome and WebKit with the tighter 65 s allowance.
+- `close_card.py` 14/14, `mark_zoom.py` 9/9, `flows.py` 10/10, `reload.py` 11/11, `page_images.py` 7/7, `office_limits.py` 6/6 and `leave_guard.py` (7/7; Firefox 6/6) in Chrome, Firefox, WebKit and Chromium.
+- `expiry.py` 12/12 and `sangam_signin.py` 18/18 in Chrome, Firefox and WebKit; `load.py` 3/3.
+
 ## 8. Known gaps
+- **Excel column and row sizes set by dragging are lost on a page reload on the portal** (accepted for Phase 1, coordinator 16 Nov). They are display only (D-190) and kept with the tab in memory: they survive sheet changes and tab switches, but a reload brings the tab back (D-174) at the file's own sizes. Nothing in the file is lost.
 - **Browser tests must sign out when they finish** (`sign_out` in `tests/web-e2e/pdfs.py`; in Development `/signout` now ends the person's session). A session keeps its worker until it ends (D-174). On 16 Nov, twenty runs that never signed out left 40 workers alive, the pool's cap, holding 6.5 GB on an 8 GB machine (about 162 MB each), and a load run's page turn timed out. With sign-out, 4 to 7 workers stay.
 - **Browser tests need a person of their own per run** (`sign_in_as` in `tests/web-e2e/pdfs.py`). A signed-in session now keeps its tabs (D-174), so a fixed test name starts each run with the last run's documents open, tabs pile up, and that person's worker stays for the whole session. The first re-run after patch 26 showed it as three one-off failures; with a person per run everything passed.
 - **Browser tests and the Development sign-in:** name the person with the `chvd-dev-user` cookie, not only the `X-Dev-User` header. A closing page's "disconnect" call is a beacon: it carries cookies (as the real sign-in does) but not a test tool's extra headers, so with the header alone it reaches the default person's worker and the old connection lingers for 3 minutes. That made WT-22's leak look larger in Development than it is with the real cookie.
