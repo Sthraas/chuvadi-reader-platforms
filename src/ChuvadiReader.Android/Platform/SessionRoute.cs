@@ -23,6 +23,9 @@ public static class SessionRoute
     /// <summary>The WebView whose route is saved (MainPage, on BlazorWebViewInitialized).</summary>
     public static void Track(AWebView webView) => _webView = new WeakReference<AWebView>(webView);
 
+    /// <summary>True when the WebView has a page to go back to (Back then navigates inside the app).</summary>
+    public static bool CanGoBack() => _webView?.TryGetTarget(out var web) == true && web.CanGoBack();
+
     /// <summary>MainActivity.OnSaveInstanceState: the route the Ui is on, if it isn't Home.</summary>
     public static void Save(Bundle state)
     {

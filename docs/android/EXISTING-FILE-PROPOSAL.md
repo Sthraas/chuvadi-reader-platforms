@@ -169,8 +169,8 @@ Android host Debug and Release `-warnaserror` 0 warnings. On device, run 4254133
 version of the patch): `platform_checks.py` "no private cache path in tab, card or row titles, accessible names or text"
 pass on both.
 
-## P-09 Status messages name folders through `IPathLabels` (AT-21) — **approved by Arun (D-190, 16 Nov); Foundation builds it into its next PR**
-Patch: [`proposal/P-09-folder-messages.patch`](proposal/P-09-folder-messages.patch), against platform/foundation-pr
+## P-09 Status messages name folders through `IPathLabels` (AT-21) — **approved by Arun (D-190) — taken by Foundation (patch 29, 71754e1)**
+Patch: [`proposal/P-09-folder-messages.patch`](proposal/applied/P-09-folder-messages.patch), against platform/foundation-pr
 **07ed3ca** (applies on it alone, on 07ed3ca + Mobile UI a1dfb40, and on foundation-pr 89ac6b2); 4 files, +24 −5.
 
 AT-21: after **Bind all** the tablet said "Bound 2 desks into /data/user/0/in.chuvadi.reader/cache/work/folder/b7b7…".

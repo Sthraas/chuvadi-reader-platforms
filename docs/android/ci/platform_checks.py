@@ -232,7 +232,8 @@ def touch(*args):
 RECT_JS = r"""
 ((sel, text) => {
   const vis = e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
-  const els = [...document.querySelectorAll(sel)].filter(e => !text || (e.textContent || '').trim().startsWith(text)).filter(vis);
+  const names = e => [e.textContent, e.getAttribute('aria-label'), e.getAttribute('title')].filter(t => t).map(t => t.trim());
+  const els = [...document.querySelectorAll(sel)].filter(e => !text || names(e).some(t => t.startsWith(text))).filter(vis);
   const e = els[0];
   if (!e) return null;
   e.scrollIntoView({ block: 'center', inline: 'center' });
@@ -836,6 +837,61 @@ keep = ("route", "tab", "tabs", "counter")
 check("after Android ends the app in the background, it comes back on the same document, page and tabs (AT-11)",
       killed and pid() not in ("", pid_before) and all(k0.get(k) == k1.get(k) for k in keep),
       {"killed": killed, "pid": [pid_before, pid()], "before": {k: k0.get(k) for k in keep}, "after": {k: k1.get(k) for k in keep}})
+
+
+# ── 7e. D-190: leaving with unsaved marks asks first (the last Back) ─────────
+def closeq():
+    try:
+        return cdp.evaluate("(() => { const q = document.querySelector('.closeq'); return q ? q.innerText.slice(0, 160) : null; })()")
+    except Exception:  # noqa: BLE001 — page not reachable
+        return None
+
+
+def back_until_question(limit=8):
+    """Back, as the person would, until the question shows or the app has left."""
+    for _ in range(limit):
+        key("KEYCODE_BACK")
+        time.sleep(1.5)
+        if resumed() != PKG:
+            return None
+        q = closeq()
+        if q:
+            return q
+    return None
+
+
+go_read()
+tap_el(".ph-nav-b, .lb-btn", "Mark")
+time.sleep(1.5)
+tap_el(".ph-tool, .rb", "Rectangle")
+time.sleep(1)
+pg = cdp.evaluate("(() => { const p = [...document.querySelectorAll('.rpage-wrap .rpage')].find(e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.top < innerHeight && r.bottom > 0; });"
+                  " if (!p) return null; const r = p.getBoundingClientRect(); return [r.left, Math.max(r.top, 0), r.width, Math.min(r.bottom, innerHeight) - Math.max(r.top, 0), devicePixelRatio]; })()")
+drew = False
+if pg:
+    ox, oy = webview_origin()
+    x1, y1 = ox + (pg[0] + pg[2] * 0.3) * pg[4], oy + (pg[1] + pg[3] * 0.3) * pg[4]
+    x2, y2 = ox + (pg[0] + pg[2] * 0.6) * pg[4], oy + (pg[1] + pg[3] * 0.5) * pg[4]
+    drew = touch("swipe", round(x1), round(y1), round(x2), round(y2), 600)
+    time.sleep(1.5)
+shot("p11a-mark-drawn")
+pid_mark = pid()
+q1 = back_until_question()
+shot("p11b-close-question")
+check("the last Back with unsaved marks asks first, and the app stays (D-190)",
+      drew and bool(q1) and resumed() == PKG and pid() == pid_mark, {"question": q1, "resumed": resumed(), "page": pg})
+if q1:
+    tap_el(".closeq button", "Cancel")
+    time.sleep(1.5)
+    check("Cancel keeps the app open with the marks (D-190)", resumed() == PKG and not closeq(), {"resumed": resumed(), "question": closeq()})
+    q2 = back_until_question()
+    if q2:
+        tap_el(".closeq button", "Discard")
+        time.sleep(3)
+    shot("p11c-after-discard")
+    check("Discard lets the Back go on: the app leaves (D-190)", bool(q2) and resumed() != PKG, {"question": q2, "resumed": resumed()})
+launch()
+wait_for(lambda s: s.get("route") is not None, 30, "the app again")
 
 
 # ── 8. Split screen ──────────────────────────────────────────────────────────

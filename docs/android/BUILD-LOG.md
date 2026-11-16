@@ -889,3 +889,19 @@ same screen; no crash), smoke pass. With round 6 (API 36 phone and tablet, all c
   compose reports it "already in Foundation", the patch moves to `proposal/applied/`, and Android Test verifies AT-21.
 - For the record: Arun confirmed on his Windows PC that pinch zoom works and a rectangle drawn at a zoom lands under the
   pointer.
+
+### 67. Patch 29 (71754e1) + Mobile UI ca152c4; D-190 close paths; workload set 10.0.401 trial — coordinator, 16 Nov 14:40 IST
+- Composition clean; **P-09 is in Foundation** (moved to `proposal/applied/`); no Android proposals pending.
+- **D-190, the question before closing, Android's close paths** (`IUnsavedWork`):
+  - *Back:* the Back that would leave the app — the Ui consumed nothing and the WebView has no page to go back to —
+    with unsaved marks is held: `ConfirmCloseAsync()`, and the gesture goes on (the app leaves) only on true. Cancel
+    keeps the app open. If the question can't be shown, the Back goes on (never trapped). Any other Back as before.
+  - *Closing a tab / the other tabs / all tabs:* in the Ui, through `TabsService`'s `CloseGuard` — nothing for the host.
+  - *The app going away otherwise* (Home, the recents swipe, Android ending a background app): Android gives no way to
+    hold these, as the contract says. Home keeps the app and its marks in memory; a swipe or a background kill loses
+    unsaved marks (memory only, by design in patch 29).
+  - Test: `platform_checks.py` draws a rectangle in Mark, presses Back until the question shows (app still there,
+    same process), Cancel (app stays), Back again, Discard (the app leaves).
+- Workflow input `workload_set` (trial only: changes the runner's copy of global.json, never committed).
+- Sandbox: Android Debug and Release `-warnaserror` 0 warnings; manifest 14/14; Core 434 (+6 skipped), Hosting 102,
+  MobileUi 16, WebUi 41 pass.

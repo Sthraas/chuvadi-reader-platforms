@@ -24,12 +24,16 @@ on:
         default: full
         type: choice
         options: [full, smoke, timeline]
+      workload_set:
+        description: "Trial only: a workload set to use on the runner instead of global.json's (e.g. 10.0.401). Never committed; empty = the pin."
+        required: false
+        default: ""
 
 env:
-  # platform/foundation-pr: patch 28 (mark card close control, Find and Fit on turned pages, hidden Find matches, Find box in Excel and Word) on Reader main 814f755.
-  FOUNDATION_REF: 87f95c0a36a8366ce3da4f8f6494ac05e7bce59d
-  # platform/mobile-ui: Foundation 57a63c5 merged; H-25 pinch in Mark leaves no mark.
-  MOBILEUI_REF: cbdef7729d603018fcde0f4e72910d98cff50b95
+  # platform/foundation-pr: patch 29 (marks kept with the tab, the question before closing, Excel resize, P-09, M-24) on Reader main cc8134b.
+  FOUNDATION_REF: 71754e122bd63d9a1225006f0c6c4014718009df
+  # platform/mobile-ui: Foundation 87f95c0 merged; Find bar 44 px and out of the page's way on the phone.
+  MOBILEUI_REF: ca152c452bd70a07ffe4a3a5f124a3ac04ba2397
   DOTNET_NOLOGO: '1'
   DOTNET_CLI_TELEMETRY_OPTOUT: '1'
 
@@ -89,6 +93,12 @@ jobs:
             python3 -c "import json,sys; a=json.load(open('global.json'))['sdk']; b=json.loads(sys.argv[1])['sdk']; sys.exit(0 if all(a.get(k)==v for k,v in b.items()) else 'global.json differs from D-178: '+str(a))" "$want"
           else
             echo "$want" > global.json
+          fi
+          # A trial of another workload set (coordinator, 16 Nov: is 10.0.401 fine for Android?) changes it on this
+          # runner's copy only.
+          if [ -n "${{ inputs.workload_set }}" ]; then
+            python3 -c "import json,sys; g=json.load(open('global.json')); g['sdk']['workloadVersion']=sys.argv[1]; json.dump(g, open('global.json','w'))" "${{ inputs.workload_set }}"
+            echo "TRIAL workload set: $(cat global.json)"
           fi
           dotnet --version
 

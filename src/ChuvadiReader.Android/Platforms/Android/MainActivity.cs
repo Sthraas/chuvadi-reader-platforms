@@ -1,3 +1,4 @@
+using ChuvadiReader.Platform;
 using ChuvadiReader.Android.Platform;
 using global::Android.App;
 using global::Android.Content;
@@ -133,10 +134,56 @@ public sealed class MainActivity : MauiAppCompatActivity
                 return;
             }
 
-            // Nobody consumed it: hand the gesture to the next handler (MAUI / system default).
+            // D-190: the Back that would leave the app (nothing left to close, no page to go back to) with
+            // unsaved marks is held; the Ui asks about each file, and the app leaves only when the person
+            // has answered for all of them. Anything else goes on exactly as before.
+            if (!SessionRoute.CanGoBack() && Service<IUnsavedWork>() is { HasUnsavedWork: true } work)
+            {
+                AskThenLeave(work);
+                return;
+            }
+
+            PassOn();
+        }
+
+        private void PassOn()
+        {
+            // Hand the gesture to the next handler (MAUI's WebView history, then the system: leave the app).
             Enabled = false;
             activity.OnBackPressedDispatcher.OnBackPressed();
             Enabled = true;
+        }
+
+        private bool _asking;
+
+        private async void AskThenLeave(IUnsavedWork work)
+        {
+            if (_asking)
+            {
+                return; // the question is already on screen
+            }
+
+            _asking = true;
+            bool go;
+            try
+            {
+                go = await work.ConfirmCloseAsync();
+            }
+            catch (Exception ex)
+            {
+                // The question could not be shown: never trap the person in the app.
+                global::Android.Util.Log.Warn("Chuvadi", $"Close question failed: {ex.Message}");
+                go = true;
+            }
+            finally
+            {
+                _asking = false;
+            }
+
+            if (go)
+            {
+                activity.RunOnUiThread(PassOn);
+            }
         }
     }
 }
