@@ -1,9 +1,9 @@
 {
-  "round": "12d (tablet only: close card through Document \u203a Close; text box typing a fourth time)",
-  "emulators": "tablet-36",
+  "round": "12e (AT-27 clean case on the same app: pinch in Read and in Mark mode, phone and tablet)",
+  "emulators": "phone-36,tablet-36",
   "suites": "saves",
   "foundation_ref": "71754e122bd63d9a1225006f0c6c4014718009df",
   "mobileui_ref": "ca152c452bd70a07ffe4a3a5f124a3ac04ba2397",
-  "android_ref": "04c052af2b8293d01004c257fe508f7d9caeaad5",
-  "saves_only": "SV-1,SV-13"
+  "android_ref": "5208bf064d580f66d51521d3ee7acc878ee83121",
+  "saves_only": "SV-15"
 }

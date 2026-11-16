@@ -386,7 +386,7 @@ cdp.wait("!!(window.Blazor && Blazor.navigateTo) && document.getElementById('app
 ORIG = {}
 for fx, nm in (("doc-12p.pdf", "sv-text.pdf"), ("doc-12p.pdf", "sv-shape.pdf"), ("form-filled.pdf", "sv-form.pdf"),
                ("doc-12p.pdf", "sv-redact.pdf"), ("doc-12p.pdf", "sv-arrange.pdf"), ("doc-12p.pdf", "sv-print.pdf"),
-               ("doc-12p.pdf", "sv-pass.pdf"), ("doc-12p.pdf", "sv-compress.pdf"), ("doc-12p.pdf", "sv-flatten.pdf"), ("rotated.pdf", "sv-rotated.pdf"), ("doc-12p.pdf", "sv-zoom.pdf"), ("doc-12p.pdf", "sv-close.pdf")):
+               ("doc-12p.pdf", "sv-pass.pdf"), ("doc-12p.pdf", "sv-compress.pdf"), ("doc-12p.pdf", "sv-flatten.pdf"), ("rotated.pdf", "sv-rotated.pdf"), ("doc-12p.pdf", "sv-zoom.pdf"), ("doc-12p.pdf", "sv-close.pdf"), ("doc-12p.pdf", "sv-pinch.pdf")):
     ORIG[nm] = push(fx, nm)
 time.sleep(3)
 
@@ -899,6 +899,37 @@ def sv12_zoom():
     R.check("SV-12c pinch in makes it smaller again", r3[2] < r1[2] * 0.9, {"page_w_zoomed": round(r1[2]), "page_w_after_pinch_in": round(r3[2]), "mark_card_put_away_by": away, "mode": "Mark"})
 
 
+def sv15_pinch_modes():
+    """AT-27, the clean case: pinch out and in on the page in Read mode, then in Mark mode with a tool armed and no card up."""
+    if not pick_open("sv-pinch.pdf")["opened"]:
+        R.check("SV-15 file opened through the picker", False, None)
+        return
+    marks = "document.querySelectorAll('.mk-layer > *, .mk-layer svg > *').length"
+    out = {}
+    for m, arm in (("Read", None), ("Mark", ("Mark: Rectangle", "Rectangle", "Box"))):
+        mode(m)
+        time.sleep(1)
+        if arm:
+            tool(*arm)
+            time.sleep(0.8)
+        r0 = cdp.js(PAGE0)
+        card = bool(cdp.js(FCARD)) if phone() else False
+        at = cdp.js(f"(() => {{ const e = document.elementFromPoint({r0[4] / 2}, {r0[5] * 0.4}); return e ? (e.closest('.rpage') ? 'page' : (e.className || e.tagName).toString().slice(0, 40)) : null; }})()")
+        c = to_screen(r0[4] / 2, r0[5] * 0.4)
+        span = min(to_screen(r0[4], 0)[0], 1000)
+        n0 = cdp.js(marks)
+        touch("pinch", c[0], c[1], round(span * 0.25), round(span * 0.8), 600)
+        time.sleep(2)
+        r1 = cdp.js(PAGE0)
+        shot(f"sv15-{m.lower()}-pinched-out")
+        touch("pinch", c[0], c[1], round(span * 0.8), round(span * 0.25), 600)
+        time.sleep(2)
+        r2 = cdp.js(PAGE0)
+        out[m] = {"under_the_fingers": at, "mark_card_up": card, "page_w": [round(r0[2]), round(r1[2]), round(r2[2])], "marks_before": n0, "marks_after": cdp.js(marks)}
+        R.check(f"SV-15 {m} mode: pinch out makes the page bigger, pinch in smaller again, and no mark is left behind",
+                r1[2] > r0[2] * 1.15 and r2[2] < r1[2] * 0.9 and out[m]["marks_after"] == n0, out[m])
+
+
 def sv11_excel():
     adb("push", os.path.join(FX, "test.xlsx"), "/sdcard/Download/sv-sheet.xlsx")
     sh("am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d 'file:///sdcard/Download/sv-sheet.xlsx' >/dev/null")
@@ -1064,7 +1095,7 @@ def sv14_excel_resize():
 
 XLSX_MD5 = None
 CASES = [("SV-1", sv1_text), ("SV-2", sv2_shape), ("SV-3", sv3_form), ("SV-4", sv4_redact), ("SV-7", sv7_password), ("SV-8", sv8_compress),
-         ("SV-9", sv9_flatten), ("SV-10", sv10_rotated), ("SV-12", sv12_zoom), ("SV-11", sv11_excel), ("SV-14", sv14_excel_resize), ("SV-13", sv13_close_card), ("SV-6", sv6_print), ("SV-5", sv5_arrange)]
+         ("SV-9", sv9_flatten), ("SV-10", sv10_rotated), ("SV-12", sv12_zoom), ("SV-11", sv11_excel), ("SV-14", sv14_excel_resize), ("SV-13", sv13_close_card), ("SV-15", sv15_pinch_modes), ("SV-6", sv6_print), ("SV-5", sv5_arrange)]
 if phone():
     # Round 11: the phone stopped answering after the third Mark › Save as. Everything else first, so it is covered whatever happens.
     first = ["SV-11", "SV-14", "SV-12", "SV-10", "SV-1", "SV-2", "SV-3", "SV-13"]     # what round 12 did not reach on the phone
