@@ -53,6 +53,10 @@ internal static unsafe partial class Native
     [LibraryImport(Lib, EntryPoint = "chvd_start_mark", StringMarshalling = StringMarshalling.Utf8)]
     public static partial void StartMark(string accent, string rule);
 
+    /// <summary>From inside <see cref="GtkHost.CloseRequested"/> only: this close request leaves the window open.</summary>
+    [LibraryImport(Lib, EntryPoint = "chvd_hold_close")]
+    public static partial void HoldClose();
+
     /// <summary>The app has drawn itself: the start-up mark over the page goes.</summary>
     [LibraryImport(Lib, EntryPoint = "chvd_ready")]
     public static partial void Ready();

@@ -118,6 +118,13 @@ public static class Program
             var incoming = services.GetRequiredService<IncomingFiles>();
             WireWindow(services, incoming, instance);
 
+            // D-190: closing the window with unsaved marks asks first (Save / Save as / Discard / Cancel).
+            var unsaved = services.GetRequiredService<IUnsavedWork>();
+            var closeGuard = new WindowCloseGuard(
+                () => unsaved.HasUnsavedWork, unsaved.ConfirmCloseAsync,
+                Native.HoldClose, () => Native.Present(null), Native.Close, GtkHost.Post);
+            GtkHost.CloseRequested += closeGuard.OnCloseRequested;
+
             _ = manager.AddRootComponentAsync(typeof(ChuvadiReader.Ui.App), "#app", ParameterView.Empty);
             Mark("root component added");
             manager.Navigate("/");

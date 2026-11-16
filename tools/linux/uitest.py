@@ -1490,6 +1490,170 @@ def button_layouts():
 step("35-button-layouts", button_layouts)
 
 
+def ask_before_closing():
+    """D-190 on Linux: with unsaved marks, closing a tab, all tabs or the window asks Save / Save as / Discard /
+    Cancel. The window is closed the real ways: Alt F4 (the desktop's close request) and the title bar's own
+    close button. Cancel and Escape keep everything; the window goes only when every file has an answer."""
+    import hashlib, shutil
+    folder = os.path.join(OUT, "closeq")
+    os.makedirs(folder, exist_ok=True)
+    files = {n: os.path.join(folder, n) for n in ("ask-a.pdf", "ask-b.pdf")}
+    for path in files.values():
+        shutil.copyfile(PDF, path)
+    digest = lambda path: hashlib.sha256(open(path, "rb").read()).hexdigest()
+    before = {n: digest(path) for n, path in files.items()}
+    shapes = lambda: app.js("return document.querySelectorAll('.mk-shape').length")
+    tabs = lambda: app.js("return [...document.querySelectorAll('.rtab .rtab-name')].map(e => e.textContent.trim())")
+    card = lambda: app.js("var c=document.querySelector('.closeq'); return c ? {title: c.querySelector('.closeq-title').textContent.trim(), "
+                          "text: c.querySelector('.closeq-text').textContent.replace(/\\s+/g,' ').trim(), "
+                          "buttons: [...c.querySelectorAll('button')].map(b => b.textContent.trim())} : null")
+
+    def show(name):
+        app.js(f"var t=[...document.querySelectorAll('.rtab')].find(t => t.textContent.includes({json.dumps(name)})); t.click(); return 1")
+        app.wait(lambda: app.js(f"var t=document.querySelector('.rtab.active'); return !!t && t.textContent.includes({json.dumps(name)})"), 10, name + " on screen")
+        app.wait(lambda: rendered(0), 20, name + " drawn")
+        time.sleep(0.6)
+
+    def mark_mode():
+        if not app.js("return [...document.querySelectorAll('.srail button')].some(b => b.offsetParent && (b.getAttribute('aria-label')||'').startsWith('Rectangle'))"):
+            app.click(".lb-mode", 1)  # Mark
+            time.sleep(1.2)
+
+    def draw():
+        mark_mode()
+        click_label(".srail", "Rectangle")
+        focus_main()
+        gx, gy = (int(v) for v in window_geometry()[0].split(","))
+        x, y = app.js("var d=document.querySelector('.rdesk').getBoundingClientRect(), l=document.querySelector('.mk-layer').getBoundingClientRect(); "
+                      "return [Math.round(Math.max(l.left, d.left) + 80), Math.round(Math.max(l.top, d.top, 90) + 80)]")
+        n = shapes()
+        app.xdo("mousemove", str(gx + x), str(gy + y))
+        app.xdo("mousedown", "1")
+        for i in range(1, 9):
+            app.xdo("mousemove", str(gx + x + 12 * i), str(gy + y + 8 * i))
+            time.sleep(0.04)
+        app.xdo("mouseup", "1")
+        app.wait(lambda: shapes() == n + 1, 5, "a rectangle drawn")
+        app.key("Escape")
+        time.sleep(0.3)
+
+    def answer(label):
+        ok = app.js(f"var b=[...document.querySelectorAll('.closeq button')].find(b => b.textContent.trim() === {json.dumps(label)}); if (!b) return false; b.click(); return true")
+        if not ok:
+            raise AssertionError(f"no '{label}' on the card: {card()}")
+        time.sleep(1.2)
+
+    def asked(what):
+        app.wait(lambda: card() is not None, 6, "the question after " + what)
+        time.sleep(0.4)
+        if not app.alive():
+            raise AssertionError(f"the app closed on {what} with unsaved marks")
+        return card()
+
+    def alt_f4():
+        focus_main()
+        app.xdo("key", "alt+F4")
+
+    said = []
+    for name, path in files.items():
+        open_tab(path)
+    show("ask-a.pdf")
+    draw()
+    show("ask-b.pdf")
+    if shapes() != 0:
+        raise AssertionError("the other tab shows the first tab's mark")
+    show("ask-a.pdf")
+    if shapes() != 1:
+        raise AssertionError(f"the mark did not stay with its tab: {shapes()} shapes after a tab switch")
+    said.append("the mark stays with its tab")
+
+    # A tab's own x.
+    app.js("document.querySelector('.rtab.active .rtab-x').click(); return 1")
+    c = asked("the tab's x")
+    if "ask-a.pdf" not in c["title"] or c["buttons"] != ["Save", "Save as…", "Discard", "Cancel"]:
+        raise AssertionError(f"the card on closing a tab: {c}")
+    answer("Cancel")
+    if card() or "ask-a.pdf" not in tabs() or shapes() != 1:
+        raise AssertionError(f"Cancel on a tab's x: card {card()}, tabs {tabs()}, shapes {shapes()}")
+    said.append("tab x asks (Save / Save as… / Discard / Cancel), Cancel keeps it")
+
+    # Close all tabs (Ctrl Shift W, real key).
+    focus_main()
+    app.xdo("key", "ctrl+shift+w")
+    asked("Close all tabs")
+    app.key("Escape")
+    time.sleep(0.8)
+    if card() or len(tabs()) != 2 or shapes() != 1:
+        raise AssertionError(f"Escape on Close all tabs: card {card()}, tabs {tabs()}, shapes {shapes()}")
+    # Close inactive tabs (Ctrl Alt W) from the other tab: the file with marks is the inactive one.
+    show("ask-b.pdf")
+    focus_main()
+    app.xdo("key", "ctrl+alt+w")
+    c = asked("Close inactive tabs")
+    if "ask-a.pdf" not in c["title"]:
+        raise AssertionError(f"Close inactive tabs asked about the wrong file: {c}")
+    seen_while_asked = shapes()
+    app.shot("39-ask-inactive-tab")
+    answer("Cancel")
+    if card() or len(tabs()) != 2:
+        raise AssertionError(f"Cancel on Close inactive tabs: card {card()}, tabs {tabs()}")
+    show("ask-a.pdf")
+    mark_mode()  # the file asked about is shown in Read, where marks are not drawn
+    if shapes() != 1:
+        raise AssertionError(f"the mark was lost by a cancelled Close inactive tabs ({shapes()} shapes in Mark)")
+    said.append(f"Close all tabs and Close inactive tabs ask, Escape and Cancel keep both (while asked about the inactive file, "
+                f"{seen_while_asked} of its 1 mark is on screen: it is shown in Read)")
+
+    # The window: Alt F4, then the title bar's close button, then a second request while the question is up.
+    alt_f4()
+    asked("Alt F4")
+    answer("Cancel")
+    if card() or not app.alive() or shapes() != 1:
+        raise AssertionError("Cancel after Alt F4 did not leave the app as it was")
+    app.click_real(".tl-close")
+    asked("the title bar's close button")
+    app.shot("39-ask-before-closing")
+    alt_f4()
+    time.sleep(1.0)
+    if not app.alive() or app.js("return document.querySelectorAll('.closeq').length") != 1:
+        raise AssertionError("a second close while the question is up closed the app or asked twice")
+    answer("Cancel")
+    said.append("Alt F4 and the close button ask, a second close asks once, Cancel keeps the window")
+
+    # Two files with marks: one question each; Save on the first, Discard on the second; then the window goes.
+    show("ask-b.pdf")
+    draw()
+    alt_f4()
+    c = asked("Alt F4 with two files")
+    if "File 1 of 2" not in c["text"]:
+        raise AssertionError(f"two files with marks, first card: {c}")
+    first = "ask-a.pdf" if "ask-a.pdf" in c["title"] else "ask-b.pdf"
+    second = "ask-b.pdf" if first == "ask-a.pdf" else "ask-a.pdf"
+    answer("Save")
+    app.wait(lambda: (card() or {}).get("text", "").find("File 2 of 2") >= 0 or not app.alive(), 15, "the second file's question")
+    c = card()
+    if not c or second not in c["title"]:
+        raise AssertionError(f"the second card: {c}")
+    if not app.alive():
+        raise AssertionError("the app closed before the second file was answered")
+    # The window closes on this answer, so the click is made just after the driver has replied.
+    app.js("var b=[...document.querySelectorAll('.closeq button')].find(b => b.textContent.trim() === 'Discard'); setTimeout(() => b.click(), 200); return 1")
+    app.wait(lambda: not app.alive(), 15, "the window to close once every file has an answer")
+    code = app.proc.returncode
+    after = {n: digest(path) for n, path in files.items()}
+    if after[first] == before[first]:
+        raise AssertionError(f"Save did not write the marks into {first}")
+    if after[second] != before[second]:
+        raise AssertionError(f"Discard changed {second}")
+    said.append(f"two files: asked one at a time; Save wrote {first}, Discard left {second} as it was; then the app closed (exit {code})")
+    app.restart(log_name="app-after-ask.log")
+    time.sleep(1.5)
+    return "; ".join(said)
+
+
+step("39-ask-before-closing", ask_before_closing, shot=False)
+
+
 def window_close():
     app.click_real(".tl-close")
     app.wait(lambda: not app.alive(), 15, "app exit")

@@ -65,6 +65,7 @@ static struct
      * first render (chvd_ready), or the fallback time. */
     GtkWidget *cover;
     guint cover_fallback;
+    int close_held;     /* set by .NET from inside the close-requested event: that request is held */
     double pinch_scale; /* the pinch's scale at the last change sent to the page; 0 when no pinch is on */
 
     /* The last pointer press inside the view, for begin-move from the HTML title bar. */
@@ -406,12 +407,29 @@ static gboolean on_drop(GtkDropTarget *target, const GValue *value, double x, do
 
 /* ── window ──────────────────────────────────────────────────────────────── */
 
+/* Every way the window is asked to close arrives here: the title bar's close button, Alt F4, the desktop's
+ * own "Close", and the in-app close (chvd_close). .NET hears of it first and may hold this one request
+ * (chvd_hold_close, from inside the event) while it asks about unsaved work (D-190); it closes the window
+ * itself afterwards if the answer allows. */
 static gboolean on_close_request(GtkWindow *window, gpointer data)
 {
     (void)window;
     (void)data;
+    S.close_held = 0;
     S.event(CHVD_EVENT_CLOSE_REQUESTED, NULL);
+    if (S.close_held)
+    {
+        S.close_held = 0;
+        return TRUE; /* stay open */
+    }
+
     return FALSE; /* let it close; .NET quits the loop on the destroy below */
+}
+
+/* From inside the close-requested event only: this request does not close the window. Main thread. */
+CHVD_EXPORT void chvd_hold_close(void)
+{
+    S.close_held = 1;
 }
 
 static void on_destroy(GtkWidget *widget, gpointer data)
