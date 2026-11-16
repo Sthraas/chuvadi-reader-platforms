@@ -141,6 +141,7 @@ x0, y0, x1, y1 = map(int, m.groups())
 ok = x0 >= 18 and y0 >= 18 and x1 <= 774 and y1 <= 594 and x1 - x0 >= 700 and y1 - y0 >= 480
 sys.exit(0 if ok else 1)
 PYEOF
+[[ "$pf" == *"pdf-images=0"* ]] && [[ "$pf" != *"pdf-bytes=0 "* ]] && pass "M-26 the page drawn for printing is vector (a PDF with no image in it)" || fail "M-26 printing must be vector: ${pf:-no printfit line}"
 grep -E 'CHUVADI (open-button|picked|tabs|ui) ' "$LOG"
 i=0
 for f in $PICKS; do

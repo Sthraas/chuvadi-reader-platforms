@@ -91,7 +91,24 @@ internal sealed class MacPdfPageRenderer : UIPrintPageRenderer
             }
         }
 
+        // The same drawing into a PDF, as printing does: it must stay vector — no picture of the page in it.
+        using var data = new NSMutableData();
+        using (var consumer = new CGDataConsumer(data))
+        {
+            var sheet = new CGRect(0, 0, sw, sh);
+            using var pdfOut = new CGContextPDF(consumer, sheet);
+            pdfOut.BeginPage(sheet);
+            pdfOut.TranslateCTM(0, sh);
+            pdfOut.ScaleCTM(1, -1);
+            Draw(pdfOut, page, new CGRect(18, 18, sw - 36, sh - 36), fitToPage);
+            pdfOut.EndPage();
+            pdfOut.Close();
+        }
+
+        var written = System.Text.Encoding.Latin1.GetString(data.ToArray());
+        var images = System.Text.RegularExpressions.Regex.Matches(written, @"/Subtype\s*/Image").Count;
+
         return FormattableString.Invariant(
-            $"sheet={sw}x{sh} rotation={page.Rotation} scale={at.Scale:0.###} placed={at.X:0},{at.Y:0}+{at.Width:0}x{at.Height:0} ink={x0},{y0}..{x1},{y1}");
+            $"sheet={sw}x{sh} rotation={page.Rotation} scale={at.Scale:0.###} placed={at.X:0},{at.Y:0}+{at.Width:0}x{at.Height:0} ink={x0},{y0}..{x1},{y1} pdf-bytes={written.Length} pdf-images={images}");
     }
 }
