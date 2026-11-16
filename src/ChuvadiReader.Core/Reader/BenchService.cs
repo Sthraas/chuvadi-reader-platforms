@@ -86,6 +86,7 @@ public sealed class BenchService
             }
         }
 
+        NoteUnsaved();
         Changed?.Invoke();
     }
 
@@ -180,6 +181,7 @@ public sealed class BenchService
             _restoring = false;
         }
 
+        NoteUnsaved();
         Changed?.Invoke();
     }
 
@@ -190,6 +192,16 @@ public sealed class BenchService
     {
         var sb = new System.Text.StringBuilder(256);
         foreach (var d in _desks)
+        {
+            AppendDesk(sb, d);
+        }
+
+        return sb.ToString();
+    }
+
+    /// <summary>One desk's part of the fingerprint: its name, settings and every page as placed.</summary>
+    private static void AppendDesk(System.Text.StringBuilder sb, Desk d)
+    {
         {
             sb.Append('D').Append(d.Id.ToString("N")).Append('|')
               .Append(d.Name).Append('|').Append(d.NameLocked ? '1' : '0').Append('|')
@@ -236,7 +248,86 @@ public sealed class BenchService
             }
             sb.Append('\n');
         }
+    }
+
+    // ── unsaved work (D-194) ─────────────────────────────────────────────────
+
+    // Each desk as it was when it was last kept somewhere outside the app: bound to a PDF, or saved in (or opened
+    // from) a session file.
+    private readonly Dictionary<Guid, string> _kept = new();
+    private bool _unsavedKnown;
+
+    /// <summary>D-194: true when a desk with pages has changed since it was last bound to a PDF or saved in a
+    /// session file (or was never either). Closing the app now would lose that arranging.</summary>
+    public bool HasUnsavedWork
+    {
+        get
+        {
+            foreach (var d in _desks)
+            {
+                if (!d.IsEmpty && !(_kept.TryGetValue(d.Id, out var kept) && kept == SignatureOf(d)))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+    }
+
+    /// <summary>How many desks <see cref="HasUnsavedWork"/> is about.</summary>
+    public int UnsavedDeskCount =>
+        _desks.Count(d => !d.IsEmpty && !(_kept.TryGetValue(d.Id, out var kept) && kept == SignatureOf(d)));
+
+    /// <summary>Raised when <see cref="HasUnsavedWork"/> changes.</summary>
+    public event Action? UnsavedChanged;
+
+    /// <summary>D-194: asked before the app closes with unsaved arranging. Returns false when the person chose
+    /// Cancel; a session they chose to save is saved by then. The shell sets it (it shows the card).</summary>
+    public Func<Task<bool>>? CloseGuard { get; set; }
+
+    /// <summary>Asks about unsaved arranging, if there is any. True: go ahead and close.</summary>
+    public Task<bool> ConfirmCloseAsync() =>
+        HasUnsavedWork && CloseGuard is { } guard ? guard() : Task.FromResult(true);
+
+    /// <summary>The page calls this after this desk was bound to a PDF the person keeps (not after a working
+    /// copy made for printing or for another tool).</summary>
+    public void MarkDeskKept(Guid deskId)
+    {
+        if (FindDesk(deskId) is { } d)
+        {
+            _kept[d.Id] = SignatureOf(d);
+            NoteUnsaved();
+        }
+    }
+
+    /// <summary>The page calls this after every desk was bound, or the session was saved to a file.</summary>
+    public void MarkAllKept()
+    {
+        _kept.Clear();
+        foreach (var d in _desks)
+        {
+            _kept[d.Id] = SignatureOf(d);
+        }
+
+        NoteUnsaved();
+    }
+
+    private static string SignatureOf(Desk d)
+    {
+        var sb = new System.Text.StringBuilder(128);
+        AppendDesk(sb, d);
         return sb.ToString();
+    }
+
+    private void NoteUnsaved()
+    {
+        bool now = HasUnsavedWork;
+        if (now != _unsavedKnown)
+        {
+            _unsavedKnown = now;
+            UnsavedChanged?.Invoke();
+        }
     }
 
     // ── select-all / invert (per desk) ──────────────────────────────────────────
@@ -1798,6 +1889,7 @@ public sealed class BenchService
         }
 
         ClearHistory();
+        MarkAllKept();   // just read from a session file: what is on the desks is what that file holds
         Raise();
         return result;
     }
@@ -1853,6 +1945,7 @@ public sealed class BenchService
         _selected.Clear();
         _selectionAnchor = null;
         _activeDesk = null;
+        _kept.Clear();
         EnsureDesk();
         ClearHistory();
         Raise();

@@ -69,6 +69,7 @@ public partial class Reader
     private Stack<MkState> _mkRedo => _marks.Redo;
     private MkState? _pendingSnap;
     private Func<bool, Task<string?>>? _saveMarksHandler;
+    private bool _unsavedTold;
 
     private sealed record MkState(
         Dictionary<int, List<TextBox>> Texts,
@@ -347,6 +348,14 @@ public partial class Reader
         if (_shellGone || !Nav.ToBaseRelativePath(Nav.Uri).StartsWith("reader", StringComparison.OrdinalIgnoreCase))
         {
             return;
+        }
+
+        // D-194: hosts that must act before a close is under way (Linux holds a sign-out) hear when this changes.
+        bool unsavedNow = _marks.HasUnsaved;
+        if (unsavedNow != _unsavedTold)
+        {
+            _unsavedTold = unsavedNow;
+            Tabs.NoteUnsavedMarksChanged();
         }
 
         if (Shell.PendingTool is not null && Tab is { } pt && (pt.Session is not null || DocReady(pt)))

@@ -1785,7 +1785,7 @@
             + Shapes.Values.Sum(l => l.Count)
             + Images.Values.Sum(l => l.Count(i => i.Bytes.Length > 0));
 
-        public bool HasUnsaved => Count > 0 && Signature() != SavedAs;
+        public bool HasUnsaved => Count > 0 && (SavedAs is null || Signature() != SavedAs);
 
         public void Discard()
         {
