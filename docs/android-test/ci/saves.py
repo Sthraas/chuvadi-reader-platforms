@@ -868,29 +868,35 @@ def sv12_zoom():
     R.check("SV-12a pinch out with two fingers makes the page bigger", r1[2] > r0[2] * 1.15 or (cdp.js("visualViewport.scale") or 1) > 1.15, {"page_w_before": round(r0[2]), "page_w_after": round(r1[2]), "viewport": r0[4:], "visual_scale": cdp.js("visualViewport.scale")})
     mode("Mark")
     tool("Mark: Rectangle", "Rectangle", "Box")
-    r = cdp.js(PAGE0)
-    # two points that are on screen and on page 1
+    # the page that is under the upper-middle of the screen after the pinch (on the phone that is no longer page 1)
+    pg = cdp.js("(() => { const ps = [...document.querySelectorAll('.rpage-wrap .rpage')]; const y = innerHeight * 0.34; const i = ps.findIndex(e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.top <= y - 40 && r.bottom >= y + 110; }); if (i < 0) return null; const r = ps[i].getBoundingClientRect(); return [r.left, r.top, r.width, r.height, innerWidth, innerHeight, i]; })()")
+    if not pg:
+        R.check("SV-12b a page fills the upper-middle of the screen after the pinch", False, {"first_page": cdp.js(PAGE0)})
+        return
+    r, page_i = pg[:6], pg[6]
     x0, x1 = max(r[0], 0) + min(r[2], r[4]) * 0.22, max(r[0], 0) + min(r[2], r[4]) * 0.62
-    y0, y1 = max(r[1], 0) + r[5] * 0.22, max(r[1], 0) + r[5] * 0.40
+    y0, y1 = r[5] * 0.30, r[5] * 0.30 + 90
     a, b = to_screen(x0, y0), to_screen(x1, y1)
     touch("swipe", a[0], a[1], b[0], b[1], 900)       # raw touch events: the finger really ends at b
     time.sleep(1.5)
     shot("sv12-marked-at-zoom")
-    r2 = cdp.js(PAGE0)
+    r2 = cdp.js(f"(() => {{ const e = [...document.querySelectorAll('.rpage-wrap .rpage')][{page_i}].getBoundingClientRect(); return [e.left, e.top, e.width, e.height]; }})()")
     want = {"x0": round((x0 - r[0]) / r[2] * 595.28, 1), "x1": round((x1 - r[0]) / r[2] * 595.28, 1),
             "y1": round((1 - (y0 - r[1]) / r[3]) * 841.89, 1), "y0": round((1 - (y1 - r[1]) / r[3]) * 841.89, 1)}
     s = save_as()
     got = None
     if s["files"]:
         rd, pages = read(s["files"][-1], "sv12-saveas.pdf")
-        got = stamp_rect(rd) if rd else None
+        got = stamp_rect(rd, page_i) if rd else None
     off = max(abs(got[k] - want[k]) for k in want) if got and "x0" in got else None
     R.check("SV-12b a rectangle drawn by finger at the pinched zoom is saved where it was drawn (within 6 pt)", off is not None and off <= 6,
-            {"zoomed_page_css": [round(v) for v in r[:4]], "page_moved_during_draw": [round(v) for v in r2[:4]] != [round(v) for v in r[:4]], "drawn_pt": want, "saved_pt": got, "largest_offset_pt": off, "save": s})
-    touch("pinch", c[0], c[1], round(span * 0.8), round(span * 0.25), 600)
+            {"page": page_i + 1, "zoomed_page_css": [round(v) for v in r[:4]], "page_moved_during_draw": [round(v) for v in r2[:4]] != [round(v) for v in r[:4]], "drawn_pt": want, "saved_pt": got, "largest_offset_pt": off, "save": s})
+    away = card_away() if phone() and cdp.js(FCARD) else None       # the phone's mark card lies over the middle of the screen
+    c2 = to_screen(r0[4] / 2, r0[5] * 0.36)
+    touch("pinch", c2[0], c2[1], round(span * 0.8), round(span * 0.25), 600)
     time.sleep(2)
     r3 = cdp.js(PAGE0)
-    R.check("SV-12c pinch in makes it smaller again", r3[2] < r1[2] * 0.9, {"page_w_zoomed": round(r1[2]), "page_w_after_pinch_in": round(r3[2])})
+    R.check("SV-12c pinch in makes it smaller again", r3[2] < r1[2] * 0.9, {"page_w_zoomed": round(r1[2]), "page_w_after_pinch_in": round(r3[2]), "mark_card_put_away_by": away, "mode": "Mark"})
 
 
 def sv11_excel():
@@ -943,9 +949,13 @@ def close_tab_by_touch(name):
         x = RECT(f".ph-tab-x[aria-label='Close {name}']")
     else:
         # 12d: on the tablet Close lives in Document ▾ (the tab's own × is hidden there)
-        x = doc_action("Close tab", "Close this tab", "Close document", "Close file")
-        time.sleep(1.5)
-        return {"close_item": x, "menu_items": None if x else labels()}
+        tap("Document actions", "Document", sel=".tb-doc, button")
+        time.sleep(1.2)
+        x = cdp.js("(() => { " + VIS + " const b = [...document.querySelectorAll('button, [role=menuitem]')].filter(vis).find(e => (e.innerText || '').trim() === 'Close' && e.parentElement && /Properties/.test(e.parentElement.innerText || '')); if (!b) return null; const r = b.getBoundingClientRect(); return {x: r.left + r.width / 2, y: r.top + r.height / 2, w: Math.round(r.width), h: Math.round(r.height), text: 'Document ▾ › Close'}; })()")
+        if x:
+            tap_xy(x["x"], x["y"])
+            time.sleep(1.5)
+        return x or {"close_item": None, "menu_items": labels()}
     if x:
         tap_xy(x["x"], x["y"])
         time.sleep(1.5)
@@ -1059,6 +1069,11 @@ if phone():
     # Round 11: the phone stopped answering after the third Mark › Save as. Everything else first, so it is covered whatever happens.
     first = ["SV-11", "SV-14", "SV-12", "SV-10", "SV-1", "SV-2", "SV-3", "SV-13"]     # what round 12 did not reach on the phone
     CASES = [c for c in CASES if c[0] in first] + [c for c in CASES if c[0] not in first]
+only = [x for x in os.environ.get("AT_SAVES_ONLY", "").split(",") if x]
+if os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), "run.json")):
+    only = only or [x for x in json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "run.json"))).get("saves_only", "").split(",") if x]
+if only:
+    CASES = [c for c in CASES if c[0] in only]
 health("start")
 for name, fn in CASES:
     case(name, fn)
