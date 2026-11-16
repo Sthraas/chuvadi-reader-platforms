@@ -54,9 +54,11 @@
     {
         // WT-21: close this tab's documents first, so their page images and memory are freed now, not when
         // the connection is cleaned up minutes later. (The cookie is already dead, so nothing could fetch them.)
+        // D-190: this close cannot be held (the sign-in is already over, and the warning before it offered
+        // the downloads), so the Ui's "save your marks?" card is not asked: it would keep the documents open.
         try
         {
-            await InvokeAsync(() => Documents.CloseAllAsync());
+            await InvokeAsync(() => ChuvadiReader.Web.Hosting.SessionEndClose.CloseDocumentsAsync(Documents));
         }
         catch (Exception ex) when (ex is ObjectDisposedException or InvalidOperationException or IOException)
         {

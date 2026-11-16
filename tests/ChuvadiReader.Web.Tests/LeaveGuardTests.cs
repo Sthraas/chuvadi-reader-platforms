@@ -6,10 +6,10 @@ using Xunit;
 
 namespace ChuvadiReader.Web.Tests;
 
-/// <summary>D-181: the browser asks before leaving only while the open document has unsaved marks.</summary>
+/// <summary>D-181: the browser asks before leaving only while an open document has unsaved marks (D-190's answer).</summary>
 public class LeaveGuardTests
 {
-    private sealed class FakeCommands : IAppCommands
+    private sealed class FakeCommands : IAppCommands, IUnsavedWork
     {
         private readonly List<AppCommandInfo> _list = [new("r.find", "Find", "Read", "Ctrl F", true)];
 
@@ -21,15 +21,22 @@ public class LeaveGuardTests
 
         public Task<bool> InvokeAsync(string id) => Task.FromResult(false);
 
-        /// <summary>The Reader mounts with a document: the Ui's save command, enabled while marks are unsaved.</summary>
+        /// <summary>What the kit says closing would lose; the Ui's commands change whenever marks do.</summary>
+        public bool Unsaved { get; private set; }
+
+        public bool HasUnsavedWork => Unsaved;
+
+        public int Asked { get; private set; }
+
+        public Task<bool> ConfirmCloseAsync()
+        {
+            Asked++;
+            return Task.FromResult(true);
+        }
+
         public void Marks(bool? unsaved)
         {
-            _list.RemoveAll(c => c.Id == LeaveGuard.UnsavedMarksCommand);
-            if (unsaved is { } on)
-            {
-                _list.Add(new(LeaveGuard.UnsavedMarksCommand, "Save as new PDF", "Mark", "Ctrl Shift S", on, on ? null : "Nothing to save"));
-            }
-
+            Unsaved = unsaved == true;
             Changed?.Invoke();
         }
 
@@ -62,7 +69,7 @@ public class LeaveGuardTests
     {
         var commands = new FakeCommands();
         var js = new RecordingJs();
-        using var guard = new LeaveGuard(commands, new BrowserBridge(js), NullLogger<LeaveGuard>.Instance);
+        using var guard = new LeaveGuard(commands, commands, new BrowserBridge(js), NullLogger<LeaveGuard>.Instance);
 
         commands.Marks(true); // before the page can run script: nothing is sent
         Assert.Empty(js.Told);
@@ -92,7 +99,7 @@ public class LeaveGuardTests
     {
         var commands = new FakeCommands();
         var js = new RecordingJs();
-        var guard = new LeaveGuard(commands, new BrowserBridge(js), NullLogger<LeaveGuard>.Instance);
+        var guard = new LeaveGuard(commands, commands, new BrowserBridge(js), NullLogger<LeaveGuard>.Instance);
         guard.Start();
         Assert.Empty(js.Told);
 
@@ -102,5 +109,6 @@ public class LeaveGuardTests
 
         guard.Dispose();
         Assert.Equal(0, commands.Listeners); // stops following the Ui
+        Assert.Equal(0, commands.Asked);     // the guard only reads; the Ui's card is never raised by it
     }
 }

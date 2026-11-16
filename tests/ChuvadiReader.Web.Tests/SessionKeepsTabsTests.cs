@@ -228,6 +228,44 @@ public sealed class SessionKeepsTabsTests : IDisposable
         await again.DisposeAsync();
     }
 
+    private sealed class UnsavedMarks : ITabMarks
+    {
+        public int Count => 1;
+
+        public bool HasUnsaved => true;
+
+        public void Discard()
+        {
+        }
+    }
+
+    [Fact]
+    public async Task Session_end_closes_documents_with_unsaved_marks_without_the_question_a_tab_close_asks()
+    {
+        // D-190: closing a tab with unsaved marks asks first, and Cancel keeps it open. The end of the sign-in
+        // cannot be held, so it closes without asking; otherwise the documents (and their memory) would stay.
+        var c = new Connection(_states, _images, _options, new As("erin", "sid-4"));
+        var path = await UploadAsync(c, "marked.pdf");
+        var tab = await c.Tabs.OpenAsync(path, "marked.pdf", DocumentFormat.Pdf);
+        tab.Marks = new UnsavedMarks();
+        var asked = 0;
+        c.Tabs.CloseGuard = _ =>
+        {
+            asked++;
+            return Task.FromResult(false); // the person chose Cancel
+        };
+
+        await c.Tabs.CloseAsync(tab.Id);
+        await c.Tabs.CloseAllAsync();
+        Assert.Equal(2, asked);
+        Assert.Single(c.Tabs.Tabs); // still open: the card's answer is respected for the Ui's own closes
+
+        await ChuvadiReader.Web.Hosting.SessionEndClose.CloseDocumentsAsync(c.Tabs);
+        Assert.Equal(2, asked);     // not asked again
+        Assert.Empty(c.Tabs.Tabs);
+        await c.DisposeAsync();
+    }
+
     [Fact]
     public async Task An_ended_session_keeps_nothing_a_stale_connection_writes()
     {
