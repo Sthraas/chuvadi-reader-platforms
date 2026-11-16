@@ -205,7 +205,10 @@ public partial class Reader
         _card = _card == "view" ? "view" : null;
         _sigReport = null;
         _showSigBanner = true;
-        _viewer = null;
+        // B-33: the reference is set only when a viewer is created, so it is dropped only for a tab that has no
+        // viewer. For a viewer tab it is either already this tab's (the page drew before this ran) or is replaced
+        // when this tab's own viewer is created (each is keyed by its tab).
+        if (tab is null || !tab.Format.IsViewOnly()) _viewer = null;
         _viewerOutline = Array.Empty<ViewerOutlineEntry>();
         _viewerCounter = null;
         _viewerFind = null;
