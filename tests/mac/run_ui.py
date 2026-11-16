@@ -1628,8 +1628,9 @@ def p26():
         r["print_vector"] = False
     quit_app()
     ev["rotated"] = r
-    if not (ok and not r["error"] and r["new_square_saved"] and r["print_vector"]):
-        bad.append(f"rotated page (mark saved={r['new_square_saved']} where drawn={r.get('new_square_where_expected')}, print vector={r['print_vector']})")
+    r["mark_drawn"] = any("1 shape" in x for x in r.get("status_after_mark", []))
+    if not (ok and not r["error"] and r["mark_drawn"] and r["print_vector"] and r.get("print_has_page_text")):
+        bad.append(f"rotated page (mark drawn={r['mark_drawn']}, print vector={r['print_vector']}, page text on paper={r.get('print_has_page_text')})")
 
     # ── control: the same mark on an unrotated page (does a mark land under the pointer at all?) ──
     ctl = f"{FX}/mark-control.pdf"
@@ -1810,6 +1811,188 @@ def stall():
            f"after three clicks on the page: ⌘K opens={ev['cmdk_opens']}, Next page works={ev['next_page_works']}, quits by itself={gone} ({ev['quit_seconds']} s)", **ev)
 
 
+@case("P29 marks kept with the tab, ask before closing, Excel resize, sheet pager")
+def p29():
+    ev, bad = {}, []
+    a = f"{FX}/p29-a.pdf"
+    shutil.copy(f"{FX}/five-pages.pdf", a)
+    size0 = os.path.getsize(a)
+
+    def status(tag):
+        return [re.sub(r"\s*@.*$", "", l.strip())[:110] for l in axdump(tag).splitlines() if re.search(r"\d shapes?\b", l)][:2]
+
+    def card(tag):
+        t = axdump(tag)
+        up = "Save the marks on" in t
+        txt = [re.sub(r"\s*@.*$", "", l.strip())[:160] for l in t.splitlines() if re.search(r"Save the marks on|not saved|File \d+ of", l)][:3]
+        return up, txt, t
+
+    def answer(name):
+        press(name, role="AXButton", index=-1)
+        time.sleep(1.5)
+
+    def draw_mark():
+        press("Mark 2")
+        time.sleep(1.2)
+        press("Rectangle", role="AXButton")
+        time.sleep(0.8)
+        _, _, win = main_centre()
+        drive("drag", win[0] + 470, win[1] + 260, win[0] + 590, win[1] + 360)
+        time.sleep(1.2)
+
+    reset_state({"theme": "light"})
+    launch(settle=4)
+    open_doc(a, settle=3)
+    open_doc(f"{FX}/many-pages.pdf", settle=3)
+    drive("key", "cmd+1")
+    time.sleep(1.5)
+    draw_mark()
+    ev["marked"] = status("p29-marked")
+    # marks kept with the tab
+    drive("key", "cmd+2")
+    time.sleep(1.5)
+    ev["other_tab"] = status("p29-other-tab")
+    drive("key", "cmd+1")
+    time.sleep(1.5)
+    ev["back"] = status("p29-back")
+    ev["back_shot"] = shot("p29-back")
+    ev["marks_kept"] = any("1 shape" in x for x in ev["back"])
+    if not ev["marks_kept"]:
+        bad.append("marks not kept with the tab")
+
+    asks = {}
+    # close this tab
+    press("Close tab", role="AXButton", index=0)
+    time.sleep(1.5)
+    up, txt, _ = card("p29-ask-close-tab")
+    asks["close tab"] = {"asked": up, "text": txt, "shot": shot("p29-ask-close-tab")}
+    if up: answer("Cancel")
+    # from the other tab: close inactive tabs, close all tabs
+    drive("key", "cmd+2")
+    time.sleep(1.2)
+    for label in ("Close inactive tabs", "Close all tabs"):
+        press("Tab actions", role="AXButton")
+        time.sleep(1)
+        press(label, contains=True, role="AXButton")
+        time.sleep(1.5)
+        up, txt, _ = card("p29-ask-" + label.replace(" ", "-"))
+        asks[label] = {"asked": up, "text": txt}
+        if up: answer("Cancel")
+        else: drive("key", "escape")
+        time.sleep(0.8)
+    t = axdump("p29-after-cancels")
+    ev["both_tabs_still_open"] = "p29-a.pdf" in t and "many-pages.pdf" in t
+    # the window's close button
+    press("Close", role="AXButton")
+    time.sleep(2)
+    up, txt, _ = card("p29-ask-window-close")
+    asks["window close"] = {"asked": up, "text": txt, "alive": bool(pids()), "shot": shot("p29-ask-window-close")}
+    if up: answer("Cancel")
+    # Quit
+    drive("activate", NAME)
+    drive("key", "cmd+q")
+    time.sleep(2)
+    up, txt, _ = card("p29-ask-quit")
+    asks["quit"] = {"asked": up, "text": txt, "alive": bool(pids()), "shot": shot("p29-ask-quit")}
+    if up: answer("Cancel")
+    time.sleep(1)
+    asks["quit"]["alive_after_cancel"] = bool(pids())
+    ev["marks_after_all_cancels"] = (drive("key", "cmd+1"), time.sleep(1.5), status("p29-after-cancels-a"))[2]
+    # Quit → Discard: the app goes, the file is untouched
+    drive("key", "cmd+q")
+    time.sleep(2)
+    up, _, _ = card("p29-ask-quit-2")
+    if up: answer("Discard")
+    gone = False
+    for _ in range(100):
+        if not pids():
+            gone = True
+            break
+        time.sleep(0.1)
+    ev["discard_quits"] = gone
+    ev["file_untouched_after_discard"] = os.path.getsize(a) == size0
+    if not gone:
+        quit_app(force=True)
+    ev["asks"] = asks
+    for k, v in asks.items():
+        if not v["asked"]:
+            bad.append(f"no question on {k}")
+    if not ev["both_tabs_still_open"]:
+        bad.append("Cancel did not keep both tabs")
+    if not (ev["discard_quits"] and ev["file_untouched_after_discard"]):
+        bad.append(f"Discard on Quit (quits={ev['discard_quits']}, file untouched={ev['file_untouched_after_discard']})")
+
+    # Quit → Save: the mark is in the file
+    reset_state({"theme": "light"})
+    launch(settle=4)
+    open_doc(a, settle=3)
+    draw_mark()
+    drive("activate", NAME)
+    drive("key", "cmd+q")
+    time.sleep(2)
+    up, txt, t = card("p29-ask-quit-save")
+    sv = {"asked": up, "buttons": [re.sub(r"\s*@.*$", "", l.strip())[:60] for l in t.splitlines() if re.search(r'AXButton desc="(Save|Save as…|Discard|Cancel)"', l)][-4:]}
+    if up:
+        press("Save", role="AXButton", index=-1)
+    gone = False
+    for _ in range(150):
+        if not pids():
+            gone = True
+            break
+        time.sleep(0.1)
+    sv["quits_after_save"] = gone
+    sv["file_changed"] = os.path.getsize(a) != size0
+    if not gone:
+        sv["shot"] = shot("p29-quit-save-still-open")
+        quit_app(force=True)
+    ev["quit_save"] = sv
+    if not (up and gone and sv["file_changed"]):
+        bad.append(f"Save on Quit (asked={up}, quits={gone}, file changed={sv['file_changed']})")
+
+    # ── Excel: resize a column by dragging, put the file's sizes back; sheet pager ────────────
+    reset_state({"theme": "light"})
+    launch(settle=4)
+    open_doc(f"{FX}/formats.xlsx", settle=5)
+
+    def col_x(tag, letter):
+        m = re.search(r'AXStaticText desc="%s" @(-?\d+),(-?\d+) (\d+)x(\d+)' % letter, axdump(tag))
+        return (int(m.group(1)), int(m.group(2))) if m else None
+
+    xa, xb = col_x("p29-xlsx-0", "A"), col_x("p29-xlsx-0", "B")
+    x = {"A": xa, "B_before": xb}
+    if xa and xb:
+        edge = (xa[0] + xb[0]) // 2 + 4   # letters are centred, so the edge between A and B is halfway
+        drive("drag", edge, xa[1] + 8, edge + 60, xa[1] + 8)
+        time.sleep(1.5)
+        x["B_after_drag"] = col_x("p29-xlsx-1", "B")
+        x["resized_shot"] = shot("p29-xlsx-resized")
+        x["moved_px"] = (x["B_after_drag"][0] - xb[0]) if x["B_after_drag"] else None
+        rc, o = press("File's own sizes", role="AXButton")
+        x["reset_button"] = rc == 0
+        time.sleep(1.5)
+        x["B_after_reset"] = col_x("p29-xlsx-2", "B")
+    x["resize_ok"] = bool(x.get("moved_px") and 45 <= x["moved_px"] <= 75 and x.get("reset_button") and x.get("B_after_reset") == xb)
+    if not x["resize_ok"]:
+        bad.append(f"Excel column resize (moved {x.get('moved_px')} px, reset button={x.get('reset_button')}, back={x.get('B_after_reset')} vs {xb})")
+    # pager: Next sheet shows the second sheet, not only the number
+    t0 = axdump("p29-pager-0")
+    press("Next sheet", role="AXButton")
+    time.sleep(2)
+    t1 = axdump("p29-pager-1")
+    num = re.search(r'AXTextField desc="sheet number" value="(\d+)"', t1)
+    x["pager_number"] = num.group(1) if num else None
+    x["pager_sheet2_content"] = "marker-xlsx" in t1 and "marker-xlsx" not in t0
+    x["pager_sheet1_gone"] = "Merged title" not in t1 and "Merged title" in t0
+    x["pager_shot"] = shot("p29-pager")
+    if not (x["pager_number"] == "2" and (x["pager_sheet2_content"] or x["pager_sheet1_gone"])):
+        bad.append(f"sheet pager (number {x['pager_number']}, sheet 2 shown={x['pager_sheet2_content']}, sheet 1 gone={x['pager_sheet1_gone']})")
+    quit_app()
+    ev["xlsx"] = x
+    record("P29 marks kept with the tab, ask before closing, Excel resize, sheet pager", "fail" if bad else "pass",
+           (f"failed: {bad}" if bad else "marks kept; asked on close tab, close inactive, close all, window close, Quit; Cancel keeps all; Discard quits, file untouched; Save quits, file changed; "
+            f"column resize {x.get('moved_px')} px and back; pager shows sheet 2"), **ev)
+
+
 @case("M-14 .NET message in Details")
 def m14():
     src = f"{FX}/noaccess.pdf"
@@ -1847,8 +2030,12 @@ def main():
     if A.suite == "mark":
         m27()
         return
+    if A.suite == "p29":
+        p29()
+        return
     if A.suite == "shared":
         m27()
+        p29()
         stall()
         p26()
         p25()

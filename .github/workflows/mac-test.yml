@@ -250,7 +250,7 @@ jobs:
           defaults write org.cups.PrintingPrefs UseLastPrinter -bool false
           lpstat -t || true
       - name: Run T2–T5 (${{ matrix.suite }})
-        run: python3 harness/tests/mac/run_ui.py "$RUNNER_TEMP/macdrive" /tmp/fixtures "$PWD/evidence" --suite ${{ (inputs.only == 'print' || inputs.only == 'pw' || inputs.only == 'shared' || inputs.only == 'mark') && inputs.only || matrix.suite }} --runs "$RUNS"
+        run: python3 harness/tests/mac/run_ui.py "$RUNNER_TEMP/macdrive" /tmp/fixtures "$PWD/evidence" --suite ${{ (inputs.only == 'print' || inputs.only == 'pw' || inputs.only == 'shared' || inputs.only == 'mark' || inputs.only == 'p29') && inputs.only || matrix.suite }} --runs "$RUNS"
         timeout-minutes: 100
       - name: Logs
         if: always()
