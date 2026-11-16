@@ -77,7 +77,7 @@ public sealed class TextViewService
         if (codePage is int chosen)
         {
             var read = TextEncodings.Decode(bytes, chosen, out int notFitting);
-            var name = TextEncodings.Find(chosen)?.Name ?? string.Create(CultureInfo.InvariantCulture, $"Code page {chosen}");
+            var name = TextEncodings.NameOf(chosen);
             return new TextDocument(path, read, SplitLines(read), name, bytes.LongLength)
             {
                 CodePage = chosen,

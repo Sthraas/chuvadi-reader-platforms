@@ -60,11 +60,6 @@ public static class PlatformText
     /// private key, and the portal never takes one.</summary>
     public const string CertificateSigningOnPortal = "Certificate signing is in the desktop app. Your private key never leaves your computer.";
 
-    /// <summary>The word a greyed rail button shows where its shortcut would be, for <see cref="CertificateSigningOnPortal"/>
-    /// (other greyed buttons say "soon"; this one is off, D-27 a). Six characters at most: beside "Sign with
-    /// certificate", the longest label on the Tools rail, "desktop" already runs 4 px past the rail's edge.</summary>
-    public const string CertificateSigningTag = "off";
-
     /// <summary>The reason "Sign with certificate" is greyed out on this host, or null where it works (every host but Web).</summary>
     public static string? CertificateSigningOff(IPlatformInfo platform) =>
         platform.Kind == PlatformKind.Web ? CertificateSigningOnPortal : null;

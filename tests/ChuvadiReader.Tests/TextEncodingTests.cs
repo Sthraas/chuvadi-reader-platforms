@@ -155,6 +155,74 @@ public sealed class TextEncodingTests
     }
 
     [Fact]
+    public void The_first_picker_offers_four_and_none_needs_the_code_pages_provider()
+    {
+        Assert.Equal(new[] { "UTF-8", "Windows-1252", "UTF-16 LE", "UTF-16 BE" }, TextEncodings.FirstChoices.Select(c => c.Name));
+        foreach (var choice in TextEncodings.FirstChoices)
+        {
+            Assert.NotNull(TextEncodings.Find(choice.CodePage));          // each is in the long list too
+            Assert.Equal(choice.Name, TextEncodings.NameOf(choice.CodePage));
+        }
+
+        // The name shown is the same whether the encoding was worked out or chosen.
+        TextViewService.Decode([0x63, 0xE9], out var detected);
+        Assert.Equal(detected, TextEncodings.NameOf(TextEncodings.CodePageOfDetected(detected)));
+        Assert.Equal("Cyrillic (Windows-1251)", TextEncodings.NameOf(1251));
+        Assert.Equal("Code page 99999", TextEncodings.NameOf(99999));
+    }
+
+    private sealed class Store : ChuvadiReader.Core.Storage.IAppStorage
+    {
+        public readonly Dictionary<string, string> Data = new();
+        public Task<string?> GetAsync(string key, CancellationToken ct = default) => Task.FromResult(Data.TryGetValue(key, out var v) ? v : null);
+        public Task SetAsync(string key, string value, CancellationToken ct = default) { Data[key] = value; return Task.CompletedTask; }
+    }
+
+    [Fact]
+    public async Task The_chosen_encoding_is_remembered_with_the_recent_entry_and_Automatic_forgets_it()
+    {
+        var store = new Store();
+        var recents = new RecentFilesService(store);
+        await recents.HydrateAsync();
+        var item = new RecentItem("notes.txt", "/docs/notes.txt", DocumentFormat.Text, DateTimeOffset.Now, false);
+
+        Assert.Null(recents.TextEncodingFor(item.Path));
+        Assert.False(await recents.SetTextEncodingAsync(item.Path, 1252));     // not in Recents: nowhere to keep it
+
+        await recents.TouchAsync(item);
+        Assert.True(await recents.SetTextEncodingAsync(item.Path, TextEncodings.Utf16Le));
+        Assert.Equal(TextEncodings.Utf16Le, recents.TextEncodingFor("/DOCS/notes.txt"));
+
+        await recents.TouchAsync(item with { LastOpened = DateTimeOffset.Now });   // opened again, as the Ui does
+        Assert.Equal(TextEncodings.Utf16Le, recents.TextEncodingFor(item.Path));
+
+        var again = new RecentFilesService(store);                              // the next start
+        await again.HydrateAsync();
+        Assert.Equal(TextEncodings.Utf16Le, again.TextEncodingFor(item.Path));
+
+        Assert.True(await again.SetTextEncodingAsync(item.Path, null));        // Automatic
+        Assert.Null(again.TextEncodingFor(item.Path));
+
+        // Out of Recents, forgotten: 20 newer files push it out.
+        await again.SetTextEncodingAsync(item.Path, 1252);
+        for (int i = 0; i < 20; i++) await again.TouchAsync(new RecentItem($"f{i}.txt", $"/docs/f{i}.txt", DocumentFormat.Text, DateTimeOffset.Now, false));
+        Assert.Null(again.TextEncodingFor(item.Path));
+        await again.TouchAsync(item);
+        Assert.Null(again.TextEncodingFor(item.Path));
+    }
+
+    [Fact]
+    public async Task Recents_saved_before_this_still_load()
+    {
+        var store = new Store();
+        store.Data["recents"] = """[{"FileName":"a.txt","Path":"/a.txt","Format":0,"LastOpened":"2026-11-01T10:00:00+05:30","IsEncrypted":false}]""";
+        var recents = new RecentFilesService(store);
+        await recents.HydrateAsync();
+        Assert.Single(recents.Items);
+        Assert.Null(recents.Items[0].TextCodePage);
+    }
+
+    [Fact]
     public void A_chosen_encoding_is_not_refused_as_binary()
     {
         // UTF-16 without a mark is full of zero bytes; the automatic read calls that binary, a chosen read shows it.
