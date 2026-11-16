@@ -61,8 +61,42 @@ public sealed class RecentFilesService
         Changed?.Invoke();
     }
 
+    /// <summary>D-191: the encoding chosen for this text file, or null for Automatic (also when the file is not
+    /// in Recents). Give it to <see cref="TextViewService.Load(string, int?)"/>.</summary>
+    public int? TextEncodingFor(string path) => Find(path)?.TextCodePage;
+
+    /// <summary>D-191: remembers the encoding chosen for this text file, for as long as it stays in Recents; null
+    /// (Automatic) forgets it. On this machine only; the file is not touched. False when the file is not in
+    /// Recents, so there is nowhere to remember it.</summary>
+    public async Task<bool> SetTextEncodingAsync(string path, int? codePage, CancellationToken ct = default)
+    {
+        int at = _items.FindIndex(i => string.Equals(i.Path, path, StringComparison.OrdinalIgnoreCase));
+        if (at < 0)
+        {
+            return false;
+        }
+
+        if (_items[at].TextCodePage != codePage)
+        {
+            _items[at] = _items[at] with { TextCodePage = codePage };
+            await _storage.SetAsync(StorageKey, JsonSerializer.Serialize(_items), ct).ConfigureAwait(false);
+            Changed?.Invoke();
+        }
+
+        return true;
+    }
+
+    private RecentItem? Find(string path) =>
+        _items.Find(i => string.Equals(i.Path, path, StringComparison.OrdinalIgnoreCase));
+
     public async Task TouchAsync(RecentItem item, CancellationToken ct = default)
     {
+        // Opening a file again must not forget the encoding chosen for it (the callers build a fresh entry).
+        if (item.TextCodePage is null && Find(item.Path)?.TextCodePage is { } chosen)
+        {
+            item = item with { TextCodePage = chosen };
+        }
+
         _items.RemoveAll(i => string.Equals(i.Path, item.Path, StringComparison.OrdinalIgnoreCase));
         _items.Insert(0, item);
         if (_items.Count > 20)
