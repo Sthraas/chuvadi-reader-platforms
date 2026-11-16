@@ -20,6 +20,7 @@ internal static class MacTabKeyMonitor
     private const nuint Shift = 1 << 17, Control = 1 << 18, Option = 1 << 19, Command = 1 << 20;
 
     private static IntPtr _monitor;
+    private static readonly object Context = new(); // the block carries a context; this handler needs none
 
     /// <summary>The block's shape as AppKit calls it: NSEvent in, NSEvent (or nil) out.</summary>
     private delegate IntPtr KeyDownHandler(IntPtr nsEvent);
@@ -45,7 +46,7 @@ internal static class MacTabKeyMonitor
             }
 
             delegate* unmanaged<IntPtr, IntPtr, IntPtr> handler = &OnKeyDown;
-            using var block = new BlockLiteral(handler, null, typeof(MacTabKeyMonitor), nameof(OnKeyDown));
+            using var block = new BlockLiteral(handler, Context, typeof(MacTabKeyMonitor), nameof(OnKeyDown));
             _monitor = AddMonitor(events, Selector.GetHandle("addLocalMonitorForEventsMatchingMask:handler:"), KeyDownMask, &block);
             MacSmoke.Log("tab-key-monitor " + (_monitor != IntPtr.Zero ? 1 : 0));
         }
