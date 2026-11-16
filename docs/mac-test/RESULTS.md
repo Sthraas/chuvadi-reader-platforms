@@ -11,6 +11,33 @@ Runs (one each, read before the next — no retries):
 | 3 | 42494662734 | ⌘O found not to open a panel → the Open button; app stdout per launch; diagnostic exception build |
 | 4 | 42517758923 | panel path set through Accessibility (typing into the Go-to field was lossy) → documents open; timing sets skipped |
 
+## platform/mac dc92616 (16 Nov, patches 30–31, built on xcode-27 with the macOS 27 SDK) — NOT signed off: M-29
+
+**The question asked: does an app built with the macOS 27 SDK on the xcode-27 runner still launch and pass on macOS
+26, 15 and 15-Intel? It launches on all three and passes everything except one new failure on macOS 15 (M-29).**
+
+- **Minimum macOS is now 14** (D-195): set 10.0.403's Mac Catalyst SDK refuses a floor below 17.0. As pushed with 15.0
+  the head did not build on xcode-27 (runs 43898330078, 43898682703); from 48609f1 the project says 17.0 and builds
+  with `global.json` as pushed, no swap. My audit's T1.9 line now reads `minos 17.0`. No macOS 14 runner exists, so the
+  new minimum itself is untested.
+- Runs: **43899642846** (shared, c36919b + the Mac chat's trial patch), **43910573253** (full, same), **43911857655**
+  (patch-29 case, same), **43922954973** (shared, dc92616 as pushed). App built on `xcode-27` (macOS 27.0.1, Xcode 27.1),
+  run on the three usual runners. The Windows comparison job cannot build this pin, so no Windows numbers.
+
+| Check | macOS 26 | macOS 15 | 15 Intel | Note |
+|---|---|---|---|---|
+| Launches; first frame in every timed launch (40 each) | ✅ (log) | ✅ | ✅ | |
+| M-27 at four zooms, M-26 vector print, M-28, M-24, tab keys, stall | ✅ | ✅ | ✅ | |
+| Patch 29: marks kept, question in five places, Cancel / Discard / Save, sheet pager | ✅ | ✅ | ✅ | |
+| **Excel column resize by dragging** | ✅ 3/3 | ❌ 1 of 3 | ❌ 3 of 3 | **M-29** |
+| Full regression (43910573253) | ✅ | ✅ | ✅ except M-25 once | 26: runner shut down after the last case, so results are from its log and it has no T2 numbers |
+
+T2 on the xcode-27 build (probe, ms, median (worst) of 10): macOS 15 cold 7 653 (11 759), warm first render 3 003
+(3 512); 15-Intel cold 9 425 (10 420), warm 3 066 (3 348). Open panel → page 310 / 885. In line with earlier builds.
+
+**What blocks the sign-off:** M-29. Also open: M-25 (Intel, ⌘O after Esc, seen again once in the full run).
+Not tested for patches 30–31: the encoding picker, and the pager after switching between Excel/Word/text tabs.
+
 ## platform/mac 684c479 (16 Nov, Foundation patch 29) — every test passes; sign-off waits only for a head that builds as pushed
 
 **Where it stands.** On 684c479 nothing I test fails on any runner, and every bug M-01 to M-28 is closed except the
