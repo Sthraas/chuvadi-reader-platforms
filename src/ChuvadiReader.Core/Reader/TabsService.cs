@@ -251,6 +251,12 @@ public sealed class TabsService : IDisposable
     /// Null: nothing is asked.</summary>
     public Func<IReadOnlyList<ReaderTab>, Task<bool>>? CloseGuard { get; set; }
 
+    /// <summary>Raised when a tab's marks became unsaved, or stopped being so (the Reader page says when).</summary>
+    public event Action? UnsavedMarksChanged;
+
+    /// <summary>The Reader page calls this when the tab in front gained its first unsaved mark or lost its last.</summary>
+    public void NoteUnsavedMarksChanged() => UnsavedMarksChanged?.Invoke();
+
     /// <summary>True when any open tab has unsaved marks.</summary>
     public bool HasUnsavedMarks
     {

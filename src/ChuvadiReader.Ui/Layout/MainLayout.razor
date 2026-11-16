@@ -14,6 +14,8 @@
 @inject IAppStorage Storage
 @inject ShellService Shell
 @inject BenchService Bench
+@inject SessionService Sessions
+@inject ChuvadiReader.Platform.IFileWriteBack WriteBack
 @inject UserProfileService Profile
 @inject ChuvadiReader.Platform.IPlatformInfo Platform
 @inject ChuvadiReader.Platform.IPathLabels PathLabels
@@ -278,20 +280,36 @@
                from Cancel to the first button. Without these two stops Tab went on to the page behind the scrim,
                where Esc no longer cancelled and Enter worked the control underneath. *@
             <span class="closeq-edge" tabindex="0" aria-hidden="true" @onfocus="() => FocusCloseAskAsync(last: true)"></span>
-            <div class="closeq-title" id="closeq-title">Save the marks on <b>@ask.Tab.FileName</b>?</div>
-            <div class="closeq-text">
-                @(ask.Tab.Marks?.Count == 1 ? "It has 1 mark that is not saved. It is lost" : $"It has {ask.Tab.Marks?.Count} marks that are not saved. They are lost") if you close without saving.
-                @if (ask.Of > 1)
-                {
-                    <span class="closeq-of"> File @ask.Index of @ask.Of.</span>
-                }
-            </div>
+            @if (ask.Tab is { } askTab)
+            {
+                <div class="closeq-title" id="closeq-title">Save the marks on <b>@askTab.FileName</b>?</div>
+                <div class="closeq-text">
+                    @(askTab.Marks?.Count == 1 ? "It has 1 mark that is not saved. It is lost" : $"It has {askTab.Marks?.Count} marks that are not saved. They are lost") if you close without saving.
+                    @if (ask.Of > 1)
+                    {
+                        <span class="closeq-of"> File @ask.Index of @ask.Of.</span>
+                    }
+                </div>
+            }
+            else
+            {
+                @* D-194: Arrange's desks, changed since they were last bound to a PDF or saved in a session file. *@
+                <div class="closeq-title" id="closeq-title">Save what you arranged?</div>
+                <div class="closeq-text">
+                    @(ask.Of == 1 ? "1 desk in Arrange has pages that are neither bound to a PDF nor saved in a session. It is lost"
+                                  : $"{ask.Of} desks in Arrange have pages that are neither bound to a PDF nor saved in a session. They are lost") if you close without saving.
+                </div>
+            }
             @if (_closeAskError is { Length: > 0 } why)
             {
                 <div class="closeq-err">@why</div>
             }
             <div class="closeq-btns">
-                @if (ask.CanSaveInto)
+                @if (ask.Tab is null)
+                {
+                    <button class="fc-btn primary" @ref="_closeAskFirst" disabled="@_closeAskBusy" @onclick="() => AnswerClose(CloseAnswer.SaveAs)">Save session…</button>
+                }
+                else if (ask.CanSaveInto)
                 {
                     <button class="fc-btn primary" @ref="_closeAskFirst" disabled="@_closeAskBusy" @onclick="() => AnswerClose(CloseAnswer.Save)">Save</button>
                     <button class="fc-btn" disabled="@_closeAskBusy" @onclick="() => AnswerClose(CloseAnswer.SaveAs)">Save as…</button>
@@ -354,7 +372,8 @@
 
     // ── D-190: ask before closing with unsaved marks ───────────────────────
     private enum CloseAnswer { Save, SaveAs, Discard, Cancel }
-    private sealed record CloseAsk(ReaderTab Tab, int Index, int Of, bool CanSaveInto);
+    // Tab: the file asked about; null for the question about Arrange (then Of is the number of desks).
+    private sealed record CloseAsk(ReaderTab? Tab, int Index, int Of, bool CanSaveInto);
     private CloseAsk? _closeAsk;
     private TaskCompletionSource<CloseAnswer>? _closeAnswer;
     private string? _closeAskError;
@@ -432,9 +451,70 @@
             : "The file isn't on screen yet. Try again.";
     }
 
-    // "Save" writes into the file, as Ctrl S does. A file that cannot be written offers only Save as.
-    private static bool CanSaveInto(ReaderTab tab)
+    // ── D-194: Arrange asks at app close ────────────────────────────────────
+    /// <summary>BenchService.CloseGuard. Shows Arrange and asks Save session / Discard / Cancel.</summary>
+    private Task<bool> ConfirmArrangeCloseAsync()
     {
+        var done = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _ = InvokeAsync(async () =>
+        {
+            try { done.TrySetResult(await AskAboutArrangeAsync()); }
+            catch (Exception ex) { _closeAsk = null; done.TrySetException(ex); }
+        });
+        return done.Task;
+    }
+
+    private async Task<bool> AskAboutArrangeAsync()
+    {
+        try
+        {
+            if (!IsAt("/bench")) Nav.NavigateTo("/bench");
+            _closeAskError = null;
+            while (Bench.HasUnsavedWork)
+            {
+                _closeAsk = new CloseAsk(null, 1, Bench.UnsavedDeskCount, false);
+                _closeAnswer = new TaskCompletionSource<CloseAnswer>(TaskCreationOptions.RunContinuationsAsynchronously);
+                _closeAskBusy = false;
+                _closeAskFocus = true;
+                StateHasChanged();
+                var answer = await _closeAnswer.Task;
+
+                if (answer == CloseAnswer.Cancel) return false;
+                if (answer == CloseAnswer.Discard) return true;   // nothing to undo: the app is closing
+
+                _closeAskBusy = true;
+                StateHasChanged();
+                var path = await Picker.PickSaveSessionAsync("bench-session");
+                if (string.IsNullOrEmpty(path)) continue;          // backed out of the save: ask again
+                try
+                {
+                    await Sessions.SaveSessionAsync(path, Bench.ExportSession());
+                    await WriteBack.DeliverOrThrowAsync(path);
+                    Bench.MarkAllKept();
+                }
+                catch (Exception ex)   // whatever stopped the save, the question stays up and says so
+                {
+                    _closeAskError = $"Couldn't save the session: {ex.Message}";
+                }
+            }
+
+            return true;
+        }
+        finally
+        {
+            _closeAsk = null;
+            _closeAnswer = null;
+            _closeAskBusy = false;
+            StateHasChanged();
+        }
+    }
+
+    // "Save" writes into the file, as Ctrl S does. It is offered only where the host saves into the file the
+    // person opened (PlatformCapabilities.SaveInPlace; D-194: false on the portal, whose Save as is a download)
+    // and only for a file that can be written. Otherwise the card offers only Save as.
+    private bool CanSaveInto(ReaderTab tab)
+    {
+        if (!Platform.Capabilities.SaveInPlace) return false;
         try
         {
             var info = new System.IO.FileInfo(tab.Path);
@@ -470,6 +550,7 @@
     {
         _statusSlot.Changed += OnStatusSlotChanged;
         Tabs.CloseGuard = ConfirmCloseAsync;
+        Bench.CloseGuard = ConfirmArrangeCloseAsync;
         Theme.Changed += OnThemeChanged;
         Win.StateChanged += OnWinChanged;
         Tabs.Changed += OnTabsChanged;
@@ -992,6 +1073,7 @@
         }
 
         if (Tabs.CloseGuard == ConfirmCloseAsync) Tabs.CloseGuard = null;
+        if (Bench.CloseGuard == ConfirmArrangeCloseAsync) Bench.CloseGuard = null;
         _closeAnswer?.TrySetResult(CloseAnswer.Cancel);
         Theme.Changed -= OnThemeChanged;
         Win.StateChanged -= OnWinChanged;
