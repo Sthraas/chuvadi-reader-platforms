@@ -459,6 +459,8 @@ html[data-platform] .psi-or span { height: 0; background: none; border-top: 0.5p
 .closeq-err { margin-top: 8px; font-size: 12.5px; color: var(--chvd-danger); overflow-wrap: anywhere; }
 .closeq-btns { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .closeq-gap { flex: 1; }
+.closeq-edge { position: absolute; width: 0; height: 0; outline: none; }   /* focus stops that keep Tab inside the card */
 html[data-shell="phone"] .closeq { top: auto; bottom: calc(16px + env(safe-area-inset-bottom)); }
 html[data-shell="phone"] .closeq .fc-btn { min-height: 44px; flex: 1; }
+html[data-shell="tablet"] .closeq .fc-btn { min-height: 44px; min-width: 80px; }   /* AT-26: finger-sized on the tablet too */
 html[data-shell="phone"] .closeq-gap { display: none; }

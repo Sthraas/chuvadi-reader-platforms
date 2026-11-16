@@ -16,7 +16,7 @@ on:
   workflow_call:
     inputs:
       runner:
-        description: GitHub runner label (ubuntu-latest, ubuntu-24.04-arm, macos-latest, windows-latest).
+        description: GitHub runner label (ubuntu-latest, ubuntu-24.04-arm, macos-latest, windows-latest; xcode-27 for a Mac Catalyst build, which the pinned workload set needs Xcode 27.1 for).
         required: true
         type: string
       build:
