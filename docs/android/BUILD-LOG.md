@@ -939,3 +939,5 @@ same screen; no crash), smoke pass. With round 6 (API 36 phone and tablet, all c
   Labels: a file there shows as "Documents/Chuvadi Documents/…", as the Files app shows it. Limit: after a reinstall,
   files the earlier install made belong to it, so a save to the same name gets a new name. Test: platform check
   "the default save folder is Documents/Chuvadi Documents on the device, not the app's cache" (Settings › Saving).
+
+Step 68, result: run 43899989183 (head 60171388; Foundation 4b704c8d3d32c9c21c5c20bb77ba7d1b5fb14391, Mobile UI ae6ae6d), all four emulators green. Phone API 36: gestures 11/11, platform 33/33; tablet API 36: gestures 13/13, platform 31/31, including the new AT-23 check (Settings shows Documents/Chuvadi Documents) and D-190 Cancel/Discard; API 35 phone and tablet: WebView gate 4/4 (WebView 124). Run 43899911787 was cancelled: its FOUNDATION_REF held a mistyped full SHA (fixed in 60171388).
