@@ -87,6 +87,18 @@ internal static class MacSmoke
                 return;
             }
 
+            if (kind == "closewindow")
+            {
+                // D-190: the Ui's own red button — IWindowControls.Close, AppKit's performClose:.
+                _services!.GetRequiredService<ChuvadiReader.Core.Window.IWindowControls>().Close();
+                Later(2.5, async () =>
+                {
+                    Log($"step {index + 1} closewindow: " + await UiTextAsync(Current(view)));
+                    RunSteps(view, index + 1);
+                });
+                return;
+            }
+
             if (kind == "unfocus")
             {
                 // M-08 / M-23: the state Mac Test saw — the window has no first responder (focus on its content group).
@@ -176,6 +188,14 @@ internal static class MacSmoke
                       var t = {{System.Text.Json.JsonSerializer.Serialize(arg)}};
                       var b = Array.prototype.find.call(document.querySelectorAll('button'), function (x) {
                         return (x.getAttribute('title') || x.getAttribute('aria-label') || x.textContent.trim()).indexOf(t) === 0; });
+                      if (!b) { return 'no-button'; } b.click(); return 'clicked';
+                    })()
+                    """,
+                "closeq" => $$"""
+                    (function () {   // D-190: a button of the question before closing, by its words
+                      var t = {{System.Text.Json.JsonSerializer.Serialize(arg)}};
+                      var b = Array.prototype.find.call(document.querySelectorAll('.closeq button'), function (x) {
+                        return x.textContent.trim().indexOf(t) === 0; });
                       if (!b) { return 'no-button'; } b.click(); return 'clicked';
                     })()
                     """,
@@ -384,7 +404,7 @@ internal static class MacSmoke
               }
               var keys = window.__chvdKeys.splice(0).join(',');
               var e = document.getElementById('blazor-error-ui');
-              return 'route=' + location.pathname + ' reader=' + (document.querySelector('.reader') ? 1 : 0)
+              return 'route=' + location.pathname + ' closeq=' + (document.querySelector('.closeq') ? 1 : 0) + ' reader=' + (document.querySelector('.reader') ? 1 : 0)
                 + ' errorbar=' + (e ? getComputedStyle(e).display : 'none')
                 + ' unlock=' + (document.querySelector('.uc') ? 1 : 0)
                 + ' immersive=' + (document.body.classList.contains('chvd-immersive') ? 1 : 0)

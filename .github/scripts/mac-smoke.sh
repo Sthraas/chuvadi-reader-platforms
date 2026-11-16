@@ -399,19 +399,19 @@ stall_probe "with the pinch recognizer" "" pinch
 # fit) and a 120×80 drag — the shape must be where the pointer was.
 rm -f "$LOG"
 open -n --env CHUVADI_SMOKE=1 \
-  --env "CHUVADI_SMOKE_STEPS=wait;native:click-page;native:ctrl-tab;native:ctrl-shift-tab;native:cmd-2;native:cmd-1;cmd:Mark: Rectangle;markdrag;wait" \
+  --env "CHUVADI_SMOKE_STEPS=wait;native:click-page;native:ctrl-tab;native:ctrl-shift-tab;native:cmd-2;native:cmd-1;cmd:Mark: Rectangle;markdrag;wait;native:cmd-q;closeq:Cancel;closewindow;closeq:Cancel;native:cmd-q;closeq:Discard" \
   --stdout "$LOG" --stderr "$LOG" -a "$APP" "$DOCS/k1.pdf"
 native_watch 240 &
 NW=$!
-if ! wait_for 'CHUVADI steps done' 240; then
-  fail "M-27 steps did not finish"
+if ! wait_for 'CHUVADI (steps done|close-guard answer quit close=1)' 300; then
+  fail "M-27 / D-190 steps did not finish"
   # What the app is doing when it stops answering: the main thread's stack, and WebKit's content process.
   APID=$(pgrep -f "$APP/Contents/MacOS/$EXE" | head -1)
   [ -n "$APID" ] && sample "$APID" 3 2>/dev/null | sed -n '/Call graph:/,/Total number in stack/p' | head -70
   WPID=$(pgrep -f com.apple.WebKit.WebContent | tail -1)
   [ -n "$WPID" ] && { echo "--- WebContent $WPID"; sample "$WPID" 3 2>/dev/null | sed -n '/Call graph:/,/Total number in stack/p' | head -45; }
 fi
-wait $NW 2>/dev/null || true
+kill $NW 2>/dev/null; wait $NW 2>/dev/null || true
 grep -E "CHUVADI (step [0-9]+ (cmd|markdrag): [^r]|page-key)|clicked page" "$LOG" | sed -E 's/^.*CHUVADI //' | cut -c1-300
 order=$(st 2 | sed -E 's/.* order="([^"]*)".*/\1/')
 first="\"$(echo "$order" | cut -d'|' -f1)\""; second="\"$(echo "$order" | cut -d'|' -f2)\""
@@ -425,8 +425,21 @@ s=$(st 9); err=$(echo "$s" | sed -nE 's/.* markerr=([0-9]+).*/\1/p')
 echo "mark: $(echo "$s" | grep -oE 'mark=[^ ]+ pointer=[^ ]+ markerr=[0-9]+ rects=[a-z]+') $(echo "$s" | grep -oE 'zoom=[0-9.]+')"
 [ -n "$err" ] && [ "$err" -le 6 ] && pass "M-27 a dragged mark lands under the pointer (off by ${err} px)" \
   || fail "M-27 mark vs pointer: ${err:-no mark} px off — $(echo "$s" | grep -oE 'mark=[^ ]+ pointer=[^ ]+|mark=none')"
+# D-190: with the mark unsaved, real ⌘Q asks and Cancel keeps the app open; the Ui's own close button asks and
+# Cancel keeps the window; ⌘Q again and Discard quits. (Every other phase quits with nothing unsaved: no question.)
+grep -E "CHUVADI close-guard" "$LOG" | sed -E 's/^.*CHUVADI //'
+q() { [[ "$(st "$1")" == *"closeq=$2"* ]]; }
+q 9 0 && q 10 1 && pass "D-190 real ⌘Q with an unsaved mark shows the question and the app stays open" || fail "D-190 ⌘Q with an unsaved mark: $(st 10 | cut -c1-90)"
+q 11 0 && [[ "$(st 11)" == *"reader=1"* ]] && pass "D-190 Cancel keeps the app and the tab" || fail "D-190 Cancel after ⌘Q: $(st 11 | cut -c1-90)"
+q 12 1 && pass "D-190 the window's close button with an unsaved mark shows the question" || fail "D-190 window close with an unsaved mark: $(st 12 | cut -c1-90)"
+q 13 0 && [[ "$(st 13)" == *"reader=1"* ]] && pass "D-190 Cancel keeps the window" || fail "D-190 Cancel after window close: $(st 13 | cut -c1-90)"
+end=$((SECONDS + 30)); while pgrep -f "$APP/Contents/MacOS/$EXE" >/dev/null && [ $SECONDS -lt $end ]; do sleep 0.5; done
+if grep -q "CHUVADI close-guard answer quit close=1" "$LOG" && ! pgrep -f "$APP/Contents/MacOS/$EXE" >/dev/null; then
+  pass "D-190 ⌘Q then Discard quits"
+else
+  fail "D-190 ⌘Q then Discard did not quit"; pkill -9 -f "$APP/Contents/MacOS/$EXE"; sleep 2
+fi
 cp "$LOG" "$PWD/smoke-marks.log"
-quit_app || fail "marks run did not quit"
 sleep 2
 
 # --- M-17 / M-18 / M-21 / M-19: the tester's sequences, scripted --------------------------------------------

@@ -39,6 +39,8 @@
     <UseSystemResourceKeys>false</UseSystemResourceKeys>
 
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- MacCloseGuard hands AppKit two function pointers (D-190). -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <!-- Legal texts in the bundle, unchanged (HANDOFF: "notices in Contents/Resources"; D-82, D-84).

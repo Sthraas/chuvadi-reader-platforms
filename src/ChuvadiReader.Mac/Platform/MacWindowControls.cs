@@ -77,6 +77,7 @@ public sealed class MacWindowControls : IWindowControls, IDisposable
         AppKitBridge.MakeContentFullHeight(window);
         AppKitBridge.HideTitlebar(window);
         AppKitBridge.SetRestorable(window, false);
+        MacCloseGuard.Install(); // D-190: the question before quitting or closing the window
         if (!_sized && window != IntPtr.Zero)
         {
             _sized = true;

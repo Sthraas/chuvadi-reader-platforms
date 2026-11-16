@@ -98,6 +98,7 @@ let keys: [String: (CGKeyCode, CGEventFlags)] = [
     "cmd-k": (40, [.maskCommand]),
     "cmd-o": (31, [.maskCommand]),
     "cmd-f": (3, [.maskCommand]),
+    "cmd-q": (12, [.maskCommand]),
     "cmd-2": (19, [.maskCommand]),
     "cmd-1": (18, [.maskCommand]),
     "ctrl-tab": (48, [.maskControl]),
