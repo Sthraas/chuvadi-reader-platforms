@@ -146,6 +146,9 @@ everything, which points at the Find box's binding (value written back on re-ren
 or the IME. The Android chat's "garbled typing" (D-81) was this. Other Blazor-bound text fields (Library search, Mark text boxes,
 form fields, desk names) likely share the pattern; to check next round.
 **Evidence:** R3 › results-*-api36 › function/results.jsonl (F-03b); `screenshots/r1/r3-print-dialog-find-typing.png` (right).
+**Round 12b (run 43847609716, tablet):** one lost key again — a new text box, 11 keys sent ("chuvadimark"), the box held
+"huvadimark" (first key gone) and the saved file carried that. The same step passed on this head in run 43840270286 and on the phone
+in both, so 1 of 4. Round 12c repeats it; if it shows again this is AT-10 reopened for Foundation (first key after the caret lands).
 
 ## AT-11 · S2 · Android (host process-death restore; Foundation only if a Ui hook is needed) · **verified** R5 run 42746209649 (Foundation f88f9ef + Mobile UI c5c0b7e + Android 9ce073b, Release): tabs back after a background kill 11 of 11, phone and tablet — On the phone, open tabs are lost when Android ends the app in the background
 **Steps:** phone API 36, several tabs open, Home key, `am kill in.chuvadi.reader` (what Android does to a background app under memory
@@ -384,7 +387,7 @@ most likely the phone/tablet swipe-and-pan handling on `.rdesk` (mobile.js) capt
 every markup gesture on touch (text, shapes, freehand, probably the Protect redaction box). Owner: whoever owns that handler
 (Mobile UI's mobile.js, or Foundation's reader.js); the markup layer should win when a markup tool is active.
 
-## AT-16 · S3 · Foundation (shared Ui) · **verified on tablet; on the phone the same check now fails for a different reason — AT-24** — Page box drifts from the page on screen (tablet, after Find)
+## AT-16 · S3 · Foundation (shared Ui) · **verified** R12 on phone and tablet (drift suite 7 of 7 on each, its own check DR-7 included) — Page box drifts from the page on screen (tablet, after Find)
 **Steps:** tablet API 36, open `doc-12p.pdf`, Find `zephyrine` (one match, foot of page 3).
 **Expected:** the page box says 3 — page 3 fills the screen.
 **Actual:** the match is shown and page 3 fills the screen, but the page box says **2** ("2 / 12"). Phone says "3 / 12".
@@ -394,6 +397,7 @@ a second document, a reopen, a rotation and a restart) ran in R8b: cold open, se
 tablet (box = page on screen, steady for 6–8 s). Its "move to page 5" and "restart" steps were wrong in my script (it scrolled the page
 from script, and a plain launch opens on Home); corrected for round 9. So the only drift seen so far is the tablet one after Find.
 **Round 10:** fixed — see the heading. Kept in the drift suite for every round.
+**Round 12 (runs 43840270286 and 43847609716, Android 04c052a + Foundation 71754e1 (patch 29) + Mobile UI ca152c4, Release, API 36):** passes on both.
 
 ## AT-17 · S2 · Foundation (shared Ui, markup) · **verified** R10/10b (Android ce890a6 + Foundation 07ed3ca + Mobile UI 8699719, Release, API 36): the caret is in the new box after the first tap (`TEXTAREA` focused) and "chuvadimark" types into it — tablet runs 42938865447, 42948523807, 42951440189; phone run 42948523807 — Mark › Text: the new box doesn't take the caret; typing fires one-key shortcuts instead
 **Steps:** phone or tablet, open a PDF, Mark › Text, tap the page (a box appears — AT-15 fixed that), type `chuvadimark`.
@@ -410,7 +414,7 @@ Android also raises the keyboard); and don't run one-key shortcuts while a marku
 Blocks: text markup + Save, and the Mark text box part of AT-10.
 **Round 10:** fixed — see the heading. This also clears the Mark text box part of AT-10 (a burst of 11 keys all arrive).
 
-## AT-18 · S1 · Android (host) · **fixed; verified on tablet for 8 paths, on phone for 3; phone Save as new PDF still unproven (AT-22)** — R10/10b/10c, table below — Nothing that saves to a new file works on Android: the host's save pickers are switched off
+## AT-18 · S1 · Android (host) · **verified on phone and tablet** R12/12b for every path I exercise, files read back — except Reduce file size, which is AT-23 — Nothing that saves to a new file works on Android: the host's save pickers are switched off
 **Steps:** Release, phone or tablet. Any of: Mark › draw a rectangle › **Save as new PDF**; Protect › draw a redaction box ›
 **Save redacted copy**; Arrange › pages on a desk › **Bind all**.
 **Expected:** Android's "save to" picker opens, the file is written where the person chose.
@@ -467,6 +471,24 @@ Phone results that did come through in 11c: **Save redacted copy PASS, password-
 opens with the password, 12 pages). Tablet: all rows pass again; Reduce file size is AT-23.
 **Phone paths still unproven after 11c:** Flatten on this head, Reduce file size, Bind all (and AT-21's message), rotated-page save,
 pinch and a mark at a zoom, print to PDF.
+**Round 12 / 12b (runs 43840270286 and 43847609716, Android 04c052a + Foundation 71754e1 (patch 29) + Mobile UI ca152c4, Release, API 36).**
+
+| Path | Tablet | Phone |
+|---|---|---|
+| Save (in place) | PASS in R12 (but see the lost first key, AT-10 note) | n/a |
+| Mark › Save as new PDF (text box, rectangle) | PASS | PASS — card up, Save reachable |
+| Save as on a filled form (values kept) | PASS | PASS |
+| Save as on a /Rotate 90 page | PASS | PASS |
+| Save redacted copy | PASS | PASS |
+| Password-protected copy | PASS | PASS |
+| Flatten | PASS | PASS |
+| Print to PDF (vector) | PASS | PASS |
+| Arrange › Bind all (folder picker) | PASS | PASS |
+| Close card › Save as… (D-190) | see D-190 below | PASS — file has the marks, tab closes |
+| Reduce file size (Press) | **AT-23** | **AT-23** |
+
+No crash or ANR; device health normal after every case. Not exercised by me at all: snapshot image, desk session file, Split,
+Merge, Export pages as images, Lift, Combine.
 
 ## AT-19 · S2 · Android (build) / Foundation · **verified, closed** R11 run 43755713592: `global.json` is in the repo (SDK 10.0.403, workload set 10.0.403, rollForward disable), the clean build uses it: 0 errors, 0 warnings, runtime pack 10.0.14 — The clean build breaks on the .NET SDK patch released 10 Nov (10.0.404): the toolchain isn't pinned
 **Steps:** clean runner, `actions/setup-dotnet` with `10.0.x` (what the Android workflow and mine use), `dotnet workload install
@@ -496,7 +518,7 @@ So a release built by hand from the repo (not through the workflow) is not pinne
 - **Recommendation: (a).**
 **Round 11:** the leftover is closed — `global.json` came with patch 27 and the build reads it from the repo (audit `global.json`, `sdk.txt`).
 
-## AT-20 · S2 · was my test tool, not the app · **verified, closed** R11a/R11 (runs 43748557072, 43755713592): on the tablet in portrait the Shelf → desk long-press drag (2 of 2) and the desk reorder (1 of 1) both work — Tablet: long-press drag from the Shelf doesn't put a page on a desk
+## AT-20 · S2 · was my test tool, not the app · **verified, closed** — R12/12b: phone and tablet, drag 2 of 2 and reorder 1 of 1 on each — Tablet: long-press drag from the Shelf doesn't put a page on a desk
 **Steps:** tablet API 36 portrait, one PDF open, Arrange (Shelf sheet shows pages 1–12, Desk 1 says "Drag pages here"); long-press
 shelf page 3 and drag it onto the desk.
 **Expected:** the page lands on the desk (it does on the phone: two pages dragged, then reordered by long-press drag, R9b).
@@ -515,7 +537,7 @@ desk reorder on the tablet in portrait?
 produce the pointer events the page listens for. With the Android chat's rotation-aware `touch.py` (taken into `ci/touch.py`):
 Shelf → desk 2 of 2, reorder 1 of 1, on Android 070af93 and again on a2c022c. The app was never wrong here.
 
-## AT-21 · S4 · Android (host) / Foundation P-09 · **verified on tablet** R11a, R11, R11c ("Bound 1 desk into Download/at-bind"); phone still to see — After Bind all, the message shows the app's internal working path instead of the folder the person chose
+## AT-21 · S4 · Android P-09, now in Foundation patch 29 · **verified, closed** R12/12b on phone and tablet: "Bound 1 desk into Download/at-bind", no internal path on screen — After Bind all, the message shows the app's internal working path instead of the folder the person chose
 **Steps:** tablet API 36, Arrange with pages on desks › **Bind all** › choose `Download/at-bind` in Android's folder picker › Allow.
 **Expected:** "Bound 2 desks into at-bind" (the folder's own name), as AT-07 settled for tabs and recents.
 **Actual:** "Bound 2 desks into /data/user/0/in.chuvadi.reader/cache/work/folder/b7b7ff383d02410990fcbf082bdd5ba6". The files
@@ -524,6 +546,7 @@ themselves are in the chosen folder and correct. (Run 42951440189, Android ce890
 **Fix (Android chat):** give the message the picked folder's display name (the same display-name route used for AT-07). Any other
 "saved to …" message that prints a path (Export, Scatter, Press) should be checked the same way.
 **Round 11a / 11 (tablet):** verified with P-09 applied by Android's composition. It stays "pending" only in the sense that P-09 is not yet in Foundation; Press's own message was not checked (see AT-23).
+**Round 12 / 12b:** phone and tablet both show the chosen folder's name. Closed.
 
 ## AT-22 · S2 · Mobile UI · **verified** R11 run 43755713592 (Mobile UI 5a49864): with the mark's card up, Save as new PDF sits above it and works — 3 of 3 on the phone (text box, rectangle, form), files read back — Phone: after drawing a mark, its property card covers **Save as new PDF**, and the card has no close control
 **Steps:** phone API 36, open a PDF, Mark › Rectangle (or Text), draw on the page. The mark's card ("Rectangle" / "Text box":
@@ -565,7 +588,7 @@ route; Scatter, Lift, Export when no folder was picked) — not yet exercised.
   the file can vanish.
 - **Recommendation: (a) for Phase 1;** (b) later if Arun wants a standing Chuvadi folder on Android.
 
-## AT-24 · S2 · Foundation (shared Ui, Find) · open, new with patch 28 — Phone: Find jumps to the wrong page and highlights the wrong words
+## AT-24 · S2 · Foundation / Mobile UI · **verified fixed** R12 (patch 29 + Mobile UI ca152c4): on the phone Find goes to page 3 and stays (DR-7 passes) — Phone: Find jumps to the wrong page and highlights the wrong words
 **Steps:** phone API 36, portrait. Open `drift-doc.pdf` (12 pages; the word "Zephyrine" is on page 3 only). More › Find, type
 `Zephyrine`.
 **Expected:** the view goes to page 3 and "Zephyrine" is highlighted (round 11, patch 27: box 3, page 3 — passed).
@@ -576,6 +599,27 @@ match itself is placed one page on. Steady for the whole 6 s watch. `screenshots
 **Likely cause:** patch 28's Find-highlight rework (`reader.js`, "Find highlights the word where it is shown") — on the phone shell
 the page a match belongs to is being taken one off (page index against the phone's page list?).
 **Fix:** Foundation; I'll re-run `ci/drift.py` DR-7 and add a check that the highlight rectangle lies inside the page that holds the word.
+**Round 12:** not reproduced — phone drift suite 7 of 7 including the Find jump. Seen only on the patch 28 head (run 43768598611).
+
+## AT-25 · S4 · Foundation (shared Ui, Excel view) / Mobile UI for the touch size · open — Excel: the "File's own sizes" control is 24 px high on phone and tablet
+**Steps:** phone or tablet, open an `.xlsx`, drag a column edge wider with a finger (works: 64 → 135 px; row 20 → 61 px; the header
+is marked as changed; the file on disk is untouched — md5 equal). The reset control "File's own sizes" appears beside the sheet tabs.
+**Expected:** 44 px touch target like every other control on touch shells (AT-06).
+**Actual:** 103 × 24 px on both (`.xv-resetsizes`, fixed `height: 24px`). It does work when hit: sizes go back to the file's own.
+`screenshots/r12/r12-tablet-excel-reset-and-mark-card.png` (first frame, bottom left). (runs 43840270286 and 43847609716, Android 04c052a + Foundation 71754e1 (patch 29) + Mobile UI ca152c4, Release, API 36.)
+**Also to note, not filed:** the column and row headers that carry the drag edges are 20 px high / 36 px wide; the finger reach of
+14 px either side of an edge made every one of my drags land (4 of 4), so I leave that as it is.
+**Fix:** 44 px min-height on touch shells (Mobile UI's `mobile.css`), or in the component.
+
+## D-190 checks (not bugs) — the ask-before-closing card and Excel resize, by touch
+- **Phone, close card:** PASS in R12 and 12b. Tabs sheet › × on a tab with unsaved marks → "Save the marks on sv-close.pdf? It has 2
+  marks that are not saved…" with Save, Save as…, Discard, Cancel, each 80 × 44 px, whole card on screen and on top. Cancel: card
+  goes, tab and marks stay. Save as…: Android's picker, `sv-close-edited.pdf` has both marks and 12 pages, the tab then closes.
+  `screenshots/r12/r12-phone-excel-bind-closecard-picker.png` (third frame).
+- **Tablet, close card:** not shown yet — my script looked for the tab's own ×, which the tablet layout hides (Close is in
+  Document ▾, as frame 12d draws it). Round 12c goes through Document ▾ › Close.
+- **Excel resize by finger:** PASS on phone and tablet (column, row, reset, file unchanged). One finding: AT-25.
+- **Still to do:** Discard, plain Save from the card, the "File n of m" walk with several tabs, and the last-Back question Android added.
 
 ## Questions for the coordinator (not filed as bugs)
 - **Q-1 Same file opened again → new tab** — answered by the coordinator (9 Nov 07:12): Windows is the reference. Checked the shared

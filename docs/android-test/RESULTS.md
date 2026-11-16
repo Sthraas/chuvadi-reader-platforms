@@ -245,6 +245,26 @@ Build clean (0 warnings), 0 crashes. (I first labelled this run "12"; the coordi
 | AT-13 | 5 of 5 (3.9–4.1 s) | 5 of 5 (6.6–7.2 s) |
 | Device health after every save case | normal throughout | normal throughout |
 
+## Round 12 / 12b (runs 43840270286 and 43847609716, Android 04c052a + Foundation 71754e1 (patch 29) + Mobile UI ca152c4, Release, API 36)
+Build from clean: 0 errors, 0 warnings, repo `global.json` (SDK 10.0.403, workload set 10.0.403). As-built Release: 0 crashes.
+
+| Area | Phone | Tablet |
+|---|---|---|
+| Save suite (12b) | 33 of 38 — fails: Reduce (AT-23), reset control size (AT-25), two of my own zoom checks; one n/a | 29 of 37 — fails: Reduce (AT-23), reset size (AT-25), lost first key ×2 (AT-10 note), close card not reached ×2; two n/a |
+| AT-21 Bind message | PASS | PASS |
+| AT-20 drag, reorder, Bind all | PASS | PASS |
+| Close card by touch (D-190) | PASS (asks, 44 px buttons, Cancel, Save as…) | to do in 12c |
+| Excel resize by finger (D-190) | PASS | PASS |
+| Pinch out | PASS (388 → 1,242 px) | PASS (596 → 1,907) |
+| Mark at a zoom, saved in place | to do in 12c (my check drew on the wrong page) | PASS (0.1 pt) |
+| Pinch in | not shown on the phone (my pinch landed on the mark card) — 12c | PASS |
+| Drift suite incl. AT-16, AT-24 | 7 of 7 | 7 of 7 |
+| Function | 17 of 19 (my old print step; print passes in the save suite) | 17 of 19 (same) |
+| Design / touch targets | 42 of 42 | 30 of 30 |
+| AT-13 | 5 of 5 (5.4–6.1 s) | 5 of 5 (6.9–7.8 s) |
+
+The two one-off failures of round 11c (tablet restart, phone rotation sample) did not come back.
+
 ## Blocked in CI: Reader on Android 15 (API 35)
 The API 35 image ships WebView 124, so the app correctly shows only its update screen (D-105). Updating it in CI from the API 36
 image's WebView failed twice: that WebView needs the Trichrome static library, which my donor job couldn't locate on the API 36

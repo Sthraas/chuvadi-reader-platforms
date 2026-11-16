@@ -951,7 +951,7 @@ def close_tab_by_touch(name):
         # 12d: on the tablet Close lives in Document ▾ (the tab's own × is hidden there)
         tap("Document actions", "Document", sel=".tb-doc, button")
         time.sleep(1.2)
-        x = cdp.js("(() => { " + VIS + " const b = [...document.querySelectorAll('button, [role=menuitem]')].filter(vis).find(e => (e.innerText || '').trim() === 'Close' && e.parentElement && /Properties/.test(e.parentElement.innerText || '')); if (!b) return null; const r = b.getBoundingClientRect(); return {x: r.left + r.width / 2, y: r.top + r.height / 2, w: Math.round(r.width), h: Math.round(r.height), text: 'Document ▾ › Close'}; })()")
+        x = cdp.js("(() => { " + VIS + " const b = [...document.querySelectorAll('button, [role=menuitem]')].filter(vis).find(e => (e.innerText || '').trim().split('\\n')[0].trim() === 'Close' && (() => { let p = e; for (let i = 0; i < 5 && p; i++) { p = p.parentElement; if (p && /Flatten/.test(p.innerText || '')) return true; } return false; })()); if (!b) return null; const r = b.getBoundingClientRect(); return {x: r.left + r.width / 2, y: r.top + r.height / 2, w: Math.round(r.width), h: Math.round(r.height), text: 'Document ▾ › Close'}; })()")
         if x:
             tap_xy(x["x"], x["y"])
             time.sleep(1.5)
