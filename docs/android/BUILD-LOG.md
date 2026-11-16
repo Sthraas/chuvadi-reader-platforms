@@ -921,3 +921,6 @@ same screen; no crash), smoke pass. With round 6 (API 36 phone and tablet, all c
   - cold open (runs 43837801762 / 43837816523, Release, 10 runs each, median ms to page 1 painted):
     phone 5401 (pin) vs 5348 (10.0.401), tablet 6275 vs 6692 — within run-to-run noise.
   - **Answer: no** — Android regresses on 10.0.401 (Back goes back a page as well as closing a card).
+- **Run 43840796541** (phone API 36, full, 6510738, pin): **all green** — gestures 11/11, platform 32/32; D-190 on the
+  phone: a Box mark ("1 shape · unsaved"), the last Back asks and the app stays, Cancel keeps it, Discard and it leaves;
+  Release launch pass. With 43837772368, all four emulators are green on patch 29 + Mobile UI ca152c4.
