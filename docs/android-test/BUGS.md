@@ -577,7 +577,7 @@ discovers a gesture", pending that one look.
 (`screenshots/r11/r11-phone-save-above-card-then-home.png`, frames 1–2); `sv-text-edited.pdf`, `sv-shape-edited.pdf` and
 `sv-form-edited.pdf` were written through Android's picker and carry the mark (and the form's values).
 
-## AT-23 · S2 · Android (host) · open — Reduce file size (Press) writes the smaller PDF into the app's private cache, where the person can't find it
+## AT-23 · S2 · Android (host) · open — Reduce file size **and Export pages as images** write their output into the app's private cache, where the person can't find it (the whole "default save folder" route)
 **Steps:** tablet API 36, open `Download/sv-compress.pdf` › Document › **Reduce file size (Press)** › **Press →**.
 **Expected:** like every other save to a new file since AT-18: Android's picker asks where, and the file is there afterwards.
 **Actual:** no picker. The card says "23.2 KB → 17.2 KB (25.9% smaller)" with an "open pressed file" link and a folder chip "Compressed".
@@ -595,6 +595,13 @@ route; Scatter, Lift, Export when no folder was picked) — not yet exercised.
 - (c) Keep it private and rely on "open pressed file" + Save as. *Pros:* nothing to build. *Cons:* the person must know to do it, and
   the file can vanish.
 - **Recommendation: (a) for Phase 1;** (b) later if Arun wants a standing Chuvadi folder on Android.
+**Round 12f (run 43885159508, Android 5208bf0, phone and tablet) — Export pages as images does the same.** Document › Export pages as
+images › PNG, this page › **Export →**: no picker; the card says "Exported 1 file → Export"; the only new file is
+`/data/user/0/in.chuvadi.reader/cache/work/Chuvadi Documents/Export/sv-more.png`. Nothing appears in Downloads, Pictures or
+Documents. So this is not one command but the route: every action that saves into the Reader's own save folders (Compressed, Export,
+and by the same code very likely Scatter, Lift, Snapshot) ends in the cache on Android. That strengthens option (b) — one visible
+`Chuvadi` folder granted once — over patching each command with a picker; (a) remains the quickest for Phase 1. Coordinator's call.
+Merge reaches its page ("add at least two PDFs"); Split was not reached in this first look. Both still to do.
 
 ## AT-24 · S2 · Foundation / Mobile UI · **verified fixed** R12 (patch 29 + Mobile UI ca152c4): on the phone Find goes to page 3 and stays (DR-7 passes) — Phone: Find jumps to the wrong page and highlights the wrong words
 **Steps:** phone API 36, portrait. Open `drift-doc.pdf` (12 pages; the word "Zephyrine" is on page 3 only). More › Find, type
@@ -652,6 +659,14 @@ ask-before-closing card, is then asked about saving a mark they never meant to m
 passing — worth comparing which tool it arms (mine: Rectangle).
 **Fix:** when a second finger lands while a shape is being started, drop the shape (and do not select it); let two-finger pinch
 through whatever tool is armed. Mobile UI / Foundation between them.
+
+## AT-28 · S3 · Mobile UI · open — Export card and Merge page: controls are 28–34 px high on phone and tablet
+Measured in run 43885159508 (Android 5208bf0): Export as image card — format and range chips SVG / PNG / JPG / BMP, This page /
+All pages, 96–600 dpi: 28 px (phone), 29 px (tablet); **Export →** 34 px; "change…" 16–17 px; the card's Close 19 px. Merge page —
+Add files, Add open documents, Merge & Save: 32–33 px. The Press card is built the same way (its "change…" and **Press →** are the
+same components) and my design suite has not been measuring any of these cards, so AT-06's "all pass" covered the shell, not them.
+**Expected:** 44 px on touch shells. **Fix:** the same touch-size rule for card chips, card primary buttons and the page-level
+buttons of Merge / Split; I am adding these cards to `ci/design.py` so they are measured every round.
 
 ## D-190 checks (not bugs) — the ask-before-closing card and Excel resize, by touch
 - **Phone, close card:** PASS in R12 and 12b. Tabs sheet › × on a tab with unsaved marks → "Save the marks on sv-close.pdf? It has 2
