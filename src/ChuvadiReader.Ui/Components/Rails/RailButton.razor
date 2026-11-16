@@ -10,7 +10,7 @@
         @onclick="OnClick">
     <Icon Name="@Icon" Size="@Size" />
     <span class="rb-l">@Label</span>
-    <span class="rb-k">@(DisabledReason is not null ? DisabledTag : ShownKeys)</span>
+    <span class="rb-k">@(DisabledReason is not null ? "soon" : ShownKeys)</span>
 </button>
 
 @code {
@@ -22,9 +22,6 @@
     [Parameter] public bool Danger { get; set; }
     [Parameter] public bool Disabled { get; set; }
     [Parameter] public string? DisabledReason { get; set; }
-
-    /// <summary>The word shown where the shortcut would be while <see cref="DisabledReason"/> is set.</summary>
-    [Parameter] public string DisabledTag { get; set; } = "soon";
 
     /// <summary>With <see cref="DisabledReason"/>: the button looks greyed out but still answers a tap, so its
     /// OnClick can show the reason where a tooltip can't be read (touch screens, D-187).</summary>
