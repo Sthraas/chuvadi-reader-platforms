@@ -1,5 +1,10 @@
 # Proposal to Foundation: B-33, the title bar's sheet arrows do nothing (shared Reader page)
 
+> **Superseded, 16 Nov.** Foundation fixed B-33 in patch 31 (6c85f066, merged here from b895750): each viewer is
+> keyed by its tab, and the reference is kept when the new tab is a viewer tab. That covers both causes below,
+> the Linux-only one by another route. Checked on Linux: UI step 40 passes. **The diff below is not to be applied.**
+> The page is kept for its account of why Linux alone showed the first cause.
+
 16 Nov, Linux chat. For Linux Test's **B-33** (S2), found on `platform/linux` b0e5608 (patch 29) and still there on
 patch 30 (4b704c8). The cause is in the shared Reader page, so nothing is changed on `platform/linux`: this is the
 exact diff, with tests, for Foundation to take. It applies cleanly to `platform/foundation-pr` 4b704c8.

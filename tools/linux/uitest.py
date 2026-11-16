@@ -1493,7 +1493,7 @@ step("35-button-layouts", button_layouts)
 def sheet_pager():
     """Linux Test B-33: in an Excel file the title bar's sheet arrows and number box did nothing (the tabs under
     the sheet worked). Checked from Home, with a PDF already open, and on a second workbook, with real clicks
-    and typing. Needs Foundation's fix in the shared Reader page (docs/linux/PROPOSAL-b33-sheet-pager.md)."""
+    and typing. Fixed in the shared Reader page by Foundation's patch 31 (6c85f066)."""
     book = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tests", "ChuvadiReader.Tests", "Fixtures", "Office", "layout.xlsx")
     book = os.path.normpath(book)
     state = lambda: app.js("var b=document.querySelector('.tb-pg-box'), t=document.querySelector('.xv-tab.on'); return [b ? b.value : null, t ? t.textContent.trim() : null]")
@@ -1546,10 +1546,120 @@ def sheet_pager():
             f"first workbook after a second one ({len(second)} sheet{'s' if len(second) != 1 else ''}); tabs and arrows stay in step")
 
 
-# B-33 is in the shared Reader page: this step fails until Foundation's fix is merged (the exact diff is in
-# docs/linux/PROPOSAL-b33-sheet-pager.md). Run it by name meanwhile: UITEST_ONLY=40.
-if "40" in os.environ.get("UITEST_ONLY", "") or os.environ.get("UITEST_B33") == "1":
-    step("40-sheet-pager", sheet_pager)
+step("40-sheet-pager", sheet_pager)  # fixed in the shared Reader page by Foundation's patch 31
+
+
+def encoding_picker():
+    """Patch 31 (D-191): "Read this file as" for text, Markdown and HTML files, from the status bar's button and
+    from the Document menu's "Text encoding…". Checked in the Linux app with files of known bytes: the text
+    follows the choice, the choice is remembered while the file is in Recents, and the file is never changed."""
+    import hashlib
+    folder = os.path.join(OUT, "encoding")
+    os.makedirs(folder, exist_ok=True)
+    text = "Café résumé – “quoted” €5, naïve"
+    files = {
+        "enc-1252.txt": text.encode("cp1252"),
+        "enc-utf8.md": ("# " + text + "\n").encode("utf-8"),
+        "enc-1252.html": ("<html><body><p>" + text + "</p></body></html>").encode("cp1252"),
+    }
+    for name, data in files.items():
+        with open(os.path.join(folder, name), "wb") as f:
+            f.write(data)
+    digest = lambda name: hashlib.sha256(open(os.path.join(folder, name), "rb").read()).hexdigest()
+    before = {n: digest(n) for n in files}
+    # An HTML file is shown in a closed frame: its text is the frame's own document (srcdoc), with entities decoded.
+    shown = lambda: app.js("var v=document.querySelector('.rviewer'); if (!v) return ''; var f=v.querySelector('iframe'); "
+                           "var t=v.innerText; if (f && f.srcdoc) { var d=new DOMParser().parseFromString(f.srcdoc, 'text/html'); t += ' ' + d.body.textContent; } "
+                           "return t.replace(/\\s+/g, ' ').trim()")
+    button = lambda: app.js("var b=[...document.querySelectorAll('.sb-btn')].find(b => (b.title||'').startsWith('Read this file as')); return b ? b.textContent.trim() : null")
+    rows = lambda: app.js("return [...document.querySelectorAll('.enc-row')].map(r => [r.querySelector('.enc-n').textContent.trim(), r.getAttribute('aria-checked') === 'true'])")
+    chosen = lambda: next((n for n, on in rows() if on), None)
+
+    def open_card_from_status_bar():
+        app.js("var b=[...document.querySelectorAll('.sb-btn')].find(b => (b.title||'').startsWith('Read this file as')); b.click(); return 1")
+        app.wait(lambda: len(rows()) > 0, 5, "the encoding card from the status bar")
+
+    def choose(name):
+        ok = app.js(f"var r=[...document.querySelectorAll('.enc-row')].find(r => r.querySelector('.enc-n').textContent.trim() === {json.dumps(name)}); if (!r) return false; r.click(); return true")
+        if not ok:
+            raise AssertionError(f"no '{name}' in the encoding card: {rows()}")
+        app.wait(lambda: chosen() == name, 5, f"'{name}' chosen (now {chosen()})")
+        time.sleep(0.8)
+
+    said = []
+    # A Windows-1252 text file: Automatic reads it right; UTF-8 does not fit and says so; back again.
+    open_tab(os.path.join(folder, "enc-1252.txt"))
+    app.wait(lambda: text in shown(), 15, f"the Windows-1252 file read automatically (shown: {shown()[:80]!r})")
+    label = button()
+    if not label or "1252" not in label:
+        raise AssertionError(f"the status bar's encoding button on a Windows-1252 file: {label!r}")
+    open_card_from_status_bar()
+    names = [n for n, _ in rows()]
+    if names != ["Automatic", "UTF-8", "Windows-1252", "UTF-16 LE", "UTF-16 BE"] or chosen() != "Automatic":
+        raise AssertionError(f"the encoding card: {rows()}")
+    choose("UTF-8")
+    app.wait(lambda: text not in shown() and "Caf" in shown(), 5, f"the text re-read as UTF-8 (shown: {shown()[:80]!r})")
+    note = app.js("var e=document.querySelector('.fc-status.err'); return e ? e.textContent.trim() : ''")
+    if not note:
+        raise AssertionError("read as UTF-8, bytes that don't fit: the card says nothing")
+    if "UTF-8" not in (button() or ""):
+        raise AssertionError(f"the status bar's button after choosing UTF-8: {button()!r}")
+    app.shot("41-encoding-utf8-on-1252")
+    said.append(f"Windows-1252 text: Automatic reads it (button '{label}'); as UTF-8 the accents go and the card says \"{note[:70]}\"")
+
+    # Remembered with Recents: close the tab, open the file again.
+    app.key("Escape")
+    close_active_tab()
+    open_tab(os.path.join(folder, "enc-1252.txt"))
+    app.wait(lambda: "Caf" in shown(), 15, "the file open again")
+    time.sleep(0.8)
+    if text in shown() or "UTF-8" not in (button() or ""):
+        raise AssertionError(f"the choice was not remembered: button {button()!r}, shown {shown()[:60]!r}")
+    # From the Document menu's entry this time, and back to Automatic (which forgets the choice).
+    cmd = next((c for c in app.commands() if c["Id"] == "doc.encoding"), None)
+    if not cmd or not cmd["Enabled"] or cmd["Label"] != "Text encoding…" or cmd["Group"] != "Document":
+        raise AssertionError(f"the Document menu's entry: {cmd}")
+    app.invoke("doc.encoding")
+    app.wait(lambda: chosen() == "UTF-8", 5, f"the card from the Document menu with UTF-8 chosen (now {rows()})")
+    choose("Windows-1252")
+    app.wait(lambda: text in shown(), 5, "the text right again as Windows-1252")
+    choose("UTF-16 LE")
+    app.wait(lambda: "Caf" not in shown(), 5, "the text re-read as UTF-16 LE")
+    choose("Automatic")
+    app.wait(lambda: text in shown(), 5, "the text right again on Automatic")
+    app.key("Escape")
+    close_active_tab()
+    said.append("the choice is remembered on opening the file again; the Document menu's \"Text encoding…\" opens the same card; Windows-1252, UTF-16 LE and Automatic each re-read it")
+
+    # Markdown (UTF-8) and HTML (Windows-1252) have it too.
+    for name, wrong in (("enc-utf8.md", "Windows-1252"), ("enc-1252.html", "UTF-8")):
+        open_tab(os.path.join(folder, name))
+        app.wait(lambda: text in shown(), 15, f"{name} read automatically (shown: {shown()[:80]!r})")
+        if not button():
+            raise AssertionError(f"{name}: no encoding button in the status bar")
+        open_card_from_status_bar()
+        choose(wrong)
+        app.wait(lambda: text not in shown(), 5, f"{name} re-read as {wrong}")
+        choose("Automatic")
+        app.wait(lambda: text in shown(), 5, f"{name} right again on Automatic")
+        app.key("Escape")
+        close_active_tab()
+    said.append("Markdown and HTML files have it too")
+
+    # Not offered where it means nothing.
+    open_tab(PDF)
+    app.wait(lambda: rendered(0), 20, "the PDF drawn")
+    if button() is not None or any(c["Id"] == "doc.encoding" and c["Enabled"] for c in app.commands()):
+        raise AssertionError("a PDF offers a text encoding")
+    close_active_tab()
+    after = {n: digest(n) for n in files}
+    if after != before:
+        raise AssertionError(f"a file was changed by choosing an encoding: {[n for n in files if after[n] != before[n]]}")
+    said.append("a PDF does not offer it; the three files are byte-for-byte as written")
+    return "; ".join(said)
+
+
+step("41-encoding-picker", encoding_picker)
 
 
 def ask_before_closing():
