@@ -502,7 +502,7 @@ Checked again on this head:
 
 **Ready**, with B-31 (Excel time-only cells) known. A real trackpad pinch still needs a real machine.
 
-## Sign-off — Linux ac90d94 (16 Nov, patch 28): ready for Arun, with one thing to know
+## Sign-off — Linux ac90d94 (16 Nov, patch 28) — superseded by b0e5608 below
 
 | Check | Result |
 |---|---|
@@ -516,6 +516,28 @@ Checked again on this head:
 - [CI run 43764387511](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/43764387511) on ac90d94 is green, and Arun's checklist below uses its package.
 
 **Ready**, with B-31 (Excel time-only cells) known. A real trackpad pinch still needs a real machine.
+
+## Sign-off — Linux b0e5608 (16 Nov, patch 29): ready for Arun, with two things to know
+
+| Check | Result |
+|---|---|
+| Marks kept with the tab ✅ | Each tab keeps exactly its own marks, in place, through tab switches, Read and back, and a zoom change |
+| Ask before closing ✅ | A tab's x, Close all, Close inactive, Alt F4 and the title bar's close all ask Save / Save as… / Discard / Cancel when marks are unsaved, and never when there are none. Cancel and Escape keep everything; Discard leaves the file byte-identical; Save and Save as… write the mark where it was drawn; two files are asked one at a time, then the app exits |
+| Excel resize by dragging ✅ | Columns and rows resize on screen; cell text and the file are unchanged; closing asks nothing; reopening shows the file's own sizes |
+| Excel sheet pager ✗ | **B-33: the title bar's sheet arrows and number box still don't change the sheet on Linux** |
+| Quick regression ✅ | Marks after a pinch, pinch, patch 28 checks, B-24 + B-08b, B-25, owner-password printing, single instance, drops, print, `/Rotate` |
+
+**The two things to know**
+1. **B-33, Excel sheet pager.** In the title bar, Next and Previous do nothing, and typing a sheet number changes the
+   number but not the sheet. The sheet tabs at the bottom work. Patch 29 lists this as fixed; on Linux it isn't.
+2. **B-31, Excel time-only cells** (library): unchanged.
+
+**Notes**
+- My test copy is built with SDK 10.0.114, with `global.json` (10.0.403) set aside. CI uses the pinned SDK.
+- CI run 43841811974 on b0e5608 was still in progress when I wrote this. Arun's checklist below stays on the
+  ac90d94 package until that run is green.
+
+**Ready for Arun's check**, with B-33 and B-31 known. Neither touches the data in a file.
 
 ## Arun's check — Linux ac90d94
 

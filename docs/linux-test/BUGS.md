@@ -42,6 +42,7 @@ Every bug gets fixed; I re-verify on the fixing commit and mark it here.
 | B-30 | S2 (perf) | **shared Ui/Core + Foundation** | Memory isn't given back after closing the CAD drawing: 1.43–1.77 GB stays for 60 s+, and 680 MB of managed heap is still live after a full collection | **verified fixed bf60da9; re-verified 90895ef, 7cd960c** — app 249 MB before, 937 MB with 5 sheets, 265 MB 2 s after closing. Recorded: WebKit 221 → ~587 MB and stays |
 | B-31 | S2 | **library** (Chuvadi.Sheets, SH-L1) | Excel time-only cells (stored 0 to 1, e.g. 6:00 PM) show `########`, and the stored value on hover, in the value bar and in copy is wrong (0.75 reads as -0.25). On bf60da9 they showed `1899-12-30 18:00` | **open** — still on 7cd960c: `########`, stored value shown as -0.25 for 0.75 |
 | B-32 | S2 | **library + shared Ui/Core** | A PDF page's `/Rotate` (90, 180, 270) is ignored on screen: the page shows unrotated. Same on bf60da9 | **verified fixed 7cd960c** (86996dd) — 90, 180 and 270 turned as the file says, on vector pages, on a cropped page and on heavy raster sheets (Arun's CAD sheets are `/Rotate 270` and now show landscape) |
+| B-33 | S2 | **shared Ui/Core** (Foundation's B-33) | Excel: the title bar's sheet arrows do nothing, and typing a sheet number moves the number but not the sheet shown. Patch 29 says this is fixed; on Linux it is not | **open** — b0e5608 |
 | K-01 | — | Linux | GNOME close-only layout showed all three buttons (known, 7 Nov) | **verified fixed f7d0034, re-verified f3d5978** (6 layouts) |
 
 Routing (coordinator, 8 Nov): **Linux** → the Linux chat. **shared Ui/Core** → Foundation's combined patch, as exact diffs from the Linux chat or Foundation. **library** → the coordinator compiles them for Arun (library coordinator).
@@ -863,3 +864,62 @@ within 2–3 pt in the saved file.
 
 **Quick regression ✅.** B-24 + B-08b Cancel; B-25; owner-password printing; single instance (1 window, 4 tabs);
 drops; print byte-identical; `/Rotate` 0, 90, 180, 270 on screen; no files left in `/tmp`. B-31 is unchanged (open).
+
+
+---
+## Linux Test — 16 Nov, patch 29 on `platform/linux` b0e5608 (standing watch)
+Patch 29: marks kept with their tab, the ask-before-closing card, Excel resize by dragging, the sheet pager fix;
+Linux adds the question on closing the window (D-190). Built from source with SDK 10.0.114 (`global.json` set aside
+in my test copy only). CI run 43841811974 was still in progress when this was written. New tool:
+`tools/t_patch29.py`; new fixture: `fixtures/three-sheets.xlsx`.
+
+**Marks kept with the tab ✅**
+- A rectangle drawn on tab a; two drawn on tab b. Tab b showed none of a's, and each tab kept exactly its own marks,
+  at the same place, after switching away and back.
+- They also survive Read and back to Mark, and a zoom change followed by a tab switch (the mark scales with the page).
+- Neither file on disk is touched until you save.
+
+**Ask before closing ✅**
+
+| Action | Result |
+|---|---|
+| A tab's x, no marks | Closes at once, no question |
+| A tab's x, 1 unsaved mark | Card "Save the marks on c-cancel.pdf?" — "It has 1 mark that is not saved. It is lost if you close without saving." Buttons: Save, Save as…, Discard, Cancel |
+| Cancel, and Escape | The tab and its mark stay; the card goes |
+| Discard | The tab closes; the file is byte-identical; reopened, it shows no marks and closes without asking |
+| Save | The tab closes; the file changed and holds the mark where it was drawn (drawn at 104, 122 – 201, 184 pt; saved ink 103, 121 – 202, 185 pt) |
+| Save as… | The file dialog opens; the copy holds the mark (155, 121 – 254, 185 pt); the original is byte-identical; the tab closes |
+| Close all tabs (Ctrl Shift W) | Asks; Cancel keeps every tab |
+| Close inactive tabs (Ctrl Alt W) | Asks about the inactive file with marks; Cancel keeps every tab; Discard closes the inactive tabs and leaves the file byte-identical |
+| Alt F4 with two files holding marks | Asks "File 1 of 2"; the app stays open. A second Alt F4 while asked: still one card, still open. Cancel keeps the window and all three tabs |
+| Title bar's close button | Asks again. Save on the first (that file now holds its mark), then "File 2 of 2"; Discard on the second (that file is byte-identical); the app exits with code 0 |
+
+Two things seen, neither losing anything:
+- When the question is about a file that isn't on screen, that file is brought forward in Read, where marks aren't
+  drawn: the card says "1 mark that is not saved" over a page showing none. Linux noted the same (build log 59).
+- After Cancel on such a question, the tab shown is the asked file, not the one you were on.
+
+**Excel resize by dragging ✅** (`layout.xlsx`)
+- Dragging column D's right edge +60 px: 64 → 124 px. Dragging row 8's bottom edge +30 px: 20 → 50 px. Both headers
+  are marked as changed, and a "File's own sizes" button appears.
+- Every cell's text is unchanged, and the file is byte-identical.
+- The other sheet is untouched; back on the first sheet the new sizes are still there.
+- Closing the tab asks nothing. Reopened, the file's own sizes are back (64 and 20 px).
+
+## B-33 — Excel: the title bar's sheet pager still doesn't change the sheet (S2, shared Ui/Core)
+**Steps.** Open `fixtures/three-sheets.xlsx` (sheets One, Two, Three; A1 says which). The title bar shows
+"1 sheet / 3" with Previous and Next arrows.
+**Result on b0e5608**
+- Click **Next sheet** (real mouse click, and a scripted click): nothing changes. The box still says 1 and sheet One is shown.
+- Type **2** in the box and press Enter: the box says 2, but sheet One is still shown (A1 "first sheet", tab One selected).
+- Clicking the sheet tab "Two" at the bottom works, and **Previous sheet** then does nothing either.
+- The same with `layout.xlsx`, and whether the file is opened from the command line or into a running app.
+**Expected.** Patch 29 (caa3889, "the title bar's sheet arrows and number box change the sheet shown"): the sheet changes.
+**Scope.** The commit is in this head, and `XlsxView.GoToAsync` does call `SelectFromOutsideAsync`. The behaviour
+on Linux is the same as on ac90d94, before the fix. Linux's UI pass has no step for the sheet pager, so the pass
+wouldn't show it. The data is unaffected.
+
+**Quick regression ✅.** Marks after pinch steps to 55, 100 and 150 % (18 marks exact on screen, within 2–3 pt in
+the saved file); pinch on PDF, Excel and Word; Find and Fit on turned pages; hidden Excel matches named; B-24 +
+B-08b Cancel; B-25; owner-password printing; single instance (1 window, 4 tabs); drops; print byte-identical;
+`/Rotate` on screen; no files left in `/tmp`. B-31 is unchanged (open).
