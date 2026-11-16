@@ -681,3 +681,11 @@ Rebased onto foundation-pr 4b704c8 (patch 30).
 - **Fallback if the preview image changes:** see README, "If the build runner changes" — the exact Xcode 27.1 app is
   named when present; an Xcode older than 27.1 stops the build with a plain message; the `build_runner` input takes
   another label with no file change; failing that, a Mac with Xcode 27.1. An older workload set is not a fallback.
+- **Run 43908667013 on cf99a20, as pushed (no patch, no swap):** build on `xcode-27` succeeded; bundle minimum 14.0;
+  `Chuvadi-mac-universal-unsigned.zip` handed out (47.3 MB). Unit tests passed on all four runners. Smoke on that one
+  zip: **macos-26 0 failed, xcode-27 (macOS 27) 0 failed**, macos-15 2 failed, macos-15-intel 4 failed. The app
+  launches and runs on macOS 15, arm64 and Intel (the Intel runner runs the x86_64 slice natively).
+- **Open, from the first run of this smoke on macOS 15 (not yet explained):** real ⌃Tab did not reach the app in two
+  states — the locked PDF's password prompt (keys phase) and an Excel file just opened — while it worked there with no
+  first responder and after a click on a page, and ⌘1 worked in the same phase. Intel only, in addition: the window
+  62 pt off vertical centre (M-07) and ⌘1 once not showing the first tab (M-23). On macOS 26 and 27 all of these pass.
