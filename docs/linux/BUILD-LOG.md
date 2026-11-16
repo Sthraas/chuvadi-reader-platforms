@@ -784,3 +784,29 @@ No app change: one UI step added (38). Build under test: 7cd960c5.
 - Release build `-warnaserror` clean on SDK 10.0.403. Unit tests: Reader 382 passed / 6 skipped, host kit 100,
   Linux 61, Web Ui 41, Mobile Ui 16. Full UI pass under Xvfb: **126/126**.
 - Patch 28's own changes were not checked by hand here beyond the pass; Linux Test re-checks from the branch.
+
+### 59. Patch 29 merged (71754e1); the window asks before closing with unsaved marks (D-190) (16 Nov)
+- **Merge of `platform/foundation-pr` 71754e1** (PR 20, Reader main cc8134b): clean; shared `src` and `tests`
+  identical to 71754e1. Release build `-warnaserror` clean on SDK 10.0.403. Unit tests: Reader 434 passed /
+  6 skipped, host kit 102, Linux 68, Web Ui 41, Mobile Ui 16. Full UI pass under Xvfb: **127/127**.
+- **Closing the window.** Every way it is asked to close (the title bar's close button, Alt F4, the desktop's own
+  Close, the in-app close through `chvd_close`) raises GTK's `close-request`. The host now reads `IUnsavedWork`
+  there (`WindowCloseGuard`, wired in `Program.cs`): nothing unsaved, the window closes at once as before;
+  otherwise the request is held (`chvd_hold_close`, valid inside the request only), the window is brought
+  forward, `ConfirmCloseAsync()` is awaited, and the window is closed only on true. A second close while the
+  question is up is held and does not ask twice. If the question cannot be shown, the next close goes through.
+  The same rules as `MainWindow.OnClosing` on Windows.
+- **Closing a tab, the inactive tabs, all tabs:** shared (`TabsService`), nothing in the host. Checked on Linux.
+- **Tests:** `WindowCloseGuardTests` (7). UI step 39, real input: a tab's x, Close all tabs (Ctrl Shift W), Close
+  inactive tabs (Ctrl Alt W), Alt F4, the title bar's close button, a second Alt F4 while asked; Cancel and Escape
+  keep tabs, marks and window; two files with marks are asked one at a time, Save wrote the first (file changed),
+  Discard left the second byte-for-byte, then the app exited 0. Step 36 still shows a close with nothing unsaved.
+- **Not asked about on Linux: signing out, shutting down, a kill.** The host is a plain GTK window with no tie to
+  the desktop's session, so those end the process without a close request. Windows holds a shutdown
+  (`OnSessionEnding`). Possible here with OS parts only (GLib's D-Bus: an inhibit with the GNOME or KDE session
+  manager while marks are unsaved); not done, it is new behaviour.
+- **Seen in the shared Ui, for Foundation:** asked about a file that was not on screen (Close inactive tabs, or
+  the second file on closing the window), that file is shown in Read, where marks are not drawn: the card says
+  "1 mark that is not saved" over a page showing none (`39-ask-inactive-tab.png` in the pass's output). Nothing
+  is lost.
+- Excel resize, the sheet pager fix, WT-18, P-09, M-24: not checked by hand here beyond the pass.
