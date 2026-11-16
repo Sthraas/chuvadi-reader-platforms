@@ -61,6 +61,26 @@ const port = process.argv[2] || 5106;
   await p.waitForTimeout(400);
   const big = await p.evaluate(() => { const s = [...document.querySelectorAll('.mk-shape')].pop(); return s ? Math.round(s.getBoundingClientRect().width) : 0; });
   check('slow device: a quick drag with Rectangle draws it to where the finger lifted', await count('.mk-shape') === s2 + 1 && big > 50, `${s2} → ${await count('.mk-shape')}, width ${big}px`);
+  // 3b. Mobile UI H-25: two fingers are a pinch. With Rectangle, and then with Text, a pinch leaves no mark.
+  const pinch = async () => {
+    const a = at(0.4, 0.5), c = at(0.6, 0.5);
+    const two = (d) => [{ x: a[0] - d, y: a[1], id: 1 }, { x: c[0] + d, y: c[1], id: 2 }];
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [two(0)[0]] });
+    await p.waitForTimeout(40);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: two(0) });
+    for (let d = 8; d <= 64; d += 8) { await p.waitForTimeout(16); await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: two(d) }); }
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [two(64)[0]] });
+    await p.waitForTimeout(40);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await p.waitForTimeout(600);
+  };
+  const s3 = await count('.mk-shape'), t3 = await count('.mk-text');
+  await pinch();
+  check('a two-finger pinch with Rectangle leaves no mark', await count('.mk-shape') === s3 && await count('.mk-text') === t3, `shapes ${s3} → ${await count('.mk-shape')}, text ${t3} → ${await count('.mk-text')}`);
+  await p.click('button[aria-label="Text"]').catch(() => { }); await p.waitForTimeout(300);
+  await pinch();
+  check('a two-finger pinch with Text leaves no mark', await count('.mk-shape') === s3 && await count('.mk-text') === t3, `shapes ${s3} → ${await count('.mk-shape')}, text ${t3} → ${await count('.mk-text')}`);
+  await p.click('button[aria-label="Rectangle"]'); await p.waitForTimeout(300);
   // 4. A pen touches the page; from then on the pen marks and a finger pans (design 12e, D-42).
   await p.evaluate(() => {
     const l = document.querySelector('.mk-layer');
