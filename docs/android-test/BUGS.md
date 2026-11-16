@@ -132,7 +132,7 @@ type `zephyrine`.
 says 2. **Evidence:** R2 run 42533545934 › results-tablet-api36 › function/04-find.png (`screenshots/r1/r2-find-print.png`, left).
 Re-checked next round on phone too (phone typing in R2 was cut short by the test, see notes).
 
-## AT-10 · S2 · Foundation (shared Ui) · **verified** R5 run 42746209649 (Foundation f88f9ef + Mobile UI c5c0b7e + Android 9ce073b, Release): Find box and Library search keep every key of a burst, phone and tablet (Mark text box untestable until AT-15) — The Find box drops typed characters; a plain field doesn't
+## AT-10 · S2 · Foundation (shared Ui) · **reopened R12 on the tablet**: the first key typed into a new Mark text box is lost in 3 of 4 runs on patch 29 (phone 2 of 2 fine) — The Find box drops typed characters; a plain field doesn't
 **Steps:** API 36, open a PDF, Find, type on the on-screen keyboard path (`adb shell input text`, i.e. real key events through the IME).
 **Expected:** every character arrives, as in any text field.
 **Actual (R3, run 42537723474):**
@@ -149,6 +149,14 @@ form fields, desk names) likely share the pattern; to check next round.
 **Round 12b (run 43847609716, tablet):** one lost key again — a new text box, 11 keys sent ("chuvadimark"), the box held
 "huvadimark" (first key gone) and the saved file carried that. The same step passed on this head in run 43840270286 and on the phone
 in both, so 1 of 4. Round 12c repeats it; if it shows again this is AT-10 reopened for Foundation (first key after the caret lands).
+**Round 12c / 12d (runs 43851708067, 43854550313) — reopened.** Tablet, portrait, Android 04c052a + Foundation 71754e1 (patch 29) + Mobile UI ca152c4, Release, API 36. Mark › Text, tap the page: the caret is
+in the new box (AT-17 still passes: `TEXTAREA` focused after the first tap). Eleven keys are then sent ("chuvadimark"); the box holds
+"huvadimark" and Save writes that into the file. Lost in runs 43847609716, 43851708067, 43854550313; whole in 43840270286. On the
+phone the same step is whole in both runs, and on the tablet it was whole on every earlier head (patch 26, 27, 28).
+**Caveat:** my keys arrive within a few milliseconds of the box appearing (`adb shell input text`), faster than a hand reaches the
+keyboard — but that was equally true on the earlier heads, where nothing was lost. So something in patch 29 (marks kept with the tab?
+the box being re-created once after the first key?) or Mobile UI ca152c4 changed the timing on the tablet shell.
+**Fix:** Foundation to look at what happens to a new text box between focus and the first key on the tablet; I keep the check.
 
 ## AT-11 · S2 · Android (host process-death restore; Foundation only if a Ui hook is needed) · **verified** R5 run 42746209649 (Foundation f88f9ef + Mobile UI c5c0b7e + Android 9ce073b, Release): tabs back after a background kill 11 of 11, phone and tablet — On the phone, open tabs are lost when Android ends the app in the background
 **Steps:** phone API 36, several tabs open, Home key, `am kill in.chuvadi.reader` (what Android does to a background app under memory
@@ -484,7 +492,7 @@ pinch and a mark at a zoom, print to PDF.
 | Flatten | PASS | PASS |
 | Print to PDF (vector) | PASS | PASS |
 | Arrange › Bind all (folder picker) | PASS | PASS |
-| Close card › Save as… (D-190) | see D-190 below | PASS — file has the marks, tab closes |
+| Close card › Save as… (D-190) | PASS (12d) — file has the mark, tab closes | PASS — file has the marks, tab closes |
 | Reduce file size (Press) | **AT-23** | **AT-23** |
 
 No crash or ANR; device health normal after every case. Not exercised by me at all: snapshot image, desk session file, Split,
@@ -611,13 +619,31 @@ is marked as changed; the file on disk is untouched — md5 equal). The reset co
 14 px either side of an edge made every one of my drags land (4 of 4), so I leave that as it is.
 **Fix:** 44 px min-height on touch shells (Mobile UI's `mobile.css`), or in the component.
 
+## AT-26 · S3 · Mobile UI (tablet look) · open — Tablet: the ask-before-closing card's buttons are 30 px high
+**Steps:** tablet API 36, portrait. Open a PDF, draw a mark, Document ▾ › Close.
+**Expected:** the card's buttons are touch-sized (44 px), as they are on the phone (80 × 44 each).
+**Actual:** the card is right in every other way — "Save the marks on sv-close.pdf? It has 1 mark that is not saved…", whole on screen,
+nothing over it; Cancel keeps the tab and the mark; Save as… goes through Android's picker, the new file has the mark and 12 pages,
+and the tab closes — but its buttons measure Save 50 × 30, Save as… 78 × 30, Discard 66 × 30, Cancel 62 × 30. Discard sits 2 px from
+Save as…, so a slip of the finger discards. (Run 43854550313, Android 04c052a + Foundation 71754e1 (patch 29) + Mobile UI ca152c4, Release, API 36.)
+**Fix:** the phone's 44 px rule for `.closeq .fc-btn` on the tablet shell too, with a wider gap before Discard.
+
+## AT-27 · S3 · Mobile UI · open, **needs one confirming look** — Phone: two-finger pinch does not zoom while in Mark mode
+**What I saw:** phone, Read mode: pinch out zooms (page 388 → 1,242 px, run 43847609716). In **Mark** mode the same gesture left the
+page at the same size twice: a pinch in with the Rectangle tool armed (43847609716) and a pinch out with the Text tool armed
+(43851708067). On the tablet both pinches work in Mark mode. A mark drawn on the phone is saved where drawn (0.4 pt, page 2), and a
+zoom set in Read mode is kept when switching to Mark — so the route "zoom, then mark" works; "zoom while marking" does not.
+**What I have not shown:** that my two fingers were on the page and not on the phone's mark card in the first case, and whether this
+is the intended reading of H-25 ("pinch in Mark leaves no mark") — if pinch is meant to be swallowed in Mark mode on the phone, say
+so and I'll close this. Next round runs the clean case (Mark mode, no card up, pinch out and in on the page).
+
 ## D-190 checks (not bugs) — the ask-before-closing card and Excel resize, by touch
 - **Phone, close card:** PASS in R12 and 12b. Tabs sheet › × on a tab with unsaved marks → "Save the marks on sv-close.pdf? It has 2
   marks that are not saved…" with Save, Save as…, Discard, Cancel, each 80 × 44 px, whole card on screen and on top. Cancel: card
   goes, tab and marks stay. Save as…: Android's picker, `sv-close-edited.pdf` has both marks and 12 pages, the tab then closes.
   `screenshots/r12/r12-phone-excel-bind-closecard-picker.png` (third frame).
-- **Tablet, close card:** not shown yet — my script looked for the tab's own ×, which the tablet layout hides (Close is in
-  Document ▾, as frame 12d draws it). Round 12c goes through Document ▾ › Close.
+- **Tablet, close card:** PASS for behaviour in 12d (Document ▾ › Close, as frame 12d draws it — the tab has no × on the tablet):
+  asks, Cancel keeps, Save as… saves and closes. Its buttons are too small: **AT-26**.
 - **Excel resize by finger:** PASS on phone and tablet (column, row, reset, file unchanged). One finding: AT-25.
 - **Still to do:** Discard, plain Save from the card, the "File n of m" walk with several tabs, and the last-Back question Android added.
 
@@ -628,3 +654,5 @@ is marked as changed; the file on disk is untouched — md5 equal). The reset co
   by touch expected in this release? If yes it is a feature gap for Foundation, not an Android bug; if no I'll stop listing it.
 - **Q-R10-2 Tablet drag (AT-20):** does the Android chat's gesture check pass shelf → desk drag and desk reorder on the tablet in portrait?
 - **Q-R10-3 `global.json` (AT-19 leftover):** check it into the repo root — recommended (a) above. Who owns it, Foundation?
+- **Q-R12-1 AT-27:** is two-finger pinch meant to zoom in Mark mode on the phone (as it does on the tablet)?
+- **Q-R12-2 AT-23:** Reduce file size through the picker — recommended (a); who decides, Arun?
