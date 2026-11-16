@@ -1,0 +1,13 @@
+diff --git a/src/ChuvadiReader.Mac/ChuvadiReader.Mac.csproj b/src/ChuvadiReader.Mac/ChuvadiReader.Mac.csproj
+index 3b15863f..11183105 100644
+--- a/src/ChuvadiReader.Mac/ChuvadiReader.Mac.csproj
++++ b/src/ChuvadiReader.Mac/ChuvadiReader.Mac.csproj
+@@ -20,7 +20,7 @@
+     <ApplicationVersion>1</ApplicationVersion>
+ 
+     <!-- Mac Catalyst 15.0 = macOS 12 Monterey and later. -->
+-    <SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
++    <SupportedOSPlatformVersion>17.0</SupportedOSPlatformVersion>
+ 
+     <!-- Universal app: Apple Silicon + Intel in one bundle (Arun approved). -->
+     <RuntimeIdentifiers>maccatalyst-arm64;maccatalyst-x64</RuntimeIdentifiers>
