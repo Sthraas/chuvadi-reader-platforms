@@ -8,15 +8,21 @@ namespace ChuvadiReader.Core.Reader;
 /// <summary>The marks drawn on a tab's document that are not in the file yet (D-186 Q3 B). The Reader page owns
 /// what they are; the tab keeps them, so they are still there after another tab or another page was shown.
 /// Memory only: they go when the tab closes.</summary>
-public interface ITabMarks
+public interface ITabMarks : ITabUnsaved
 {
-    /// <summary>How many marks there are that a save would write.</summary>
+}
+
+/// <summary>Work on a tab's document that is not in a file yet and is kept with the tab, in memory (D-195):
+/// marks, edited bookmarks, redaction areas. The page that makes it owns what it is.</summary>
+public interface ITabUnsaved
+{
+    /// <summary>How many there are (marks, bookmarks, areas) that a save would write.</summary>
     int Count { get; }
 
-    /// <summary>True when there are marks that no save has written yet.</summary>
+    /// <summary>True when no save has written them yet.</summary>
     bool HasUnsaved { get; }
 
-    /// <summary>Drops every mark (the person chose Discard).</summary>
+    /// <summary>Drops them (the person chose Discard).</summary>
     void Discard();
 }
 
@@ -41,6 +47,17 @@ public sealed class ReaderTab
 
     /// <summary>True when closing this tab would lose marks (D-190).</summary>
     public bool HasUnsavedMarks => Marks?.HasUnsaved == true;
+
+    /// <summary>D-195: this tab's bookmarks as edited and not yet saved, set by the Reader page.</summary>
+    public ITabUnsaved? Bookmarks { get; set; }
+
+    /// <summary>D-195: redaction areas drawn or found on this tab's file in Protect and not yet saved as a
+    /// redacted copy, set by the Protect page.</summary>
+    public ITabUnsaved? Redactions { get; set; }
+
+    /// <summary>True when closing this tab would lose marks, bookmark edits or redaction areas.</summary>
+    public bool HasUnsavedWork =>
+        Marks?.HasUnsaved == true || Bookmarks?.HasUnsaved == true || Redactions?.HasUnsaved == true;
 
     /// <summary>Column widths and row heights set on screen for an Excel file in this tab (D-190). Viewing only.</summary>
     public SheetSizeMemory SheetSizes { get; } = new();
@@ -246,10 +263,58 @@ public sealed class TabsService : IDisposable
         }
     }
 
-    /// <summary>D-190: asked before tabs with unsaved marks are closed. It gets those tabs and returns false when
+    /// <summary>D-190, D-195: asked before tabs with unsaved marks, bookmark edits or redaction areas are closed. It gets those tabs and returns false when
     /// the person chose Cancel; marks they chose to save are saved by then. The shell sets it (it shows the card).
     /// Null: nothing is asked.</summary>
     public Func<IReadOnlyList<ReaderTab>, Task<bool>>? CloseGuard { get; set; }
+
+    // ── work on a file that has no tab (D-195) ───────────────────────────────
+
+    // Protect can open a file of its own, with no tab in the strip. Its redaction areas are kept here, under a
+    // stand-in that never shows as a tab, so they survive leaving Protect and are asked about when the app closes.
+    private readonly Dictionary<string, ReaderTab> _detached = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The file Protect last had open (it opens there again when Protect is shown with nothing handed to it).</summary>
+    public string? ProtectPath { get; set; }
+
+    /// <summary>Where work on this file is kept: its tab when it has one, otherwise a stand-in made for it.</summary>
+    public ReaderTab WorkHolderFor(string path, string fileName)
+    {
+        lock (_tabsGate)
+        {
+            var tab = _tabs.Find(t => string.Equals(t.Path, path, StringComparison.OrdinalIgnoreCase));
+            if (tab is not null)
+            {
+                // The file got a tab after Protect had it: its areas move to the tab.
+                if (_detached.Remove(path, out var was) && tab.Redactions is null) tab.Redactions = was.Redactions;
+                return tab;
+            }
+
+            if (!_detached.TryGetValue(path, out var holder))
+            {
+                _detached[path] = holder = new ReaderTab { Id = "protect:" + Guid.NewGuid().ToString("N"), Path = path, FileName = fileName };
+            }
+
+            return holder;
+        }
+    }
+
+    /// <summary>True for a stand-in from <see cref="WorkHolderFor"/> (a file with no tab in the strip).</summary>
+    public bool IsDetached(ReaderTab tab)
+    {
+        lock (_tabsGate)
+        {
+            return _detached.TryGetValue(tab.Path, out var holder) && ReferenceEquals(holder, tab);
+        }
+    }
+
+    private ReaderTab[] DetachedSnapshot()
+    {
+        lock (_tabsGate)
+        {
+            return _detached.Values.ToArray();
+        }
+    }
 
     /// <summary>Raised when a tab's marks became unsaved, or stopped being so (the Reader page says when).</summary>
     public event Action? UnsavedMarksChanged;
@@ -257,14 +322,14 @@ public sealed class TabsService : IDisposable
     /// <summary>The Reader page calls this when the tab in front gained its first unsaved mark or lost its last.</summary>
     public void NoteUnsavedMarksChanged() => UnsavedMarksChanged?.Invoke();
 
-    /// <summary>True when any open tab has unsaved marks.</summary>
+    /// <summary>True when any open tab has unsaved marks, bookmark edits or redaction areas.</summary>
     public bool HasUnsavedMarks
     {
         get
         {
             lock (_tabsGate)
             {
-                return _tabs.Exists(t => t.HasUnsavedMarks);
+                return _tabs.Exists(t => t.HasUnsavedWork) || _detached.Values.Any(t => t.HasUnsavedWork);
             }
         }
     }
@@ -272,7 +337,7 @@ public sealed class TabsService : IDisposable
     /// <summary>Asks about these tabs' unsaved marks, if they have any. True: go ahead and close.</summary>
     public async Task<bool> ConfirmCloseAsync(IEnumerable<ReaderTab> tabs)
     {
-        var unsaved = tabs.Where(t => t.HasUnsavedMarks).ToList();
+        var unsaved = tabs.Where(t => t.HasUnsavedWork).ToList();
         if (unsaved.Count == 0 || CloseGuard is not { } guard)
         {
             return true;
@@ -307,7 +372,7 @@ public sealed class TabsService : IDisposable
     /// is closed. True: the app may close.</summary>
     public Task<bool> ConfirmCloseAllAsync()
     {
-        return ConfirmCloseAsync(TabsSnapshot());
+        return ConfirmCloseAsync(TabsSnapshot().Concat(DetachedSnapshot()));
     }
 
     private int _confirming;
