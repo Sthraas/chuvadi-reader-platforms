@@ -252,3 +252,9 @@ Routed to the Foundation by the coordinator, 16 Nov 14:33. The diff is regenerat
 - The way back: "File's own sizes" appears beside the sheet tabs once something is resized; it restores every size and goes away. ✔
 - A cell still shows its value in the value bar after a resize; no sideways scroll; no page errors. ✔
 - What I could not do here: a real finger. The touch cases use pointer events of type "touch" sent by script, which exercise the 14 px reach but not the browser's own gesture handling.
+
+## View asked for by the coordinator (16 Nov 21:35): what the ask-before-closing card should offer on the portal
+The question (coming to Arun from Web): on the portal the card's Save writes the marks into the session copy on the server, and nothing downloads.
+1. **Save should download, as Ctrl S does on the portal, and the tab closes once the download has been handed to the browser.** D-03 already says that on the Web "Save = browser download", and the Web host delivers Save and Save as as downloads. One word should do one thing (the WT-10 rule).
+2. **Not "as is".** A Save that only updates the server's copy and then closes the tab looks finished but leaves nothing on the person's computer, and 12a promises that copy is wiped at sign-out. It is the one path where the card loses the work it exists to protect.
+3. **Keep D-190's order: Save · Save as… · Discard · Cancel, if Save as… asks for a name on the portal; show Save alone if both would hand over the same download.** Two buttons that do the same thing make the person stop and wonder. "Only Save as…" is safe, but it drops the one-press answer the card is built around.

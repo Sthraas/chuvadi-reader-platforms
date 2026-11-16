@@ -1,6 +1,8 @@
 # Web portal UI — existing-file hooks
 
 ## Still to apply — the ask-before-closing card keeps the keyboard inside it (found 16 Nov, checking patch 29 / D-190)
+Routed to the Foundation by the coordinator, 16 Nov 21:35. Not in patch 30; it still applies cleanly to **6d80aa3** (patch 30).
+
 **`proposal/web-ui-close-card-keeps-focus.patch`**, against foundation **7c0b4bc** (= foundation-pr 71754e1 for `src`; applies cleanly, alone and with the two diffs below). Two files, 14 lines added and 1 removed:
 - `Ui/Layout/MainLayout.razor`: two focus stops (`<span class="closeq-edge" tabindex="0" aria-hidden="true">`), one before the first button and one after Cancel. The first sends focus to Cancel, the second to the first button (`FocusCloseAskAsync`); Cancel gets a `@ref`.
 - `Ui/wwwroot/css/shell.css`: `.closeq-edge` has no size and no outline.
@@ -12,7 +14,9 @@ What it cures (patch 29 as merged; the same in Chromium and WebKit, on the porta
 
 With the patch (three browsers, portal and Windows profiles): Tab goes Save › Save as… › Discard › Cancel › Save › …; Shift Tab goes Save › Cancel › Discard › Save as… › Save; Esc cancels from anywhere in that cycle and the tab stays. Build `-warnaserror` 0 warnings; 593 tests pass with this and the two diffs below applied together.
 
-## Still to apply — the rail word for "Sign with certificate" on the portal: "soon", not "off" (coordinator 16 Nov 00:40)
+## Applied by the Foundation (patch 30, commit 188d986; checked on 6d80aa3) — the rail word for "Sign with certificate" on the portal: "soon", not "off"
+In exactly as sent (`git apply -R --check` succeeds). Checked on 6d80aa3: "soon" in the Reader's Protect rail and Redact's Tools rail in three browsers, inside the rail; all 12 certificate cases as D-187 says.
+
 **`proposal/web-ui-portal-certificate-rail-word.patch`**, against foundation **754d1e2**; it still applies cleanly to **7c0b4bc** (patch 29), where I re-checked it: the word reads "soon" in three browsers. Four files, 3 lines added and 11 removed. Routed to the Foundation by the coordinator, 16 Nov 14:33.
 
 Why it is needed: patch 28 (commit 7b3e1af, 15 Nov 19:00 UTC = 16 Nov 00:30 IST) applied the **first** version of my certificate diff, in which a greyed "Sign with certificate" shows the word "off". The coordinator's decision at 00:40 was to use the word every other unavailable rail item on the portal uses, which is "soon". My updated diff was pushed after the Foundation had applied the first one. This follow-up brings the code to the updated version:
@@ -24,7 +28,9 @@ Nothing else changes: the sentence, the greyed state, the tap on touch and the c
 
 Proofs: with the patch, "Sign with certificate" shows "soon" in the Reader's Protect rail and Redact's Tools rail in Chromium, Firefox and WebKit, ending at x 1204 inside the rail's 1218. Build `-warnaserror` 0 warnings; 539 tests pass (no guard test names the word). Screenshot: `screenshots/chromium-u18-rail-hover.png`.
 
-## Still to apply — the hidden-matches line under the sheet instead of above it (U-20 a, D-192; routed by the coordinator 16 Nov 14:33)
+## Applied by the Foundation (patch 30, commit b5ffad5, placed by hand; checked on 6d80aa3) — the hidden-matches line under the sheet instead of above it (U-20 a, D-192)
+The same change as sent (the block just above the sheet tabs, the border on its top edge); not byte-identical because the Foundation placed it by hand around the resize code. Checked on 6d80aa3: 0% of the sentence covered at 1280, 1920, tablet and phone sizes in three browsers; the right words in 9 of 9 cases, shown only when a match is in a hidden row or column.
+
 **`proposal/web-ui-xlsx-hidden-matches-under-sheet.patch`**, **regenerated 16 Nov against foundation 7c0b4bc (patch 29)**: the version written against 754d1e2 no longer applied, because patch 29 changed the lines around it for the resize. The change itself is the same. Two files, 9 lines added and 6 removed. Re-measured on patch 29: 0% of the sentence covered at 1280, 1920, tablet and phone sizes in three browsers.
 - `Ui/Components/Viewers/XlsxView.razor`: the `xv-hiddenhits` block moves from above the value bar to just above the sheet tabs.
 - `Ui/Components/Viewers/XlsxView.razor.css`: its border goes on the top edge instead of the bottom.

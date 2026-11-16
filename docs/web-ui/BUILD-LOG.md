@@ -461,3 +461,26 @@ With all three applied together: build 0 warnings, 593 tests pass; the hidden-ma
 
 ### 6. Portal surfaces against patch 28's screenshots
 63 screenshots: text identical in all. Pixels differ only in Home's greeting ("Good evening" at 21:34, "Good morning" at 09:38 on the container's clock). Drop overlay 6 of 6.
+
+## 2026-11-16 — session 26 (coordinator 21:35: merge patch 30 and confirm it in the portal)
+
+### 1. Branches and merge
+Checked all: `platform/foundation-pr` 4b704c8, `platform/foundation` 6d80aa3, `main` 1c482d4, `platform/web` 3f80768, `platform/web-test` 9e4cc6a, `platform/mobile-ui` ae6ae6d. `platform/foundation` 6d80aa3 has the same `src`, `tests`, `tools`, `ci` and `global.json` as foundation-pr 4b704c8; merged it (clean). `src` equals foundation-pr's.
+
+### 2. Build and tests
+Build `-warnaserror` 0 warnings. Tests 438 + 16 + 41 + 102 = **597 pass**, 0 fail, 6 skipped (the Foundation's).
+
+### 3. Patch 30 in the portal, Chromium / Firefox / WebKit
+1. **Hidden-matches line under the sheet (D-192)**: in, placed by hand by the Foundation. 0% covered by the Find box at four sizes; right words in 9 of 9 cases; not shown before a search, for a visible-only match, on the hidden sheet, or after clearing.
+2. **Rail word "soon"**: in exactly as sent. 12 of 12 certificate cases as D-187 says; the word fits the rail.
+3. **Find stays on the match's page (Mobile UI H-26)**: the Foundation's `foot.pdf` (the word 91% down each of four pages), Find "footmark", six steps, on portal desktop, tablet, phone and the Windows profile: 72 steps, the match on screen and on its own page every time (pages snap, `y mandatory`, on all four).
+4. **A pinch in Mark leaves no mark (Mobile UI H-25)**: tablet and phone profiles. Two touch pointers sent by script in all three browsers, and real two-finger touches (CDP) in Chromium: no shape and no text with Rectangle or with Text. Control: one finger still drags a rectangle (0 → 1).
+
+### 4. Portal surfaces against patch 29's screenshots
+63 screenshots: text identical in all; pixels identical with Home's date line and greeting masked (they follow the clock). Drop overlay 6 of 6.
+
+### 5. Still with the Foundation
+`proposal/web-ui-close-card-keeps-focus.patch` is not in patch 30 and still applies cleanly to 6d80aa3.
+
+### 6. View on the card's Save on the portal
+Three lines in OPTIONS: Save should download as Ctrl S does (D-03), not stay as it is.
