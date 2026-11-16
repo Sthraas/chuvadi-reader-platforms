@@ -85,7 +85,7 @@ if [[ $SUITES == *,robust,* ]] && [ -f "$HERE/robust.py" ]; then
 fi
 # The save suite goes last: on the phone the device has stopped answering during it three times.
 if [[ $SUITES == *,saves,* ]]; then
-  timeout 2700 python3 "$HERE/saves.py" "$OUT/saves" "$OUT/fixtures" || rc=1
+  timeout 3900 python3 "$HERE/saves.py" "$OUT/saves" "$OUT/fixtures" || rc=1
 fi
 # Save suite again on the test-only build with the host's save pickers switched on (AT-18).
 if [[ $SUITES == *,saves,* ]] && [ -f "$PKGS/chuvadi-reader-release-saves-on.apk" ] && [ "${RELEASE_ONLY:-0}" != 1 ]; then

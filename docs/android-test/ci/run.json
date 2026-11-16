@@ -1,7 +1,7 @@
 {
-  "round": "12 (head 04c052a: Foundation 71754e1 patch 29 + Mobile UI ca152c4)",
+  "round": "12b (save suite again: picker in list view; close card on the tablet through Document; phone: pinch, zoom mark, rotated, Excel first)",
   "emulators": "phone-36,tablet-36",
-  "suites": "saves,drift,function,design,at13",
+  "suites": "saves",
   "foundation_ref": "71754e122bd63d9a1225006f0c6c4014718009df",
   "mobileui_ref": "ca152c452bd70a07ffe4a3a5f124a3ac04ba2397",
   "android_ref": "04c052af2b8293d01004c257fe508f7d9caeaad5"

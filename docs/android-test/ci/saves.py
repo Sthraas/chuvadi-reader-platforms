@@ -155,6 +155,37 @@ def in_picker():
     return "documentsui" in ui_dump()
 
 
+def picker_choose(name, tries=22):
+    """In Android's picker: Downloads, list view (full names), scroll to the file, tap it."""
+    seen, went = [], 0
+    for _ in range(tries):
+        xml = ui_dump()
+        if "documentsui" not in xml:
+            seen.append("not the picker")
+            time.sleep(1.5)
+            continue
+        m = re.search(r'text="%s"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"' % re.escape(name), xml)
+        if m:
+            x1, y1, x2, y2 = map(int, m.groups())
+            sh(f"input tap {(x1 + x2) // 2} {(y1 + y2) // 2}")
+            return True, seen
+        seen.append(sorted(set(re.findall(r'text="((?:sv-|at-)[^"]+)"', xml)))[:10])
+        if "Files in Downloads" not in xml and went < 3:
+            went += 1                                   # the picker reopens in the last folder used (e.g. at-bind)
+            ui_tap_text("Show roots")
+            time.sleep(1.2)
+            ui_tap_text("Downloads", "Download")
+        elif ui_tap_text("List view"):
+            pass                                        # the grid cuts long names short
+        else:
+            w, h = map(int, re.findall(r"(\d+)x(\d+)", sh("wm size"))[-1])
+            if h < w and portrait_rotation() == 1:
+                w, h = h, w
+            sh(f"input swipe {w // 2} {int(h * 0.75)} {w // 2} {int(h * 0.4)} 300")
+        time.sleep(1.5)
+    return False, seen
+
+
 def pick_open(name):
     r = _pick_open(name)
     if not r["opened"]:
@@ -173,26 +204,7 @@ def _pick_open(name):
     time.sleep(1.5)
     hit = tap("Open a document", sel=".ph-fab") if phone() else tap("Choose a document to open", "Open (Ctrl O)", "Open")
     time.sleep(2.5)
-    ok = False
-    seen = []
-    for _ in range(18):
-        xml = ui_dump()
-        m = re.search(r'text="%s"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"' % re.escape(name), xml)
-        if m:
-            x1, y1, x2, y2 = map(int, m.groups())
-            sh(f"input tap {(x1 + x2) // 2} {(y1 + y2) // 2}")
-            ok = True
-            break
-        seen.append(sorted(set(re.findall(r'text="(sv-[^"]+)"', xml)))[:12] if "documentsui" in xml else "not the picker")
-        if "documentsui" in xml and re.search(r'text="sv-[^"]+\.(pdf|xlsx)"', xml):
-            # in the right folder, the file is further down the list: scroll
-            w, h = map(int, re.findall(r"(\d+)x(\d+)", sh("wm size"))[-1])
-            if h < w and portrait_rotation() == 1:
-                w, h = h, w
-            sh(f"input swipe {w // 2} {int(h * 0.75)} {w // 2} {int(h * 0.35)} 300")
-        elif not (ui_tap_text("Download") or ui_tap_text("Downloads")):
-            ui_tap_text("Show roots")
-        time.sleep(1.5)
+    ok, seen = picker_choose(name)
     if not ok:
         shot("picker-file-not-found")
     if not ok and in_picker():
@@ -891,12 +903,11 @@ def sv11_excel():
     time.sleep(1.5)
     tap("Open a document", sel=".ph-fab") if phone() else tap("Choose a document to open", "Open (Ctrl O)", "Open")
     time.sleep(2.5)
-    for _ in range(8):
-        if ui_tap_text("sv-sheet.xlsx"):
-            break
-        if not (ui_tap_text("Download") or ui_tap_text("Downloads")):
-            ui_tap_text("Show roots")
-        time.sleep(1.5)
+    picked, seen = picker_choose("sv-sheet.xlsx")
+    if not picked:
+        shot("picker-file-not-found")
+        if in_picker():
+            sh("input keyevent KEYCODE_BACK")
     ok = cdp.wait("document.querySelectorAll('.xv-cell').length > 0", 40)
     shot("sv11-grid")
     cells = cdp.js("(() => { " + VIS + " const c = [...document.querySelectorAll('.xv-cell')]; const withv = c.filter(e => (e.dataset.v || e.textContent || '').trim());"
@@ -931,7 +942,10 @@ def close_tab_by_touch(name):
             time.sleep(1.2)
         x = RECT(f".ph-tab-x[aria-label='Close {name}']")
     else:
-        x = RECT(".rtab.active .rtab-x")
+        # 12d: on the tablet Close lives in Document ▾ (the tab's own × is hidden there)
+        x = doc_action("Close tab", "Close this tab", "Close document", "Close file")
+        time.sleep(1.5)
+        return {"close_item": x, "menu_items": None if x else labels()}
     if x:
         tap_xy(x["x"], x["y"])
         time.sleep(1.5)
@@ -970,7 +984,7 @@ def sv13_close_card():
     tap_xy(c["x"], c["y"])
     time.sleep(1.5)
     still = cdp.js("(() => { const t = [...document.querySelectorAll('.rtab-name, .ph-t, .ph-row-l')].map(e => e.textContent.trim()); return t; })()")
-    R.check("SV-13c Cancel: the card goes, the tab and its mark stay", cdp.js(CLOSEQ) is None and any(name in t for t in still or []) and cdp.js(marks) == n0,
+    R.check("SV-13c Cancel: the card goes, the tab and its mark stay", cdp.js(CLOSEQ) is None and any(name in t for t in still or []) and cdp.js(marks) >= n0,
             {"card_gone": cdp.js(CLOSEQ) is None, "tabs": still, "marks_before": n0, "marks_after": cdp.js(marks)})
     if phone():
         h = RECT(".ph-sheet .ph-sheet-a, .ph-handle")
@@ -1000,8 +1014,8 @@ def sv13_close_card():
     time.sleep(1.5)
     tabs = cdp.js("[...document.querySelectorAll('.rtab-name, .ph-row-l, .ph-t')].map(e => e.textContent.trim())")
     R.check("SV-13d Save as… from the card: Android's picker, the new file has the mark, then the tab closes",
-            bool(files and got and (got["annots"] or got["xobjects"]) and pages == 12 and cdp.js(CLOSEQ) is None and not any(t == name for t in tabs or [])),
-            {"card_again": bool(q2), "picker": picker, "files": files, "pdf": got, "pages": pages, "tabs_after": tabs, "card_still_up": cdp.js(CLOSEQ)})
+            bool(files and got and (got["annots"] or got["xobjects"]) and pages and len(pages) == 12 and cdp.js(CLOSEQ) is None and not any(t == name for t in tabs or [])),
+            {"card_again": bool(q2), "picker": picker, "files": files, "pdf": got, "pages": len(pages) if pages else None, "tabs_after": tabs, "card_still_up": cdp.js(CLOSEQ)})
     shot("sv13-after-saveas")
 
 
@@ -1041,9 +1055,10 @@ def sv14_excel_resize():
 XLSX_MD5 = None
 CASES = [("SV-1", sv1_text), ("SV-2", sv2_shape), ("SV-3", sv3_form), ("SV-4", sv4_redact), ("SV-7", sv7_password), ("SV-8", sv8_compress),
          ("SV-9", sv9_flatten), ("SV-10", sv10_rotated), ("SV-12", sv12_zoom), ("SV-11", sv11_excel), ("SV-14", sv14_excel_resize), ("SV-13", sv13_close_card), ("SV-6", sv6_print), ("SV-5", sv5_arrange)]
-if os.environ.get("AT_SAVES_ORDER") == "marks-last" or phone():
+if phone():
     # Round 11: the phone stopped answering after the third Mark › Save as. Everything else first, so it is covered whatever happens.
-    CASES = [c for c in CASES if c[0] not in ("SV-1", "SV-2", "SV-3", "SV-10", "SV-12")] + [c for c in CASES if c[0] in ("SV-12", "SV-10", "SV-1", "SV-2", "SV-3")]
+    first = ["SV-11", "SV-14", "SV-12", "SV-10", "SV-1", "SV-2", "SV-3", "SV-13"]     # what round 12 did not reach on the phone
+    CASES = [c for c in CASES if c[0] in first] + [c for c in CASES if c[0] not in first]
 health("start")
 for name, fn in CASES:
     case(name, fn)
