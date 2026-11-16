@@ -568,14 +568,13 @@ sheet tabs work) and B-31 (Excel time-only cells, library). Neither touches the 
 
 **Notes**
 - My test copy is built with SDK 10.0.114, with `global.json` (10.0.403) set aside. CI uses the pinned SDK.
-- CI run 43918822871 on b08b0e5 was still in progress when I wrote this. Arun's checklist below stays on the
-  fc20516 package until that run is green.
+- [CI run 43918822871](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/43918822871) on b08b0e5 is green, and Arun's checklist below uses its package.
 
 **Ready for Arun's check**, with B-31 known.
 
-## Arun's check — Linux fc20516
+## Arun's check — Linux b08b0e5
 
-**Get the package.** GitHub → `Sthraas/chuvadi-reader-platforms` → Actions → run **Linux** on `fc20516` ([run 43910045202](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/43910045202), green) → Artifacts → **linux-x64** (ARM machine: `linux-arm64`). Unzip it and use **`deb/chuvadi-reader_1.0.0~preview_amd64.deb`** — the self-contained one (37.9 MB, needs no .NET; artifacts kept until 14 Feb 2027). SHA-256 `4175b45da49219182ae1b1b6ab93398b1d34b58343a501352a8a818a78e2dad2`. (`deb-framework-dependent/` is the smaller variant that pulls in Microsoft's .NET runtime package.) Or with the CLI: `gh run download 43910045202 -R Sthraas/chuvadi-reader-platforms -n linux-x64`.
+**Get the package.** GitHub → `Sthraas/chuvadi-reader-platforms` → Actions → run **Linux** on `b08b0e5` ([run 43918822871](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/43918822871), green) → Artifacts → **linux-x64** (ARM machine: `linux-arm64`). Unzip it and use **`deb/chuvadi-reader_1.0.0~preview_amd64.deb`** — the self-contained one (37.9 MB, needs no .NET; artifacts kept until 14 Feb 2027). SHA-256 `1ca61bafa304575074a88928222500d1ac814db7eb04a2a5feea5231a4d98d40`. (`deb-framework-dependent/` is the smaller variant that pulls in Microsoft's .NET runtime package.) Or with the CLI: `gh run download 43918822871 -R Sthraas/chuvadi-reader-platforms -n linux-x64`.
 
 **Install** (Ubuntu 24.04 or 26.04, desktop):
 ```
@@ -593,7 +592,7 @@ It appears in the app grid as **Chuvadi Reader**; it also installs and loads its
 5. **Print to your real printer**: a mixed portrait/landscape file, 2 copies; check it's crisp (vector), and that a file whose permissions forbid printing is refused — then works when opened with its owner password.
 6. **A password-protected PDF**: wrong password, then the right one.
 7. **Mark → annotate → Save as**, and **Protect → Find & redact** a word → Save redacted copy — then search the saved copy for the word (it must be gone). **New in patch 29:** draw marks on two files and switch tabs: each tab should keep its own marks. Then close a tab with unsaved marks, and try Close all tabs and the window's close button: each should ask Save / Save as… / Discard / Cancel, and Cancel should keep everything. A tab with no marks should close without asking.
-8. **Word and Excel files** of your own — text should read exactly as in the file (spaces, spelling, case untouched). The Excel grid now follows the file: column widths, row heights, merged cells, borders and fills, hidden rows and columns, and hidden sheets listed dimmed. Numbers show in the file's own format; hover or click a cell for the stored value. Two known gaps: a time with no date shows `########` with a wrong stored value (B-31), and built-in short dates show as mm-dd-yy, not your system's format. **New in patch 29:** drag the edge of a column letter or a row number to resize it; this is for viewing only and never changes the file. Known gap: the sheet arrows and number box in the title bar don't change the sheet (B-33); use the sheet tabs at the bottom.
+8. **Word and Excel files** of your own — text should read exactly as in the file (spaces, spelling, case untouched). The Excel grid now follows the file: column widths, row heights, merged cells, borders and fills, hidden rows and columns, and hidden sheets listed dimmed. Numbers show in the file's own format; hover or click a cell for the stored value. Two known gaps: a time with no date shows `########` with a wrong stored value (B-31), and built-in short dates show as mm-dd-yy, not your system's format. **New in patch 29:** drag the edge of a column letter or a row number to resize it; this is for viewing only and never changes the file. Also try the sheet arrows and number box in the title bar: they should change the sheet, the same as the sheet tabs at the bottom. **Text files (new in patch 31):** the status bar shows the encoding the file was read as; click it to re-read the file as Automatic, UTF-8, Windows-1252 or UTF-16. This only changes how the file is read and never changes the file.
 9. **Document ▾ → Show in folder** opens Files with the file selected; **Snapshot → Copy** then paste into another app.
 10. **Settings and gestures**: switch the five themes and the interface size; change GNOME's window-button layout (Tweaks → Window Titlebars) and see the buttons follow; maximise and restore. **Pinch on the trackpad** over a page: the page should zoom about your fingers, both ways, and the bars and tabs should not scale; on Home a pinch should do nothing. Then draw a rectangle in Mark after pinching: it should land under the pointer. I couldn't test a real pinch here.
 
