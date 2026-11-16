@@ -954,7 +954,7 @@ def sv16_other_outputs():
                 picker = "folder" if ("USE THIS FOLDER" in xml.upper() or "at-bind" in xml) else "file"
                 (folder_picker("at-bind", 10) if picker == "folder" else save_picker())
             time.sleep(6)
-        seen = sh("find /storage/emulated/0/ -type f -newer /data/local/tmp/at-mark 2>/dev/null | grep -v '/Android/' | head -8").strip().splitlines()
+        seen = sh("find /storage/emulated/0/ -type f -newer /data/local/tmp/at-mark 2>/dev/null | grep -v -E '/Android/|/ui\\.xml$|window_dump' | head -8").strip().splitlines()
         private = sh("su 0 find /data/user/0/in.chuvadi.reader/cache/work /data/user/0/in.chuvadi.reader/files -type f -newer /data/local/tmp/at-mark 2>/dev/null | grep -v -E 'session|tabs|recent|\\.json$' | head -8").strip().splitlines()
         lines = [l.strip()[:150] for l in (cdp.js("document.body.innerText") or "").splitlines() if re.search(r"saved|wrote|export|split|merg|/data/|folder|images? ", l, re.I)][:10]
         shot("sv16-" + key.split()[0].lower() + "-after")
