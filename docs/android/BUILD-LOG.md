@@ -905,3 +905,19 @@ same screen; no crash), smoke pass. With round 6 (API 36 phone and tablet, all c
 - Workflow input `workload_set` (trial only: changes the runner's copy of global.json, never committed).
 - Sandbox: Android Debug and Release `-warnaserror` 0 warnings; manifest 14/14; Core 434 (+6 skipped), Hosting 102,
   MobileUi 16, WebUi 41 pass.
+- **Run 43837772368** (all four, full, pin 10.0.403, 04c052a): phone 35 / tablet 35 gate 4/4; tablet 36 gestures 13/13,
+  platform **30/30 — D-190 passes** (question shown, app stays; Cancel keeps it; Discard and the app leaves); phone 36
+  29/30: the phone's tool row calls the rectangle **Box**, so the drag landed with the Text tool (an empty text box,
+  "1 text") and the last Back left without a question. Test fixed (Rectangle on the rail, else Box). Release launch pass
+  on all four. Note for Foundation: an empty text box counted as no unsaved work (left without asking) — by design?
+- **Workload set 10.0.401 trial** (runner only, global.json not committed; Android 36.1.69, MAUI 10.0.20, **runtime
+  10.0.12** instead of 36.1.118 / 10.0.110 / 10.0.14):
+  - builds: yes, 0 warnings; .apk 43,901,247 vs 43,991,412 bytes (−90 KB).
+  - run 43837787070 (all four, full): API 35 gate 4/4 on both; gestures 11/11 and 13/13; Release launch pass on all four;
+    **two new failures on both API 36 devices** that pass on the pin in the same build: "Back closes an open card
+    (Print) and stays on the same screen" — the card closed *and* the page went back (/reader → /bench), and "relaunch
+    returns to the screen it left from" (/reader or /bench → /). MAUI 10.0.20's BlazorWebView handles Back itself as
+    well (WebView history) — the host's Back-first ordering (round 3's fix) doesn't hold on that MAUI.
+  - cold open (runs 43837801762 / 43837816523, Release, 10 runs each, median ms to page 1 painted):
+    phone 5401 (pin) vs 5348 (10.0.401), tablet 6275 vs 6692 — within run-to-run noise.
+  - **Answer: no** — Android regresses on 10.0.401 (Back goes back a page as well as closing a card).

@@ -863,7 +863,10 @@ def back_until_question(limit=8):
 go_read()
 tap_el(".ph-nav-b, .lb-btn", "Mark")
 time.sleep(1.5)
-tap_el(".ph-tool, .rb", "Rectangle")
+# The tablet's rail calls it Rectangle; the phone's tool row calls it Box (run 43837772368: on the phone the
+# drag landed with the Text tool, made an empty text box and no unsaved mark, so nothing was asked).
+if not tap_el(".rb", "Rectangle"):
+    tap_el(".ph-tool", "Box")
 time.sleep(1)
 pg = cdp.evaluate("(() => { const p = [...document.querySelectorAll('.rpage-wrap .rpage')].find(e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.top < innerHeight && r.bottom > 0; });"
                   " if (!p) return null; const r = p.getBoundingClientRect(); return [r.left, Math.max(r.top, 0), r.width, Math.min(r.bottom, innerHeight) - Math.max(r.top, 0), devicePixelRatio]; })()")
@@ -874,6 +877,8 @@ if pg:
     x2, y2 = ox + (pg[0] + pg[2] * 0.6) * pg[4], oy + (pg[1] + pg[3] * 0.5) * pg[4]
     drew = touch("swipe", round(x1), round(y1), round(x2), round(y2), 600)
     time.sleep(1.5)
+    marks = cdp.evaluate("(() => { const t = [...document.querySelectorAll('.ph-sub, .tb-sub, .rd-sub')].map(e => e.textContent).join(' '); return t; })()")
+    print(f"  after the drag: {marks!r}")
 shot("p11a-mark-drawn")
 pid_mark = pid()
 q1 = back_until_question()
