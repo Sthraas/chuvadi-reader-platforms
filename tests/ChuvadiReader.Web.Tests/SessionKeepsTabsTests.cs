@@ -303,6 +303,47 @@ public sealed class SessionKeepsTabsTests : IDisposable
         => ChuvadiReader.Web.Hosting.Workers.WorkerPool.NobodyLeft(new(0, counter.Count, _states.Count, counter.Connected));
 
     [Fact]
+    public async Task A_remembered_text_encoding_stays_inside_the_persons_session()
+    {
+        // D-191 on the portal: the choice lives with the file's Recents entry, and Recents is the session's.
+        // A reload keeps it; another person, and the same person's other sign-in, never see it (nor the file's
+        // name); the end of the session forgets it.
+        var first = new Connection(_states, _images, _options, new As("gita", "sid-6"));
+        var path = await UploadAsync(first, "notes.txt");
+        var recents = new ChuvadiReader.Core.Documents.RecentFilesService(first.Storage);
+        await recents.HydrateAsync();
+        await recents.TouchAsync(new ChuvadiReader.Core.Documents.RecentItem("notes.txt", path, DocumentFormat.Text, DateTimeOffset.UtcNow, false));
+        Assert.True(await recents.SetTextEncodingAsync(path, 1252));
+
+        var reloaded = new Connection(_states, _images, _options, new As("gita", "sid-6"));
+        var again = new ChuvadiReader.Core.Documents.RecentFilesService(reloaded.Storage);
+        await again.HydrateAsync();
+        Assert.Equal(1252, again.TextEncodingFor(path));
+
+        foreach (var other in new[] { new As("hari", "sid-7"), new As("gita", "sid-8") })
+        {
+            var theirs = new Connection(_states, _images, _options, other);
+            var seen = new ChuvadiReader.Core.Documents.RecentFilesService(theirs.Storage);
+            await seen.HydrateAsync();
+            Assert.Null(seen.TextEncodingFor(path));
+            Assert.DoesNotContain(seen.Items, i => i.Path == path || i.FileName == "notes.txt");
+            Assert.False(await seen.SetTextEncodingAsync(path, 1200)); // nor can they set one for a file that isn't theirs
+            await theirs.DisposeAsync();
+        }
+
+        Assert.Equal(1252, again.TextEncodingFor(path)); // untouched by the others
+        await first.DisposeAsync();
+        await reloaded.DisposeAsync();
+        _states.End("gita", "sid-6");
+        var afterEnd = new Connection(_states, _images, _options, new As("gita", "sid-6"));
+        var fresh = new ChuvadiReader.Core.Documents.RecentFilesService(afterEnd.Storage);
+        await fresh.HydrateAsync();
+        Assert.Null(fresh.TextEncodingFor(path));
+        Assert.DoesNotContain(fresh.Items, i => i.Path == path);
+        await afterEnd.DisposeAsync();
+    }
+
+    [Fact]
     public async Task An_ended_session_keeps_nothing_a_stale_connection_writes()
     {
         var stale = new Connection(_states, _images, _options, new As("dave", "sid-3"));

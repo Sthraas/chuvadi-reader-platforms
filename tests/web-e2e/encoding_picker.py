@@ -1,0 +1,123 @@
+"""D-191 on the portal: the encoding chosen for a text file stays inside the person's session.
+
+A UTF-8 text file with accented words is opened; the status bar names the encoding it was read as. The
+person chooses "Windows-1252" in "Read this file as": the text is read again (the accents turn into two
+letters each, which is what that choice means) and the status bar says Windows-1252. After a page reload the
+tab comes back still read that way (the choice is with the session's Recents entry). A second person who
+opens a file of the same name and content gets Automatic and the proper accents: nothing of the first
+person's choice reaches them. The first person, signed out and in again, also starts from Automatic.
+Development sign-in.
+
+Usage: python3 encoding_picker.py <portal base> <out dir> [--browser chrome|chromium|firefox|webkit]
+"""
+import os
+import sys
+
+from playwright.sync_api import sync_playwright
+
+from pdfs import sign_in_as, sign_out
+
+base, out = sys.argv[1].rstrip("/"), sys.argv[2]
+engine = sys.argv[sys.argv.index("--browser") + 1] if "--browser" in sys.argv else "chrome"
+results = []
+os.makedirs(out, exist_ok=True)
+txt = os.path.join(out, "accents.txt")
+with open(txt, "wb") as f:
+    f.write("Un café déjà vu, naïve et sincère.\nSecond line, plain.\n".encode("utf-8"))
+
+AS_UTF8, AS_1252 = "café déjà vu", "cafÃ© dÃ©jÃ  vu"
+BUTTON = "button.sb-btn[title]:has(svg)"
+TEXT = "() => (document.querySelector('.txv') || document.body).innerText.replace(/\\u00a0/g, ' ')"
+
+
+def check(name, ok, detail=""):
+    results.append(ok)
+    print(("PASS" if ok else "FAIL") + ": " + name + (" — " + str(detail).replace("\n", " ") if detail != "" else ""))
+
+
+def open_text(page):
+    page.goto(base + "/")
+    page.wait_for_selector("nav.leftbar >> text=Upload", timeout=30000)
+    with page.expect_file_chooser(timeout=15000) as fc:
+        page.click("nav.leftbar >> text=Upload")
+    fc.value.set_files(txt)
+    page.wait_for_url("**/reader**", timeout=30000)
+    page.wait_for_function("() => document.querySelector('.txv') && document.querySelector('.txv').innerText.includes('Second line')", timeout=30000)
+    page.wait_for_timeout(800)
+
+
+def shows(page, want, timeout=15000):
+    try:
+        page.wait_for_function("want => (" + TEXT + ")().includes(want)", arg=want, timeout=timeout)
+        return True
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def enc_button(page):
+    return page.locator("button.sb-btn[aria-label*='Now ']").first
+
+
+def chosen_row(page):
+    enc_button(page).click()
+    page.wait_for_selector(".enc-list", timeout=10000)
+    on = page.locator(".enc-row.on .enc-n").all_inner_texts()
+    return on[0] if len(on) == 1 else on
+
+
+with sync_playwright() as p:
+    if engine == "chrome":
+        b = p.chromium.launch(channel="chrome", args=["--no-sandbox"])
+    else:
+        b = getattr(p, "chromium" if engine == "chromium" else engine).launch()
+
+    # --- the first person chooses an encoding -------------------------------------------------------------
+    one = b.new_context(viewport={"width": 1400, "height": 900})
+    who = sign_in_as(one, base, "enc-one-" + engine)
+    page = one.new_page()
+    errors = []
+    page.on("pageerror", lambda e: errors.append(str(e)))
+    open_text(page)
+    check("the file opens read automatically, accents right", shows(page, AS_UTF8), page.evaluate(TEXT)[:60])
+    label = enc_button(page).inner_text().strip()
+    check("the status bar names the encoding", label == "UTF-8", label)
+    check("Automatic is the choice to begin with", chosen_row(page) == "Automatic")
+    page.click(".enc-row:has(.enc-n:text-is('Windows-1252'))")
+    check("choosing Windows-1252 reads the same bytes again that way", shows(page, AS_1252), page.evaluate(TEXT)[:60])
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(500)
+    label = enc_button(page).inner_text().strip()
+    check("... and the status bar says so", label == "Windows-1252", label)
+
+    page.reload()
+    page.wait_for_selector("nav.leftbar", timeout=30000)
+    check("after a reload the tab is still read as chosen", shows(page, AS_1252, timeout=30000), page.evaluate(TEXT)[:60])
+    check("... with the choice still marked in the card", chosen_row(page) == "Windows-1252")
+    page.keyboard.press("Escape")
+
+    # --- a second person, same file name and content ------------------------------------------------------
+    two = b.new_context(viewport={"width": 1400, "height": 900})
+    sign_in_as(two, base, "enc-two-" + engine)
+    other = two.new_page()
+    other.on("pageerror", lambda e: errors.append(str(e)))
+    open_text(other)
+    check("a second person's file of the same name is read automatically", shows(other, AS_UTF8) and AS_1252 not in other.evaluate(TEXT), other.evaluate(TEXT)[:60])
+    check("... Automatic is their choice: nothing of the first person's reached them", chosen_row(other) == "Automatic")
+    other.keyboard.press("Escape")
+    check("the first person still has their choice", shows(page, AS_1252) and enc_button(page).inner_text().strip() == "Windows-1252")
+    sign_out(two, base)
+
+    # --- the first person signs out and in again: a new session starts from Automatic ---------------------
+    sign_out(one, base)
+    again = b.new_context(viewport={"width": 1400, "height": 900})
+    again.add_cookies([{"name": "chvd-dev-user", "value": who, "url": base}])  # the very same person
+    back = again.new_page()
+    back.on("pageerror", lambda e: errors.append(str(e)))
+    open_text(back)
+    check("signed out and in again, the same person starts from Automatic", shows(back, AS_UTF8) and chosen_row(back) == "Automatic")
+    back.keyboard.press("Escape")
+    check("no page errors", not errors, "; ".join(errors[:3]))
+    sign_out(again, base)
+    b.close()
+
+sys.exit(0 if all(results) else 1)

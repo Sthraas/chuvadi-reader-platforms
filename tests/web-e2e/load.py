@@ -151,7 +151,10 @@ async def person(browser, n, results):
             await ctx.request.get(base + "/signout", max_redirects=0)
         except Exception:  # noqa: BLE001
             pass
-        await ctx.close()
+        try:  # the page is being sent to the signed-out page just now; don't let the tool's close wait on it for ever
+            await asyncio.wait_for(ctx.close(), 30)
+        except Exception:  # noqa: BLE001
+            r.setdefault("notes", []).append("the test tool's context close didn't finish in 30 s")
 
 
 async def main():
@@ -166,7 +169,10 @@ async def main():
         stop.set()
         await sampling
         for b in pool:
-            await b.close()
+            try:
+                await asyncio.wait_for(b.close(), 30)
+            except Exception:  # noqa: BLE001 - results are already in hand
+                print("note: a browser didn't close within 30 s", file=sys.stderr)
 
     ok = [r for r in results if not r["error"]]
     summary = {"people": people, "browsers": len(pool), "succeeded": len(ok), "failed": len(results) - len(ok), "wall_ms": round(wall * 1000)}
