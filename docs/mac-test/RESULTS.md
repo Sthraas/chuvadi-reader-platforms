@@ -35,6 +35,11 @@ Runs (one each, read before the next — no retries):
 T2 on the xcode-27 build (probe, ms, median (worst) of 10): macOS 15 cold 7 653 (11 759), warm first render 3 003
 (3 512); 15-Intel cold 9 425 (10 420), warm 3 066 (3 348). Open panel → page 310 / 885. In line with earlier builds.
 
+**Update, head 9631897 (5ccb12c + docs; M-08 on macOS 15 — ⌃Tab taken where AppKit hands over events):** shared run
+43933644211 — everything passes on macOS 26 and 15, including the tab keys in both focus states and the column resize;
+15-Intel fails the column resize again (M-29, now 4 of 4 on Intel). Full run 43924148080 on dc92616: clean except
+M-25 on Intel. Still not signed off.
+
 **What blocks the sign-off:** M-29. Also open: M-25 (Intel, ⌘O after Esc, seen again once in the full run).
 Not tested for patches 30–31: the encoding picker, and the pager after switching between Excel/Word/text tabs.
 
