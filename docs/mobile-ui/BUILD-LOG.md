@@ -641,3 +641,37 @@ Evidence:
   the desk menu and Read with Find open identical apart from the clock; Read and Home show the known
   1-level noise pixels in the same places as before.
 
+## 16 Nov, 14:40: Foundation 71754e1 (patch 29) merged; the ask-before-closing card and Excel resize by finger
+- Merged platform/foundation-pr 71754e1: no conflicts. H-25 and H-26 still apply and are still outstanding.
+- **The ask-before-closing card** (new tool `tools/mobile-ui/closecard.py`, 6 checks; it opens a copy of a
+  PDF under a 100-character name), at 412×915, 915×412, 800×1280, 1280×800:
+  - Phone, both ways up: Save / Save as… / Discard / Cancel all there, each 44 px high, each the top element
+    at its centre, inside the screen; the long name wraps. With the system bars' insets set (24 px top,
+    48 px bottom, through Chrome's safe-area override) the card sits above the bottom bar. With the keyboard
+    up (the window 320 px shorter in portrait, 200 px in landscape) all four are still on screen.
+    Foundation's phone styling holds; I only added a height limit with scrolling, for safety.
+  - Tablet: the four answers were 30 px high. Fixed with the cards below.
+  - Cancel keeps the tab and its mark; Discard closes the tab.
+  - Not seen here: a real keyboard and real system bars. Both are stood in for (a shorter window; inset
+    override). Android Test should look once on the emulator.
+- **Found and fixed (mine, mobile.css): the tablet's cards were never 44 px.** Card buttons, number and text
+  boxes 30 px, segment buttons 28 px, colour dots 20 px, tick rows 19 px — on every float card; the box
+  audit doesn't open cards. Now 44 px boxes drawn as before (a selected rectangle's card: 260 pixels of
+  corner and dot-edge antialiasing differ, nothing moves). Colour dots and tick rows on the phone too.
+  checks.py check 11 now measures every control on the rectangle's card. Still small: the tick box itself
+  (13 px; its row is the 44 px target). Other cards (text box, image, sign, redact) get the same rules but
+  are not measured by a check yet.
+- **Excel resize by finger** (new tool `tools/mobile-ui/xlresize.py`, 13 checks), same four sizes:
+  - Dragging column B's edge 60 px widens it 60 px and the sheet doesn't scroll; 10 px off the edge still
+    takes it; two taps fit it and don't zoom; a row's edge the same; zoomed, the edge still follows the
+    finger; a finger in the middle of a column letter scrolls; a pinch on the cells zooms.
+  - "File's own sizes" was 24 px high: a 44 px box now (mine).
+  - **Fights:** (1) a pinch that starts on an edge also resized → H-27 diff (shared viewers.js), fixed with
+    it. (2) a finger on an ordinary (20 px) row number resizes instead of scrolling → F-4, three ways with
+    for and against, for Foundation and the coordinator; xlresize.py prints it as OPEN, not FAIL.
+- hooks-12 is replaced by `mobile-ui-hooks-13.patch` = H-25 + H-26 + H-27.
+- Results (hooks-13 applied): 593 tests pass, 6 skipped by Foundation: 434 + 102 + 41 + 16; touch at the
+  four sizes: 279 checks pass, 0 fail, 1 open (F-4, at three sizes); box audit clean; desktop before
+  (71754e1) / after at 1440×900: Read, Mark, a selected rectangle's card, the ask-before-closing card,
+  Arrange and the desk menu identical apart from the clock; Home has the known 1-level noise pixels.
+

@@ -1,10 +1,38 @@
-# Mobile app UI → Foundation: hooks and hand-off (updated 16 Nov, patch 28)
+# Mobile app UI → Foundation: hooks and hand-off (updated 16 Nov, patch 29)
 
-## Outstanding for Foundation: H-25 and H-26 (`proposal/mobile-ui-hooks-12.patch`)
-Against foundation-pr 87f95c0 (patch 28). `mobile-ui-hooks-12.patch` is both together (what Android's
-`compose.sh` applies); `proposal/H25-reader-pinch-in-mark-leaves-no-mark.patch` and
-`proposal/H26-find-stays-on-the-match-page-when-pages-snap.patch` are each on its own.
-H-24 landed in patch 28 as sent (`proposal/landed/`).
+## Outstanding for Foundation: H-25, H-26 and H-27 (`proposal/mobile-ui-hooks-13.patch`)
+Against foundation-pr 71754e1 (patch 29). `mobile-ui-hooks-13.patch` is the three together (what Android's
+`compose.sh` applies); each is also on its own beside it:
+`proposal/H25-reader-pinch-in-mark-leaves-no-mark.patch`,
+`proposal/H26-find-stays-on-the-match-page-when-pages-snap.patch`,
+`proposal/H27-excel-resize-gives-way-to-a-pinch.patch`.
+
+### H-27: Excel resize gives way to a pinch (D-190, by finger)
+(`Ui/wwwroot/js/viewers.js`, `gridResize`, +2 / −0)
+- A pinch whose first finger lands on a column's or row's edge both zooms the sheet and resizes: the first
+  finger has started a resize and keeps it while the second finger zooms. Measured on 71754e1 at 412×915
+  and 800×1280: zoom 1 → 1.69 and column B 108 → 76 px (at 100 %).
+- The change: a second touch pointer down while an edge is held drops the resize (`finish(false)`), so
+  nothing changes size and the pinch goes on.
+- **For:** pinch always only zooms. **Against:** as with H-25, a second finger that lands outside the grid
+  isn't seen by this listener.
+
+### F-4 (a choice, not a diff yet): a finger on a row number resizes instead of scrolling
+- For a finger the edge takes 14 px each way. An ordinary row number is 20 px high, so all of it is "edge":
+  a finger that starts anywhere on the row-number column and moves up or down resizes a row; the sheet
+  does not scroll. Seen at 800×1280, 1280×800 and 915×412 (scroll 0 → 0, one more row marked as changed).
+  At 412×915 the row picked happened to be 64 px high, and it scrolled.
+- Column letters at 64 px: the middle 36 px scrolls sideways, the 14 px at each side resizes.
+- Ways to settle it:
+  - **A. A smaller edge on small headers** (for a finger, no more than a quarter of the header's size).
+    For: two lines. Against: on a 20 px row the edge is 5 px, hard to hit with a finger, and the rest
+    is still only 10 px of "scroll".
+  - **B. A finger must rest on the edge for a moment (about 350 ms) before it resizes;** a finger that
+    moves at once scrolls. Two taps to fit stay as they are. For: scroll and resize can't be confused, and
+    the full 14 px edge can stay. Against: resizing by finger is slower and has to be learnt (the guide
+    line could show when the hold has taken). Mouse and pen unchanged.
+  - **C. Leave it.** For: nothing to do. Against: on a tablet the left strip of every sheet doesn't scroll.
+  - I'd take B. I can write it as a diff once it is chosen.
 
 ### H-26: page at a time, Find lands on the next page when the match is low on its page
 (`Ui/wwwroot/js/reader.js`, `scrollToMatch`, +7 / −1) — found re-checking F-1 on the tablet

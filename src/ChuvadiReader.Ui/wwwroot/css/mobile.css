@@ -831,3 +831,52 @@ html[data-shell="phone"] .rfind {
     border: 0; border-bottom: var(--chvd-stroke) solid var(--chvd-border); border-radius: 0; box-shadow: none;
 }
 html[data-shell="phone"] .rfind-box { flex: 1 1 0; width: auto; min-width: 0; }
+
+/* Cards (a selected mark's card, the tool cards, the ask-before-closing card): on the tablet their buttons and
+   boxes were 28 to 30 px high and the colour dots 20 px. Each is a 44 px box, drawn as before: transparent
+   bands above and below that the margins take back, the outline as an inset shadow. (The phone already makes
+   its card buttons 44 px tall, visibly; the dots and the tick rows are done here for both.) */
+html[data-shell="tablet"] .fc-btn,
+html[data-shell="tablet"] .fc-num,
+html[data-shell="tablet"] .fc-in,
+html[data-shell="tablet"] .fc-sel {
+    box-sizing: border-box; height: 44px; margin-block: -7px; border-style: solid; border-color: transparent; border-width: 7px 0;
+    background-clip: padding-box; border-radius: 6px / 13px; box-shadow: inset 0 0 0 var(--mu-line) var(--chvd-border);
+}
+html[data-shell="tablet"] .fc-btn { padding-inline: calc(10px + var(--mu-line)); }
+html[data-shell="tablet"] .fc-num,
+html[data-shell="tablet"] .fc-in,
+html[data-shell="tablet"] .fc-sel { padding-inline: calc(8px + var(--mu-line)); }
+html[data-shell="tablet"] .fc-btn:hover:not(:disabled),
+html[data-shell="tablet"] .fc-btn.on,
+html[data-shell="tablet"] .fc-btn.primary { border-color: transparent; background-clip: padding-box; box-shadow: inset 0 0 0 var(--mu-line) var(--chvd-binding); }
+html[data-shell="tablet"] .fc-btn.ink { border-color: transparent; background-clip: padding-box; box-shadow: inset 0 0 0 var(--mu-line) var(--chvd-ink); }
+html[data-shell="tablet"] .fc-num:focus,
+html[data-shell="tablet"] .fc-in:focus,
+html[data-shell="tablet"] .fc-sel:focus { border-color: transparent; }
+html[data-shell="tablet"] .fc-seg > button { box-sizing: border-box; height: 44px; margin-block: -8px; border: solid transparent; border-width: 8px 0; background-clip: padding-box; border-radius: 5px / 13px; }
+html[data-shell="tablet"] .fc-seg > button.on { background-clip: padding-box; box-shadow: none; filter: drop-shadow(0 1px 1.5px rgba(26, 19, 16, .12)); }
+html[data-shell="phone"] .fc-sw,
+html[data-shell="tablet"] .fc-sw {
+    box-sizing: border-box; width: 44px; height: 44px; margin: -12px; border: 12px solid transparent;
+    background-clip: padding-box !important;      /* the colour comes as an inline background, which resets the clip */
+    box-shadow: inset 0 0 0 var(--mu-line) var(--chvd-border);
+}
+html[data-shell="phone"] .fc-sw.on,
+html[data-shell="tablet"] .fc-sw.on { outline-offset: -10px; }
+html[data-shell="phone"] .fc-sw input[type=color],
+html[data-shell="tablet"] .fc-sw input[type=color] { inset: -12px; }
+html[data-shell="phone"] .fc-toggle,
+html[data-shell="tablet"] .fc-toggle { box-sizing: border-box; min-height: 44px; margin-block: -12px -13px; }
+/* The ask-before-closing card (D-190). Phone: it never grows past the screen (a long file name, the keyboard
+   up in landscape); its answers stay in view because the card scrolls. */
+html[data-shell="phone"] .closeq {
+    max-height: calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); overflow-y: auto; box-sizing: border-box;
+}
+html[data-shell="tablet"] .closeq { max-height: calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); overflow-y: auto; box-sizing: border-box; }
+/* Excel: "File's own sizes" (D-190) is 24 px high in the bottom bar; a 44 px box on touch, drawn as before. */
+html[data-shell="phone"] .xv-resetsizes,
+html[data-shell="tablet"] .xv-resetsizes {
+    box-sizing: border-box; height: 44px; margin-block: -10px; border-style: solid; border-color: transparent; border-width: 10px 0;
+    padding-inline: 10px; background-clip: padding-box; border-radius: 6px / 16px; box-shadow: inset 0 0 0 1px var(--chvd-binding);
+}

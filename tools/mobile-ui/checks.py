@@ -273,10 +273,12 @@ async def main():
             const saves = [...document.querySelectorAll('.ph-fab, .srail .rb')].filter(e => /^Save/.test(e.getAttribute('aria-label') || '') && e.getBoundingClientRect().width > 0);
             const tools = [...document.querySelectorAll('.ph-strip button')];
             const x = document.querySelector('.fcard .fcard-x'); const xr = x && x.getBoundingClientRect();
-            return { card: !!document.querySelector('.fcard'), saves: saves.length, savesOnTop: saves.every(top),
+            const small = [...document.querySelectorAll('.fcard button, .fcard input:not([type=checkbox]):not([type=color]), .fcard select, .fcard label.fc-sw, .fcard label.fc-toggle')]
+                .map(e => { const q = e.getBoundingClientRect(); return [e.className.split(' ')[0] || e.tagName, Math.round(q.width), Math.round(q.height)]; }).filter(v => v[1] > 0 && (v[1] < 44 || v[2] < 44));
+            return { card: !!document.querySelector('.fcard'), saves: saves.length, savesOnTop: saves.every(top), small,
                      toolsOnTop: tools.filter(e => e.getBoundingClientRect().right <= innerWidth).every(top),
                      close: xr ? [Math.round(xr.width), Math.round(xr.height)] : null }; })()""")
-        ok = r["card"] and r["saves"] >= 1 and r["savesOnTop"] and r["toolsOnTop"] and r["close"] and min(r["close"]) >= 44
+        ok = r["card"] and r["saves"] >= 1 and r["savesOnTop"] and r["toolsOnTop"] and r["close"] and min(r["close"]) >= 44 and not r["small"]
         marks0 = await pg.locator(".mk-layer .mk-shape").count()
         if r["close"]:
             await pg.locator(".fcard .fcard-x").tap(); await pg.wait_for_timeout(700)

@@ -73,3 +73,16 @@ index 690523e..a0dbb11 100644
                  const r = w.getBoundingClientRect(), wTop = deskEl.scrollTop + (r.top - d.top), wEnd = wTop + r.height;
                  // Stay on the match's page where the match allows (AT-09: a match at a page's foot, a third of the
                  // way down, left the next page covering most of the view, and the page box said that page).
+diff --git a/src/ChuvadiReader.Ui/wwwroot/js/viewers.js b/src/ChuvadiReader.Ui/wwwroot/js/viewers.js
+index 551efcf..fbcf4bf 100644
+--- a/src/ChuvadiReader.Ui/wwwroot/js/viewers.js
++++ b/src/ChuvadiReader.Ui/wwwroot/js/viewers.js
+@@ -235,6 +235,8 @@ export function gridResize(el, dotnetRef) {
+     };
+ 
+     el.addEventListener('pointerdown', (e) => {
++        // A second finger while an edge is held is a pinch (the sheet zooms): the resize is dropped, nothing changes size.
++        if (st.drag && e.pointerType === 'touch' && e.pointerId !== st.drag.id) { st.lastPress = null; finish(false, e); return; }
+         if (e.button > 0 || st.drag) return;
+         const edge = edgeAt(e);
+         if (!edge) { st.lastPress = null; return; }
