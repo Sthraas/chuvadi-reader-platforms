@@ -810,3 +810,29 @@ No app change: one UI step added (38). Build under test: 7cd960c5.
   "1 mark that is not saved" over a page showing none (`39-ask-inactive-tab.png` in the pass's output). Nothing
   is lost.
 - Excel resize, the sheet pager fix, WT-18, P-09, M-24: not checked by hand here beyond the pass.
+
+### 60. Patch 30 merged (4b704c8); B-33 traced to the shared Reader page (16 Nov)
+- **Merge of `platform/foundation-pr` 4b704c8** (PR 21, Reader main fc54ece: a rare blank page fixed, Find stays on
+  the match page, pinch in Mark leaves no mark, hidden-matches line under the sheet): clean; shared `src` and
+  `tests` identical to 4b704c8. No Linux host change. Release build `-warnaserror` clean on SDK 10.0.403. Unit
+  tests: Reader 438 passed / 6 skipped, host kit 102, Linux 68, Web Ui 41, Mobile Ui 16. Full UI pass under Xvfb:
+  **127/127**.
+- **B-33 (Linux Test, S2): the title bar's sheet arrows and number box do nothing.** Reproduced on this head. Not
+  WebKitGTK and not the host: the shared Reader page loses its reference to the tab's viewer.
+  1. On a tab change `SyncActive` calls `LoadPageBgAsync` before `OnActiveDocChanged`. Linux's settings store
+     answers at once, so `LoadPageBgAsync` draws the page before it returns: the new viewer is made, and the reset
+     two lines later forgets it. A host whose store answers later draws after the reset, which is why the Web
+     portal passes. Seen with a trace build (stack: `OnTabsChanged → SyncActive → LoadPageBgAsync →
+     Renderer.ProcessRenderQueue → XlsxView created`, then `OnActiveDocChanged … viewer was #…`, then every
+     `CounterGoAsync` with a null viewer).
+  2. A second file of the same kind reuses the first one's viewer (no `@key`), whose reference is never handed
+     over again: every host.
+  Nothing shared is changed on this branch. `PROPOSAL-b33-sheet-pager.md` has the exact diff with three tests.
+  A build with that diff: unit tests Reader 438 / 6 skipped, host kit 105; full UI pass with step 40 on,
+  **128/128**.
+- **UI step 40** (sheet pager: Next, Previous, a typed number, a tab press then Next; from Home, with a PDF open,
+  on a second workbook and back; real clicks and typing). Fails on this head, passes with the fix. In the tree,
+  run by name (`UITEST_ONLY=40`, or `UITEST_B33=1` for the whole pass) until the shared fix is merged.
+- Foundation's patch 31 (6c85f066, not merged here yet) keys each viewer by its tab and keeps the reference when
+  the new tab is a viewer tab: the same second cause, and another way round the first. To be checked on Linux
+  with step 40.
