@@ -87,6 +87,16 @@ let textTapHandler = null;
 function dropCaretHold() {
     if (caretHoldTimer) { clearTimeout(caretHoldTimer); caretHoldTimer = 0; }
     if (caretHold) { caretHold.remove(); caretHold = null; }
+    document.removeEventListener('mousedown', keepCaretHeld, true);
+}
+
+// The mouse-down a browser sends after a finger's tap: its own action (moving the focus to what is under it) is
+// stopped while the caret is being held, unless it is on a text box, which should take the focus.
+function keepCaretHeld(e) {
+    if (!caretHold) return;
+    const t = e.target;
+    if (t && t.closest && t.closest('.mk-text')) return;
+    e.preventDefault();
 }
 
 function holdCaret(x, y) {
@@ -100,6 +110,22 @@ function holdCaret(x, y) {
     document.body.appendChild(ta);
     caretHold = ta;
     try { ta.focus({ preventScroll: true }); } catch { }
+    // AT-10 (reopened): the tap is not over when the finger lifts. The browser then sends its mouse events for the
+    // tap, and the mouse-down's own action moves the focus to the page area under it, away from this field, until
+    // the box arrives some tens of milliseconds later. Keys typed in that gap went nowhere: the first key of a
+    // quick typist was lost. So that mouse-down's focus move is stopped (keepCaretHeld), and should the focus
+    // leave this field some other way while it is the one holding the caret, it takes the focus back, unless the
+    // focus went to a text box (the one it was holding for, or another the person touched).
+    document.addEventListener('mousedown', keepCaretHeld, true);
+    ta.addEventListener('blur', () => {
+        if (caretHold !== ta) return;
+        setTimeout(() => {
+            if (caretHold !== ta) return;
+            const now = document.activeElement;
+            if (now === ta || (now && now.classList && now.classList.contains('mk-ta'))) return;
+            try { ta.focus({ preventScroll: true }); } catch { }
+        }, 0);
+    });
     caretHoldTimer = setTimeout(dropCaretHold, 2000);   // no box came of the tap
 }
 
