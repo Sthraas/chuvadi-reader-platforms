@@ -1,0 +1,892 @@
+info: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[58]
+      Creating key {8559fc86-1965-4bb8-b96a-2e7cd7c0c481} with creation date 2026-11-16 09:56:44Z, activation date 2026-11-16 09:56:44Z, and expiration date 2027-02-14 09:56:44Z.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:5691
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: /tmp/pub13
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:5691/healthz - - -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: GET /healthz'
+info: Microsoft.AspNetCore.Http.Result.ContentResult[2]
+      Write content with HTTP Response ContentType of text/plain; charset=utf-8
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: GET /healthz'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:5691/healthz - 200 2 text/plain;+charset=utf-8 120.5896ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:5691/ - - -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint '/{**path} => RelayAsync'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[58]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Creating key {c86807d4-5da4-4063-8514-ed1747857e24} with creation date 2026-11-16 09:56:44Z, activation date 2026-11-16 09:56:44Z, and expiration date 2027-02-14 09:56:44Z.
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.Hosting.Lifetime[14]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Now listening on: http://unix:/tmp/chvd-gw-9094/3533011739fd6cb6.sock
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.Hosting.Lifetime[0]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Application started. Press Ctrl+C to shut down.
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.Hosting.Lifetime[0]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Hosting environment: Development
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.Hosting.Lifetime[0]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Content root path: /tmp/pub13
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request starting HTTP/1.1 GET http://worker/_worker/health - - -
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executing endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Http.Result.JsonResult[3]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Writing value of type '<>f__AnonymousType3`4' as Json.
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executed endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request finished HTTP/1.1 GET http://worker/_worker/health - 200 - application/json;+charset=utf-8 73.0943ms
+info: ChuvadiReader.Web.Hosting.Workers.WorkerPool[0]
+      Worker 35330117 started (pid 9194) in 571 ms
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request starting HTTP/1.1 GET http://127.0.0.1:5691/ - - -
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executing endpoint '/ (/)'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executed endpoint '/ (/)'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request finished HTTP/1.1 GET http://127.0.0.1:5691/ - 200 - text/html;+charset=utf-8 70.1445ms
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint '/{**path} => RelayAsync'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:5691/ - 200 - text/html;+charset=utf-8 692.3169ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:5691/_content/ChuvadiReader.Ui/lipi-sans/fonts/LiPi-Sans-Latin.woff2 - - -
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:5691/_content/ChuvadiReader.Ui/fonts/google/fonts.css - - -
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:5691/_content/ChuvadiReader.Ui/lipi-sans/lipi-sans.css - - -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.StaticAssets.StaticAssetsInvoker[2]
+      Sending file. Request path: '_content/ChuvadiReader.Ui/lipi-sans/lipi-sans.css'. Physical path: '/tmp/pub13/wwwroot/_content/ChuvadiReader.Ui/lipi-sans/lipi-sans.css.br'
+info: Microsoft.AspNetCore.StaticAssets.StaticAssetsInvoker[2]
+      Sending file. Request path: '_content/ChuvadiReader.Ui/fonts/google/fonts.css'. Physical path: '/tmp/pub13/wwwroot/_content/ChuvadiReader.Ui/fonts/google/fonts.css.br'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:5691/_content/ChuvadiReader.Ui/lipi-sans/lipi-sans.css - 200 2129 text/css 29.1519ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:5691/_content/ChuvadiReader.Ui/fonts/google/fonts.css - 200 893 text/css 29.4896ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:5691/_content/ChuvadiReader.Ui/css/prefs.css - - -
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:5691/_content/ChuvadiReader.Ui/css/app.css - - -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.StaticAssets.StaticAssetsInvoker[2]
+      Sending file. Request path: '_content/ChuvadiReader.Ui/css/app.css'. Physical path: '/tmp/pub13/wwwroot/_content/ChuvadiReader.Ui/css/app.css.br'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:5691/_content/ChuvadiReader.Ui/css/app.css - 200 4452 text/css 0.4113ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:5691/_content/ChuvadiReader.Ui/css/shell.css - - -
+info: Microsoft.AspNetCore.StaticAssets.StaticAssetsInvoker[2]
+      Sending file. Request path: '_content/ChuvadiReader.Ui/css/prefs.css'. Physical path: '/tmp/pub13/wwwroot/_content/ChuvadiReader.Ui/css/prefs.css.br'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:5691/_content/ChuvadiReader.Ui/css/prefs.css - 200 601 text/css 0.7651ms
+info: Microsoft.AspNetCore.StaticAssets.StaticAssetsInvoker[2]
+      Sending file. Request path: '_content/ChuvadiReader.Ui/css/shell.css'. Physical path: '/tmp/pub13/wwwroot/_content/ChuvadiReader.Ui/css/shell.css.br'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:5691/_content/ChuvadiReader.Ui/css/shell.css - 200 5314 text/css 0.2562ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:5691/_content/ChuvadiReader.Ui/css/tokens.css - - -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.StaticAssets.StaticAssetsInvoker[2]
+      Sending file. Request path: '_content/ChuvadiReader.Ui/lipi-sans/fonts/LiPi-Sans-Latin.woff2'. Physical path: '/tmp/pub13/wwwroot/_content/ChuvadiReader.Ui/lipi-sans/fonts/LiPi-Sans-Latin.woff2'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:5691/_content/ChuvadiReader.Ui/lipi-sans/fonts/LiPi-Sans-Latin.woff2 - 200 351860 font/woff2 42.9790ms
+info: Microsoft.AspNetCore.StaticAssets.StaticAssetsInvoker[2]
+      Sending file. Request path: '_content/ChuvadiReader.Ui/css/tokens.css'. Physical path: '/tmp/pub13/wwwroot/_content/ChuvadiReader.Ui/css/tokens.css.br'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:5691/_content/ChuvadiReader.Ui/css/tokens.css - 200 2084 text/css 5.9001ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:5691/_content/ChuvadiReader.Ui/css/mobile.css - - -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.StaticAssets.StaticAssetsInvoker[2]
+      Sending file. Request path: '_content/ChuvadiReader.Ui/css/mobile.css'. Physical path: '/tmp/pub13/wwwroot/_content/ChuvadiReader.Ui/css/mobile.css.br'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:5691/_content/ChuvadiReader.Ui/css/mobile.css - 200 7673 text/css 0.4090ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:5691/ChuvadiReader.Web.styles.css - - -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:5691/css/portal.css - - -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:5691/_content/ChuvadiReader.Ui/js/theme.js - - -
+info: Microsoft.AspNetCore.StaticAssets.StaticAssetsInvoker[2]
+      Sending file. Request path: 'css/portal.css'. Physical path: '/tmp/pub13/wwwroot/css/portal.css.br'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:5691/css/portal.css - 200 1222 text/css 0.7705ms
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:5691/js/portal.js - - -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.StaticAssets.StaticAssetsInvoker[2]
+      Sending file. Request path: '_content/ChuvadiReader.Ui/js/theme.js'. Physical path: '/tmp/pub13/wwwroot/_content/ChuvadiReader.Ui/js/theme.js.br'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:5691/_content/ChuvadiReader.Ui/js/theme.js - 200 991 text/javascript 1.0404ms
+info: Microsoft.AspNetCore.StaticAssets.StaticAssetsInvoker[2]
+      Sending file. Request path: 'js/portal.js'. Physical path: '/tmp/pub13/wwwroot/js/portal.js.br'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:5691/js/portal.js - 200 4487 text/javascript 0.3200ms
+info: Microsoft.AspNetCore.StaticAssets.StaticAssetsInvoker[2]
+      Sending file. Request path: 'ChuvadiReader.Web.styles.css'. Physical path: '/tmp/pub13/wwwroot/ChuvadiReader.Web.styles.css.br'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:5691/ChuvadiReader.Web.styles.css - 200 77 text/css 3.0017ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:5691/_framework/blazor.web.js - - -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.StaticAssets.StaticAssetsInvoker[2]
+      Sending file. Request path: '_framework/blazor.web.js'. Physical path: '/tmp/pub13/wwwroot/_framework/blazor.web.js.br'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:5691/_framework/blazor.web.js - 200 47560 text/javascript 0.3516ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:5691/_content/ChuvadiReader.Ui/ChuvadiReader.Ui.our8p3mejj.bundle.scp.css - - -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.StaticAssets.StaticAssetsInvoker[2]
+      Sending file. Request path: '_content/ChuvadiReader.Ui/ChuvadiReader.Ui.our8p3mejj.bundle.scp.css'. Physical path: '/tmp/pub13/wwwroot/_content/ChuvadiReader.Ui/ChuvadiReader.Ui.our8p3mejj.bundle.scp.css.br'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:5691/_content/ChuvadiReader.Ui/ChuvadiReader.Ui.our8p3mejj.bundle.scp.css - 200 29446 text/css 0.4336ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:5691/_blazor/initializers - - -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint '/{**path} => RelayAsync'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request starting HTTP/1.1 GET http://127.0.0.1:5691/_blazor/initializers - - -
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint '/{**path} => RelayAsync'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:5691/_blazor/initializers - 200 - application/json;+charset=utf-8 11.5785ms
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request finished HTTP/1.1 GET http://127.0.0.1:5691/_blazor/initializers - 200 - application/json;+charset=utf-8 8.7067ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 POST http://127.0.0.1:5691/_blazor/negotiate?negotiateVersion=1 - - 0
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint '/{**path} => RelayAsync'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request starting HTTP/1.1 POST http://127.0.0.1:5691/_blazor/negotiate?negotiateVersion=1 - - 0
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint '/{**path} => RelayAsync'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 POST http://127.0.0.1:5691/_blazor/negotiate?negotiateVersion=1 - 200 316 application/json 7.2141ms
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request finished HTTP/1.1 POST http://127.0.0.1:5691/_blazor/negotiate?negotiateVersion=1 - 200 316 application/json 5.5770ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:5691/_blazor?id=XMWsm2egEjBe7LofXLJkdQ - - -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint '/{**path} => RelayAsync'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request starting HTTP/1.1 GET http://worker/_blazor?id=XMWsm2egEjBe7LofXLJkdQ - - -
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:5691/_content/ChuvadiReader.Ui/fonts/google/jizHRFtNs2ka5fXjeivQ4LroWlx-6zAjjH7M.woff2 - - -
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:5691/_content/ChuvadiReader.Ui/fonts/google/m8JXjfVIf7OT22n3M-S_YKVla1OD.woff2 - - -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.StaticAssets.StaticAssetsInvoker[2]
+      Sending file. Request path: '_content/ChuvadiReader.Ui/fonts/google/m8JXjfVIf7OT22n3M-S_YKVla1OD.woff2'. Physical path: '/tmp/pub13/wwwroot/_content/ChuvadiReader.Ui/fonts/google/m8JXjfVIf7OT22n3M-S_YKVla1OD.woff2'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:5691/_content/ChuvadiReader.Ui/fonts/google/m8JXjfVIf7OT22n3M-S_YKVla1OD.woff2 - 200 28468 font/woff2 158.5340ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:5691/_content/ChuvadiReader.Ui/fonts/google/-F63fjptAgt5VM-kVkqdyU8n1i8q1w.woff2 - - -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.StaticAssets.StaticAssetsInvoker[2]
+      Sending file. Request path: '_content/ChuvadiReader.Ui/fonts/google/-F63fjptAgt5VM-kVkqdyU8n1i8q1w.woff2'. Physical path: '/tmp/pub13/wwwroot/_content/ChuvadiReader.Ui/fonts/google/-F63fjptAgt5VM-kVkqdyU8n1i8q1w.woff2'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:5691/_content/ChuvadiReader.Ui/fonts/google/-F63fjptAgt5VM-kVkqdyU8n1i8q1w.woff2 - 200 14708 font/woff2 0.4070ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:5691/_content/ChuvadiReader.Ui/fonts/google/jizBRFtNs2ka5fXjeivQ4LroWlx-6zUTjg.woff2 - - -
+info: Microsoft.AspNetCore.StaticAssets.StaticAssetsInvoker[2]
+      Sending file. Request path: '_content/ChuvadiReader.Ui/fonts/google/jizHRFtNs2ka5fXjeivQ4LroWlx-6zAjjH7M.woff2'. Physical path: '/tmp/pub13/wwwroot/_content/ChuvadiReader.Ui/fonts/google/jizHRFtNs2ka5fXjeivQ4LroWlx-6zAjjH7M.woff2'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:5691/_content/ChuvadiReader.Ui/fonts/google/jizHRFtNs2ka5fXjeivQ4LroWlx-6zAjjH7M.woff2 - 200 22128 font/woff2 165.6758ms
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:5691/_content/ChuvadiReader.Ui/fonts/google/6NU78FyLNQOQZAnv9bYEvDiIdE9Ea92uemAk_WBq8U_9v0c2Wa0KxC9TeA.woff2 - - -
+info: Microsoft.AspNetCore.StaticAssets.StaticAssetsInvoker[2]
+      Sending file. Request path: '_content/ChuvadiReader.Ui/fonts/google/jizBRFtNs2ka5fXjeivQ4LroWlx-6zUTjg.woff2'. Physical path: '/tmp/pub13/wwwroot/_content/ChuvadiReader.Ui/fonts/google/jizBRFtNs2ka5fXjeivQ4LroWlx-6zUTjg.woff2'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:5691/_content/ChuvadiReader.Ui/fonts/google/jizBRFtNs2ka5fXjeivQ4LroWlx-6zUTjg.woff2 - 200 21032 font/woff2 0.3213ms
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:5691/_content/ChuvadiReader.Ui/fonts/google/-F6qfjptAgt5VM-kVkqdyU8n3twJwlBFgg.woff2 - - -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.StaticAssets.StaticAssetsInvoker[2]
+      Sending file. Request path: '_content/ChuvadiReader.Ui/fonts/google/-F6qfjptAgt5VM-kVkqdyU8n3twJwlBFgg.woff2'. Physical path: '/tmp/pub13/wwwroot/_content/ChuvadiReader.Ui/fonts/google/-F6qfjptAgt5VM-kVkqdyU8n3twJwlBFgg.woff2'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:5691/_content/ChuvadiReader.Ui/fonts/google/-F6qfjptAgt5VM-kVkqdyU8n3twJwlBFgg.woff2 - 200 14888 font/woff2 0.4081ms
+info: Microsoft.AspNetCore.StaticAssets.StaticAssetsInvoker[2]
+      Sending file. Request path: '_content/ChuvadiReader.Ui/fonts/google/6NU78FyLNQOQZAnv9bYEvDiIdE9Ea92uemAk_WBq8U_9v0c2Wa0KxC9TeA.woff2'. Physical path: '/tmp/pub13/wwwroot/_content/ChuvadiReader.Ui/fonts/google/6NU78FyLNQOQZAnv9bYEvDiIdE9Ea92uemAk_WBq8U_9v0c2Wa0KxC9TeA.woff2'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:5691/_content/ChuvadiReader.Ui/fonts/google/6NU78FyLNQOQZAnv9bYEvDiIdE9Ea92uemAk_WBq8U_9v0c2Wa0KxC9TeA.woff2 - 200 67304 font/woff2 1.4214ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:5691/_content/ChuvadiReader.Ui/fonts/google/m8JXjfVIf7OT22n3M-S_YLNlaw.woff2 - - -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.StaticAssets.StaticAssetsInvoker[2]
+      Sending file. Request path: '_content/ChuvadiReader.Ui/fonts/google/m8JXjfVIf7OT22n3M-S_YLNlaw.woff2'. Physical path: '/tmp/pub13/wwwroot/_content/ChuvadiReader.Ui/fonts/google/m8JXjfVIf7OT22n3M-S_YLNlaw.woff2'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:5691/_content/ChuvadiReader.Ui/fonts/google/m8JXjfVIf7OT22n3M-S_YLNlaw.woff2 - 200 26872 font/woff2 0.4954ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:5691/_content/ChuvadiReader.Ui/js/portal-drop.js - - -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.StaticAssets.StaticAssetsInvoker[2]
+      Sending file. Request path: '_content/ChuvadiReader.Ui/js/portal-drop.js'. Physical path: '/tmp/pub13/wwwroot/_content/ChuvadiReader.Ui/js/portal-drop.js.br'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:5691/_content/ChuvadiReader.Ui/js/portal-drop.js - 200 847 text/javascript 14.3337ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:5691/_content/ChuvadiReader.Ui/js/shell.js - - -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.StaticAssets.StaticAssetsInvoker[2]
+      Sending file. Request path: '_content/ChuvadiReader.Ui/js/shell.js'. Physical path: '/tmp/pub13/wwwroot/_content/ChuvadiReader.Ui/js/shell.js.br'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:5691/_content/ChuvadiReader.Ui/js/shell.js - 200 1084 text/javascript 0.6506ms
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request starting HTTP/1.1 GET http://worker/_worker/health - - -
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executing endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Http.Result.JsonResult[3]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Writing value of type '<>f__AnonymousType3`4' as Json.
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executed endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request finished HTTP/1.1 GET http://worker/_worker/health - 200 - application/json;+charset=utf-8 1.5078ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 POST http://127.0.0.1:5691/_blazor/disconnect - multipart/form-data;+boundary=----WebKitFormBoundaryrULUEhV0B6e0cQiI 359
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint '/{**path} => RelayAsync'
+info: Microsoft.AspNetCore.Server.Kestrel.Connections[34]
+      Connection id "0HNQ3OVLUK9P5", Request id "0HNQ3OVLUK9P5:00000001": the application aborted the connection.
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint '/{**path} => RelayAsync'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:5691/_blazor?id=XMWsm2egEjBe7LofXLJkdQ - 101 - - 2773.3111ms
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request starting HTTP/1.1 POST http://127.0.0.1:5691/_blazor/disconnect - multipart/form-data;+boundary=----WebKitFormBoundaryrULUEhV0B6e0cQiI 359
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request finished HTTP/1.1 GET http://worker/_blazor?id=XMWsm2egEjBe7LofXLJkdQ - 101 - - 2780.3747ms
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: ChuvadiReader.Web.Hosting.SessionLifetime[0]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Connection 68ff0019 closed with 0 tab(s) open
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request finished HTTP/1.1 POST http://127.0.0.1:5691/_blazor/disconnect - 200 0 - 38.9228ms
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint '/{**path} => RelayAsync'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 POST http://127.0.0.1:5691/_blazor/disconnect - 200 0 - 49.0717ms
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request starting HTTP/1.1 GET http://worker/_worker/health - - -
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executing endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Http.Result.JsonResult[3]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Writing value of type '<>f__AnonymousType3`4' as Json.
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executed endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request finished HTTP/1.1 GET http://worker/_worker/health - 200 - application/json;+charset=utf-8 1.2508ms
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request starting HTTP/1.1 GET http://worker/_worker/health - - -
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executing endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Http.Result.JsonResult[3]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Writing value of type '<>f__AnonymousType3`4' as Json.
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executed endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request finished HTTP/1.1 GET http://worker/_worker/health - 200 - application/json;+charset=utf-8 1.2416ms
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request starting HTTP/1.1 GET http://worker/_worker/health - - -
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executing endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Http.Result.JsonResult[3]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Writing value of type '<>f__AnonymousType3`4' as Json.
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executed endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request finished HTTP/1.1 GET http://worker/_worker/health - 200 - application/json;+charset=utf-8 0.6580ms
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request starting HTTP/1.1 GET http://worker/_worker/health - - -
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executing endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Http.Result.JsonResult[3]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Writing value of type '<>f__AnonymousType3`4' as Json.
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executed endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request finished HTTP/1.1 GET http://worker/_worker/health - 200 - application/json;+charset=utf-8 0.6786ms
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request starting HTTP/1.1 GET http://worker/_worker/health - - -
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executing endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Http.Result.JsonResult[3]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Writing value of type '<>f__AnonymousType3`4' as Json.
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executed endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request finished HTTP/1.1 GET http://worker/_worker/health - 200 - application/json;+charset=utf-8 0.6214ms
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request starting HTTP/1.1 GET http://worker/_worker/health - - -
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executing endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Http.Result.JsonResult[3]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Writing value of type '<>f__AnonymousType3`4' as Json.
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executed endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request finished HTTP/1.1 GET http://worker/_worker/health - 200 - application/json;+charset=utf-8 0.6045ms
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request starting HTTP/1.1 GET http://worker/_worker/health - - -
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executing endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Http.Result.JsonResult[3]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Writing value of type '<>f__AnonymousType3`4' as Json.
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executed endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request finished HTTP/1.1 GET http://worker/_worker/health - 200 - application/json;+charset=utf-8 0.6735ms
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request starting HTTP/1.1 GET http://worker/_worker/health - - -
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executing endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Http.Result.JsonResult[3]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Writing value of type '<>f__AnonymousType3`4' as Json.
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executed endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request finished HTTP/1.1 GET http://worker/_worker/health - 200 - application/json;+charset=utf-8 0.6624ms
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request starting HTTP/1.1 GET http://worker/_worker/health - - -
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executing endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Http.Result.JsonResult[3]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Writing value of type '<>f__AnonymousType3`4' as Json.
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executed endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request finished HTTP/1.1 GET http://worker/_worker/health - 200 - application/json;+charset=utf-8 0.5767ms
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request starting HTTP/1.1 GET http://worker/_worker/health - - -
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executing endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Http.Result.JsonResult[3]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Writing value of type '<>f__AnonymousType3`4' as Json.
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executed endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request finished HTTP/1.1 GET http://worker/_worker/health - 200 - application/json;+charset=utf-8 0.6446ms
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request starting HTTP/1.1 GET http://worker/_worker/health - - -
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executing endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Http.Result.JsonResult[3]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Writing value of type '<>f__AnonymousType3`4' as Json.
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executed endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request finished HTTP/1.1 GET http://worker/_worker/health - 200 - application/json;+charset=utf-8 0.5176ms
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request starting HTTP/1.1 GET http://worker/_worker/health - - -
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executing endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Http.Result.JsonResult[3]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Writing value of type '<>f__AnonymousType3`4' as Json.
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executed endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request finished HTTP/1.1 GET http://worker/_worker/health - 200 - application/json;+charset=utf-8 0.6932ms
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request starting HTTP/1.1 GET http://worker/_worker/health - - -
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executing endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Http.Result.JsonResult[3]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Writing value of type '<>f__AnonymousType3`4' as Json.
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executed endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request finished HTTP/1.1 GET http://worker/_worker/health - 200 - application/json;+charset=utf-8 0.6128ms
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request starting HTTP/1.1 GET http://worker/_worker/health - - -
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executing endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Http.Result.JsonResult[3]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Writing value of type '<>f__AnonymousType3`4' as Json.
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executed endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request finished HTTP/1.1 GET http://worker/_worker/health - 200 - application/json;+charset=utf-8 0.6668ms
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request starting HTTP/1.1 GET http://worker/_worker/health - - -
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executing endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Http.Result.JsonResult[3]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Writing value of type '<>f__AnonymousType3`4' as Json.
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executed endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request finished HTTP/1.1 GET http://worker/_worker/health - 200 - application/json;+charset=utf-8 0.5379ms
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request starting HTTP/1.1 POST http://worker/_worker/notice - application/json;+charset=utf-8 -
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executing endpoint 'HTTP: POST /_worker/notice'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Http.Result.NoContentResult[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Setting HTTP status code 204.
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executed endpoint 'HTTP: POST /_worker/notice'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request finished HTTP/1.1 POST http://worker/_worker/notice - 204 - - 13.1423ms
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request starting HTTP/1.1 GET http://worker/_worker/health - - -
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executing endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Http.Result.JsonResult[3]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Writing value of type '<>f__AnonymousType3`4' as Json.
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executed endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request finished HTTP/1.1 GET http://worker/_worker/health - 200 - application/json;+charset=utf-8 0.5689ms
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request starting HTTP/1.1 GET http://worker/_worker/health - - -
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executing endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Http.Result.JsonResult[3]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Writing value of type '<>f__AnonymousType3`4' as Json.
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executed endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request finished HTTP/1.1 GET http://worker/_worker/health - 200 - application/json;+charset=utf-8 0.5067ms
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request starting HTTP/1.1 GET http://worker/_worker/health - - -
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executing endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Http.Result.JsonResult[3]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Writing value of type '<>f__AnonymousType3`4' as Json.
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executed endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request finished HTTP/1.1 GET http://worker/_worker/health - 200 - application/json;+charset=utf-8 0.7054ms
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request starting HTTP/1.1 GET http://worker/_worker/health - - -
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executing endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Http.Result.JsonResult[3]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Writing value of type '<>f__AnonymousType3`4' as Json.
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executed endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request finished HTTP/1.1 GET http://worker/_worker/health - 200 - application/json;+charset=utf-8 0.3470ms
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request starting HTTP/1.1 POST http://worker/_worker/end - application/json;+charset=utf-8 -
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executing endpoint 'HTTP: POST /_worker/end'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request starting HTTP/1.1 GET http://worker/_worker/health - - -
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executing endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Http.Result.JsonResult[3]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Writing value of type '<>f__AnonymousType3`4' as Json.
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executed endpoint 'HTTP: GET /_worker/health'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request finished HTTP/1.1 GET http://worker/_worker/health - 200 - application/json;+charset=utf-8 0.2808ms
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: ChuvadiReader.Web.Files.SessionStates[0]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Session c6d3dc968ecb14462f7a1f6d ended; 0 page image(s) freed
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: ChuvadiReader.Web.Hosting.Workers.GatewayLifeline[0]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Gateway is gone; stopping
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.Hosting.Lifetime[0]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Application is shutting down...
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Http.Result.JsonResult[3]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Writing value of type '<>f__AnonymousType4`1' as Json.
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Executed endpoint 'HTTP: POST /_worker/end'
+info: ChuvadiReader.Web.Worker.35330117[0]
+      info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+info: ChuvadiReader.Web.Worker.35330117[0]
+            Request finished HTTP/1.1 POST http://worker/_worker/end - 200 - application/json;+charset=utf-8 11.1087ms
+info: ChuvadiReader.Web.Hosting.Workers.WorkerPool[0]
+      Worker 35330117 stopped

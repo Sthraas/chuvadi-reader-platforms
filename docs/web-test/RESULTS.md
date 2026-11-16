@@ -288,4 +288,12 @@ With **real Sangam rc.16** (gateway, short idle): owner with cookie 200; **the f
 - **WT-19** ✅ fixed (first measured since 04cdd21; Chromium): rows-1048576.xlsx open 1,054 MB → 155 MB 2 s after close (flat to 30 s); cancelled open of cancel-4x1m.xlsx peak 1,556 MB → 147 MB.
 - **WT-18** ✗ unchanged: ratio-600.xlsx and zip-bomb.xlsx refused in 0.3–0.8 s with "damaged or isn't an Excel workbook"; rows-1048577 and entries-20001 say "too large".
 - **Regression:** `flows.py` 10/10, `page_images.py` 7/7, `reload.py` 11/11, `sangam_signin.py` 18/18, `expiry.py` 12/12 — each × Chrome, Firefox, WebKit; `office_limits.py` 6/6 Chrome, WebKit; `comeback.py` 5/5.
-- **OBS-2:** once, one portal instance stopped ending sessions after browsers were killed mid-load; 15 fresh-portal kill trials and 7 timed kills since — not reproduced (BUGS.md).
+- **OBS-2:** once, one portal instance stopped ending sessions — reproduced and explained on a0a2f7c as **WT-24** (below).
+
+## 16 Nov 2026 — `platform/web` @ **a0a2f7c** (Foundation patch 28)
+- **Build from clean:** 0 warnings; Reader **382** (+6 skipped), Hosting **100**, Mobile UI **16**, Web UI **41**; Web **181/181**; `check-package.sh` PASS.
+- **M-27** ✅ `mark_position.py`: Chromium 16/16, WebKit 26.6 16/16, **WebKit 17.4 16/16**, Firefox 15/16 (one `goto` time-out); worst 0.9 px on screen, 0.4 % of the page saved. `zoom_tools.py` (move, resize, Redact box) 5/5 on all four. Web's `mark_zoom.py` (now with Redact at a zoom and Sign with certificate) 9/9 × Chrome, Firefox, WebKit.
+- **Patch 28 claims checked by hand (3 engines):** Ctrl F on an Excel file puts the cursor in "Find in Excel…" and typing goes there ✅; Ctrl F with no file open does no harm ✅; **Sign with certificate** is shown greyed (disabled, 38 % opacity) with "Certificate signing is in the desktop app. Your private key never leaves your computer." ✅ (D-187). Not checked here: the hidden-row Find line (D-188), Find on a turned page, the close control on a selected mark's card on touch — for the patch 29 pass.
+- **Regression:** `flows.py` 10/10, `page_images.py` 7/7, `reload.py` 11/11, `leave_guard.py` 7/7 (Firefox 6/6), `office_limits.py` 6/6, `sangam_signin.py` 18/18, `expiry.py` 12/12 — each × Chrome, Firefox, WebKit; `leave_prompt.py` 5/5 × 3; `reload_tabs.py` 11/11 × 3; `comeback.py` 5/5 Chrome, WebKit; **Firefox 2 of 7 runs** → WT-25.
+- **WT-18** ✗ unchanged (fix is in patch 29). **WT-23** not on this head (patch 29).
+- **WT-24 (new, High):** the expiry pass hangs for good when a session ends just as its worker stops; 2 fresh-portal runs in 9. **WT-25 (new, Low):** files stay 60–80 s past the session's end after an unclean leave. Both in BUGS.md.

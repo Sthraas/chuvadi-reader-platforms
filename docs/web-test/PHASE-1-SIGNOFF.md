@@ -1,6 +1,6 @@
 # Web — what remains for a Phase 1 sign-off (Web Test chat)
 
-> **Updated 16 Nov 2026, 03:40 IST** — tested head **eab426b** (patch 27). The section below supersedes §1–§3 of the 11 Nov text that follows.
+> **Updated 16 Nov 2026, 15:45 IST** — tested heads **eab426b** (patch 27) and **a0a2f7c** (patch 28). The section below supersedes §1–§3 of the 11 Nov text that follows.
 
 ## Status on 16 Nov (eab426b)
 **Fixed and verified:** M-27 (Chromium, Firefox, WebKit 26.6 and WebKit 17.4; Rectangle, Text box, move, resize, Redact box at a zoom), WT-19 (Excel close and cancelled open give the memory back), WT-22, WT-21, WT-17, WT-20, the Leave-site question (D-181). 22 of 24 numbered bugs closed.
@@ -8,12 +8,12 @@
 **Blocks the sign-off**
 | # | What | Owner |
 |---|---|---|
+| **WT-24** | **High.** The session-expiry pass can hang for good; after that no session on the portal expires and no worker is freed until a restart (reproduced 2 runs in 9 on a0a2f7c) | Web fixes; Web Test re-tests |
+| WT-25 | Low. Files stay 60–80 s past the session's end when the browser left without a clean close | Web: confirm the timer, fix or state it |
 | WT-23 | Unsaved marks on a tab that isn't showing are lost on reload. Decided: fix (D-186, D-190 — marks kept with the tab; ask-before-closing card) | Foundation builds; Web merges; Web Test re-tests |
 | WT-18 | Oversized Excel part / zip bomb still called "damaged" | Foundation / library |
-| PR 19 | Merged in Reader main 814f755, not yet on `platform/web` — re-test M-27 again on that head (current engines + WebKit 17.4, Redact, move/resize) | Web merges; Web Test re-tests |
+| Patch 29 head | WT-23 fix and close card, WT-18 fix, Excel resize, M-27 again (current engines + WebKit 17.4) — M-27 already re-verified on patch 28 (a0a2f7c) | Web merges; Web Test re-tests |
 | Skipped tests | 6 skipped (PDF-L1, L2, L6, L7, L8, SH-L1) — the written reason for each | Foundation (in hand) |
-
-**Watching, not blocking:** OBS-2 — once, a portal instance stopped ending sessions after browsers were killed mid-load; 22 tries since, not reproduced. Suggestion to Web in BUGS.md (a time limit and a log line in the expiry pass).
 
 **Decisions:** all settled (D-161, D-162, D-171, D-172, patch 26) — none open.
 
