@@ -22,6 +22,8 @@ const [port, engine = 'chromium', mode = ''] = process.argv.slice(2);
   await p.goto(`http://127.0.0.1:${port}/reader`, { waitUntil: 'networkidle' });
   await p.waitForFunction(() => document.querySelectorAll('.rdesk .rpage svg').length > 0, null, { timeout: 30000 });
   await p.keyboard.press('2'); await p.waitForTimeout(800);
+  // Marks stay with their tab now (D-186 Q3 B), so a run before this one may have left some: start with none.
+  const clear = p.locator('button[aria-label="Clear all marks"]'); if (await clear.isEnabled()) { await clear.click(); await p.waitForTimeout(300); }
   await p.click('button[aria-label="Rectangle"]'); await p.waitForTimeout(300);
   let fail = 0;
   const zoomNow = () => p.evaluate(() => { let e = document.querySelector('.rpage-wrap'); while (e && !(e.style && e.style.getPropertyValue('--rpage-zoom'))) e = e.parentElement; return e ? parseFloat(e.style.getPropertyValue('--rpage-zoom')) : NaN; });

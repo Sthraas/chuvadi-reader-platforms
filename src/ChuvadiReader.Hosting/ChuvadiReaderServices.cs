@@ -87,6 +87,7 @@ public static class ChuvadiReaderServices
         Core<IAppReadySignal, AppReadySignal>(services, life);
         Core<IAppCommands, ShellAppCommands>(services, life);
         Core<IncomingFiles, IncomingFiles>(services, life);
+        Core<IUnsavedWork, TabsUnsavedWork>(services, life);
 
         // Platform seams: harmless defaults. Each host replaces the ones it supports.
         Seam<IUiScale, NoopUiScale>(services, life);
