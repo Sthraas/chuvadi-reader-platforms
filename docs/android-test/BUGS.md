@@ -89,7 +89,7 @@ isn't keyed on the touch form factor here.
 **Actual:** tablet portrait shows tabs · pager · search; `Document ▾` is gone, so Properties / Export / Compress / Merge / Split
 have no entry point from the top bar in portrait. **Evidence:** `screenshots/r1/12f-vs-app.png`.
 
-## AT-06 · S4 · Mobile UI · **one leftover** R11: tablet landscape, Arrange shelf tools "Collapse every file" and "Weave two files" are 43 dp high (need 44); everything else measured passes (tablet 29 of 30 screens) — Touch targets under 44 dp (handout: 48 dp on tablet and phone)
+## AT-06 · S3 · Mobile UI · **verified** R11c: phone 42 of 42, tablet 30 of 30 (the two 43 dp shelf tools from round 11 are now 44) — Touch targets under 44 dp (handout: 48 dp on tablet and phone)
 Measured in the page (CSS px = dp), every visible control, all screens, R1 API 36 (`design/*.layout.json`):
 | Form | Control | Size (dp) |
 |---|---|---|
@@ -105,6 +105,7 @@ Measured in the page (CSS px = dp), every visible control, all screens, R1 API 3
 **Expected:** ≥ 44 dp everywhere (Android's own minimum is 48 dp; the handout asks 48 on tablet rails and phone bars). A larger
 hit area (padding / `::after` inset) keeps the drawn size.
 **Round 11 (run 43755713592):** `.shelf-tool` buttons "Collapse every file" (84.7 × 43) and "Weave two files page-for-page…" (76.3 × 43) in tablet landscape Arrange. One dp short; fix with the others' 44 px box.
+**Round 11c (run 43768598611, Android c6ce38b + Foundation 87f95c0 (patch 28) + Mobile UI cbdef77):** all measured controls ≥ 44 dp on both.
 
 ## AT-07 · S4 · Android · **verified** R5 run 42746209649 (Foundation f88f9ef + Mobile UI c5c0b7e + Android 9ce073b, Release): no control labelled with a /data/ path on any screen — to verify — Tabs and Home's recent cards/rows label themselves with the internal working path
 The tablet tab's `title`, and the accessible name/`title` of every Home "Pick up where you left off" card (`.rcard`) and Recent
@@ -383,7 +384,7 @@ most likely the phone/tablet swipe-and-pan handling on `.rdesk` (mobile.js) capt
 every markup gesture on touch (text, shapes, freehand, probably the Protect redaction box). Owner: whoever owns that handler
 (Mobile UI's mobile.js, or Foundation's reader.js); the markup layer should win when a markup tool is active.
 
-## AT-16 · S3 · Foundation (shared Ui) · **verified** R10 run 42938865447 (Android ce890a6 + Foundation 07ed3ca + Mobile UI 8699719, Release, API 36): its own check (`ci/drift.py` DR-7: Find jump, then the page box against the page under the middle of the screen) passes on phone and tablet; the other six drift checks pass too (7 of 7 each) — Page box drifts from the page on screen (tablet, after Find)
+## AT-16 · S3 · Foundation (shared Ui) · **verified on tablet; on the phone the same check now fails for a different reason — AT-24** — Page box drifts from the page on screen (tablet, after Find)
 **Steps:** tablet API 36, open `doc-12p.pdf`, Find `zephyrine` (one match, foot of page 3).
 **Expected:** the page box says 3 — page 3 fills the screen.
 **Actual:** the match is shown and page 3 fills the screen, but the page box says **2** ("2 / 12"). Phone says "3 / 12".
@@ -457,6 +458,15 @@ page, pinch and the drift and AT-13 suites did **not** run in round 11. This is 
 the two that did not (10, 10b) never got a Mark › Save as through on the phone. I can't yet say whether that is the app, Android's
 picker or the CI emulator — no log survived. Round 12 runs the phone with a live log, a device health check after every case, and
 the mark saves last.
+**Round 11c (run 43768598611, Android c6ce38b + Foundation 87f95c0 (patch 28) + Mobile UI cbdef77) — correction to the round 11 note above.** The phone did **not** go wrong after a Save as. With a live
+log kept, the record shows the app opening Android's picker every time (`START … OPEN_DOCUMENT` on each try) and the device healthy
+after every case (load, memory, input all normal). What failed was **my picker step**: once saved copies are the newest files in
+Downloads, my script no longer recognised the folder and stopped scrolling to the file. Fixed in `ci/saves.py` for the next round.
+(The emulator going silent at the very end of rounds 10c/11a/11 is a CI matter; the run now survives it.)
+Phone results that did come through in 11c: **Save redacted copy PASS, password-protected copy PASS** (both fields typed, encrypted,
+opens with the password, 12 pages). Tablet: all rows pass again; Reduce file size is AT-23.
+**Phone paths still unproven after 11c:** Flatten on this head, Reduce file size, Bind all (and AT-21's message), rotated-page save,
+pinch and a mark at a zoom, print to PDF.
 
 ## AT-19 · S2 · Android (build) / Foundation · **verified, closed** R11 run 43755713592: `global.json` is in the repo (SDK 10.0.403, workload set 10.0.403, rollForward disable), the clean build uses it: 0 errors, 0 warnings, runtime pack 10.0.14 — The clean build breaks on the .NET SDK patch released 10 Nov (10.0.404): the toolchain isn't pinned
 **Steps:** clean runner, `actions/setup-dotnet` with `10.0.x` (what the Android workflow and mine use), `dotnet workload install
@@ -505,7 +515,7 @@ desk reorder on the tablet in portrait?
 produce the pointer events the page listens for. With the Android chat's rotation-aware `touch.py` (taken into `ci/touch.py`):
 Shelf → desk 2 of 2, reorder 1 of 1, on Android 070af93 and again on a2c022c. The app was never wrong here.
 
-## AT-21 · S4 · Android (host), fix P-09 pending in Foundation · **verified on tablet** R11a/R11 with P-09 applied by the composition: the message reads "Bound 1 desk into Download/at-bind", no internal path on screen — After Bind all, the message shows the app's internal working path instead of the folder the person chose
+## AT-21 · S4 · Android (host) / Foundation P-09 · **verified on tablet** R11a, R11, R11c ("Bound 1 desk into Download/at-bind"); phone still to see — After Bind all, the message shows the app's internal working path instead of the folder the person chose
 **Steps:** tablet API 36, Arrange with pages on desks › **Bind all** › choose `Download/at-bind` in Android's folder picker › Allow.
 **Expected:** "Bound 2 desks into at-bind" (the folder's own name), as AT-07 settled for tabs and recents.
 **Actual:** "Bound 2 desks into /data/user/0/in.chuvadi.reader/cache/work/folder/b7b7ff383d02410990fcbf082bdd5ba6". The files
@@ -554,6 +564,18 @@ route; Scatter, Lift, Export when no folder was picked) — not yet exercised.
 - (c) Keep it private and rely on "open pressed file" + Save as. *Pros:* nothing to build. *Cons:* the person must know to do it, and
   the file can vanish.
 - **Recommendation: (a) for Phase 1;** (b) later if Arun wants a standing Chuvadi folder on Android.
+
+## AT-24 · S2 · Foundation (shared Ui, Find) · open, new with patch 28 — Phone: Find jumps to the wrong page and highlights the wrong words
+**Steps:** phone API 36, portrait. Open `drift-doc.pdf` (12 pages; the word "Zephyrine" is on page 3 only). More › Find, type
+`Zephyrine`.
+**Expected:** the view goes to page 3 and "Zephyrine" is highlighted (round 11, patch 27: box 3, page 3 — passed).
+**Actual:** the counter says 1/1, the view goes to **page 4**, and the highlight sits on unrelated words there ("…discharg**ed admitt**ed…")
+— right position on the page, wrong page. The page box says 4, in step with the screen, so this is not the old drift (AT-16); the
+match itself is placed one page on. Steady for the whole 6 s watch. `screenshots/r11/r11c-phone-find-wrong-page.png`. (run 43768598611, Android c6ce38b + Foundation 87f95c0 (patch 28) + Mobile UI cbdef77.)
+**Tablet:** the same check passes (page 3); I have not yet checked where the highlight sits there.
+**Likely cause:** patch 28's Find-highlight rework (`reader.js`, "Find highlights the word where it is shown") — on the phone shell
+the page a match belongs to is being taken one off (page index against the phone's page list?).
+**Fix:** Foundation; I'll re-run `ci/drift.py` DR-7 and add a check that the highlight rectangle lies inside the page that holds the word.
 
 ## Questions for the coordinator (not filed as bugs)
 - **Q-1 Same file opened again → new tab** — answered by the coordinator (9 Nov 07:12): Windows is the reference. Checked the shared

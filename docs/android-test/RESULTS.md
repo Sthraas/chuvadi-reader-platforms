@@ -231,6 +231,20 @@ as-built Release launches, 0 crashes.
 
 "Warm ready" in `startup.py` records nothing (n = 0) on both: my probe, not the app; warm first frame is 305 ms on the tablet.
 
+## Round 11c (run 43768598611, Android c6ce38b + Foundation 87f95c0 (patch 28) + Mobile UI cbdef77; Release, API 36)
+Build clean (0 warnings), 0 crashes. (I first labelled this run "12"; the coordinator's round 12 is the patch 29 head.)
+
+| Area | Phone | Tablet |
+|---|---|---|
+| Save suite | 13 of 25 — redacted copy and password copy PASS; the rest not reached (my picker step, fixed) | 40 of 43 — Reduce file size = AT-23, two n/a |
+| Pinch, mark at a zoom | not reached | PASS (0.1 pt) |
+| AT-20 drag and reorder, AT-21 message | not reached | PASS |
+| Drift suite | 6 of 7 — **Find lands on page 4, not 3: AT-24** | 6 of 7 — after a forced stop and restart no page was on screen within 40 s (once; tabs-restored checks F-15, F-15b pass; to repeat) |
+| Function | 18 of 19 — rotation check read "page 1" before, "page 3" after (my sample was taken before the page turn settled; to repeat) | 17 of 19 (my old print step) |
+| Design / touch targets | 42 of 42 | 30 of 30 |
+| AT-13 | 5 of 5 (3.9–4.1 s) | 5 of 5 (6.6–7.2 s) |
+| Device health after every save case | normal throughout | normal throughout |
+
 ## Blocked in CI: Reader on Android 15 (API 35)
 The API 35 image ships WebView 124, so the app correctly shows only its update screen (D-105). Updating it in CI from the API 36
 image's WebView failed twice: that WebView needs the Trichrome static library, which my donor job couldn't locate on the API 36

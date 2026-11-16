@@ -174,7 +174,8 @@ def _pick_open(name):
     hit = tap("Open a document", sel=".ph-fab") if phone() else tap("Choose a document to open", "Open (Ctrl O)", "Open")
     time.sleep(2.5)
     ok = False
-    for _ in range(14):
+    seen = []
+    for _ in range(18):
         xml = ui_dump()
         m = re.search(r'text="%s"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"' % re.escape(name), xml)
         if m:
@@ -182,7 +183,8 @@ def _pick_open(name):
             sh(f"input tap {(x1 + x2) // 2} {(y1 + y2) // 2}")
             ok = True
             break
-        if "documentsui" in xml and re.search(r'text="sv-[a-z]+\.(pdf|xlsx)"', xml):
+        seen.append(sorted(set(re.findall(r'text="(sv-[^"]+)"', xml)))[:12] if "documentsui" in xml else "not the picker")
+        if "documentsui" in xml and re.search(r'text="sv-[^"]+\.(pdf|xlsx)"', xml):
             # in the right folder, the file is further down the list: scroll
             w, h = map(int, re.findall(r"(\d+)x(\d+)", sh("wm size"))[-1])
             if h < w and portrait_rotation() == 1:
@@ -191,12 +193,14 @@ def _pick_open(name):
         elif not (ui_tap_text("Download") or ui_tap_text("Downloads")):
             ui_tap_text("Show roots")
         time.sleep(1.5)
+    if not ok:
+        shot("picker-file-not-found")
     if not ok and in_picker():
         sh("input keyevent KEYCODE_BACK")
     stem = name.rsplit(".", 1)[0]
     opened = cdp.wait(f"(() => {{ const t = ((document.querySelector('.rtab.active .rtab-name') || document.querySelector('.ph-t')) || {{}}).textContent || '';"
                       f" return t.trim().startsWith('{stem}') && document.querySelectorAll('.rpage svg').length > 0; }})()", 40)
-    return {"button": hit, "picked": ok, "opened": bool(opened)}
+    return {"button": hit, "picked": ok, "opened": bool(opened), "picker_showed": None if ok else seen[-4:]}
 
 
 def push(fixture, name):
