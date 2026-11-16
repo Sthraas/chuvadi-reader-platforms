@@ -538,7 +538,7 @@ Checked again on this head:
 
 **Ready for Arun's check**, with B-33 and B-31 known. Neither touches the data in a file.
 
-## Sign-off — Linux fc20516 (16 Nov, patch 30): ready for Arun, with two things to know
+## Sign-off — Linux fc20516 (16 Nov, patch 30) — superseded by b08b0e5 below
 
 [CI run 43910045202](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/43910045202) is green, and
 Arun's checklist below uses its package. My test copy is built with SDK 10.0.114 (`global.json` set aside).
@@ -554,6 +554,24 @@ Arun's checklist below uses its package. My test copy is built with SDK 10.0.114
 sheet tabs work) and B-31 (Excel time-only cells, library). Neither touches the data in a file.
 
 **Ready for Arun's check**, with B-33 and B-31 known.
+
+## Sign-off — Linux b08b0e5 (16 Nov, patch 31): ready for Arun, with one thing to know
+
+| Check | Result |
+|---|---|
+| Excel sheet pager (B-33) ✅ | Fixed: Next, Previous and a typed sheet number change the sheet, from Home, after a PDF tab, on a second workbook and back |
+| Encoding picker ✅ | A Windows-1252 text file reads right on Automatic; read as UTF-8 the card says how many bytes don't fit; back to Automatic it reads right; the file's bytes never change |
+| Patch 29 and 30 again ✅ | Marks kept with the tab; ask before closing; Excel resize; a pinch in Mark leaves no mark |
+| Quick regression ✅ | Marks after a pinch, pinch, patch 28 checks, B-24 + B-08b, B-25, owner-password printing, single instance, drops, print, `/Rotate` |
+
+**The one thing to know:** B-31, Excel time-only cells (library), is unchanged.
+
+**Notes**
+- My test copy is built with SDK 10.0.114, with `global.json` (10.0.403) set aside. CI uses the pinned SDK.
+- CI run 43918822871 on b08b0e5 was still in progress when I wrote this. Arun's checklist below stays on the
+  fc20516 package until that run is green.
+
+**Ready for Arun's check**, with B-31 known.
 
 ## Arun's check — Linux fc20516
 

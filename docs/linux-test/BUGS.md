@@ -42,7 +42,7 @@ Every bug gets fixed; I re-verify on the fixing commit and mark it here.
 | B-30 | S2 (perf) | **shared Ui/Core + Foundation** | Memory isn't given back after closing the CAD drawing: 1.43–1.77 GB stays for 60 s+, and 680 MB of managed heap is still live after a full collection | **verified fixed bf60da9; re-verified 90895ef, 7cd960c** — app 249 MB before, 937 MB with 5 sheets, 265 MB 2 s after closing. Recorded: WebKit 221 → ~587 MB and stays |
 | B-31 | S2 | **library** (Chuvadi.Sheets, SH-L1) | Excel time-only cells (stored 0 to 1, e.g. 6:00 PM) show `########`, and the stored value on hover, in the value bar and in copy is wrong (0.75 reads as -0.25). On bf60da9 they showed `1899-12-30 18:00` | **open** — still on 7cd960c: `########`, stored value shown as -0.25 for 0.75 |
 | B-32 | S2 | **library + shared Ui/Core** | A PDF page's `/Rotate` (90, 180, 270) is ignored on screen: the page shows unrotated. Same on bf60da9 | **verified fixed 7cd960c** (86996dd) — 90, 180 and 270 turned as the file says, on vector pages, on a cropped page and on heavy raster sheets (Arun's CAD sheets are `/Rotate 270` and now show landscape) |
-| B-33 | S2 | **shared Ui/Core** (Foundation's B-33) | Excel: the title bar's sheet arrows do nothing, and typing a sheet number moves the number but not the sheet shown. Patch 29 says this is fixed; on Linux it is not | **open** — still on fc20516. Linux traced it to the shared Reader page (build log 60); Foundation's patch 31 has a fix, not merged to `platform/linux` yet |
+| B-33 | S2 | **shared Ui/Core** (Foundation's B-33) | Excel: the title bar's sheet arrows do nothing, and typing a sheet number moves the number but not the sheet shown. Patch 29 says this is fixed; on Linux it is not | **verified fixed b08b0e5** (patch 31, 6c85f06) — Next, Previous and a typed number change the sheet from Home, after a PDF tab, on a second workbook and back on the first; the same test fails on fc20516 |
 | K-01 | — | Linux | GNOME close-only layout showed all three buttons (known, 7 Nov) | **verified fixed f7d0034, re-verified f3d5978** (6 layouts) |
 
 Routing (coordinator, 8 Nov): **Linux** → the Linux chat. **shared Ui/Core** → Foundation's combined patch, as exact diffs from the Linux chat or Foundation. **library** → the coordinator compiles them for Arun (library coordinator).
@@ -947,3 +947,37 @@ inactive, Alt F4 and the title bar's close, with every button; Save and Save as�
 pinch on PDF, Excel and Word; Find and Fit on turned pages; the hidden-matches line is shown; B-24 + B-08b Cancel;
 B-25; owner-password printing; single instance (1 window, 4 tabs); drops; print byte-identical; `/Rotate` on
 screen; no files left in `/tmp`. B-31 is unchanged (open).
+
+
+---
+## Linux Test — 16 Nov, patch 31 on `platform/linux` b08b0e5 (standing watch)
+Patch 31: the sheet pager fix (B-33), the encoding picker for text files, keys reaching a new text box, the close
+card keeping the keyboard. Built from source with SDK 10.0.114 (`global.json` set aside in my test copy only). CI
+run 43918822871 was still in progress when this was written. Tools: `tools/t_pager.py` (rewritten),
+`t_encoding.py`; fixture `fixtures/three-sheets-b.xlsx`.
+
+**B-33 ✅ fixed.** `t_pager.py`, real mouse clicks and typing, nine steps in each of four situations (Next, Next,
+Previous, type 1, type 3, press tab 2, Next, type 1):
+
+| Situation | fc20516 | b08b0e5 |
+|---|---|---|
+| Workbook opened from Home | ✗ arrows dead; a typed number moves only the number | ✅ number, selected tab and sheet shown agree at every step |
+| After opening a PDF and coming back | ✅ | ✅ |
+| A second workbook | ✗ | ✅ |
+| Back on the first workbook | ✗ | ✅ |
+
+**Encoding picker ✅** (`t_encoding.py`, a Windows-1252 file of known bytes).
+- On Automatic it reads `café – “quoted” € 5 naïve`, and the status bar's button says Windows-1252.
+- The card lists Automatic (chosen), UTF-8, Windows-1252, UTF-16 LE, UTF-16 BE.
+- Read as UTF-8: the accents show as replacement marks, the card says "6 bytes don't fit UTF-8", the button says UTF-8.
+- Back to Automatic: the text reads right again.
+- The file's bytes are unchanged throughout.
+
+**Patch 29 and 30, run again ✅.** Marks kept with the tab; ask before closing on every way of closing, with every
+button; Save and Save as… write the mark where it was drawn; Excel resize leaves the file byte-identical; a pinch
+in Mark leaves no mark.
+
+**Quick regression ✅.** Marks after pinch steps to 55, 100 and 150 % (18 exact on screen, within 2–3 pt saved);
+pinch on PDF, Excel and Word; Find and Fit on turned pages; hidden Excel matches named; B-24 + B-08b Cancel; B-25;
+owner-password printing; single instance (1 window, 4 tabs); drops; print byte-identical; `/Rotate` on screen; no
+files left in `/tmp`. B-31 is unchanged (open).
