@@ -30,10 +30,10 @@ on:
         default: ""
 
 env:
-  # platform/foundation-pr: patch 29 (marks kept with the tab, the question before closing, Excel resize, P-09, M-24) on Reader main cc8134b.
-  FOUNDATION_REF: 71754e122bd63d9a1225006f0c6c4014718009df
-  # platform/mobile-ui: Foundation 87f95c0 merged; Find bar 44 px and out of the page's way on the phone.
-  MOBILEUI_REF: ca152c452bd70a07ffe4a3a5f124a3ac04ba2397
+  # platform/foundation-pr: patch 30 (AT-27 pinch in Mark, Find stays on the match page, hidden-matches line, a rare blank page) on Reader main fc54ece.
+  FOUNDATION_REF: 4b704c8f9ddbd1e45b8d3b10ad15c785adf2f466
+  # platform/mobile-ui: Foundation 71754e1 merged; close card and Excel resize on touch; tablet cards 44 px.
+  MOBILEUI_REF: ae6ae6dca7bd7f5c02cd71e5e27634f687e0a1ff
   DOTNET_NOLOGO: '1'
   DOTNET_CLI_TELEMETRY_OPTOUT: '1'
 

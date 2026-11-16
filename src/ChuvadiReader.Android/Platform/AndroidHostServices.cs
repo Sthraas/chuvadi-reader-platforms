@@ -64,8 +64,16 @@ public sealed class AndroidPlatformInfo : IPlatformInfo
             : FormFactor.Phone;
 }
 
-/// <summary>Android folders: settings in private files; working copies in the cache (the system may
-/// reclaim it); no default save folder, because every save goes through the system picker.</summary>
+/// <summary>
+/// Android folders: settings in private files; working copies in the cache (the system may reclaim it).
+/// AT-23: the default save folder — where Reduce file size, Export pages as images, Scatter, Lift and the
+/// other "save into my folder" commands write without asking — is the device's shared **Documents**
+/// folder (Core adds "Chuvadi Documents" under it), as on the desktop. Before, there was none, so Core
+/// fell back to the app's cache, where the person couldn't see the files and Android may delete them.
+/// Android lets an app create its own files in Documents with no permission (scoped storage, Android 11
+/// and later; the app needs 15+), and the Files app and others see them. Limit: after the app is
+/// reinstalled, files it made before belong to the old install, so a save to the same name gets a new one.
+/// </summary>
 public sealed class AndroidAppPaths : IAppPaths
 {
     public AndroidAppPaths()
@@ -74,13 +82,16 @@ public sealed class AndroidAppPaths : IAppPaths
         WorkingFolder = Path.Combine(FileSystem.CacheDirectory, "work");
         Directory.CreateDirectory(AppDataFolder);
         Directory.CreateDirectory(WorkingFolder);
+        DefaultSaveFolder = SharedStorage.Root is { } root
+            ? Path.Combine(root, global::Android.OS.Environment.DirectoryDocuments!)
+            : null;
     }
 
     public string AppDataFolder { get; }
 
     public string WorkingFolder { get; }
 
-    public string? DefaultSaveFolder => null;
+    public string? DefaultSaveFolder { get; }
 }
 
 /// <summary>
@@ -185,4 +196,12 @@ public sealed class AndroidAccount : IAccount
     public Task<bool> SignInAsync(CancellationToken ct = default) => Task.FromResult(false);
 
     public Task SignOutAsync(CancellationToken ct = default) => Task.CompletedTask;
+}
+
+/// <summary>The device's shared storage as the Files app shows it (/storage/emulated/0 for the owner).</summary>
+public static class SharedStorage
+{
+    public static string? Root { get; } =
+        (global::Android.App.Application.Context.GetSystemService(global::Android.Content.Context.StorageService)
+            as global::Android.OS.Storage.StorageManager)?.PrimaryStorageVolume.Directory?.AbsolutePath;
 }

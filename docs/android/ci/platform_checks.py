@@ -818,6 +818,21 @@ check("status and navigation bar areas take each theme's bar colour, light icons
       all(v["pass"] for v in bars.values()), bars)
 
 
+# ── 7c2. AT-23: the default save folder is the device's Documents, not the app's cache ─────────
+tap_el('button[title="Settings"]')
+wait_for(lambda s: (s.get("route") or "").startswith("/settings"), 15, "Settings")
+tap_el(".snav-item", "Sav")
+time.sleep(1.5)
+try:
+    saving = cdp.evaluate("document.querySelector('.set-main, main, #app').innerText")
+except Exception as e:  # noqa: BLE001
+    saving = f"unreadable: {e}"
+shot("p10c2-save-folder")
+check("the default save folder is Documents/Chuvadi Documents on the device, not the app's cache (AT-23)",
+      "Documents/Chuvadi Documents" in (saving or "") and "/data/" not in (saving or "") and "cache/work" not in (saving or ""),
+      {"text": (saving or "")[:300]})
+
+
 # ── 7d. AT-11: Android ends the app in the background; coming back lands on the same document ──
 tap_el('button[title="Home"]')
 wait_for(lambda s: s.get("route") == "/", 15, "Home")

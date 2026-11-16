@@ -34,7 +34,7 @@ public sealed class AndroidPathLabels : IPathLabels
             var owner = _links.FindOwner(path);
             if (owner is null)
             {
-                return _links.IsWorkingCopy(path) ? Name(path) : path;
+                return _links.IsWorkingCopy(path) ? Name(path) : OnDevice(path);
             }
 
             var (linked, link) = owner.Value;
@@ -68,6 +68,14 @@ public sealed class AndroidPathLabels : IPathLabels
         var colon = id?.IndexOf(':') ?? -1;
         var where = colon >= 0 ? id![(colon + 1)..].Trim('/') : null;
         return string.IsNullOrEmpty(where) ? null : where;
+    }
+
+    // A file in the device's shared storage (the default save folder, AT-23) shows where the Files app
+    // shows it: "Documents/Chuvadi Documents/Compressed/x.pdf", not "/storage/emulated/0/…".
+    private static string OnDevice(string path)
+    {
+        var root = SharedStorage.Root;
+        return root is { Length: > 0 } && path.StartsWith(root + "/", StringComparison.Ordinal) ? path[(root.Length + 1)..] : path;
     }
 
     private static string Name(string path)

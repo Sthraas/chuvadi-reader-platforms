@@ -924,3 +924,18 @@ same screen; no crash), smoke pass. With round 6 (API 36 phone and tablet, all c
 - **Run 43840796541** (phone API 36, full, 6510738, pin): **all green** — gestures 11/11, platform 32/32; D-190 on the
   phone: a Box mark ("1 shape · unsaved"), the last Back asks and the app stays, Cancel keeps it, Discard and it leaves;
   Release launch pass. With 43837772368, all four emulators are green on patch 29 + Mobile UI ca152c4.
+
+### 68. Patch 30 (4b704c8) + Mobile UI ae6ae6d; AT-23 default save folder — coordinator, 16 Nov 21:25 IST
+- 10.0.401 decided against; global.json stays at 10.0.403.
+- Composition clean. Sandbox: Android Debug and Release `-warnaserror` 0 warnings; manifest 14/14; Core 438 (+6 skipped),
+  Hosting 102, MobileUi 16, WebUi 41 pass.
+- **AT-23** (Reduce file size, Export pages as images — the whole "save into my folder" route — wrote into the app's
+  cache): Core's `SaveFolderService` uses the host's `IAppPaths.DefaultSaveFolder` and falls back to scratch space when
+  the host has none, and the Android host had none ("every save goes through the picker", true only for Save as).
+  Host fix: the default save folder is the device's shared **Documents** folder, so Core's "Chuvadi Documents" (with
+  Compressed, Export, the category folders) is in `Documents/Chuvadi Documents`, visible in the Files app, kept until
+  the person deletes it. No permission needed (an app may create its own files in Documents since Android 11; the
+  app needs 15). This is AT-23's option (b) without its first-run step; (a), a picker per command, would be a Ui change.
+  Labels: a file there shows as "Documents/Chuvadi Documents/…", as the Files app shows it. Limit: after a reinstall,
+  files the earlier install made belong to it, so a save to the same name gets a new name. Test: platform check
+  "the default save folder is Documents/Chuvadi Documents on the device, not the app's cache" (Settings › Saving).
