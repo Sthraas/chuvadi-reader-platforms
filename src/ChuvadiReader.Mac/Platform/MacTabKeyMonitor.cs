@@ -21,6 +21,9 @@ internal static class MacTabKeyMonitor
 
     private static IntPtr _monitor;
 
+    /// <summary>The block's shape as AppKit calls it: NSEvent in, NSEvent (or nil) out.</summary>
+    private delegate IntPtr KeyDownHandler(IntPtr nsEvent);
+
     [DllImport(LibObjC, EntryPoint = "objc_msgSend")] private static extern unsafe IntPtr AddMonitor(IntPtr cls, IntPtr sel, ulong mask, BlockLiteral* handler);
     [DllImport(LibObjC, EntryPoint = "objc_msgSend")] private static extern IntPtr Send(IntPtr receiver, IntPtr sel);
     [DllImport(LibObjC, EntryPoint = "objc_msgSend")] private static extern ushort SendUShort(IntPtr receiver, IntPtr sel);
@@ -55,6 +58,7 @@ internal static class MacTabKeyMonitor
 
     /// <summary>AppKit's block: returns the event to let it go on, or nil when it was handled here.</summary>
     [UnmanagedCallersOnly]
+    [UserDelegateType(typeof(KeyDownHandler))]
     private static IntPtr OnKeyDown(IntPtr block, IntPtr nsEvent)
     {
         try
