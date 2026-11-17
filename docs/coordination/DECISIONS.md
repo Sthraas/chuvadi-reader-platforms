@@ -553,5 +553,8 @@ Five questions for the library coordinator are with Arun (reproducer files; what
 Applied under Arun's condition on C2 (D-198): Protect is HIDDEN until Pdf 3.35.1, with a line saying it returns with the next update. Signature check shows what the signature says with no trusted/valid verdict. Page operations ask first on EVERY file, naming what will be lost (OPS-03), plus the layer warning where there are layers. Open for Arun: Excel conditional colours - skip for all files until the fix, or keep. The parse-process prototype (B2) must survive sec08, sec-s1, hyperlinks-248 and c23.
 Arun asked that all chats use Opus 5.5: the coordinator switched all twelve chats' model to Opus 5.5 (effort Medium) on 18 Nov 00:25 IST.
 
+## D-200 — Excel conditional colours skipped until the library fix
+18 Nov 2026, 01:05 IST. Arun chose (a): for all files, the Reader does not evaluate conditional formats (no EvaluateConditionalFormats call) until the Sheets release that fixes SEC-08 / SEC-10 is taken in the library move. Cell values and their shown text are untouched; only the conditional colours are not drawn. A short line on a sheet that has conditional formats says its conditional colours return with the next update. All hosts (shared Core). In patch 33.
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).
