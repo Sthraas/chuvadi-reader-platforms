@@ -205,18 +205,19 @@ public sealed class WorkerPool : ITabControl, IAsyncDisposable
     private async Task<WorkerProcess> StartAsync(string key, string sub)
     {
         var folder = Path.Combine(WorkersRoot, key);
-        if (Directory.Exists(folder))
-        {
-            Directory.Delete(folder, recursive: true); // left by a worker that died
-        }
-
-        foreach (var sub2 in new[] { folder, Path.Combine(folder, "home"), Path.Combine(folder, "tmp"), Path.Combine(folder, "data") })
-        {
-            SpaceLayout.CreatePrivateDirectory(sub2);
-        }
-
         var socket = Path.Combine(_socketFolder, key[..16] + ".sock");
-        File.Delete(socket);
+        lock (FolderGate(key))
+        {
+            // Left by a worker that died. Under the person's gate: the dead worker's own clean-up may be
+            // running at this very moment, and must neither trip this up nor delete what is made here.
+            DeleteFolder(folder);
+            foreach (var sub2 in new[] { folder, Path.Combine(folder, "home"), Path.Combine(folder, "tmp"), Path.Combine(folder, "data") })
+            {
+                SpaceLayout.CreatePrivateDirectory(sub2);
+            }
+
+            File.Delete(socket);
+        }
         var secret = Acme.AcmeJws.Base64Url(RandomNumberGenerator.GetBytes(32));
 
         var psi = StartInfo(folder, socket, key);
@@ -411,24 +412,53 @@ public sealed class WorkerPool : ITabControl, IAsyncDisposable
             _log.Log(code == 0 ? LogLevel.Information : LogLevel.Warning, "Worker {Key} (pid {Pid}) ended with code {Code}", worker.Key[..8], worker.Id, code);
         }
 
-        Clean(worker.Folder, worker.Socket);
+        CleanAfter(worker);
         return Task.CompletedTask;
     }
 
-    private void Clean(string folder, string socket)
+    private readonly ConcurrentDictionary<string, object> _folderGates = new(StringComparer.Ordinal);
+
+    private object FolderGate(string key) => _folderGates.GetOrAdd(key, _ => new object());
+
+    /// <summary>
+    /// Removes a worker's folder (the person's files) and socket once it has ended. A person's worker always
+    /// uses the same folder and socket, so when a replacement has already been started (the page reconnected
+    /// the moment the old one died, or the person came back just as an idle worker was stopped), those now
+    /// belong to the replacement: its start cleared the old worker's files, and they are left alone here.
+    /// Before this, a late clean-up could delete a live worker's files and socket.
+    /// </summary>
+    internal void CleanAfter(WorkerProcess worker)
+    {
+        lock (FolderGate(worker.Key))
+        {
+            if (_workers.TryGetValue(worker.Key, out var current)
+                && !(current.IsValueCreated && current.Value.IsCompletedSuccessfully && ReferenceEquals(current.Value.Result, worker)))
+            {
+                _log.LogDebug("Worker {Key}: a newer worker has its folder; nothing to remove", worker.Key[..8]);
+                return;
+            }
+
+            try
+            {
+                DeleteFolder(worker.Folder);
+                File.Delete(worker.Socket);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                _log.LogWarning("Couldn't remove a worker's files yet: {Message}", ex.Message);
+            }
+        }
+    }
+
+    private static void DeleteFolder(string folder)
     {
         try
         {
-            if (Directory.Exists(folder))
-            {
-                Directory.Delete(folder, recursive: true);
-            }
-
-            File.Delete(socket);
+            Directory.Delete(folder, recursive: true);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        catch (DirectoryNotFoundException)
         {
-            _log.LogWarning("Couldn't remove a worker's files yet: {Message}", ex.Message);
+            // Already gone.
         }
     }
 
@@ -451,7 +481,7 @@ public sealed class WorkerPool : ITabControl, IAsyncDisposable
         }
 
         await worker.DisposeAsync().ConfigureAwait(false);
-        Clean(worker.Folder, worker.Socket);
+        CleanAfter(worker);
         _log.LogInformation("Worker {Key} stopped", key[..8]);
     }
 

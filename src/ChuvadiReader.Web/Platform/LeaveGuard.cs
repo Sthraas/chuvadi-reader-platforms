@@ -5,7 +5,7 @@ using Microsoft.JSInterop;
 namespace ChuvadiReader.Web.Platform;
 
 /// <summary>
-/// D-181: while any open document has marks not yet saved, the browser asks "Leave site? Changes you made may
+/// D-181: while any open document has marks not yet saved (or, since D-194, Arrange has desks neither bound nor saved), the browser asks "Leave site? Changes you made may
 /// not be saved" before a reload, a close or a move to another site (signing out included). A reload brings the
 /// tabs back (D-174) but not unsaved marks, which live in memory with the tab. "Unsaved" is the kit's own answer
 /// (<see cref="IUnsavedWork"/>, D-190): every tab counts, and marks written by "Save as new PDF" count as saved.
@@ -53,6 +53,7 @@ public sealed class LeaveGuard : IDisposable
         }
 
         _commands.Changed += Update;
+        _work.Changed += Update; // D-194: the kit's own signal (marks on any tab, Arrange's desks)
         if (_tabs is not null)
         {
             _tabs.Changed += Update;
@@ -96,6 +97,7 @@ public sealed class LeaveGuard : IDisposable
         if (_started)
         {
             _commands.Changed -= Update;
+            _work.Changed -= Update;
             if (_tabs is not null)
             {
                 _tabs.Changed -= Update;

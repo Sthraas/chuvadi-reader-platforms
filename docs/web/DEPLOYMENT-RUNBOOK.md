@@ -97,6 +97,7 @@ The program folder is owned by root and read-only to the service.
 ASPNETCORE_ENVIRONMENT=Production
 ASPNETCORE_URLS=http://+:8080;https://+:8443
 ASPNETCORE_HTTPS_PORT=443
+# Required: the portal refuses to start in Single mode outside Development (D-198).
 Portal__Mode=Gateway
 Portal__PublicOrigin=https://<domain>
 Portal__DataRoot=/srv/chuvadi/data

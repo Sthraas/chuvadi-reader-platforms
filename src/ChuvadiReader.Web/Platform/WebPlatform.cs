@@ -144,10 +144,15 @@ public sealed class WebAccount : IAccount
     private string? _unit;
     private bool _signedIn;
 
-    public WebAccount(AuthenticationStateProvider auth, Microsoft.AspNetCore.Components.NavigationManager nav)
+    private readonly IServiceProvider? _services;
+
+    /// <param name="services">The connection's services, read at sign-out (the Ui's unsaved-work question, the
+    /// connection's downloads, the browser); null in tests that don't sign out.</param>
+    public WebAccount(AuthenticationStateProvider auth, Microsoft.AspNetCore.Components.NavigationManager nav, IServiceProvider? services = null)
     {
         _auth = auth;
         _nav = nav;
+        _services = services;
     }
 
     public bool IsSignedIn => _signedIn;
@@ -175,9 +180,40 @@ public sealed class WebAccount : IAccount
     /// <summary>Already signed in to reach the portal.</summary>
     public Task<bool> SignInAsync(CancellationToken ct = default) => Task.FromResult(_signedIn);
 
-    public Task SignOutAsync(CancellationToken ct = default)
+    /// <summary>How long Sign out waits for the browser to ask for a download the card has just handed it.</summary>
+    internal static readonly TimeSpan DownloadWait = TimeSpan.FromSeconds(10);
+
+    /// <summary>
+    /// Sign out. D-194: with unsaved work (marks on a PDF, desks arranged and not saved) the Ui's card asks
+    /// first — on the portal Save as (a download), Discard or Cancel — and Cancel keeps the person signed in.
+    /// After "Save as" the sign-out waits until the browser has asked for the download, because signing out
+    /// deletes the session's files. The browser's own "Leave site?" is then taken off: the person has answered.
+    /// </summary>
+    public async Task SignOutAsync(CancellationToken ct = default)
     {
+        if (_services?.GetService<IUnsavedWork>() is { HasUnsavedWork: true } work
+            && !await work.ConfirmCloseAsync()) // stays on the connection's own thread: the navigation below needs it
+        {
+            return; // Cancel, or the question is already on screen
+        }
+
+        if (_services?.GetService<SessionSpace>() is { } space && _services.GetService<TransferRegistry>() is { } registry)
+        {
+            await registry.WaitForDownloadsAsync(space.ConnectionId, DownloadWait, DownloadWait, ct);
+        }
+
+        if (_services?.GetService<BrowserBridge>() is { } browser)
+        {
+            try
+            {
+                await browser.SetLeaveGuardAsync(false);
+            }
+            catch (Exception ex) when (ex is Microsoft.JSInterop.JSException or Microsoft.JSInterop.JSDisconnectedException or OperationCanceledException or InvalidOperationException)
+            {
+                // The page is already going.
+            }
+        }
+
         _nav.NavigateTo("/signout", forceLoad: true);
-        return Task.CompletedTask;
     }
 }

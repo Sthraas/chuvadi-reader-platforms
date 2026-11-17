@@ -34,6 +34,23 @@ public class LeaveGuardTests
             return Task.FromResult(true);
         }
 
+        event Action? IUnsavedWork.Changed
+        {
+            add => WorkChanged += value;
+            remove => WorkChanged -= value;
+        }
+
+        private event Action? WorkChanged;
+
+        public int WorkListeners => WorkChanged?.GetInvocationList().Length ?? 0;
+
+        /// <summary>Unsaved work that no Reader command reflects (Arrange's desks): only the kit's signal tells.</summary>
+        public void Desks(bool unsaved)
+        {
+            Unsaved = unsaved;
+            WorkChanged?.Invoke();
+        }
+
         public void Marks(bool? unsaved)
         {
             Unsaved = unsaved == true;
@@ -109,6 +126,22 @@ public class LeaveGuardTests
 
         guard.Dispose();
         Assert.Equal(0, commands.Listeners); // stops following the Ui
+        Assert.Equal(0, commands.WorkListeners);
         Assert.Equal(0, commands.Asked);     // the guard only reads; the Ui's card is never raised by it
+    }
+
+    [Fact]
+    public void Unsaved_work_that_no_reader_command_shows_arms_the_browser_too()
+    {
+        // D-194: Arrange's desks, neither bound nor saved, count as unsaved work; only the kit's own signal tells.
+        var commands = new FakeCommands();
+        var js = new RecordingJs();
+        using var guard = new LeaveGuard(commands, commands, new BrowserBridge(js), NullLogger<LeaveGuard>.Instance);
+        guard.Start();
+        commands.Desks(true);
+        commands.Desks(true);
+        Assert.Equal([true], js.Told);
+        commands.Desks(false); // bound, saved in a session, or discarded on the card
+        Assert.Equal([true, false], js.Told);
     }
 }

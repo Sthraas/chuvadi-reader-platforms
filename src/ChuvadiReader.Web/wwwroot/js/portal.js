@@ -410,7 +410,7 @@
     // WT-27: a document dropped in the first moment after the page appears, before the drop catcher can
     // take it, used to be cancelled without a word. It is kept and handed to the catcher's own file input
     // as soon as that is live, so it goes through exactly the checks and messages of any other drop.
-    // (Once the catcher is live, this handler never sees a document drop: the catcher takes or stops it.)
+    // (Once the catcher is live, a document drop that reaches this handler is one the Ui did not want, and is not kept.)
     // Image-only drops are not kept: the catcher doesn't take those (the Reader places them on a page).
     var held = null, heldSince = 0;
     function isImageOnly(files) {
@@ -420,6 +420,10 @@
         return files.length > 0;
     }
     function holdForCatcher(dt) {
+        // Only a drop made before the catcher is live is kept. Once it is live, a document drop that still
+        // ends up here is one the Ui chose not to take (it hides the catcher when a drop isn't wanted): that
+        // stays a cancelled drop, as before.
+        if (catcherInput()) return;
         var files = dt && dt.files ? Array.prototype.slice.call(dt.files, 0, 64) : [];
         if (files.length === 0 || isImageOnly(files)) return;
         held = files;

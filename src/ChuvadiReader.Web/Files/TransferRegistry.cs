@@ -41,9 +41,54 @@ public sealed class TransferRegistry
 
     public DownloadTicket CreateDownload(string userKey, string sessionId, string path, string fileName, TimeSpan lifetime, bool deleteAfter)
     {
-        var t = new DownloadTicket(NewToken(), userKey, sessionId, path, fileName, _time.GetUtcNow() + lifetime, deleteAfter);
+        var t = new DownloadTicket(NewToken(), userKey, sessionId, path, fileName, _time.GetUtcNow() + lifetime, deleteAfter) { IssuedAt = _time.GetUtcNow() };
         _downloads[t.Id] = t;
         return t;
+    }
+
+    /// <summary>
+    /// Waits, at most <paramref name="limit"/>, until the browser has asked for every download just handed to
+    /// this connection (D-194: "Save as" on the card before Sign out). A download is a link the page clicks;
+    /// the browser's request for it and the navigation to sign-out that follows are separate requests, and
+    /// signing out deletes the session's files. Once the request has arrived the file is open and the download
+    /// completes whatever happens to the session. Only tickets issued in the last <paramref name="recent"/>
+    /// count: an older one the browser never asked for (a blocked download) must not hold a sign-out.
+    /// </summary>
+    public async Task<bool> WaitForDownloadsAsync(string sessionId, TimeSpan limit, TimeSpan recent, CancellationToken ct = default)
+    {
+        var until = _time.GetUtcNow() + limit;
+        while (true)
+        {
+            var now = _time.GetUtcNow();
+            var waiting = false;
+            foreach (var (_, t) in _downloads)
+            {
+                if (t.SessionId == sessionId && t.IssuedAt > now - recent && t.ExpiresAt > now)
+                {
+                    waiting = true;
+                    break;
+                }
+            }
+
+            if (!waiting)
+            {
+                return true;
+            }
+
+            if (now >= until || ct.IsCancellationRequested)
+            {
+                return false;
+            }
+
+            try
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(50), _time, ct).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                return false;
+            }
+        }
     }
 
     /// <summary>Takes a download ticket (single use) when it belongs to <paramref name="userKey"/>.</summary>
@@ -322,6 +367,10 @@ public sealed class UploadFile
     }
 }
 
-public sealed record DownloadTicket(string Id, string UserKey, string SessionId, string Path, string FileName, DateTimeOffset ExpiresAt, bool DeleteAfter);
+public sealed record DownloadTicket(string Id, string UserKey, string SessionId, string Path, string FileName, DateTimeOffset ExpiresAt, bool DeleteAfter)
+{
+    /// <summary>When the link was handed to the browser.</summary>
+    public DateTimeOffset IssuedAt { get; init; }
+}
 
 public sealed record PrintTicket(string Id, string UserKey, string SessionId, string PdfPath, string Title, DateTimeOffset ExpiresAt);

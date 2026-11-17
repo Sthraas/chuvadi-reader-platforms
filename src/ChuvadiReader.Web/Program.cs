@@ -46,6 +46,10 @@ public static class Program
             .Validate(o => o.IdleTimeout > o.ExpiryWarning && o.ExpiryWarning > TimeSpan.Zero, "Portal:IdleTimeout must be longer than Portal:ExpiryWarning.")
             .Validate(o => o.Mode != PortalMode.Worker || !string.IsNullOrEmpty(o.WorkerSocket) && !string.IsNullOrEmpty(o.WorkerOwner),
                 "A worker is started by the gateway only.")
+            // D-198 (the library security advisory): in Single mode sign-in, uploads and every parsing library
+            // share one process for everyone, so a file that ends the process ends the portal for everybody.
+            // In Gateway mode it ends one person's worker and nothing else. Single stays for development and tests.
+            .Validate(o => devSignIn || o.Mode != PortalMode.Single, SingleModeRefusal)
             .ValidateOnStart();
         // WT-15: discovery, keys, the token call (with the client secret) and back-channel logouts never go
         // over plain http, except against a local Sangam in Development and the test suite.
@@ -363,6 +367,12 @@ public static class Program
     /// (<see cref="AppStateLifetime.PerConnection"/>), then the portal's own implementation of every
     /// platform seam (a later registration wins). Scoped throughout: a process serves many people.
     /// </summary>
+    /// <summary>Why the portal won't start in Single mode outside Development (D-198).</summary>
+    internal const string SingleModeRefusal =
+        "Portal:Mode must be Gateway outside Development. In Single mode everyone's documents are opened in one process, "
+        + "so one bad file would stop the portal for everybody; in Gateway mode each person has their own worker process. "
+        + "Set Portal__Mode=Gateway (see docs/web/DEPLOYMENT-RUNBOOK.md).";
+
     internal static void AddReader(IServiceCollection s)
     {
         s.AddChuvadiReader(AppStateLifetime.PerConnection);

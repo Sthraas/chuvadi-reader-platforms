@@ -100,6 +100,65 @@ public class StorageCheckTests
     }
 
     [Theory]
+    [InlineData("Production", null, false)]      // the shipped appsettings.json says Single
+    [InlineData("Production", "Single", false)]
+    [InlineData("Staging", "Single", false)]     // anything that isn't Development or the test suite
+    [InlineData("Production", "Gateway", true)]
+    [InlineData("Development", "Single", true)]
+    [InlineData("Testing", null, true)]
+    public async Task Single_mode_is_refused_outside_development(string environment, string? mode, bool starts)
+    {
+        // D-198 (the library security advisory): in Single mode one bad file would stop the portal for everybody.
+        if (!Directory.Exists("/dev/shm"))
+        {
+            return; // needs a RAM folder for the data root (D-28)
+        }
+
+        var root = Path.Combine("/dev/shm", "chvd-d198-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            List<string> args =
+            [
+                "--environment", environment,
+                "--urls", "http://127.0.0.1:0",
+                "--Portal:DataRoot", root,
+                "--Portal:Workers:SocketFolder", Path.Combine(root, "sockets"),
+                "--Portal:PublicOrigin", "https://reader.example.in",
+                "--Portal:Storage:RequireEncryptedSwap", "false",
+                "--Sangam:Authority", "https://sangam.example.in/",
+                "--Sangam:ClientId", "chuvadi-reader",
+                "--Logging:LogLevel:Default", "None",
+            ];
+            if (mode is not null)
+            {
+                args.AddRange(["--Portal:Mode", mode]);
+            }
+
+            if (starts)
+            {
+                await using var app = Program.Build([.. args]);
+                await app.StartAsync();
+                await app.StopAsync();
+            }
+            else
+            {
+                var ex = await Assert.ThrowsAsync<Microsoft.Extensions.Options.OptionsValidationException>(async () =>
+                {
+                    await using var app = Program.Build([.. args]);
+                    await app.StartAsync();
+                });
+                Assert.Contains("Portal:Mode must be Gateway outside Development", ex.Message);
+                Assert.Contains("one bad file would stop the portal for everybody", ex.Message);
+            }
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Theory]
     [InlineData("http://sangam.example.in/", false)]
     [InlineData("https://sangam.example.in/", true)]
     public async Task Production_refuses_a_sangam_address_that_isnt_https(string authority, bool starts)
@@ -119,6 +178,8 @@ public class StorageCheckTests
             [
                 "--environment", "Production",
                 "--urls", "http://127.0.0.1:0",
+                "--Portal:Mode", "Gateway", // D-198: Production starts in Gateway mode only
+                "--Portal:Workers:SocketFolder", Path.Combine(root, "sockets"),
                 "--Portal:DataRoot", root,
                 "--Portal:PublicOrigin", "https://reader.example.in",
                 "--Portal:Storage:RequireEncryptedSwap", "false",

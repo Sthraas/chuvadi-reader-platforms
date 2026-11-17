@@ -50,6 +50,8 @@ with sync_playwright() as p:
     # events can't carry files into an input, so the witnesses are: the stray drop was cancelled, and files
     # handed to the catcher's input open (or are refused with a message).
     page.wait_for_selector(".pdrop input[type=file]", state="attached", timeout=15000)
+    # A drop that misses a live catcher (one made before it is live is kept for it: WT-27, early_drop.py).
+    page.wait_for_function("() => window.chvdPortal && window.chvdPortal.dropCatcherLive()", timeout=15000)
     cancelled = page.evaluate("""() => {
         const dt = new DataTransfer();
         dt.items.add(new File(['%PDF-1.4'], 'dropped.pdf', { type: 'application/pdf' }));
@@ -61,8 +63,9 @@ with sync_playwright() as p:
     }""")
     check("a drop that misses the catcher is cancelled and doesn't leave Chuvadi", cancelled["over"] and cancelled["drop"], str(cancelled))
     # The script puts files straight into the catcher's input, which a person cannot do before it is live
-    # (it takes no pointer until then); wait for that, or the browser's change event has no listener yet (WT-27).
-    page.wait_for_function("() => window.chvdPortal && window.chvdPortal.dropCatcherLive()", timeout=15000)
+    # (it takes no pointer until then); the wait above sees to that, or the change event has no listener yet (WT-27).
+    page.wait_for_timeout(1500)
+    check("... and is not opened later either", "/reader" not in page.url, page.url)
     page.set_input_files(".pdrop input[type=file]", files=[{"name": "fake.pdf", "mimeType": "application/pdf", "buffer": b"just text"}])
     try:
         page.wait_for_selector("text=fake.pdf isn't a valid PDF", timeout=15000)

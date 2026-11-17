@@ -1,12 +1,14 @@
-"""D-190 on the portal: closing a tab with unsaved marks asks first (Save / Save as / Discard / Cancel).
+"""D-190 and D-194 on the portal: closing a tab, or signing out, with unsaved marks asks first.
 
 Opens two PDFs and draws a rectangle on the first. Checks: the mark is still there after a visit to the
 other tab (marks are kept with the tab), and the browser's "Leave site?" is armed while the other tab shows
-(any tab's marks count, D-181); the tab's own close button raises the card, Cancel keeps the tab and the
-mark, Discard closes it and disarms the browser's question; "Close inactive tabs" asks about a marked tab
-that is not showing; "Close all tabs" with "Save as…" delivers the PDF as a download and closes; and "Save"
-closes the tab too (it writes the marks into the session's copy of the file on the server; nothing is
-downloaded). Development sign-in.
+(any tab's marks count, D-181); the tab's own close button raises the card, which on the portal offers
+"Save as…", Discard and Cancel and no "Save" (D-194: the portal cannot save into the person's own file);
+Cancel keeps the tab and the mark, Discard closes it and disarms the browser's question; "Close inactive
+tabs" asks about a marked tab that is not showing; "Close all tabs" with "Save as…" delivers the PDF as a
+download and closes. Sign out with unsaved marks raises the same card: Cancel keeps the person signed in
+with the mark; "Save as…" delivers the PDF and only then signs out, landing on the signed-out page without
+the browser's own question. Development sign-in.
 
 Usage: python3 close_card.py <portal base> <some.pdf> <out dir> [--browser chrome|chromium|firefox|webkit]
 """
@@ -99,7 +101,11 @@ with sync_playwright() as p:
     sign_in_as(ctx, base, "closecard-" + engine)
     page = ctx.new_page()
     errors = []
-    page.on("pageerror", lambda e: errors.append(str(e)))
+    # Firefox reports its circuit's socket closing as the page leaves (here: Sign out going to /signout);
+    # that is the browser leaving, not a portal error (as in flows.py).
+    leaving = ("was interrupted while the page was loading", "WebSocket closed with status code: 1006",
+               "WebSocket is not in the OPEN state", "Cannot send data if the connection is not in the 'Connected' State")
+    page.on("pageerror", lambda e: errors.append(str(e)) if not (engine == "firefox" and any(x in str(e) for x in leaving)) else None)
     page.goto(base + "/")
     page.wait_for_selector("nav.leftbar >> text=Upload", timeout=30000)
     upload(page, pdf)
@@ -117,7 +123,7 @@ with sync_playwright() as p:
     text = q.inner_text()
     buttons = [t.strip() for t in q.locator("button").all_inner_texts()]
     check("closing the tab asks about its marks, by name", first in text and "1 mark" in text, text.replace("\n", " ")[:120])
-    check("the card offers Save, Save as, Discard and Cancel", buttons == ["Save", "Save as…", "Discard", "Cancel"], buttons)
+    check("the card offers Save as, Discard and Cancel, and no Save (D-194)", buttons == ["Save as…", "Discard", "Cancel"], buttons)
     q.locator("button:text-is('Cancel')").click()
     page.wait_for_selector(".closeq", state="detached", timeout=10000)
     check("Cancel keeps the tab and its mark", page.evaluate(TABS) == [first, "large-format.pdf"] and page.evaluate(MARKS) == 1, page.evaluate(TABS))
@@ -152,15 +158,42 @@ with sync_playwright() as p:
     check("... and then closes every tab", got == [], got)
     check("... leaving nothing for the browser to ask about", wait_for(page, ASKS, False) is False)
 
-    # "Save": into the session's copy of the file on the server (no download).
+    # --- Sign out with unsaved marks (D-194) ----------------------------------------------------------------
+    def sign_out_menu():
+        page.click("button.acct-chip")
+        page.click("button.acct-out")
+
     page.goto(base + "/")
     page.wait_for_selector("nav.leftbar >> text=Upload", timeout=30000)
     upload(page, big)
     draw(page)
-    close_tab(page, "large-format.pdf")
-    card(page).locator("button:text-is('Save')").click()
-    got = wait_for(page, TABS, [], timeout=60000)
-    check("Save closes the tab", got == [], got)
+    dialogs = []
+    page.on("dialog", lambda d: (dialogs.append(d.type), d.accept()))
+    sign_out_menu()
+    q = card(page)
+    buttons = [t.strip() for t in q.locator("button").all_inner_texts()]
+    check("Sign out with unsaved marks asks, with the same card", "large-format.pdf" in q.inner_text() and buttons == ["Save as…", "Discard", "Cancel"], buttons)
+    q.locator("button:text-is('Cancel')").click()
+    page.wait_for_selector(".closeq", state="detached", timeout=10000)
+    page.wait_for_timeout(800)
+    check("Cancel keeps the person signed in, with the tab and its mark", "/reader" in page.url and page.evaluate(TABS) == ["large-format.pdf"] and page.evaluate(MARKS) == 1, page.url)
+
+    with page.expect_download(timeout=60000) as dl:
+        sign_out_menu()
+        card(page).locator("button:text-is('Save as…')").click()
+    saved = os.path.join(out, "sign-out-" + engine + "-" + dl.value.suggested_filename)
+    dl.value.save_as(saved)
+    check("Save as on Sign out delivers the PDF whole", open(saved, "rb").read(5) == b"%PDF-" and os.path.getsize(saved) > 1000 and open(saved, "rb").read().rstrip().endswith(b"%%EOF"),
+          "%s, %d bytes" % (dl.value.suggested_filename, os.path.getsize(saved)))
+    try:
+        page.wait_for_url("**/signed-out", timeout=30000)
+        check("... and then signs out", True)
+    except Exception as ex:  # noqa: BLE001
+        check("... and then signs out", False, page.url + " " + str(ex)[:80])
+    check("... without the browser's own Leave site question", "beforeunload" not in dialogs, dialogs)
+    page.goto(base + "/")
+    page.wait_for_selector("nav.leftbar >> text=Upload", timeout=30000)
+    check("the session is over: nothing is open on coming back", page.evaluate(TABS) == [], page.evaluate(TABS))
     check("no page errors", not errors, "; ".join(errors[:3]))
     sign_out(ctx, base)
     b.close()

@@ -197,6 +197,35 @@ public class GatewayTests(GatewayFixture gateway) : IClassFixture<GatewayFixture
     }
 
     [Fact]
+    public async Task A_dead_workers_late_clean_up_leaves_its_replacements_files_and_socket_alone()
+    {
+        // Seen while measuring a memory limit: the page reconnected the instant its worker was killed, the
+        // replacement started in the same folder, and the dead worker's exit handler then ran its clean-up.
+        // It must not delete the live worker's files (the person's uploads) or its socket.
+        using var c = gateway.Client("gw-late-clean");
+        Assert.Equal(HttpStatusCode.OK, (await c.GetAsync("/")).StatusCode);
+        var first = gateway.WorkerOf("gw-late-clean");
+        first.Process.Kill();
+        await first.Process.WaitForExitAsync();
+        Assert.Equal(HttpStatusCode.OK, (await c.GetAsync("/")).StatusCode);
+        var second = gateway.WorkerOf("gw-late-clean");
+        Assert.NotEqual(first.Id, second.Id);
+        var kept = Path.Combine(second.Folder, "data", "kept.txt");
+        await File.WriteAllTextAsync(kept, "a person's file");
+
+        gateway.Pool.CleanAfter(first); // the old worker's clean-up, arriving late
+
+        Assert.True(File.Exists(kept));
+        Assert.True(File.Exists(second.Socket));
+        Assert.Equal(HttpStatusCode.OK, (await c.GetAsync("/")).StatusCode);
+        Assert.Equal(second.Id, gateway.WorkerOf("gw-late-clean").Id);
+
+        await gateway.Pool.StopAsync(second.Key); // and its own clean-up still removes everything
+        Assert.False(Directory.Exists(second.Folder));
+        Assert.False(File.Exists(second.Socket));
+    }
+
+    [Fact]
     public async Task When_every_slot_is_taken_new_people_are_told_the_portal_is_busy()
     {
         var users = new List<HttpClient>();
