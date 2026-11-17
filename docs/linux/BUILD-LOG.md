@@ -916,3 +916,14 @@ On b08b0e5d (patch 31, signed off by Linux Test). Patch 32 is not merged here ye
   printer list and the job as plain `ipp://<server>:631`. Network printers are reached by the local CUPS, never
   by the app. GTK's print dialog (libcups) lists a named server's printers itself.
 - **D-198:** what a parsing helper can use on Linux, measured: `D-198-PARSE-HELPER-LINUX.md`.
+
+### 64. Patch 33 merged (9e00fdf) (18 Nov)
+- **Merge of `platform/foundation-pr` 9e00fdf** (PR 25, Reader main b193ab0: Protect's redaction hidden until the
+  next library update, signatures shown without a verdict, every page operation asks first, Excel conditional
+  colours skipped; D-198, D-200): clean; shared `src` and `tests` identical to 9e00fdf. No Linux host change.
+  Release build `-warnaserror` clean on SDK 10.0.403. Unit tests: Reader 448 passed / 6 skipped, host kit 103,
+  Linux 73, Web Ui 41, Mobile Ui 16. Full UI pass under Xvfb: **128/128**.
+- 128, not 130: step 24 clicks each Protect rail tool that is enabled, and "Redact box" and "Find & redact" are now
+  greyed (patch 33), so they are no longer clicked. Expected; nothing else changed in the list of steps.
+- Not checked by hand beyond the pass: the greyed redaction's reason, signatures shown as "not checked", the
+  card before each page operation, Excel conditional colours.
