@@ -270,7 +270,7 @@ public sealed class XlsxViewService
 
         int minR = int.MaxValue, maxR = 0, minC = int.MaxValue, maxC = 0;
         var cells = new List<SheetCell>(raw.Count);
-        var conditional = s.ConditionalFormats.Count == 0 ? null : s.EvaluateConditionalFormats(new ConditionalFormatOptions { Date1904 = wb.Date1904 });
+        var conditional = s.ConditionalFormats.Count == 0 || LibraryHolds.ConditionalFormatsHeld ? null : s.EvaluateConditionalFormats(new ConditionalFormatOptions { Date1904 = wb.Date1904 });
         foreach (var c in raw)
         {
             var cell = MapCell(c, wb, format, conditional?.Evaluate(c.Row, c.Column));

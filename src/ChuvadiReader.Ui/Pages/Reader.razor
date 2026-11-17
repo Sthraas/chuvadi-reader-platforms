@@ -1204,8 +1204,16 @@
             else if (_protect)
             {
                 <SideRail Kind="tools" Heading="TOOLS" Label="PROTECT">
-                    <RailButton Icon="redact" Label="Redact box" Keys="R" OnClick="() => GoRedact(false)" />
-                    <RailButton Icon="find-in-page" Label="Find & redact" OnClick="() => GoRedact(true)" />
+                    @if (LibraryHolds.RedactionHeld)
+                    {
+                        @* D-198: where redaction was, it says when it comes back (greyed; the reason shows on hover and on a tap). *@
+                        <RailButton Icon="redact" Label="Redaction" Disabled="true" DisabledReason="@LibraryHolds.RedactionBack" ReasonOnTap="true" />
+                    }
+                    else
+                    {
+                        <RailButton Icon="redact" Label="Redact box" Keys="R" OnClick="() => GoRedact(false)" />
+                        <RailButton Icon="find-in-page" Label="Find & redact" OnClick="() => GoRedact(true)" />
+                    }
                     <RailButton Icon="stamp" Label="Stamp" Active='_card == "stamp" && _stampFocus != "watermark"' OnClick='() => OpenStamp("stamp")' />
                     <RailButton Icon="watermark" Label="Watermark" Active='_card == "stamp" && _stampFocus == "watermark"' OnClick='() => OpenStamp("watermark")' />
                     <RailButton Icon="compress" Label="Flatten" Disabled="_flattening" OnClick="FlattenNow" />

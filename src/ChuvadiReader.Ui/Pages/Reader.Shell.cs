@@ -543,8 +543,10 @@ public partial class Reader
         }
 
         // Protect
-        yield return new("p.redact", "Redact box", "Protect", "redact", LocalMode == DocMode.Protect ? "R" : null, () => GoRedact(false), Entitlements.CanRedact ? null : "Not in this edition");
-        yield return new("p.find", "Find & redact", "Protect", "find-in-page", null, () => GoRedact(true), Entitlements.CanRedact ? null : "Not in this edition");
+        // D-198: redaction stays in the list, greyed, saying when it comes back (same rule as tools not built yet).
+        string? redactOff = LibraryHolds.RedactionHeld ? LibraryHolds.RedactionBack : Entitlements.CanRedact ? null : "Not in this edition";
+        yield return new("p.redact", "Redact box", "Protect", "redact", LocalMode == DocMode.Protect && redactOff is null ? "R" : null, () => GoRedact(false), redactOff);
+        yield return new("p.find", "Find & redact", "Protect", "find-in-page", null, () => GoRedact(true), redactOff);
         yield return new("p.stamp", "Stamp (header & footer)", "Protect", "stamp", null, T(() => OpenProtectCard("stamp")));
         yield return new("p.watermark", "Watermark", "Protect", "watermark", null, T(() => OpenProtectCard("watermark")));
         // D-187: off on the Web portal. Greyed with its reason; on a touch screen it still runs, and the card gives the reason.
@@ -907,6 +909,12 @@ public partial class Reader
     // ── Protect → redaction workspace ────────────────────────────────────
     private async Task GoRedact(bool find)
     {
+        if (LibraryHolds.RedactionHeld)
+        {
+            Shell.Notify(LibraryHolds.RedactionBack);   // D-198
+            return;
+        }
+
         if (!Entitlements.CanRedact)
         {
             Shell.Notify("Redaction isn't included in this edition.", isError: true);
