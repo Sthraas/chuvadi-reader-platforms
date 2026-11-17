@@ -316,6 +316,21 @@ Build from clean: 0 errors, 0 warnings. As-built Release: 0 crashes, device heal
 | Export card sizes (AT-28) | unchanged | unchanged |
 | AT-13 | 5 of 5 (4.2–4.4 s) | 5 of 5 (8.5–9.7 s) |
 
+## Round 16 (run 44172503791, Android 34cffd3 + Foundation 9e00fdf (patch 33) + Mobile UI df420b5, Release, API 36)
+Build from clean: 0 errors, 0 warnings. As-built Release: 0 crashes, device health normal throughout.
+
+| Area | Phone | Tablet |
+|---|---|---|
+| Find jump (AT-24) | **0 of 6 on the right page** | 3 of 5 (misses = Enter on the same search doesn't return) |
+| D-198 page operation ask (Bind all) | PASS | PASS |
+| D-198 redaction held | held — but no reason shown on touch (AT-30) | held — no reason on touch; "Save redacted copy" still offered (AT-30) |
+| Protect keeps its other tools | PASS | PASS |
+| Save suite (rest) | PASS except my pinch-in check | PASS |
+| Arrange drag, reorder, Bind all | PASS | PASS |
+| Function | 17 of 20 — my print step ×2, my at-once rotation variant | 18 of 20 — my print step ×2 |
+| Design / touch targets (shell) | 42 of 42 | 30 of 30 |
+| AT-13 | 5 of 5 (4.1–4.5 s) | 5 of 5 |
+
 ## Blocked in CI: Reader on Android 15 (API 35)
 The API 35 image ships WebView 124, so the app correctly shows only its update screen (D-105). Updating it in CI from the API 36
 image's WebView failed twice: that WebView needs the Trichrome static library, which my donor job couldn't locate on the API 36

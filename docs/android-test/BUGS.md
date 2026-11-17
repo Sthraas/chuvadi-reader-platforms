@@ -609,7 +609,7 @@ Merge reaches its page ("add at least two PDFs"); Split was not reached in this 
 kept, nothing left only inside the app; the card's folder chip reads "Documents/Chuvadi Documents/Compressed". Export: the PNG is under
 `Documents/Chuvadi Documents/Export`. Both devices. Closed. (Scatter, Lift, Snapshot go the same route; not separately exercised.)
 
-## AT-24 · S2 · Foundation (shared Ui, Find) · **open, worse on patch 32**: phone 1 of 5 Find jumps on the right page (4 of 5 on page 4, highlight on the wrong words) — Phone: Find jumps to the wrong page and highlights the wrong words
+## AT-24 · S2 · Foundation (shared Ui, Find) · **open, now every time on the phone**: patch 33 phone 0 of 6 Find jumps on the right page (patch 32: 1 of 5) — Phone: Find jumps to the wrong page and highlights the wrong words
 **Steps:** phone API 36, portrait. Open `drift-doc.pdf` (12 pages; the word "Zephyrine" is on page 3 only). More › Find, type
 `Zephyrine`.
 **Expected:** the view goes to page 3 and "Zephyrine" is highlighted (round 11, patch 27: box 3, page 3 — passed).
@@ -642,6 +642,10 @@ note it here for Foundation as a small second point (S4), not as the AT-24 fault
 Also seen once on the tablet (function suite F-03): after Find, page 3 with the highlight fills the screen but the box says **2**
 (`screenshots/r15/r15-tablet-find-box-says-2.png`). The drift suite's own Find check started "box 5, page 3" and settled to 3/3 within a
 second, so this looks like the box catching up late after the patch 32 scroll; I keep it under AT-16's watch rather than reopening it.
+**Round 16 (run 44172503791, Android 34cffd3 + Foundation 9e00fdf (patch 33) + Mobile UI df420b5, Release, API 36).** Phone: the first Find jump **and** all five repeats landed on page 4 — 0 of 6. It is no longer
+intermittent on the phone; a person searching a word on the phone is taken to the next page and shown the wrong words.
+Tablet: 3, 3, 3, then 4 and 5 with no highlight on screen — the tablet's misses are again "Enter on the same search does not go back to
+the match" (`screenshots/r16/r16-tablet-find-try-4-and-protect-held.png`, left), not the AT-24 fault.
 
 ## AT-25 · S4 · Mobile UI · **verified, closed** R13: "File's own sizes" is 103 × 44 px on phone and tablet — Excel: the "File's own sizes" control is 24 px high on phone and tablet
 **Steps:** phone or tablet, open an `.xlsx`, drag a column edge wider with a finger (works: 64 → 135 px; row 20 → 61 px; the header
@@ -700,6 +704,7 @@ buttons of Merge / Split; I am adding these cards to `ci/design.py` so they are 
 **Round 13:** unchanged — Export card chips 28–29 px, **Export →** 34, "change…" 16–17, Close 19; Merge page buttons 32–33 px, on both devices. Still open.
 **Round 14 (run 43925116452, Android 582b3be + Foundation b895750 (patch 31) + Mobile UI 1720924, Release, API 36):** Merge: Add files, Add open documents, Merge & Save 44 px (phone), 45 px (tablet) — fixed. Export as image card: no change on either device. Still open for the Export card (and, built the same way, the Press card — to be measured).
 **Round 15:** unchanged, as expected — Mobile UI H-27 to H-29 are not in the Android build until Foundation lands them.
+**Round 16:** unchanged (Mobile UI H-27 to H-29 not in the Android build yet).
 
 ## AT-29 · S3 · Foundation / Mobile UI · **not reproduced** R14 with the page move settled before the turn (page 3 kept on the phone, page 2 on the tablet); stays on watch — Phone: turning the phone just after moving to another page can drop back to page 1
 **Steps:** phone API 36, portrait, a 12-page PDF. Next page twice (box "3 / 12"), then turn to landscape at once.
@@ -715,6 +720,28 @@ that waits two seconds before turning, to separate "always" from "only mid-move"
 "at once" variant passed on the tablet (3 → 3 → 3) and proved nothing on the phone (the page move itself had not registered before the
 turn, so there was no place to lose). Round 13's 3 → 1 therefore stands as one unexplained case in five; not a blocker on its own.
 **Round 15:** settled turn keeps the page on both (phone 3/12, tablet 2). Not reproduced; still watched.
+
+## AT-30 · S3 · Foundation (Protect, D-198) / Mobile UI (touch) · open — With redaction held back, touch gives no reason, and the tablet still offers "Save redacted copy"
+**Steps:** patch 33, open a PDF, Protect.
+**Expected (D-198):** redaction greyed out and the Reader saying "Redaction comes back with the next update."
+**Actual:** the redaction tools are greyed and cannot be used — correct, and Protect keeps Stamp, Watermark, Flatten, Password and Sign
+(both devices). But:
+1. The reason is only in the button's tooltip / accessible name ("Redact box — Redaction comes back with the next update."). Touch has
+   no hover, and a tap on a disabled button does nothing, so on phone and tablet the person sees a greyed icon with no explanation.
+2. On the tablet the round **Save redacted copy** button (bottom right) is still shown and enabled in Protect, with nothing to save
+   (`screenshots/r16/r16-tablet-find-try-4-and-protect-held.png`, right). Not on the phone. I have not yet tapped it to see what it does;
+   next round will.
+(run 44172503791, Android 34cffd3 + Foundation 9e00fdf (patch 33) + Mobile UI df420b5, Release, API 36.)
+**Fix:** let a tap on a held tool say the line (the same `Shell.Notify(LibraryHolds.RedactionBack)` the desktop gets from its command),
+or show the line under the greyed tools on touch shells; hide "Save redacted copy" while `RedactionHeld`.
+
+## D-198 checks (not bugs) — patch 33, round 16
+- **Page operations ask first (Bind all):** PASS on phone and tablet. "The new file will not have everything", names the file and what it
+  leaves out; Continue and Cancel 44 px (phone 168 wide, tablet 80); whole card on screen. Continue → Android's folder picker → the bound
+  PDF holds the desk's pages in the desk's order.
+- **Redaction held:** cannot be used on either device — correct. See AT-30 for how it is said on touch.
+- Merge and Split asks: not yet reached (Merge needs two files; Split's menu item not reached by my script).
+- Signatures without a verdict, Excel conditional colours skipped: not exercised yet (my test files have no signature or conditional format).
 
 ## D-190 checks (not bugs) — the ask-before-closing card and Excel resize, by touch
 - **Phone, close card:** PASS in R12 and 12b. Tabs sheet › × on a tab with unsaved marks → "Save the marks on sv-close.pdf? It has 2
