@@ -712,3 +712,20 @@ Rebased onto foundation-pr b895750 (patch 31). Code head 5ccb12c. Run 4392414573
   The real-key step now reports 2 s after the key's effect is logged (10 s at most); clicks, Accessibility presses
   and ending the content process report at 4 s as before.
 - **D-158 page image failed once on Intel** (run 43914220133) and not again; not traced.
+
+### 2026-11-18 — patch 32; D-198 note; D-158 check; a page that is never drawn after ten files
+Rebased onto foundation-pr 149f4fc (patch 32). Head c134bee. Run 44152741714, as pushed, built on `xcode-27`:
+macos-26, macos-15 and macos-15-intel **0 failed**; xcode-27 1 failed (below). Unit tests: Core 455 passed, 6 skipped;
+Mac 23 — on all four.
+- **Quit and window close:** already on the shared call — `MacCloseGuard` reads `IUnsavedWork.HasUnsavedWork` and awaits
+  `ConfirmCloseAsync()` for both, so Arrange, bookmark edits and redaction areas are asked through it. No change. The
+  smoke covers an unsaved mark only.
+- **D-198:** `docs/mac/D-198-helper-process-on-mac.md` — what macOS and the App Store allow for a parsing helper.
+- **D-158 on Intel — the check:** the A0 page is the last file of the Open-panel phase; the first reports naming it
+  came from earlier tabs' timers, 6 s after it opened and before it was drawn. The check now waits (45 s at most) for
+  a report that shows its image. Passed on all four runners.
+- **Open, probably shared — the last of ten files opened at once is never drawn:** xcode-27, several-files phase:
+  many10.pdf is the tab on screen, but its page is not drawn — zoom stays at 1.000 (fit was never applied), three
+  fewer SVG elements than a passing run, no error logged — for 20 s and through both pinch steps. Same signature on
+  macos-26 on 16 Nov (run 43843112648, first attempt, patch 29). Passing runs show zoom 0.50–0.54 on the same tab.
+  The Mac pinch code is not involved: the page was not there to zoom.
