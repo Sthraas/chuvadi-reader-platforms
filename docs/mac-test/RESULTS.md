@@ -11,6 +11,16 @@ Runs (one each, read before the next — no retries):
 | 3 | 42494662734 | ⌘O found not to open a panel → the Open button; app stdout per launch; diagnostic exception build |
 | 4 | 42517758923 | panel path set through Accessibility (typing into the Go-to field was lossy) → documents open; timing sets skipped |
 
+## platform/mac 2ef3ade1 (17 Nov, rewritten branch: M-08 ⌃Tab change for macOS 15, D-195, patch 32) — all pass; superseded by c5b681a5 (patch 33)
+
+Built on `xcode-27` (macOS 27 SDK, pin 10.0.403 as pushed). Shared run 44165468256, full run 44165632545; macOS 26, 15, 15-Intel.
+
+- **M-29 Excel column resize: passed on all three runners** in the shared run, first attempt (60 px and back with "File's own sizes"). This build does not carry patch 33's resize change, so this is one good run after 15-Intel failed 4 of 4 — not closed. Tally on xcode-27 builds now: 15-Intel 4 of 5 fail, macOS 15 1 of 5, macOS 26 0 of 5.
+- **Tab keys** (⌃Tab, ⌃⇧Tab, ⌘1, ⌘2, two focus states): pass on all three with a20970ea's new ⌃Tab path on macOS 15.
+- **M-25 not seen**: T4.0 on 15-Intel opened the panel with ⌘O after Esc in the full run.
+- Everything else in the shared and full suites passes (M-27 marks at four zooms, stall, several files in order, rotated page prints whole and vector, Excel formats and Find, ⌘O five states, the save question on close and quit, Immersive/Esc).
+- Not app bugs: T1.5/T1.9 still expected minimum macOS 12 — the app correctly says 14.0 / minos 17.0 (D-195); audit fixed in 193881f. T4.6 and T4.9 on macOS 26 are the two known harness items. Windows startup and the Chromium reference job fail on the global.json pin (harness).
+
 ## platform/mac dc92616 (16 Nov, patches 30–31, built on xcode-27 with the macOS 27 SDK) — NOT signed off: M-29
 
 **The question asked: does an app built with the macOS 27 SDK on the xcode-27 runner still launch and pass on macOS
