@@ -45,13 +45,14 @@ Every bug gets fixed; I re-verify on the fixing commit and mark it here.
 | B-33 | S2 | **shared Ui/Core** (Foundation's B-33) | Excel: the title bar's sheet arrows do nothing, and typing a sheet number moves the number but not the sheet shown. Patch 29 says this is fixed; on Linux it is not | **verified fixed b08b0e5** (patch 31, 6c85f06) — Next, Previous and a typed number change the sheet from Home, after a PDF tab, on a second workbook and back on the first; the same test fails on fc20516 |
 | B-34 | S3 | Linux | D-194, first part: after a sign-out is held and cancelled, the lock on the session stays when the work is later saved or discarded, so the desktop still lists Chuvadi as having unsaved work until the next sign-out notice | **verified fixed ca415af** (3406c868) — the lock is taken when the mark is drawn and given up on Discard, through the portal (`Request.Close`) and through the GNOME session manager (`Uninhibit`); a new mark takes it again |
 | B-35 | S4 | Linux | D-194: when the desktop's portal accepts the `Inhibit` call but then refuses the lock (its request ends with Response 2), the app counts the lock as held and doesn't try the GNOME session manager | **verified fixed ca415af** (3406c868) — refused with no GNOME session manager: hold state 0; refused with one: the GNOME lock is taken at once (hold state 3) |
+| B-36 | S4 | **shared Ui/Core** | Patch 33 (D-198): with redaction held, Protect's rail still has "Save redacted copy", enabled. A click writes nothing and only shows "Redaction comes back with the next update." | **open** — found on 87e3dc9. Nothing is written, so no harm; it just looks usable |
 | K-01 | — | Linux | GNOME close-only layout showed all three buttons (known, 7 Nov) | **verified fixed f7d0034, re-verified f3d5978** (6 layouts) |
 
 Routing (coordinator, 8 Nov): **Linux** → the Linux chat. **shared Ui/Core** → Foundation's combined patch, as exact diffs from the Linux chat or Foundation. **library** → the coordinator compiles them for Arun (library coordinator).
 | Route | Bugs |
 |---|---|
 | Linux chat | B-01, B-04, B-05, B-06, B-12, B-13, B-14, B-15, B-17, B-19, B-20, B-21, B-34, B-35 (both fixed), and the Linux stanzas of B-02 |
-| shared Ui/Core | B-03, B-07, B-08b, B-10, B-11b, B-16, B-18, B-22, B-23, B-24, B-25, B-26, and the OFL texts next to the fonts in B-02 |
+| shared Ui/Core | B-03, B-07, B-08b, B-10, B-11b, B-16, B-18, B-22, B-23, B-24, B-25, B-26, B-36, and the OFL texts next to the fonts in B-02 |
 | library | B-27 (with shared: parse/render time and memory on the CAD drawing), B-08a (Chuvadi.Docs input limits), B-09a (Chuvadi.Sheets: don't materialise to the sheet's extent), B-11a (chuvadi-pdf: rebuild the xref on a bad `startxref`) |
 B-09's "no cancel / no timeout" half is the same fix as B-08b.
 
@@ -1112,3 +1113,74 @@ patch 28 checks, B-24 + B-08b Cancel, B-25, owner-password printing, single inst
 byte-identical, `/Rotate` on screen. Marks after pinch steps to 55, 100 and 150 %: exact on screen, within
 1–3 pt saved. One harmless difference: at 150 % on the turned page, the frame of the new text box shows on screen
 for a moment. B-31 is unchanged (open).
+
+## Linux Test — 18 Nov, build log 64 on `platform/linux` 87e3dc9 (patch 33)
+
+Patch 33 (Reader main b193ab0, D-198, D-200): it holds back what the libraries can't yet be trusted with until
+Pdf 3.35.1 and Sheets 2.2.1. Built from source with SDK 10.0.114 (`global.json` set aside in my test copy only).
+Linux CI run 44169643909 is green. New tool, test only: `tools/t_patch33.py`. New fixtures, made by me in
+`fixtures/patch33/`: `plain.pdf`; `rich.pdf` (2 bookmarks, page labels, language en-IN); `layered.pdf` (a layer
+hidden by default, with text on page 1); `signed.pdf` (signed with pyHanko and a self-made test certificate; the
+key was deleted); `cond.xlsx` (a cell rule, a colour scale and a data bar, plus a cell's own fill and bold).
+pyHanko is installed only in my own test folder, never in the product.
+
+**Redaction held ✅**
+- Protect's rail has one greyed "Redaction" and no "Redact box" or "Find & redact". Hovering shows "Redaction —
+  Redaction comes back with the next update." (seen on screen). Stamp, Watermark, Flatten, Password and Sign
+  with certificate are there as before.
+- The R key in Protect does nothing.
+- Going to `/redact` directly shows only the held message and nothing to draw or search.
+- **B-36 (S4, new):** "Save redacted copy" is still on the rail and enabled; a click writes nothing and shows the
+  held message.
+
+**Signatures without a verdict ✅** (`signed.pdf`)
+- The banner reads "Signed by Linux Test signer · 17 Nov 2026 · not checked in this version", in the muted
+  style.
+- The Details card shows what the signature states: signer, time, reason, issuer, the certificate's dates, what
+  it covers, the field. It also says that validity, and whether the file changed after signing, is not checked
+  in this version.
+- No verdict word (valid, not valid, trusted) appears anywhere on screen.
+- An unsigned file shows no banner. The file is untouched.
+
+**Every page operation asks first ✅** (cards titled "The new file will not have everything", Continue / Cancel,
+keyboard on Cancel, Tab stays inside, Esc cancels with nothing written)
+
+| Operation | What the card says | What the saved result shows |
+|---|---|---|
+| Merge (op-plain + op-rich) | op-plain.pdf: none of what is left out; op-rich.pdf: its bookmarks, page labels and the document's language | 6 pages; no bookmarks, no page labels, no language: as warned |
+| Split, extract (op-layered) | Has none of the listed things, plus "It has layers: a layer that is hidden in the file may show in the new one" | The hidden layer's text now shows on page 1 of the result: as warned |
+| Arrange, Bind (desk from op-plain and op-rich) | The same as Merge | No page labels, no language; the original bookmarks are gone, replaced by one bookmark per run of pages that Arrange makes itself |
+
+- Each file is asked about once per run: a second Merge or Bind of the same files goes straight on, as designed.
+- The originals are byte-identical throughout.
+
+**Excel conditional colours skipped ✅** (`cond.xlsx`, compared with ca415af)
+- The data bars that ca415af drew are not drawn.
+- A note above the sheet reads "Conditional colours return with the next update", with the reason on hover.
+- Values, a cell's own fill (yellow) and its own bold are unchanged.
+- A sheet with no rules shows no note. The file is untouched.
+
+**Patch 32 and D-194 again ✅.**
+- All D-194 cases pass: portal, a stale lock on portal and GNOME, state 3, GNOME, fallback, refused, refused
+  with GNOME, an empty bus, no bus, a dead bus address.
+- Bookmark edits and Arrange desks take the lock; redaction areas can't be drawn now.
+- Bookmarks are asked about on close, Arrange at app close, and Find never puts its match under the bar.
+- The CI package answers the stand-in desktop's notice.
+
+**Regression ✅**, the same as on ca415af: sheet pager, encoding picker, patch 29, pinch, marks after a pinch
+(exact on screen, saved identical to ca415af), patch 28 checks, B-24 + B-08b, B-25, owner-password printing,
+single instance, drops, print, `/Rotate`. B-31 is unchanged (open).
+
+## B-36 — Protect still offers "Save redacted copy" while redaction is held (S4, shared Ui/Core)
+
+**Steps:** open any PDF, press 4 for Protect. **Seen:** Redaction is greyed with its reason, but "Save redacted
+copy" further down the same rail is enabled. A click writes nothing and shows "Redaction comes back with the next
+update." **Expected:** it looks as held as Redaction does.
+
+| Option | For | Against |
+|---|---|---|
+| A. Grey it with the same reason, like Redaction | Matches the rest of the hold; the reason shows on hover | One more place to undo when Phase 2 lifts the hold (a search for `LibraryHolds` finds it) |
+| B. Hide it while redaction is held | The rail is shorter | It moves the rail around, and comes back later |
+| C. Leave it | Nothing to build | Looks usable when it isn't |
+
+I'd take A: the same rule patch 33 uses for Redaction itself.

@@ -62,7 +62,9 @@ def draw(dx=0):
 def close_x(name):
     a.js(f"var t=[...document.querySelectorAll('.rtab')].find(t => t.textContent.includes('{name}')); t.querySelector('.rtab-x').click(); return 1"); time.sleep(1.2)
 def answer(label):
-    ok = a.js(f"var b=[...document.querySelectorAll('.closeq button')].find(b => b.textContent.trim() === '{label}'); if (!b) return false; b.click(); return true"); time.sleep(1.5); return ok
+    try: ok = a.js(f"var b=[...document.querySelectorAll('.closeq button')].find(b => b.textContent.trim() === '{label}'); if (!b) return false; b.click(); return true")
+    except Exception: ok = None   # the window can close before the reply comes back
+    time.sleep(1.5); return ok
 def alive(): return a.proc.poll() is None
 def gap(first, second, since=0):
     ev = events()[since:]; t1 = [e["t"] for e in ev if e["ev"] == first]; t2 = [e["t"] for e in ev if e["ev"] == second]
@@ -114,11 +116,14 @@ try:
         key("ctrl+b"); a.xdo("key", "Return"); time.sleep(1); P("BOOKMARK added -> hold, last call:", lock())
         close_x("k-bm.pdf"); answer("Discard"); time.sleep(1); P("  Discard -> hold, last call:", lock())
         open_tab(fr); deskclick(); key("4"); key("r"); time.sleep(1)
-        L = a.js("var r=document.querySelector('.mk-layer.drawmode').getBoundingClientRect(); return [r.left, r.top, r.width]")
-        x, y = int(L[0] + L[2] * 0.3), int(max(L[1], 140) + 60); a.xdo("mousemove", str(x), str(y)); a.xdo("mousedown", "1")
-        for i in range(1, 6): a.xdo("mousemove", str(x + 28 * i), str(y + 7 * i)); time.sleep(0.04)
-        a.xdo("mouseup", "1"); time.sleep(1); P("REDACTION AREA drawn -> hold, last call:", lock())
-        deskclick(); key("1"); time.sleep(1); close_x("k-rd.pdf"); answer("Discard"); time.sleep(1); P("  Discard -> hold, last call:", lock())
+        if not a.js("return !!document.querySelector('.mk-layer.drawmode')"):
+            P("REDACTION AREA: redaction is held on this build (patch 33), so not drawn"); deskclick(); key("1"); time.sleep(1)
+        else:
+            L = a.js("var r=document.querySelector('.mk-layer.drawmode').getBoundingClientRect(); return [r.left, r.top, r.width]")
+            x, y = int(L[0] + L[2] * 0.3), int(max(L[1], 140) + 60); a.xdo("mousemove", str(x), str(y)); a.xdo("mousedown", "1")
+            for i in range(1, 6): a.xdo("mousemove", str(x + 28 * i), str(y + 7 * i)); time.sleep(0.04)
+            a.xdo("mouseup", "1"); time.sleep(1); P("REDACTION AREA drawn -> hold, last call:", lock())
+            deskclick(); key("1"); time.sleep(1); close_x("k-rd.pdf"); answer("Discard"); time.sleep(1); P("  Discard -> hold, last call:", lock())
         open_tab(fx); open_tab(fy); deskclick(); key("3"); time.sleep(2.5)
         a.js("[...document.querySelectorAll('.shelf-tool')].find(b => (b.title||'').startsWith('Weave')).click(); return 1"); time.sleep(0.8)
         a.js("var s=document.querySelectorAll('.shelf-interleave select'); s[1].selectedIndex = 1; s[1].dispatchEvent(new Event('change')); return 1"); time.sleep(0.6)
