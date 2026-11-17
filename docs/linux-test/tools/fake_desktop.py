@@ -2,6 +2,7 @@
 # independently of tools/linux/fake-session.c. It sits on a private session bus and plays one of:
 #   portal    org.freedesktop.portal.Desktop with the Inhibit interface (Inhibit, CreateMonitor, QueryEndResponse)
 #   refused   the same, but every Inhibit request ends with Response 2 (the desktop refused the lock)
+#   refusedgnome  refused, plus org.gnome.SessionManager
 #   gnome     only org.gnome.SessionManager (Inhibit / Uninhibit), no portal
 #   fallback  a portal whose Inhibit call fails, plus org.gnome.SessionManager
 #   empty     nothing on the bus at all
@@ -87,7 +88,7 @@ def on_portal(conn, sender, path, iface, method, params, inv):
         if MODE == "fallback":
             inv.return_dbus_error("org.freedesktop.DBus.Error.UnknownMethod", "no Inhibit here")
             return
-        handle = new_request(conn, sender, options.get("handle_token"), 2 if MODE == "refused" else 0)
+        handle = new_request(conn, sender, options.get("handle_token"), 2 if MODE in ("refused", "refusedgnome") else 0)
         inv.return_value(GLib.Variant("(o)", (handle,)))
     elif method == "CreateMonitor":
         window, options = params.unpack()
@@ -120,11 +121,11 @@ def on_owner(conn, sender, path, iface, signal, params):
         log("app-left-the-bus", name=name)
 
 
-if MODE in ("portal", "refused", "fallback"):
+if MODE in ("portal", "refused", "refusedgnome", "fallback"):
     for i in Gio.DBusNodeInfo.new_for_xml(PORTAL_XML).interfaces:
         bus.register_object(PATH, i, on_portal, None, None)
     Gio.bus_own_name_on_connection(bus, PORTAL, Gio.BusNameOwnerFlags.NONE, None, None)
-if MODE in ("gnome", "fallback"):
+if MODE in ("gnome", "fallback", "refusedgnome"):
     bus.register_object(GSM_PATH, Gio.DBusNodeInfo.new_for_xml(GSM_XML).interfaces[0], on_gsm, None, None)
     Gio.bus_own_name_on_connection(bus, GSM, Gio.BusNameOwnerFlags.NONE, None, None)
 bus.signal_subscribe("org.freedesktop.DBus", "org.freedesktop.DBus", "NameOwnerChanged", "/org/freedesktop/DBus",

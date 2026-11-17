@@ -43,14 +43,14 @@ Every bug gets fixed; I re-verify on the fixing commit and mark it here.
 | B-31 | S2 | **library** (Chuvadi.Sheets, SH-L1) | Excel time-only cells (stored 0 to 1, e.g. 6:00 PM) show `########`, and the stored value on hover, in the value bar and in copy is wrong (0.75 reads as -0.25). On bf60da9 they showed `1899-12-30 18:00` | **open** — still on 7cd960c: `########`, stored value shown as -0.25 for 0.75 |
 | B-32 | S2 | **library + shared Ui/Core** | A PDF page's `/Rotate` (90, 180, 270) is ignored on screen: the page shows unrotated. Same on bf60da9 | **verified fixed 7cd960c** (86996dd) — 90, 180 and 270 turned as the file says, on vector pages, on a cropped page and on heavy raster sheets (Arun's CAD sheets are `/Rotate 270` and now show landscape) |
 | B-33 | S2 | **shared Ui/Core** (Foundation's B-33) | Excel: the title bar's sheet arrows do nothing, and typing a sheet number moves the number but not the sheet shown. Patch 29 says this is fixed; on Linux it is not | **verified fixed b08b0e5** (patch 31, 6c85f06) — Next, Previous and a typed number change the sheet from Home, after a PDF tab, on a second workbook and back on the first; the same test fails on fc20516 |
-| B-34 | S3 | Linux | D-194, first part: after a sign-out is held and cancelled, the lock on the session stays when the work is later saved or discarded, so the desktop still lists Chuvadi as having unsaved work until the next sign-out notice | **open** — found on 3c83e7a. Goes away once `SessionEndGuard.Refresh()` is called on `IUnsavedWork.Changed` (planned with patch 32); re-check then |
-| B-35 | S4 | Linux | D-194: when the desktop's portal accepts the `Inhibit` call but then refuses the lock (its request ends with Response 2), the app counts the lock as held and doesn't try the GNOME session manager | **open** — found on 3c83e7a with a stand-in desktop; not seen on a real one |
+| B-34 | S3 | Linux | D-194, first part: after a sign-out is held and cancelled, the lock on the session stays when the work is later saved or discarded, so the desktop still lists Chuvadi as having unsaved work until the next sign-out notice | **verified fixed ca415af** (3406c868) — the lock is taken when the mark is drawn and given up on Discard, through the portal (`Request.Close`) and through the GNOME session manager (`Uninhibit`); a new mark takes it again |
+| B-35 | S4 | Linux | D-194: when the desktop's portal accepts the `Inhibit` call but then refuses the lock (its request ends with Response 2), the app counts the lock as held and doesn't try the GNOME session manager | **verified fixed ca415af** (3406c868) — refused with no GNOME session manager: hold state 0; refused with one: the GNOME lock is taken at once (hold state 3) |
 | K-01 | — | Linux | GNOME close-only layout showed all three buttons (known, 7 Nov) | **verified fixed f7d0034, re-verified f3d5978** (6 layouts) |
 
 Routing (coordinator, 8 Nov): **Linux** → the Linux chat. **shared Ui/Core** → Foundation's combined patch, as exact diffs from the Linux chat or Foundation. **library** → the coordinator compiles them for Arun (library coordinator).
 | Route | Bugs |
 |---|---|
-| Linux chat | B-01, B-04, B-05, B-06, B-12, B-13, B-14, B-15, B-17, B-19, B-20, B-21, B-34, B-35, and the Linux stanzas of B-02 |
+| Linux chat | B-01, B-04, B-05, B-06, B-12, B-13, B-14, B-15, B-17, B-19, B-20, B-21, B-34, B-35 (both fixed), and the Linux stanzas of B-02 |
 | shared Ui/Core | B-03, B-07, B-08b, B-10, B-11b, B-16, B-18, B-22, B-23, B-24, B-25, B-26, and the OFL texts next to the fonts in B-02 |
 | library | B-27 (with shared: parse/render time and memory on the CAD drawing), B-08a (Chuvadi.Docs input limits), B-09a (Chuvadi.Sheets: don't materialise to the sheet's extent), B-11a (chuvadi-pdf: rebuild the xref on a bad `startxref`) |
 B-09's "no cancel / no timeout" half is the same fix as B-08b.
@@ -1063,3 +1063,52 @@ marks after pinch steps to 55, 100 and 150 % (18 exact on screen, within 1–3 p
 Word; Find and Fit on turned pages; hidden Excel matches named; B-24 + B-08b Cancel; B-25; owner-password
 printing; single instance (1 window, 4 tabs); drops; print byte-identical; `/Rotate` on screen; no files left in
 `/tmp`. B-31 is unchanged (open).
+
+## Linux Test — 18 Nov, build log 63 on `platform/linux` ca415af (patch 32 merged, D-194 finished)
+
+Built from source with SDK 10.0.114 (`global.json` set aside in my test copy only). Linux CI run 44156738516 is
+green. New tools, test only: `tools/t_patch32.py`, and parts `stalegnome`, `refusedgnome` and `kinds` in
+`t_session.py` (the stand-in desktop can now refuse while a GNOME session manager is there). New fixture:
+`fixtures/find-top.pdf`, made by me, the word "topmark" on the top line of each of four pages and once mid-page.
+
+**B-34 ✅ fixed.**
+
+| Step | Portal | GNOME session manager only |
+|---|---|---|
+| A mark is drawn, no notice yet | Lock taken at once (hold state 2) | Lock taken at once (hold state 3) |
+| The notice, Cancel, then Discard on the tab | Lock given up (`Request.Close`), hold state 0 | Lock given up (`Uninhibit`), hold state 0 |
+| A new mark | A new lock | A new lock |
+| The next notice | Asks about the new mark | Asks about the new mark |
+
+**B-35 ✅ fixed.**
+
+| Case | Result |
+|---|---|
+| The portal refuses, no GNOME session manager | Hold state 0 (no lock claimed); the window still asks |
+| The portal refuses, a GNOME session manager is there | The GNOME lock is taken straight after the refusal (hold state 3) |
+
+**The rest of D-194, run again ✅.** Portal, GNOME only, portal call fails then GNOME, state 3 (no question), an
+empty bus, no bus, a bus address that points nowhere: the same results as on 3c83e7a. The CI package itself asks
+for the session monitor and answers the notice.
+
+**Patch 32 ✅** (`t_patch32.py`, real mouse and keyboard in the real window)
+
+| Item | Result |
+|---|---|
+| Bookmark edits stay with the tab | A bookmark added with Ctrl B is still there after another tab and back, and after Home and back (the drawer is closed after Home; opened again, the bookmark is in it) |
+| Closing a tab with bookmark edits | Asks "Save the bookmarks of …?": Save bookmarks / Discard / Cancel. Cancel keeps it; Discard leaves the file byte-identical; Save bookmarks writes the outline into the file (it reads back as "Page 1"; `qpdf --check` clean) |
+| Ten redaction areas drawn in a row | 10 of 10 kept; no page text selected |
+| Redaction areas stay with the file | Still 10 after Read and back, and after Home and back |
+| Closing a tab or the app with redaction areas | Asks "Discard the redaction areas on …?" with only Discard / Cancel, keyboard on Cancel. Alt F4 asks the same and Cancel keeps the app open. Discard leaves the file byte-identical |
+| Arrange at app close | Nothing unsaved: the app closes without asking. A new (interleaved) desk: Alt F4 shows Arrange and asks "Save what you arranged?" with Save session… / Discard / Cancel. Cancel keeps the app open |
+| Arrange and a mark together | Arrange is asked first, then the file with the mark; Cancel on the file keeps the app open with both still unsaved; Save session writes the session file; Discard on the file closes the app and every file is untouched |
+| The session lock follows these too | A bookmark edit, a redaction area and an Arrange desk each take the lock; Discard gives it up; the notice asks about the desk |
+| Find never under the Find bar | 16 steps through 16 matches over 4 pages: the current match is never under the bar and never off screen (the bar steps aside 8 times) |
+| The marks card on Linux | Still offers Save / Save as… / Discard / Cancel. Only the web portal leaves out Save |
+
+**Regression ✅.** Sheet pager, encoding picker, a pinch in Mark leaves no mark, patch 29 (marks kept with the
+tab, ask before closing on every way of closing, Excel resize byte-identical), pinch on PDF, Excel and Word,
+patch 28 checks, B-24 + B-08b Cancel, B-25, owner-password printing, single instance, drops, print
+byte-identical, `/Rotate` on screen. Marks after pinch steps to 55, 100 and 150 %: exact on screen, within
+1–3 pt saved. One harmless difference: at 150 % on the turned page, the frame of the new text box shows on screen
+for a moment. B-31 is unchanged (open).

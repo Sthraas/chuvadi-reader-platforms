@@ -572,7 +572,7 @@ sheet tabs work) and B-31 (Excel time-only cells, library). Neither touches the 
 
 **Ready for Arun's check**, with B-31 known.
 
-## Sign-off — Linux 3c83e7a (17 Nov, build log 62): ready for Arun, with two things to know
+## Sign-off — Linux 3c83e7a (17 Nov, build log 62) — superseded by ca415af below
 
 | Check | Result |
 |---|---|
@@ -595,9 +595,28 @@ sheet tabs work) and B-31 (Excel time-only cells, library). Neither touches the 
 
 **Ready for Arun's check**, with the D-194 limits and B-31 known.
 
-## Arun's check — Linux 3c83e7a
+## Sign-off — Linux ca415af (18 Nov, build log 63, patch 32): ready for Arun, with one thing to know
 
-**Get the package.** GitHub → `Sthraas/chuvadi-reader-platforms` → Actions → run **Linux** on `3c83e7a` ([run 44119798714](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/44119798714), green) → Artifacts → **linux-x64** (ARM machine: `linux-arm64`). Unzip it and use **`deb/chuvadi-reader_1.0.0~preview_amd64.deb`** — the self-contained one (37.9 MB, needs no .NET; artifacts kept until 15 Feb 2027). SHA-256 `147e6bd7ab174cc3200f97d648beb3b29c3213194b925e4154ef79fcbed4dbc7`. (`deb-framework-dependent/` is the smaller variant that pulls in Microsoft's .NET runtime package.) Or with the CLI: `gh run download 44119798714 -R Sthraas/chuvadi-reader-platforms -n linux-x64`.
+| Check | Result |
+|---|---|
+| D-194 finished ✅ | The sign-out lock is taken when work becomes unsaved, not only at the desktop's notice, and given up when it is saved or discarded (B-34 fixed). A lock the desktop refuses is not counted, and the GNOME session manager is asked instead (B-35 fixed). This works through the portal and through GNOME |
+| Patch 32 ✅ | Bookmark edits and redaction areas stay with the file and are asked about on close; ten redaction areas in a row are all kept; Arrange is asked about at app close, before the files with marks; Find's current match never sits under the Find bar |
+| Patch 29, 30 and 31 again ✅ | Sheet pager, encoding picker, marks kept with the tab, ask before closing, Excel resize, a pinch in Mark leaves no mark |
+| Quick regression ✅ | Marks after a pinch, pinch, patch 28 checks, B-24 + B-08b, B-25, owner-password printing, single instance, drops, print, `/Rotate` |
+
+**The one thing to know:** B-31, Excel time-only cells (library), is unchanged. And what GNOME and KDE actually
+show on Log Out, Restart and Power Off still needs Arun's laptop (item 7): no desktop session runs here.
+
+**Notes**
+- My test copy is built with SDK 10.0.114, with `global.json` (10.0.403) set aside. CI uses the pinned SDK.
+- [Linux CI run 44156738516](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/44156738516) on ca415af is green, and Arun's checklist below uses its package. The package itself answers the stand-in desktop's sign-out notice.
+- Tools: `tools/t_patch32.py`, `tools/t_session.py`, `tools/fake_desktop.py` (test only). Details are in `BUGS.md`.
+
+**Ready for Arun's check**, with B-31 known.
+
+## Arun's check — Linux ca415af
+
+**Get the package.** GitHub → `Sthraas/chuvadi-reader-platforms` → Actions → run **Linux** on `ca415af` ([run 44156738516](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/44156738516), green) → Artifacts → **linux-x64** (ARM machine: `linux-arm64`). Unzip it and use **`deb/chuvadi-reader_1.0.0~preview_amd64.deb`** — the self-contained one (37.9 MB, needs no .NET; artifacts kept until 15 Feb 2027). SHA-256 `e65f54ca7ff6679a2165651790ec7f45ab018b1249c6cd86deab37904f75ff9f`. (`deb-framework-dependent/` is the smaller variant that pulls in Microsoft's .NET runtime package.) Or with the CLI: `gh run download 44156738516 -R Sthraas/chuvadi-reader-platforms -n linux-x64`.
 
 **Install** (Ubuntu 24.04 or 26.04, desktop):
 ```
@@ -614,7 +633,7 @@ It appears in the app grid as **Chuvadi Reader**; it also installs and loads its
 4. **The KDMC CAD drawing**: open it (the sheets should now show landscape, the right way up), page through all 5 sheets (try typing a sheet number, and jumping ahead then back), zoom in and out, close it. Note the time each sheet takes to draw, and the memory in System Monitor before opening, with 5 sheets, and just after closing. Here, on 2 CPUs with no GPU: sheet 1 takes ~6 s and each new sheet 4–6 s (B-27, known); the app goes from ~250 MB to ~0.9–1 GB with 5 sheets and back to ~270 MB on closing. Your real-hardware numbers are the useful ones. The window should stay responsive while it draws, and every sheet should draw and stay sharp. The rare fresh-open stall (a drawing stuck at 115 % with a tall blank page) is fixed on this head; if you ever see it, note what you did just before.
 5. **Print to your real printer**: a mixed portrait/landscape file, 2 copies; check it's crisp (vector), and that a file whose permissions forbid printing is refused — then works when opened with its owner password.
 6. **A password-protected PDF**: wrong password, then the right one.
-7. **Mark → annotate → Save as**, and **Protect → Find & redact** a word → Save redacted copy — then search the saved copy for the word (it must be gone). **New in patch 29:** draw marks on two files and switch tabs: each tab should keep its own marks. Then close a tab with unsaved marks, and try Close all tabs and the window's close button: each should ask Save / Save as… / Discard / Cancel, and Cancel should keep everything. A tab with no marks should close without asking. **New in build 62:** with a mark unsaved, choose **Log Out** from the desktop's menu, then try **Restart** and **Power Off**: the desktop should hold it and say that Chuvadi has work that is not saved, and the Chuvadi window should ask Save / Save as… / Discard / Cancel. Cancel should keep the mark; Save should write the file and let the sign-out go on. Please note what your desktop shows and whether it waits: I can't run a desktop session here. Known for now: after a Cancel, if you then save or discard the marks, the desktop may still list Chuvadi once (B-34).
+7. **Mark → annotate → Save as**, and **Protect → Find & redact** a word → Save redacted copy — then search the saved copy for the word (it must be gone). **New in patch 29:** draw marks on two files and switch tabs: each tab should keep its own marks. Then close a tab with unsaved marks, and try Close all tabs and the window's close button: each should ask Save / Save as… / Discard / Cancel, and Cancel should keep everything. A tab with no marks should close without asking. **New in build 62:** with a mark unsaved, choose **Log Out** from the desktop's menu, then try **Restart** and **Power Off**: the desktop should hold it and say that Chuvadi has work that is not saved, and the Chuvadi window should ask Save / Save as… / Discard / Cancel. Cancel should keep the mark; Save should write the file and let the sign-out go on. Please note what your desktop shows and whether it waits: I can't run a desktop session here. The desktop should hold the sign-out from the moment you draw the mark, and not after you save or discard it. **New in patch 32:** add a bookmark (Ctrl B), or draw redaction areas in Protect, then close the tab: bookmarks ask Save bookmarks / Discard / Cancel, redaction areas only Discard / Cancel. Put pages on a desk in Arrange, then close the app: it should ask Save session… / Discard / Cancel before anything else.
 8. **Word and Excel files** of your own — text should read exactly as in the file (spaces, spelling, case untouched). The Excel grid now follows the file: column widths, row heights, merged cells, borders and fills, hidden rows and columns, and hidden sheets listed dimmed. Numbers show in the file's own format; hover or click a cell for the stored value. Two known gaps: a time with no date shows `########` with a wrong stored value (B-31), and built-in short dates show as mm-dd-yy, not your system's format. **New in patch 29:** drag the edge of a column letter or a row number to resize it; this is for viewing only and never changes the file. Also try the sheet arrows and number box in the title bar: they should change the sheet, the same as the sheet tabs at the bottom. **Text files (new in patch 31):** the status bar shows the encoding the file was read as; click it to re-read the file as Automatic, UTF-8, Windows-1252 or UTF-16. This only changes how the file is read and never changes the file.
 9. **Document ▾ → Show in folder** opens Files with the file selected; **Snapshot → Copy** then paste into another app.
 10. **Settings and gestures**: switch the five themes and the interface size; change GNOME's window-button layout (Tweaks → Window Titlebars) and see the buttons follow; maximise and restore. **Pinch on the trackpad** over a page: the page should zoom about your fingers, both ways, and the bars and tabs should not scale; on Home a pinch should do nothing. Then draw a rectangle in Mark after pinching: it should land under the pointer. I couldn't test a real pinch here.
