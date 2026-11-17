@@ -58,6 +58,10 @@ public sealed record SheetView(
     /// <summary>E-15: pictures, shapes and charts on the sheet. They aren't drawn yet; the viewer says how many.</summary>
     public int Drawings { get; init; }
 
+    /// <summary>D-200: the sheet has conditional formats whose colours are not drawn until the next update
+    /// (<see cref="LibraryHolds.ConditionalFormatsHeld"/>). The cells and their text are as the file holds them.</summary>
+    public bool ConditionalColoursHeld { get; init; }
+
     public double ColWidthPx(int col) => ColPx.TryGetValue(col, out var w) ? w : DefaultColPx;
 
     public double RowHeightPx(int row) => RowPx.TryGetValue(row, out var h) ? h : DefaultRowPx;
@@ -360,6 +364,7 @@ public sealed class XlsxViewService
             RightToLeft = s.RightToLeft,
             Zoom = s.ZoomScale is >= 10 and <= 400 ? s.ZoomScale : 100,
             Drawings = s.Drawings.Count,
+            ConditionalColoursHeld = LibraryHolds.ConditionalFormatsHeld && s.ConditionalFormats.Count > 0,
         };
     }
 
