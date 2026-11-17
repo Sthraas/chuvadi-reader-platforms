@@ -9,7 +9,7 @@ Writes <out>/report.md, <out>/results.json and one screenshot per step.
 Every step also checks: the app is running, Blazor's error bar is hidden, and no new "Chuvadi error"
 is in the app log.
 """
-import glob, json, os, re, subprocess, sys, time, traceback
+import glob, json, os, re, subprocess, sys, threading, time, traceback
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from uitest_lib import App  # noqa: E402
@@ -1824,6 +1824,161 @@ def ask_before_closing():
 
 
 step("39-ask-before-closing", ask_before_closing, shot=False)
+
+
+def sign_out_is_held():
+    """D-194: a sign-out or shutdown with unsaved work is held and asked about in the window. No desktop session
+    runs here, so the desktop's side is a stand-in on the session bus (tools/linux/fake-session.c, built by this
+    step): it speaks the portal's Inhibit / CreateMonitor / QueryEndResponse, or the GNOME session manager's
+    Inhibit, logs every call, and sends "the session is about to end" when told to. What the real GNOME and KDE
+    then show the person is theirs, and is for a real laptop."""
+    import hashlib, shutil
+    folder = os.path.join(OUT, "session")
+    os.makedirs(folder, exist_ok=True)
+    tool = os.path.join(folder, "fake-session")
+    source = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fake-session.c")
+    flags = subprocess.run(["pkg-config", "--cflags", "--libs", "gio-2.0", "gio-unix-2.0"], capture_output=True, text=True, check=True).stdout.split()
+    subprocess.run(["gcc", "-O1", "-o", tool, source, *flags], check=True)
+    pdf = os.path.join(folder, "held.pdf")
+    reason = "Chuvadi has work that is not saved."
+
+    # A session bus of its own for each stand-in, with nothing that can be started on demand: on the run's bus
+    # a real xdg-desktop-portal (where one is installed) answers to the portal's name before the stand-in can.
+    conf = os.path.join(folder, "bus.conf")
+    with open(conf, "w") as f:
+        f.write('<!DOCTYPE busconfig PUBLIC "-//freedesktop//DTD D-Bus Bus Configuration 1.0//EN" '
+                '"http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">\n'
+                "<busconfig><type>session</type><listen>unix:tmpdir=/tmp</listen><auth>EXTERNAL</auth>"
+                '<policy context="default"><allow send_destination="*" eavesdrop="true"/><allow eavesdrop="true"/><allow own="*"/></policy>'
+                "</busconfig>\n")
+    run_bus = app.env["DBUS_SESSION_BUS_ADDRESS"]
+
+    class Desktop:
+        def __init__(self, kind):
+            self.lines = []
+            bus = subprocess.run(["dbus-daemon", "--config-file=" + conf, "--fork", "--print-address=1", "--print-pid=1"],
+                                 env=app.env, capture_output=True, text=True, check=True).stdout.split()
+            self.bus_pid = int(bus[1])
+            app.env["DBUS_SESSION_BUS_ADDRESS"] = bus[0]
+            self.proc = subprocess.Popen([tool, kind], env=app.env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, bufsize=1)
+            threading.Thread(target=lambda: [self.lines.append(l.strip()) for l in self.proc.stdout], daemon=True).start()
+            app.wait(lambda: any(l.startswith("ready") for l in self.lines), 10, f"the stand-in {kind} on its bus")
+
+        def tell(self, line):
+            self.proc.stdin.write(line + "\n")
+            self.proc.stdin.flush()
+
+        def stop(self):
+            app.env["DBUS_SESSION_BUS_ADDRESS"] = run_bus
+            try:
+                self.tell("quit")
+                self.proc.wait(5)
+            except Exception:
+                self.proc.kill()
+            try:
+                os.kill(self.bus_pid, 15)
+            except OSError:
+                pass
+
+    card = lambda: app.js("var c=document.querySelector('.closeq'); return c ? c.querySelector('.closeq-title').textContent.trim() : null")
+    held = lambda: int(app.send("session-hold"))
+
+    def mark():
+        open_tab(pdf)
+        app.wait(lambda: rendered(0), 20, "the PDF drawn")
+        app.click(".lb-mode", 1)  # Mark
+        time.sleep(1.2)
+        click_label(".srail", "Rectangle")
+        focus_main()
+        gx, gy = (int(v) for v in window_geometry()[0].split(","))
+        x, y = app.js("var d=document.querySelector('.rdesk').getBoundingClientRect(), l=document.querySelector('.mk-layer').getBoundingClientRect(); "
+                      "return [Math.round(Math.max(l.left, d.left) + 80), Math.round(Math.max(l.top, d.top, 90) + 80)]")
+        app.xdo("mousemove", str(gx + x), str(gy + y))
+        app.xdo("mousedown", "1")
+        for i in range(1, 9):
+            app.xdo("mousemove", str(gx + x + 12 * i), str(gy + y + 8 * i))
+            time.sleep(0.04)
+        app.xdo("mouseup", "1")
+        app.wait(lambda: app.js("return document.querySelectorAll('.mk-shape').length") == 1, 5, "a rectangle drawn")
+        app.key("Escape")
+        time.sleep(0.3)
+
+    def answer(label, closes=False):
+        click = "b.click()" if not closes else "setTimeout(() => b.click(), 200)"  # the reply first, when the app closes on it
+        if not app.js(f"var b=[...document.querySelectorAll('.closeq button')].find(b => b.textContent.trim() === {json.dumps(label)}); if (!b) return false; {click}; return true"):
+            raise AssertionError(f"no '{label}' on the card")
+        time.sleep(1.0)
+
+    said = []
+    desktop = Desktop("portal")
+    try:
+        # The portal way.
+        shutil.copyfile(PDF, pdf)
+        before = hashlib.sha256(open(pdf, "rb").read()).hexdigest()
+        app.restart(log_name="app-session-portal.log")
+        try:
+            app.wait(lambda: "CreateMonitor" in desktop.lines, 10, "the app to ask for the session monitor")
+        except TimeoutError:
+            raise AssertionError(f"the app did not ask the portal for a session monitor; the stand-in saw {desktop.lines}")
+        desktop.tell("query-end")  # nothing unsaved: the sign-out goes on
+        app.wait(lambda: "QueryEndResponse" in desktop.lines, 5, "the answer to a sign-out with nothing unsaved")
+        time.sleep(0.5)
+        if any(l.startswith("Inhibit") for l in desktop.lines) or card() or held() != 0 or not app.alive():
+            raise AssertionError(f"a sign-out with nothing unsaved was held or asked about: {desktop.lines}, card {card()}")
+        said.append("nothing unsaved: the sign-out is answered at once and not held")
+
+        mark()
+        del desktop.lines[:]
+        desktop.tell("query-end")
+        app.wait(lambda: "QueryEndResponse" in desktop.lines, 5, "the answer to a sign-out with a mark unsaved")
+        took = [l for l in desktop.lines if l.startswith("Inhibit")]
+        if len(took) != 1 or f"flags=1 reason={reason}" not in took[0] or desktop.lines.index(took[0]) > desktop.lines.index("QueryEndResponse"):
+            raise AssertionError(f"the hold was not in place before the desktop got its answer: {desktop.lines}")
+        app.wait(lambda: card() is not None, 6, "the question in the window")
+        if held() != 2 or "held.pdf" not in card():
+            raise AssertionError(f"hold state {held()}, card {card()}")
+        app.shot("42-sign-out-held")
+        answer("Cancel")
+        if card() or held() != 2 or not app.alive():
+            raise AssertionError(f"after Cancel: card {card()}, hold state {held()}")
+        said.append(f"a mark unsaved: the portal hold (logout, \"{reason}\") is taken before the desktop is answered, the window asks, Cancel keeps the hold")
+
+        del desktop.lines[:]
+        desktop.tell("query-end")
+        app.wait(lambda: "QueryEndResponse" in desktop.lines and card() is not None, 6, "the question again on a second sign-out")
+        if any(l.startswith("Inhibit") for l in desktop.lines):
+            raise AssertionError(f"a second hold was taken: {desktop.lines}")
+        answer("Save", closes=True)
+        app.wait(lambda: not app.alive(), 15, "the window to close once the file is saved")
+        if hashlib.sha256(open(pdf, "rb").read()).hexdigest() == before:
+            raise AssertionError("Save on the sign-out's question did not write the mark into the file")
+        said.append(f"a second sign-out asks again without a second hold; Save wrote the file and the app closed (exit {app.proc.returncode}), so the sign-out can go on")
+    finally:
+        desktop.stop()
+
+    # No portal: the GNOME session manager's own hold. It sends no notice, so the sign-out is stood in for.
+    desktop = Desktop("gnome")
+    try:
+        shutil.copyfile(PDF, pdf)
+        app.restart(log_name="app-session-gnome.log")
+        mark()
+        app.send("session-end")
+        app.wait(lambda: any(l.startswith("Inhibit") for l in desktop.lines), 6, f"the GNOME session manager's hold (got {desktop.lines})")
+        took = [l for l in desktop.lines if l.startswith("Inhibit")][0]
+        if f"flags=1 reason={reason}" not in took or "app=in.chuvadi.Reader" not in took:
+            raise AssertionError(f"the GNOME hold: {took}")
+        app.wait(lambda: card() is not None and held() == 3, 6, f"the question in the window (hold state {held()})")
+        answer("Discard", closes=True)
+        app.wait(lambda: not app.alive(), 15, "the window to close after Discard")
+        said.append(f"without a portal the GNOME session manager's hold is taken ({took.split(' ', 2)[2]}); Discard closes the app")
+    finally:
+        desktop.stop()
+    app.restart(log_name="app-after-session.log")
+    time.sleep(1.5)
+    return "; ".join(said)
+
+
+step("42-sign-out-is-held", sign_out_is_held, shot=False)
 
 
 def window_close():

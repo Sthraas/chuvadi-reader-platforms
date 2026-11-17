@@ -22,6 +22,7 @@
     <Compile Include="..\..\src\ChuvadiReader.Linux\Platform\GlibcTrim.cs" Link="GlibcTrim.cs" />
     <Compile Include="..\..\src\ChuvadiReader.Linux\Platform\HostPageTheme.cs" Link="HostPageTheme.cs" />
     <Compile Include="..\..\src\ChuvadiReader.Linux\Platform\WindowCloseGuard.cs" Link="WindowCloseGuard.cs" />
+    <Compile Include="..\..\src\ChuvadiReader.Linux\Platform\SessionEndGuard.cs" Link="SessionEndGuard.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\src\ChuvadiReader.Linux\wwwroot\index.html" Link="index.html" CopyToOutputDirectory="PreserveNewest" />

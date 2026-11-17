@@ -125,6 +125,14 @@ public static class Program
                 Native.HoldClose, () => Native.Present(null), Native.Close, GtkHost.Post);
             GtkHost.CloseRequested += closeGuard.OnCloseRequested;
 
+            // D-194: a sign-out or shutdown with unsaved work is held, and asked about in the window.
+            var sessionGuard = new SessionEndGuard(
+                () => unsaved.HasUnsavedWork,
+                on => Native.SessionHold(on ? "Chuvadi has work that is not saved." : null),
+                Native.Close);
+            GtkHost.SessionEnding += sessionGuard.OnSessionEnding;
+            Native.SessionWatch();
+
             _ = manager.AddRootComponentAsync(typeof(ChuvadiReader.Ui.App), "#app", ParameterView.Empty);
             Mark("root component added");
             manager.Navigate("/");

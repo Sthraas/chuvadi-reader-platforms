@@ -19,6 +19,7 @@ internal static unsafe partial class Native
         PrintResult = 7,
         JsResult = 8,
         ButtonLayout = 9,
+        SessionEnd = 10,
     }
 
     [LibraryImport(Lib, EntryPoint = "chvd_init")]
@@ -56,6 +57,18 @@ internal static unsafe partial class Native
     /// <summary>From inside <see cref="GtkHost.CloseRequested"/> only: this close request leaves the window open.</summary>
     [LibraryImport(Lib, EntryPoint = "chvd_hold_close")]
     public static partial void HoldClose();
+
+    /// <summary>Starts listening for the desktop's "about to sign out or shut down" (D-194). Once, after <see cref="Init"/>.</summary>
+    [LibraryImport(Lib, EntryPoint = "chvd_session_watch")]
+    public static partial void SessionWatch();
+
+    /// <summary>Holds a sign-out or shutdown with this reason (the desktop shows it), or lets it go with null.</summary>
+    [LibraryImport(Lib, EntryPoint = "chvd_session_hold", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial void SessionHold(string? reason);
+
+    /// <summary>0 nothing held, 1 being asked for, 2 held through the portal, 3 through the GNOME session manager (UI tests).</summary>
+    [LibraryImport(Lib, EntryPoint = "chvd_session_hold_state")]
+    public static partial int SessionHoldState();
 
     /// <summary>The app has drawn itself: the start-up mark over the page goes.</summary>
     [LibraryImport(Lib, EntryPoint = "chvd_ready")]

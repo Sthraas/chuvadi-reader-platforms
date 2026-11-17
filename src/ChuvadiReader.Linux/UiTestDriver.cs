@@ -133,6 +133,14 @@ internal static class UiTestDriver
                 return "true";
             }
 
+            case "session-hold":
+                // 0 nothing held, 1 being asked for, 2 held through the portal, 3 through the GNOME session manager.
+                return (await GtkHost.InvokeAsync(Native.SessionHoldState)).ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+            case "session-end":
+                GtkHost.Post(GtkHost.SimulateSessionEnding);
+                return "true";
+
             case "start-mark":
                 return await GtkHost.InvokeAsync(() => Native.StartMarkShown() != 0) ? "true" : "false";
 

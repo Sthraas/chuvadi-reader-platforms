@@ -42,6 +42,7 @@ enum
     CHVD_EVENT_PRINT_RESULT = 7,      /* payload "<token>" then key=value lines (none = cancelled) */
     CHVD_EVENT_JS_RESULT = 8,         /* payload "<token>" then the result as JSON, or "!<error>" (UI test builds) */
     CHVD_EVENT_BUTTON_LAYOUT = 9,     /* payload: the desktop's new window-button layout (D-101) */
+    CHVD_EVENT_SESSION_END = 10,      /* payload "query": the desktop asks before signing out or shutting down (D-194) */
 };
 
 typedef void (*chvd_scheme_fn)(void *request, const char *uri);
@@ -66,6 +67,16 @@ static struct
     GtkWidget *cover;
     guint cover_fallback;
     int close_held;     /* set by .NET from inside the close-requested event: that request is held */
+
+    /* Sign-out and shutdown (D-194): see "the session" below. */
+    GDBusConnection *bus;
+    char *monitor_path;       /* the portal's session monitor, once asked for */
+    guint monitor_signal;
+    char *hold_reason;        /* non-NULL: .NET wants the sign-out held, with this reason */
+    char *hold_request;       /* the portal's request object that is the hold */
+    guint hold_cookie;        /* or the GNOME session manager's cookie */
+    int hold_pending;         /* a call asking for the hold is under way */
+    int query_end_owed;       /* the desktop is waiting for our answer to "about to end" */
     double pinch_scale; /* the pinch's scale at the last change sent to the page; 0 when no pinch is on */
 
     /* The last pointer press inside the view, for begin-move from the HTML title bar. */
@@ -587,6 +598,233 @@ CHVD_EXPORT void chvd_ready(void)
 CHVD_EXPORT int chvd_start_mark_shown(void)
 {
     return S.cover ? 1 : 0;
+}
+
+/* ── the session: signing out and shutting down (D-194) ────────────────────── */
+
+/* A sign-out or shutdown doesn't ask the window to close: the desktop ends the session and the process with
+ * it. It can only be held by a lock on the session, taken through D-Bus (GLib's own; nothing external):
+ *
+ *   - org.freedesktop.portal.Inhibit, the cross-desktop way (GNOME, KDE and others implement it):
+ *     Inhibit(window, 1 = logout, {reason}) takes the lock, closing the request it returns gives it up;
+ *     CreateMonitor tells us when the session is about to end ("query-end"), and the desktop then waits
+ *     about a second for QueryEndResponse, so a lock taken at that moment still counts.
+ *   - org.gnome.SessionManager Inhibit / Uninhibit, where there is no portal.
+ *
+ * While the lock is held the desktop itself tells the person that Chuvadi has unsaved work and offers to
+ * cancel or go on regardless. .NET decides when to hold (chvd_session_hold) and, on "query-end", asks the
+ * person in the window. No session bus, no portal, no GNOME session manager: nothing is held, as before. */
+
+#define PORTAL_NAME "org.freedesktop.portal.Desktop"
+#define PORTAL_PATH "/org/freedesktop/portal/desktop"
+#define PORTAL_INHIBIT "org.freedesktop.portal.Inhibit"
+#define GNOME_SM_NAME "org.gnome.SessionManager"
+#define GNOME_SM_PATH "/org/gnome/SessionManager"
+
+static void session_answer_query_end(void)
+{
+    if (S.query_end_owed && !S.hold_pending && S.bus && S.monitor_path)
+    {
+        S.query_end_owed = 0;
+        g_dbus_connection_call(S.bus, PORTAL_NAME, PORTAL_PATH, PORTAL_INHIBIT, "QueryEndResponse",
+                               g_variant_new("(o)", S.monitor_path), NULL, G_DBUS_CALL_FLAGS_NONE, -1, NULL, NULL, NULL);
+    }
+}
+
+static void session_release(void)
+{
+    if (!S.bus)
+    {
+        return;
+    }
+
+    if (S.hold_request)
+    {
+        g_dbus_connection_call(S.bus, PORTAL_NAME, S.hold_request, "org.freedesktop.portal.Request", "Close",
+                               NULL, NULL, G_DBUS_CALL_FLAGS_NONE, -1, NULL, NULL, NULL);
+        g_clear_pointer(&S.hold_request, g_free);
+    }
+
+    if (S.hold_cookie)
+    {
+        g_dbus_connection_call(S.bus, GNOME_SM_NAME, GNOME_SM_PATH, GNOME_SM_NAME, "Uninhibit",
+                               g_variant_new("(u)", S.hold_cookie), NULL, G_DBUS_CALL_FLAGS_NONE, -1, NULL, NULL, NULL);
+        S.hold_cookie = 0;
+    }
+}
+
+/* A call asking for the hold has ended, with or without one. */
+static void session_hold_settled(void)
+{
+    S.hold_pending = 0;
+    if (!S.hold_reason)
+    {
+        session_release(); /* no longer wanted: it was given up while the call was under way */
+    }
+
+    session_answer_query_end();
+}
+
+static void on_gnome_inhibit(GObject *source, GAsyncResult *result, gpointer data)
+{
+    (void)data;
+    GVariant *reply = g_dbus_connection_call_finish(G_DBUS_CONNECTION(source), result, NULL);
+    if (reply)
+    {
+        g_variant_get(reply, "(u)", &S.hold_cookie);
+        g_variant_unref(reply);
+    }
+
+    session_hold_settled();
+}
+
+static void on_portal_inhibit(GObject *source, GAsyncResult *result, gpointer data)
+{
+    (void)data;
+    GVariant *reply = g_dbus_connection_call_finish(G_DBUS_CONNECTION(source), result, NULL);
+    if (reply)
+    {
+        g_variant_get(reply, "(o)", &S.hold_request);
+        g_variant_unref(reply);
+        session_hold_settled();
+        return;
+    }
+
+    if (!S.hold_reason)
+    {
+        session_hold_settled();
+        return;
+    }
+
+    /* No portal (or it has no Inhibit): the GNOME session manager's own call. */
+    g_dbus_connection_call(S.bus, GNOME_SM_NAME, GNOME_SM_PATH, GNOME_SM_NAME, "Inhibit",
+                           g_variant_new("(susu)", g_get_prgname() ? g_get_prgname() : "chuvadi-reader", (guint32)0,
+                                         S.hold_reason, (guint32)1 /* logout */),
+                           G_VARIANT_TYPE("(u)"), G_DBUS_CALL_FLAGS_NONE, -1, NULL, on_gnome_inhibit, NULL);
+}
+
+static void session_take(void)
+{
+    if (!S.bus || !S.hold_reason || S.hold_pending || S.hold_request || S.hold_cookie)
+    {
+        return;
+    }
+
+    GVariantBuilder options;
+    g_variant_builder_init(&options, G_VARIANT_TYPE("a{sv}"));
+    g_variant_builder_add(&options, "{sv}", "reason", g_variant_new_string(S.hold_reason));
+    S.hold_pending = 1;
+    g_dbus_connection_call(S.bus, PORTAL_NAME, PORTAL_PATH, PORTAL_INHIBIT, "Inhibit",
+                           g_variant_new("(sua{sv})", "", (guint32)1 /* logout */, &options),
+                           G_VARIANT_TYPE("(o)"), G_DBUS_CALL_FLAGS_NONE, -1, NULL, on_portal_inhibit, NULL);
+}
+
+/* The portal's monitor: session-state 1 running, 2 query-end (about to end, the desktop waits for
+ * QueryEndResponse), 3 ending (too late to ask). */
+static void on_session_state(GDBusConnection *bus, const char *sender, const char *path, const char *iface,
+                             const char *signal, GVariant *params, gpointer data)
+{
+    (void)bus;
+    (void)sender;
+    (void)path;
+    (void)iface;
+    (void)signal;
+    (void)data;
+    const char *session = NULL;
+    GVariant *state = NULL;
+    guint32 phase = 0;
+    g_variant_get(params, "(&o@a{sv})", &session, &state);
+    gboolean ours = S.monitor_path && g_strcmp0(session, S.monitor_path) == 0;
+    gboolean known = g_variant_lookup(state, "session-state", "u", &phase);
+    g_variant_unref(state);
+    if (!ours || !known || phase != 2)
+    {
+        return;
+    }
+
+    S.query_end_owed = 1;
+    if (S.event)
+    {
+        S.event(CHVD_EVENT_SESSION_END, "query"); /* .NET may call chvd_session_hold from inside this */
+    }
+
+    session_answer_query_end(); /* at once, or when the hold just asked for is in place */
+}
+
+static void on_session_bus(GObject *source, GAsyncResult *result, gpointer data)
+{
+    (void)source;
+    (void)data;
+    S.bus = g_bus_get_finish(result, NULL);
+    if (!S.bus)
+    {
+        return;
+    }
+
+    g_dbus_connection_set_exit_on_close(S.bus, FALSE);
+
+    /* The monitor's object path is ours to name: .../session/<our bus name, as a path element>/<token>. */
+    char *sender = g_strdup(g_dbus_connection_get_unique_name(S.bus) + 1);
+    for (char *c = sender; *c; c++)
+    {
+        if (*c == '.')
+        {
+            *c = '_';
+        }
+    }
+
+    S.monitor_path = g_strdup_printf(PORTAL_PATH "/session/%s/chvd_session", sender);
+    g_free(sender);
+    S.monitor_signal = g_dbus_connection_signal_subscribe(S.bus, PORTAL_NAME, PORTAL_INHIBIT, "StateChanged", PORTAL_PATH,
+                                                          NULL, G_DBUS_SIGNAL_FLAGS_NONE, on_session_state, NULL, NULL);
+    GVariantBuilder options;
+    g_variant_builder_init(&options, G_VARIANT_TYPE("a{sv}"));
+    g_variant_builder_add(&options, "{sv}", "handle_token", g_variant_new_string("chvd_monitor"));
+    g_variant_builder_add(&options, "{sv}", "session_handle_token", g_variant_new_string("chvd_session"));
+    g_dbus_connection_call(S.bus, PORTAL_NAME, PORTAL_PATH, PORTAL_INHIBIT, "CreateMonitor",
+                           g_variant_new("(sa{sv})", "", &options), NULL, G_DBUS_CALL_FLAGS_NONE, -1, NULL, NULL, NULL);
+    session_take(); /* wanted before the bus was there */
+}
+
+/* Starts listening for the session's end. Once, after chvd_init. Main thread. Does nothing where there is no
+ * session bus (and never starts one). */
+CHVD_EXPORT void chvd_session_watch(void)
+{
+    if (S.bus || S.monitor_path)
+    {
+        return;
+    }
+
+    const char *address = g_getenv("DBUS_SESSION_BUS_ADDRESS");
+    char *socket = g_build_filename(g_get_user_runtime_dir(), "bus", NULL);
+    gboolean there = (address && *address) || g_file_test(socket, G_FILE_TEST_EXISTS);
+    g_free(socket);
+    if (there)
+    {
+        g_bus_get(G_BUS_TYPE_SESSION, NULL, on_session_bus, NULL);
+    }
+}
+
+/* reason: why a sign-out or shutdown should wait (shown by the desktop), or NULL to let it go. Safe to call
+ * again with the same answer. Main thread. */
+CHVD_EXPORT void chvd_session_hold(const char *reason)
+{
+    g_free(S.hold_reason);
+    S.hold_reason = reason && *reason ? g_strdup(reason) : NULL;
+    if (S.hold_reason)
+    {
+        session_take();
+    }
+    else if (!S.hold_pending)
+    {
+        session_release();
+    }
+}
+
+/* 0 nothing held, 1 being asked for, 2 held through the portal, 3 held through the GNOME session manager (UI tests). */
+CHVD_EXPORT int chvd_session_hold_state(void)
+{
+    return S.hold_request ? 2 : S.hold_cookie ? 3 : S.hold_pending ? 1 : 0;
 }
 
 /* ── pinch ───────────────────────────────────────────────────────────────── */

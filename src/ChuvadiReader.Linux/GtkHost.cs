@@ -27,6 +27,10 @@ internal static unsafe class GtkHost
 #if CHUVADI_UITEST
     /// <summary>UI test build only: the same event the window's GTK drop target raises.</summary>
     internal static void SimulateDrop(string[] paths) => FilesDropped?.Invoke(paths);
+
+    /// <summary>UI test build only: the event the desktop's "about to sign out" raises, for a desktop that
+    /// holds a sign-out but sends no such notice (the GNOME session manager without a portal).</summary>
+    internal static void SimulateSessionEnding() => SessionEnding?.Invoke();
 #endif
 
     public static event Action<string>? ExternalLinkRequested;
@@ -34,6 +38,9 @@ internal static unsafe class GtkHost
     public static event Action? FirstPaint;
 
     public static event Action? CloseRequested;
+
+    /// <summary>The desktop is about to sign out or shut down and waits a moment for the app (D-194). Main thread.</summary>
+    public static event Action? SessionEnding;
 
     /// <summary>Token, then the chosen paths (empty when cancelled).</summary>
     public static event Action<int, string[]>? DialogResult;
@@ -242,6 +249,9 @@ internal static unsafe class GtkHost
                     break;
                 case Native.WindowEvent.FirstPaint:
                     FirstPaint?.Invoke();
+                    break;
+                case Native.WindowEvent.SessionEnd:
+                    SessionEnding?.Invoke();
                     break;
             }
         }
