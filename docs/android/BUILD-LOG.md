@@ -949,3 +949,10 @@ Step 68, result: run 43899989183 (head 60171388; Foundation 4b704c8d3d32c9c21c5c
 - New device check 7f (D-191): a Windows-1252 .txt opened in the activity, then by touch: Document menu (phone ⋮ sheet, tablet Document button) → Text encoding…, check Automatic is marked with Windows-1252, tap UTF-8 (the text shows replacement marks, the row is marked), tap Automatic (right again), Back closes the card. Row heights are printed, not judged.
 - Noted for the coordinator: Open with and Share list only PDF, Word and Excel on Android; text, Markdown and HTML open only through the in-app picker.
 - Result: run 43915364866 (head 5775480e), all four green. Phone API 36: gestures 11/11, platform 38/38; tablet API 36: gestures 13/13, platform 36/36 (the five new encoding checks pass on both); API 35 phone and tablet: WebView gate 4/4. Encoding rows measure 34 CSS px on both, under the 44 px the close card buttons got in AT-26.
+
+## Step 70 — patch 32 (Reader main 6c33eab) + Mobile UI 9e3f987
+
+- Composed platform/foundation-pr 149f4fc with platform/mobile-ui 9e3f987 (encoding rows 44 px). Merge clean.
+- Close paths: the host already calls the one shared IUnsavedWork.ConfirmCloseAsync for the last Back (D-190); patch 32 adds Arrange, bookmarks and redaction areas to that same call, so no host change. Closing a tab and Close all are the Ui's. Swiping the app away or Android ending it cannot be held (as the contract says). The new Changed event is not needed on Android (it asks at close time only).
+- D-190 device check now Discards every question in turn and, when Arrange is asked, checks it comes first.
+- Sandbox: Debug 0 warnings; Core 446 (+6 skipped), Hosting 103, MobileUi 16, WebUi 41.

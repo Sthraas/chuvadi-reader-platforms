@@ -907,11 +907,20 @@ if q1:
     time.sleep(1.5)
     check("Cancel keeps the app open with the marks (D-190)", resumed() == PKG and not closeq(), {"resumed": resumed(), "question": closeq()})
     q2 = back_until_question()
-    if q2:
+    # Patch 32 (D-194): one ConfirmCloseAsync asks about Arrange first (when desks are arranged and not saved;
+    # gestures.py may leave some), then each file. Discard each question until none is left.
+    asked = []
+    q = q2
+    while q and len(asked) < 6:
+        asked.append(q.split("\n")[0])
         tap_el(".closeq button", "Discard")
         time.sleep(3)
+        q = closeq() if resumed() == PKG else None
     shot("p11c-after-discard")
-    check("Discard lets the Back go on: the app leaves (D-190)", bool(q2) and resumed() != PKG, {"question": q2, "resumed": resumed()})
+    check("Discard lets the Back go on: the app leaves (D-190)",
+          bool(q2) and resumed() != PKG and any("marks" in a for a in asked), {"asked": asked, "resumed": resumed()})
+    if any("arranged" in a for a in asked):
+        check("Arrange is asked first, in the same close question (D-194)", "arranged" in asked[0], {"asked": asked})
 launch()
 wait_for(lambda s: s.get("route") is not None, 30, "the app again")
 
