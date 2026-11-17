@@ -9,14 +9,14 @@
 - Build from clean, 0 warnings, all tests pass, package holds only .NET / ASP.NET Core and the product's own assemblies.
 - Sign-in against a real Sangam (rc.16), sessions, idle and 8-hour expiry, reload, come-back — including a worker killed or frozen while a session ends.
 - One person can't reach another's files, page images or print tickets; hostile files are refused cleanly while others keep working.
-- PDF, Word and Excel open and show the file's own content; marks land under the pointer at every zoom; save, print, redact, close card.
+- PDF, Word and Excel open and show the file's own content; marks land under the pointer at every zoom; save, print, close card (redaction verified at every zoom up to 21665a3, held on this head).
 
 **What patch 33 holds back on this head (D-198, until Pdf 3.35.1):** redaction is off; signatures are shown without a verdict; every page operation asks first; Excel conditional colours are not drawn. These come back with the patched libraries in Phase 2 and must be re-tested then (Redact at a zoom included).
 
 **Limits of this sign-off — what I did not prove**
 1. **Design:** screenshots taken and looked through for layout on 3f80768; no frame-by-frame comparison with the handout; Firefox and WebKit desktop not re-shot; the close card not checked at phone width.
 2. **Touch details from patches 28 and 30** (close control on a mark's card, pinch in Mark, Find on a turned page) — not checked by me; Mobile UI's tests cover them.
-3. **Old Safari:** marks, move, resize, Redact verified on WebKit 17.4; lines, images, signature at a zoom are in the Phase 2 device script.
+3. **Old Safari:** marks, move and resize verified on WebKit 17.4 (Redact too, before the hold); lines, images, signature at a zoom are in the Phase 2 device script.
 4. **Speed and load:** fine for 1 and 10 people on a 2-core sandbox; 20 people is not meaningful here.
 5. **A frozen worker** delays other people's session end by up to 10 s (bounded, logged) — note in BUGS.md, not a bug.
 6. **Library limits that stay** (six skipped tests, `docs/foundation/SKIPPED-TESTS.md`): header/footer and watermark on cropped or turned pages, a picture placed with a turn, Excel time-only values. These are visible to people and wait on library releases.
