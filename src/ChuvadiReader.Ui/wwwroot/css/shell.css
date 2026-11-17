@@ -487,3 +487,8 @@ html[data-shell="phone"] .closeq { top: auto; bottom: calc(16px + env(safe-area-
 html[data-shell="phone"] .closeq .fc-btn { min-height: 44px; flex: 1; }
 html[data-shell="tablet"] .closeq .fc-btn { min-height: 44px; min-width: 80px; }   /* AT-26: finger-sized on the tablet too */
 html[data-shell="phone"] .closeq-gap { display: none; }
+
+/* D-198: the page-operation question. */
+.pageopq-file, .pageopq-layers { display: block; margin-top: 8px; }
+.pageopq-list { margin: 8px 0 0; padding-left: 18px; }
+.pageopq-list li { margin: 2px 0; }

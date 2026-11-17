@@ -50,7 +50,9 @@ public sealed class XlsxDisplayTests
     [InlineData("text @ 49", "007")]
     [InlineData("bool", "TRUE")]
     [InlineData("error", "#DIV/0!")]
-    [InlineData("conditional numFmt", "CF: 7.000")]
+    // D-200: conditional formats are not evaluated until the next Sheets update, so a rule that would switch this
+    // cell's number format ("CF: 7.000") does not; the cell shows its own format. Back to "CF: 7.000" with the update.
+    [InlineData("conditional numFmt", "7.00")]
     public void A_cell_shows_its_number_format_in_the_system_culture(string label, string shown) =>
         Assert.Equal(shown, ByLabel(India)[label].Text);
 

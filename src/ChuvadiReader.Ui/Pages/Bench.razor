@@ -251,7 +251,10 @@
                     {
                         <div class="desk-menu">
                             <button @onclick="() => OpenDeskInReader(deskId)" disabled="@(_busy || desk.IsEmpty)"><Icon Name="reader" Size="13" /> Open in Reader</button>
-                            <button @onclick="() => SendDeskToRedact(deskId)" disabled="@(_busy || desk.IsEmpty)"><Icon Name="redact" Size="13" /> Send to Redact</button>
+                            @if (!LibraryHolds.RedactionHeld)   @* D-198: redaction is hidden until the next update *@
+                            {
+                                <button @onclick="() => SendDeskToRedact(deskId)" disabled="@(_busy || desk.IsEmpty)"><Icon Name="redact" Size="13" /> Send to Redact</button>
+                            }
                             @if (TouchDesks)
                             {
                                 @* Touch (Portal & Android 12f / 12i): the desk's footer actions live here, with their
@@ -1692,6 +1695,7 @@
         {
             return;
         }
+        if (!await PageOpsOkAsync(deskId)) return;   // D-198
 
         _busy = true;
         _busyLabel = toRedact ? "Sending to Redact…" : "Opening in Reader…";
@@ -2143,8 +2147,14 @@
         return result.Count == 0 ? null : result;
     }
 
+    // D-198, until Pdf 3.35.1: every page operation asks first, naming what each file will lose. The files asked
+    // about are the ones this desk (or, for all desks, any desk) takes pages from; each is asked about once per run.
+    private Task<bool> PageOpsOkAsync(Guid? deskId) =>
+        Shell.ConfirmPageOperationAsync(BenchSvc.Desks.Where(d => deskId is null || d.Id == deskId).SelectMany(d => d.Pages).Select(pg => pg.SourcePath));
+
     private async Task BindDesk(Guid deskId)
     {
+        if (!await PageOpsOkAsync(deskId)) return;   // D-198
         var path = await Picker.PickSavePdfAsync(BenchSvc.SuggestName(deskId) + ".pdf");
         if (string.IsNullOrWhiteSpace(path)) return;
         await RunSave(() => BenchSvc.BindDeskAsync(deskId, path!), path!, "Bound", "Binding desk…");
@@ -2153,6 +2163,7 @@
 
     private async Task LiftDesk(Guid deskId)
     {
+        if (!await PageOpsOkAsync(deskId)) return;   // D-198
         var path = await Picker.PickSavePdfAsync(BenchSvc.SuggestName(deskId) + "-lift.pdf");
         if (string.IsNullOrWhiteSpace(path)) return;
         await RunSave(() => BenchSvc.LiftDeskAsync(deskId, path!), path!, "Lifted", "Lifting pages…");
@@ -2160,6 +2171,7 @@
 
     private async Task BindAll()
     {
+        if (!await PageOpsOkAsync(null)) return;   // D-198
         var folder = await Picker.PickFolderAsync();
         if (string.IsNullOrWhiteSpace(folder)) return;
         _busy = true; _busyLabel = "Binding all desks…"; _status = null; _error = false; StateHasChanged();
@@ -2178,6 +2190,7 @@
 
     private async Task CombineAll()
     {
+        if (!await PageOpsOkAsync(null)) return;   // D-198
         var path = await Picker.PickSavePdfAsync("Combined.pdf");
         if (string.IsNullOrWhiteSpace(path)) return;
         _busy = true; _busyLabel = "Combining all desks…"; _status = null; _error = false; StateHasChanged();
@@ -2602,6 +2615,7 @@
 
     private async Task RunImpose(Guid deskId)
     {
+        if (!await PageOpsOkAsync(deskId)) return;   // D-198
         _impBusy = true; _status = null; _error = false; StateHasChanged();
         await Task.Yield();
         try
@@ -2725,6 +2739,7 @@
 
     private async Task RunScatter(Guid deskId)
     {
+        if (!await PageOpsOkAsync(deskId)) return;   // D-198
         _busy = true; StateHasChanged();
         try
         {
@@ -2765,6 +2780,7 @@
 
     private async Task RunExport(Guid deskId)
     {
+        if (!await PageOpsOkAsync(deskId)) return;   // D-198
         if (_expPdf)
         {
             var path = await Picker.PickSavePdfAsync(SafeFileName(DeskName(deskId)));

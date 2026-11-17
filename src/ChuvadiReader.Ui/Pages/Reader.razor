@@ -162,24 +162,24 @@
     @if (_showExport)
     {
         <div @onclick="CloseExport" style="position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:60;display:flex;align-items:center;justify-content:center">
-            <div @onclick:stopPropagation="true" style="width:470px;max-width:92%;background:var(--chvd-surface-mid);border:var(--chvd-stroke) solid var(--chvd-border);border-radius:12px;padding:18px 20px;color:var(--chvd-ink);font-family:var(--chvd-sans-display)">
+            <div class="rdlg" @onclick:stopPropagation="true" style="width:470px;max-width:92%;background:var(--chvd-surface-mid);border:var(--chvd-stroke) solid var(--chvd-border);border-radius:12px;padding:18px 20px;color:var(--chvd-ink);font-family:var(--chvd-sans-display)">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
                     <span style="font-family:var(--chvd-serif-display);font-size:18px">Export as image</span>
-                    <button @onclick="CloseExport" aria-label="Close" style="background:none;border:none;color:var(--chvd-ink-muted);cursor:pointer"><Icon Name="x" Size="16" /></button>
+                    <button @onclick="CloseExport" aria-label="Close" class="rdlg-x" style="background:none;border:none;color:var(--chvd-ink-muted);cursor:pointer"><Icon Name="x" Size="16" /></button>
                 </div>
 
                 <div style="font-family:var(--chvd-mono);font-size:11px;color:var(--chvd-ink-muted);margin-bottom:7px">format</div>
                 <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px">
                     @foreach (var f in _formats)
                     {
-                        <button @onclick="() => _expFormat = f" style="@Chip(_expFormat == f)">@f.ToString().ToUpperInvariant()</button>
+                        <button @onclick="() => _expFormat = f" class="rdlg-chip @((_expFormat == f) ? "on" : null)" style="@Chip(_expFormat == f)">@f.ToString().ToUpperInvariant()</button>
                     }
                 </div>
 
                 <div style="font-family:var(--chvd-mono);font-size:11px;color:var(--chvd-ink-muted);margin-bottom:7px">pages</div>
                 <div style="display:flex;gap:6px;margin-bottom:16px">
-                    <button @onclick="() => _expAll = false" style="@Chip(!_expAll)">This page (@CurPage)</button>
-                    <button @onclick="() => _expAll = true" style="@Chip(_expAll)">All pages@(Doc is not null ? $" ({Doc.PageCount})" : "")</button>
+                    <button @onclick="() => _expAll = false" class="rdlg-chip @((!_expAll) ? "on" : null)" style="@Chip(!_expAll)">This page (@CurPage)</button>
+                    <button @onclick="() => _expAll = true" class="rdlg-chip @((_expAll) ? "on" : null)" style="@Chip(_expAll)">All pages@(Doc is not null ? $" ({Doc.PageCount})" : "")</button>
                 </div>
 
                 @if (_expFormat != ExportFormat.Svg)
@@ -188,7 +188,7 @@
                     <div style="display:flex;gap:6px;margin-bottom:18px">
                         @foreach (var d in _dpis)
                         {
-                            <button @onclick="() => _expDpi = d" style="@Chip(_expDpi == d)">@d dpi</button>
+                            <button @onclick="() => _expDpi = d" class="rdlg-chip @((_expDpi == d) ? "on" : null)" style="@Chip(_expDpi == d)">@d dpi</button>
                         }
                     </div>
                 }
@@ -198,13 +198,13 @@
                     <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="@PathLabels.Describe(_expFolder)">@PathLabels.Describe(_expFolder)</span>
                     @if (Platform.Capabilities.PickFolders)
                     {
-                        <button @onclick="ChangeExportFolder" style="background:none;border:none;color:var(--chvd-binding);cursor:pointer;font-family:var(--chvd-mono);font-size:11px">change…</button>
+                        <button @onclick="ChangeExportFolder" class="rdlg-link" style="background:none;border:none;color:var(--chvd-binding);cursor:pointer;font-family:var(--chvd-mono);font-size:11px">change…</button>
                     }
                 </div>
 
                 <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
                     <span style="font-family:var(--chvd-serif-body);font-size:12px;color:var(--chvd-ink-muted);flex:1">@(_expStatus ?? "Saved files are never overwritten.")</span>
-                    <button @onclick="RunExport" disabled="@_expBusy" style="font-family:var(--chvd-mono);font-size:13px;padding:8px 18px;border-radius:8px;border:none;cursor:pointer;background:var(--chvd-binding);color:var(--chvd-surface-lo);@(_expBusy ? "opacity:0.6" : "")">@(_expBusy ? "exporting…" : "Export →")</button>
+                    <button @onclick="RunExport" class="rdlg-go" disabled="@_expBusy" style="font-family:var(--chvd-mono);font-size:13px;padding:8px 18px;border-radius:8px;border:none;cursor:pointer;background:var(--chvd-binding);color:var(--chvd-surface-lo);@(_expBusy ? "opacity:0.6" : "")">@(_expBusy ? "exporting…" : "Export →")</button>
                 </div>
             </div>
         </div>
@@ -213,17 +213,17 @@
     @if (_showPress)
     {
         <div @onclick="ClosePress" style="position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:60;display:flex;align-items:center;justify-content:center">
-            <div @onclick:stopPropagation="true" style="width:500px;max-width:94%;max-height:88%;overflow:auto;background:var(--chvd-surface-mid);border:var(--chvd-stroke) solid var(--chvd-border);border-radius:12px;padding:18px 20px;color:var(--chvd-ink);font-family:var(--chvd-sans-display)">
+            <div class="rdlg" @onclick:stopPropagation="true" style="width:500px;max-width:94%;max-height:88%;overflow:auto;background:var(--chvd-surface-mid);border:var(--chvd-stroke) solid var(--chvd-border);border-radius:12px;padding:18px 20px;color:var(--chvd-ink);font-family:var(--chvd-sans-display)">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
                     <span style="font-family:var(--chvd-serif-display);font-size:18px">Press</span>
-                    <button @onclick="ClosePress" aria-label="Close" style="background:none;border:none;color:var(--chvd-ink-muted);cursor:pointer"><Icon Name="x" Size="16" /></button>
+                    <button @onclick="ClosePress" aria-label="Close" class="rdlg-x" style="background:none;border:none;color:var(--chvd-ink-muted);cursor:pointer"><Icon Name="x" Size="16" /></button>
                 </div>
 
                 <div style="font-family:var(--chvd-mono);font-size:11px;color:var(--chvd-ink-muted);margin-bottom:7px">quality preset</div>
                 <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
                     @foreach (var p in _presets)
                     {
-                        <button @onclick="() => _pressPreset = p" style="@Chip(_pressPreset == p)">@p.ToString()</button>
+                        <button @onclick="() => _pressPreset = p" class="rdlg-chip @((_pressPreset == p) ? "on" : null)" style="@Chip(_pressPreset == p)">@p.ToString()</button>
                     }
                 </div>
 
@@ -232,30 +232,30 @@
                     <div style="background:var(--chvd-surface-lo);border:var(--chvd-stroke) solid var(--chvd-border-soft);border-radius:10px;padding:12px 14px;margin-bottom:14px">
                         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
                             <span style="font-family:var(--chvd-mono);font-size:11px;color:var(--chvd-ink-muted);width:96px">jpeg quality</span>
-                            <input type="range" min="10" max="95" step="1" @bind="_pressQuality" @bind:event="oninput" style="flex:1" />
+                            <input type="range" class="rdlg-range" min="10" max="95" step="1" @bind="_pressQuality" @bind:event="oninput" style="flex:1" />
                             <span style="font-family:var(--chvd-mono);font-size:12px;width:28px;text-align:right">@_pressQuality</span>
                         </div>
-                        <label style="display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:10px;cursor:pointer">
+                        <label class="rdlg-check" style="display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:10px;cursor:pointer">
                             <input type="checkbox" @bind="_pressRecompress" /> recompress images
                         </label>
                         <div style="display:flex;gap:14px">
                             <label style="flex:1;font-family:var(--chvd-mono);font-size:11px;color:var(--chvd-ink-muted)">min stream bytes
-                                <input type="number" @bind="_pressMinStream" style="width:100%;margin-top:3px;background:var(--chvd-surface-hi);border:var(--chvd-stroke) solid var(--chvd-border);border-radius:6px;color:var(--chvd-ink);padding:4px 6px;font-family:var(--chvd-mono);font-size:12px" />
+                                <input type="number" class="rdlg-num" @bind="_pressMinStream" style="width:100%;margin-top:3px;background:var(--chvd-surface-hi);border:var(--chvd-stroke) solid var(--chvd-border);border-radius:6px;color:var(--chvd-ink);padding:4px 6px;font-family:var(--chvd-mono);font-size:12px" />
                             </label>
                             <label style="flex:1;font-family:var(--chvd-mono);font-size:11px;color:var(--chvd-ink-muted)">min image pixels
-                                <input type="number" @bind="_pressMinPixels" style="width:100%;margin-top:3px;background:var(--chvd-surface-hi);border:var(--chvd-stroke) solid var(--chvd-border);border-radius:6px;color:var(--chvd-ink);padding:4px 6px;font-family:var(--chvd-mono);font-size:12px" />
+                                <input type="number" class="rdlg-num" @bind="_pressMinPixels" style="width:100%;margin-top:3px;background:var(--chvd-surface-hi);border:var(--chvd-stroke) solid var(--chvd-border);border-radius:6px;color:var(--chvd-ink);padding:4px 6px;font-family:var(--chvd-mono);font-size:12px" />
                             </label>
                         </div>
                     </div>
                 }
 
-                <label style="display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:@(_pressUseTarget ? "8px" : "14px");cursor:pointer">
+                <label class="rdlg-check" style="display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:@(_pressUseTarget ? "8px" : "14px");cursor:pointer">
                     <input type="checkbox" @bind="_pressUseTarget" /> aim for a target size
                 </label>
                 @if (_pressUseTarget)
                 {
                     <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
-                        <input type="number" step="0.1" min="0.1" @bind="_pressTargetMb" style="width:90px;background:var(--chvd-surface-hi);border:var(--chvd-stroke) solid var(--chvd-border);border-radius:6px;color:var(--chvd-ink);padding:5px 8px;font-family:var(--chvd-mono);font-size:13px" />
+                        <input type="number" class="rdlg-num" step="0.1" min="0.1" @bind="_pressTargetMb" style="width:90px;background:var(--chvd-surface-hi);border:var(--chvd-stroke) solid var(--chvd-border);border-radius:6px;color:var(--chvd-ink);padding:5px 8px;font-family:var(--chvd-mono);font-size:13px" />
                         <span style="font-family:var(--chvd-mono);font-size:12px;color:var(--chvd-ink-muted)">MB — steps quality down until it fits</span>
                     </div>
                 }
@@ -265,7 +265,7 @@
                     <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="@PathLabels.Describe(_pressFolder)">@PathLabels.Describe(_pressFolder)</span>
                     @if (Platform.Capabilities.PickFolders)
                     {
-                        <button @onclick="ChangePressFolder" style="background:none;border:none;color:var(--chvd-binding);cursor:pointer;font-family:var(--chvd-mono);font-size:11px">change…</button>
+                        <button @onclick="ChangePressFolder" class="rdlg-link" style="background:none;border:none;color:var(--chvd-binding);cursor:pointer;font-family:var(--chvd-mono);font-size:11px">change…</button>
                     }
                 </div>
 
@@ -274,13 +274,13 @@
                     <div style="background:var(--chvd-surface-lo);border:var(--chvd-stroke) solid var(--chvd-border-soft);border-radius:10px;padding:12px 14px;margin-bottom:14px">
                         <div style="font-size:15px;margin-bottom:6px">@SizeOf(_pressResult.BeforeBytes) → <span style="color:var(--chvd-binding)">@SizeOf(_pressResult.AfterBytes)</span> <span style="font-family:var(--chvd-mono);font-size:12px;color:var(--chvd-ink-muted)">(@_pressResult.SavedPercent.ToString("0.#")% smaller)</span></div>
                         <div style="font-family:var(--chvd-mono);font-size:11px;color:var(--chvd-ink-muted)">@_pressResult.ImagesRecompressed images · @_pressResult.StreamsCompressed streams · @_pressResult.ObjectsRemoved objects removed</div>
-                        <button @onclick="OpenPressResult" style="margin-top:10px;font-family:var(--chvd-mono);font-size:12px;color:var(--chvd-binding);background:none;border:var(--chvd-stroke) solid var(--chvd-binding);border-radius:6px;padding:5px 12px;cursor:pointer">open pressed file</button>
+                        <button @onclick="OpenPressResult" class="rdlg-open" style="margin-top:10px;font-family:var(--chvd-mono);font-size:12px;color:var(--chvd-binding);background:none;border:var(--chvd-stroke) solid var(--chvd-binding);border-radius:6px;padding:5px 12px;cursor:pointer">open pressed file</button>
                     </div>
                 }
 
                 <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
                     <span style="font-family:var(--chvd-serif-body);font-size:12px;color:var(--chvd-ink-muted);flex:1">@(_pressStatus ?? "A new …-pressed.pdf is created; the original is untouched.")</span>
-                    <button @onclick="RunPress" disabled="@_pressBusy" style="font-family:var(--chvd-mono);font-size:13px;padding:8px 18px;border-radius:8px;border:none;cursor:pointer;background:var(--chvd-binding);color:var(--chvd-surface-lo);@(_pressBusy ? "opacity:0.6" : "")">@(_pressBusy ? "pressing…" : "Press →")</button>
+                    <button @onclick="RunPress" class="rdlg-go" disabled="@_pressBusy" style="font-family:var(--chvd-mono);font-size:13px;padding:8px 18px;border-radius:8px;border:none;cursor:pointer;background:var(--chvd-binding);color:var(--chvd-surface-lo);@(_pressBusy ? "opacity:0.6" : "")">@(_pressBusy ? "pressing…" : "Press →")</button>
                 </div>
             </div>
         </div>
@@ -1204,8 +1204,16 @@
             else if (_protect)
             {
                 <SideRail Kind="tools" Heading="TOOLS" Label="PROTECT">
-                    <RailButton Icon="redact" Label="Redact box" Keys="R" OnClick="() => GoRedact(false)" />
-                    <RailButton Icon="find-in-page" Label="Find & redact" OnClick="() => GoRedact(true)" />
+                    @if (LibraryHolds.RedactionHeld)
+                    {
+                        @* D-198: where redaction was, it says when it comes back (greyed; the reason shows on hover and on a tap). *@
+                        <RailButton Icon="redact" Label="Redaction" Disabled="true" DisabledReason="@LibraryHolds.RedactionBack" ReasonOnTap="true" />
+                    }
+                    else
+                    {
+                        <RailButton Icon="redact" Label="Redact box" Keys="R" OnClick="() => GoRedact(false)" />
+                        <RailButton Icon="find-in-page" Label="Find & redact" OnClick="() => GoRedact(true)" />
+                    }
                     <RailButton Icon="stamp" Label="Stamp" Active='_card == "stamp" && _stampFocus != "watermark"' OnClick='() => OpenStamp("stamp")' />
                     <RailButton Icon="watermark" Label="Watermark" Active='_card == "stamp" && _stampFocus == "watermark"' OnClick='() => OpenStamp("watermark")' />
                     <RailButton Icon="compress" Label="Flatten" Disabled="_flattening" OnClick="FlattenNow" />
