@@ -729,3 +729,9 @@ Mac 23 — on all four.
   fewer SVG elements than a passing run, no error logged — for 20 s and through both pinch steps. Same signature on
   macos-26 on 16 Nov (run 43843112648, first attempt, patch 29). Passing runs show zoom 0.50–0.54 on the same tab.
   The Mac pinch code is not involved: the page was not there to zoom.
+
+### 2026-11-18 (later) — patch 33
+Rebased onto foundation-pr 9e00fdf (patch 33). Head ecb635c; no Mac code needed changing. Run 44165072867, as pushed:
+first attempt — macos-15, macos-15-intel, xcode-27 **0 failed**; macos-26 1 failed (the last of ten files never
+drawn: many10.pdf at zoom 1.000, 31 SVG elements, no error — third sighting, now on the runner that decides). Re-run of
+macos-26: **0 failed**; zip handed out. Unit tests on all four: Core 457 passed, 6 skipped; Mac 23.
