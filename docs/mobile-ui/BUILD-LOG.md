@@ -742,3 +742,27 @@ Evidence:
   Mark, the mark card, the close card, the encoding card, Export, Press, Merge, Split, Arrange and the desk
   menu identical apart from the clock; Read and Home show the known 1-level noise pixels.
 
+## 18 Nov, 00:00: Foundation 149f4fc (patch 32) merged; the three new close questions and the Find bar aside
+- Merged platform/foundation-pr 149f4fc: no conflicts. H-27, H-28, H-29 still apply; hooks-14 stays.
+- **The new questions** (new tool `tools/mobile-ui/closework.py`, 16 checks), at 412×915, 915×412, 800×1280,
+  1280×800:
+  - Bookmarks (a bookmark added with Ctrl+B, the tab closed): Save bookmarks / Discard / Cancel.
+  - Protect (a redaction area drawn by finger, the tab closed): Discard / Cancel.
+  - Arrange (pages on a desk, the app asked to close through the preview's close-app): Save session… /
+    Discard / Cancel.
+  - Each: every answer 44 px, on top, inside the screen, 8 px or more apart; the same with the system bars'
+    insets set and with the keyboard up (both stood in for); Cancel keeps the work; Discard closes.
+  - Foundation's styling holds; nothing changed for them.
+- **Found and fixed (mine, PhoneShell.razor):** on the phone, Protect's Box opens the redaction page, and its
+  Back arrow went Home, leaving the document behind (and its ⋮ has no Close). Back there now returns to the
+  document (/reader). Settings sections and everything else as before. closework.py checks it.
+- **The Find bar's bottom place (D-195)** (new tool `tools/mobile-ui/findaside.py`, Foundation's top.pdf, 16
+  matches, as the size opens and in Fit width): no match off screen or under the bar, the bar inside, on top,
+  44 px controls. Tablet: aside 0 / 3 times at 800×1280, 12 / 1 at 1280×800. Phone: never needed.
+  - **Fixed (mine, mobile.css):** were the phone's bar ever given `aside` it would sit on the bottom bar
+    (845 to 901 inside 835 to 915); it stays in the top bar's place there. Checked by forcing the class.
+- Results (hooks-14 applied): 606 tests pass, 6 skipped by Foundation: 446 + 103 + 41 + 16; touch at the four
+  sizes: 430 checks pass, 0 fail (gestures 8/8/9/9, checks 12, pinchmarks 18, xlresize 15, cards 4, encpicker 11, findaside 3/3/4/4, turned 13, closecard 6, closework 16/16/17/17); box audit clean; desktop before (149f4fc) / after at 1440×900: Read, Mark, the mark
+  card, the close card, the encoding card, Export, Press, Merge, Split and the desk menu identical apart from
+  the clock; Arrange and Home show 4 and 17 pixels one colour level off (the known noise).
+

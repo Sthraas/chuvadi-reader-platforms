@@ -1,7 +1,7 @@
-# Mobile app UI → Foundation: hooks and hand-off (updated 16 Nov, patch 31)
+# Mobile app UI → Foundation: hooks and hand-off (updated 18 Nov, patch 32)
 
 ## Outstanding for Foundation: H-27, H-28 and H-29 (`proposal/mobile-ui-hooks-14.patch`)
-Checked against foundation-pr b895750 (patch 31): all three still apply. H-25 and H-26 landed in patch 30 (`proposal/landed/`).
+Checked against foundation-pr 149f4fc (patch 32): all three still apply (with the coordinator for patch 33). H-25 and H-26 landed in patch 30 (`proposal/landed/`).
 `mobile-ui-hooks-14.patch` is what Android's `compose.sh` applies: the `viewers.js` diff (H-27 and H-28 together,
 they touch the same function) and the `Reader.razor` diff (H-29). On their own:
 `proposal/H27-excel-resize-gives-way-to-a-pinch.patch` (H-27 alone),
@@ -48,6 +48,16 @@ they touch the same function) and the `Reader.razor` diff (H-29). On their own:
 - **For:** the cards can be styled per platform without touching Reader.razor again. **Against:** names that
   only touch uses today. A fuller clean-up (move the inline styles into the stylesheet) is Foundation's call;
   my rules need `!important` where they replace an inline value, and would get simpler with it.
+
+## Patch 32 on touch: nothing for Foundation to change
+- The three new questions (Bookmarks, Protect, Arrange) were checked by finger at the four sizes
+  (`tools/mobile-ui/closework.py`): every answer 44 px, on top, inside the screen, also with system-bar insets
+  and the keyboard up; Cancel keeps the work, Discard lets the close go on. Foundation's styling holds as is.
+- The Find bar's bottom place (D-195) was checked with `tools/PixelProof/fixtures/top.pdf` by finger
+  (`tools/mobile-ui/findaside.py`): on the tablet it steps aside when needed (12 of 16 matches page-at-a-time
+  at 1280×800) and no match is ever under it or off screen. On the phone the bar is in the top bar's place
+  and never needs to; were it asked to, `.rfind.aside` (bottom: 14px) would put it over the phone's bottom
+  bar, so mobile.css keeps it at the top there. Nothing to change in Reader.razor.css.
 
 ## Patch 31 on touch: two notes and one choice (nothing patched in shared files)
 ### N-1: "File's own sizes" is now styled in two places

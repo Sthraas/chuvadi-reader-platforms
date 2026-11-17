@@ -974,3 +974,7 @@ html[data-shell="phone"] .enc-row.on,
 html[data-shell="tablet"] .enc-row.on { background-clip: padding-box; }
 html[data-shell="phone"] .enc-list,
 html[data-shell="tablet"] .enc-list { padding-block: 5px; margin-block: -5px; }
+/* D-195 (patch 32): the Find bar steps to the bottom while it would cover the match. On the phone it is in the
+   top bar's place, above the page, so it never covers one; were it ever asked to step aside it would land on the
+   bottom bar. It stays where it is. */
+html[data-shell="phone"] .rfind.aside { top: 0; bottom: auto; }

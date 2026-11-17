@@ -265,6 +265,8 @@
         Life.BackRequested += OnBackRequested;
     }
 
+    private bool OnRedactPage => Nav.ToBaseRelativePath(Nav.Uri).Split('?', '#')[0].TrimEnd('/').Equals("redact", StringComparison.OrdinalIgnoreCase);
+
     private string ModeKey => OnDocView ? Shell.Mode.ToString().ToLowerInvariant() : "none";
 
     private string? PageTitle
@@ -457,8 +459,9 @@
             return;
         }
 
-        // A Settings section goes back to the section list (Settings A, D-45); elsewhere, Home.
-        Go?.Invoke(InSettingsSection ? "/settings" : "/");
+        // A Settings section goes back to the section list (Settings A, D-45); the redaction page goes back to the
+        // document it is redacting (it opens from Protect's Box, and its areas stay with that tab); elsewhere, Home.
+        Go?.Invoke(InSettingsSection ? "/settings" : OnRedactPage ? "/reader" : "/");
     }
 
     /// <summary>Android back: a sheet closes first; then the host's default.</summary>
