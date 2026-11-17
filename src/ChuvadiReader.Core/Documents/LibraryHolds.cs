@@ -16,9 +16,12 @@ public static class LibraryHolds
     public const string RedactionWhy =
         "Until then a redacted copy could still hold the text it should remove, so it is switched off. Stamp, watermark, flatten, password and signing are in Protect as before.";
 
-    /// <summary>Whether Excel's conditional colours are left out. On Sheets 2.0.4 evaluating them can end the
-    /// process (sec08), run past a minute uncancellably (SEC-10) or take over a gigabyte (SEC-01). Arun decides
-    /// between leaving them out for every file until Sheets 2.2.1 and keeping them; until he does, they stay on,
-    /// as before. Changing this one value is the whole switch.</summary>
-    public static bool ConditionalFormatsHeld => false;
+    /// <summary>D-200: Excel's conditional formats are not evaluated, for every file, until the Sheets release that
+    /// fixes SEC-08 and SEC-10 is taken: on Sheets 2.0.4 evaluating them can end the process (sec08) or run past a
+    /// minute uncancellably (SEC-10). Cell values and their shown text are unchanged; only the conditional colours
+    /// are not drawn, and a sheet that has them says so.</summary>
+    public static bool ConditionalFormatsHeld => true;
+
+    /// <summary>Said under a sheet that has conditional formats.</summary>
+    public const string ConditionalColoursBack = "Conditional colours return with the next update";
 }
