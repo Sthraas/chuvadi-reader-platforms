@@ -123,4 +123,80 @@ public class UploadTests
     [InlineData("a.p12", new byte[] { 0x30, 0x82 }, true)]
     public void Content_must_match_the_extension(string name, byte[] head, bool ok)
         => Assert.Equal(ok, FileKinds.ContentMatches(name, head));
+
+    private static byte[] Utf16(string text, bool bigEndian = false, bool mark = true)
+    {
+        var enc = new System.Text.UnicodeEncoding(bigEndian, byteOrderMark: mark);
+        return [.. enc.GetPreamble(), .. enc.GetBytes(text)];
+    }
+
+    [Fact]
+    public void Utf16_text_with_its_byte_order_mark_is_accepted_for_every_text_type_the_viewers_open()
+    {
+        // WT-26 / D-197: the encoding picker offers UTF-16 LE and BE, so such files must be able to come in.
+        var text = "Un café, déjà vu. 日本語 😀\r\nSecond line.\r\n" + new string('x', 2000); // longer than the kilobyte checked
+        foreach (var name in new[] { "a.txt", "a.log", "a.md", "a.markdown", "a.html", "a.htm", "A.TXT" })
+        {
+            Assert.True(FileKinds.ContentMatches(name, Utf16(text).AsSpan(0, 1024)), name);
+            Assert.True(FileKinds.ContentMatches(name, Utf16(text, bigEndian: true).AsSpan(0, 1024)), name);
+            Assert.True(FileKinds.ContentMatches(name, Utf16(text).AsSpan(0, 1023)), name); // cut in the middle of a unit
+        }
+
+        Assert.True(FileKinds.ContentMatches("mark-only.txt", new byte[] { 0xFF, 0xFE }));
+        Assert.True(FileKinds.ContentMatches("short.txt", Utf16("hi")));
+        Assert.True(FileKinds.ContentMatches("pair-cut.txt", Utf16("😀")[..4])); // a surrogate pair cut by the end of what was read
+    }
+
+    [Fact]
+    public void Utf16_without_the_mark_and_binaries_under_a_text_name_stay_refused()
+    {
+        var text = "Plain words, as Notepad's UTF-16 LE without a mark would save them.";
+        Assert.False(FileKinds.ContentMatches("nomark.txt", Utf16(text, mark: false)));
+        Assert.False(FileKinds.ContentMatches("nomark-be.txt", Utf16(text, bigEndian: true, mark: false)));
+
+        // Binaries that happen to start with the two bytes of a mark.
+        Assert.False(FileKinds.ContentMatches("utf32.txt", new byte[] { 0xFF, 0xFE, 0x00, 0x00, 0x68, 0x00, 0x00, 0x00 }));        // UTF-32 LE mark
+        Assert.False(FileKinds.ContentMatches("zeros.txt", new byte[] { 0xFF, 0xFE, 0x68, 0x00, 0x00, 0x00, 0x69, 0x00 }));        // a U+0000 unit
+        Assert.False(FileKinds.ContentMatches("lone-low.txt", new byte[] { 0xFF, 0xFE, 0x00, 0xDC, 0x68, 0x00 }));                 // low surrogate alone
+        Assert.False(FileKinds.ContentMatches("lone-high.txt", new byte[] { 0xFF, 0xFE, 0x00, 0xD8, 0x68, 0x00 }));                // high surrogate, then a letter
+        Assert.False(FileKinds.ContentMatches("lone-high-be.txt", new byte[] { 0xFE, 0xFF, 0xD8, 0x00, 0x00, 0x68 }));
+        Assert.False(FileKinds.ContentMatches("exe.txt", new byte[] { 0x4D, 0x5A, 0x90, 0x00, 0x03, 0x00 }));                      // a program
+        Assert.False(FileKinds.ContentMatches("zip.md", new byte[] { 0x50, 0x4B, 0x03, 0x04, 0x14, 0x00, 0x00, 0x00 }));           // a zip
+
+        // A saved Bench session is UTF-8 JSON: the mark buys nothing there. Other types keep their own rule.
+        Assert.False(FileKinds.ContentMatches("session.json", Utf16("{}")));
+        Assert.False(FileKinds.ContentMatches("a.pdf", Utf16("%PDF-1.7")));
+    }
+
+    [Fact]
+    public void The_refusal_says_what_to_do_about_utf16_without_a_mark_and_never_calls_text_invalid()
+    {
+        var nomark = Utf16("words", mark: false);
+        var message = FileKinds.Refusal("notes.txt", nomark);
+        Assert.StartsWith("notes.txt can't be opened here.", message, StringComparison.Ordinal);
+        Assert.Contains("UTF-16 text saved without a byte-order mark", message, StringComparison.Ordinal);
+        Assert.Contains("Save it as UTF-8, or as UTF-16 with a byte-order mark", message, StringComparison.Ordinal);
+        Assert.DoesNotContain("isn't a valid", message, StringComparison.Ordinal);
+
+        Assert.Equal("fake.pdf isn't a valid PDF file.", FileKinds.Refusal("fake.pdf", "just text"u8));
+        Assert.Equal("s.json isn't a valid JSON file.", FileKinds.Refusal("s.json", nomark));
+    }
+
+    [Fact]
+    public async Task A_utf16_text_file_with_its_mark_uploads_whole_and_one_without_is_refused_with_the_message()
+    {
+        var t = NewTicket(multiple: true);
+        var good = Utf16("Un café.\r\n" + new string('é', 3000));
+        var (f, error) = t.Begin("notes.txt", good.Length);
+        Assert.Null(error);
+        Assert.Null(await f!.AppendAsync(0, new MemoryStream(good), 1 << 20, default));
+        Assert.True(f.IsComplete);
+        Assert.Equal(good, File.ReadAllBytes(f.Path)); // byte for byte: the viewer decodes it, not the upload
+
+        var bad = Utf16("Un café.", mark: false);
+        var (g, _) = t.Begin("nomark.txt", bad.Length);
+        var refused = await g!.AppendAsync(0, new MemoryStream(bad), 1 << 20, default);
+        Assert.Contains("UTF-16 text saved without a byte-order mark", refused, StringComparison.Ordinal);
+        Assert.False(File.Exists(g.Path)); // nothing kept
+    }
 }

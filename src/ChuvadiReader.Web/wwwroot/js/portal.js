@@ -401,8 +401,58 @@
         }
     });
     document.addEventListener('drop', function (e) {
-        if (hasFiles(e) && !e.defaultPrevented && !isFileInput(e.target)) e.preventDefault();
+        if (hasFiles(e) && !e.defaultPrevented && !isFileInput(e.target)) {
+            e.preventDefault();
+            holdForCatcher(e.dataTransfer);
+        }
     });
 
-    window.chvdPortal = { guardLeave: guardLeave, pick: pick, download: download, print: print, copyImage: copyImage, copyText: copyText, openLink: openLink, watchViewport: watchViewport, leave: leave, trackActivity: trackActivity, stillHere: stillHere };
+    // WT-27: a document dropped in the first moment after the page appears, before the drop catcher can
+    // take it, used to be cancelled without a word. It is kept and handed to the catcher's own file input
+    // as soon as that is live, so it goes through exactly the checks and messages of any other drop.
+    // (Once the catcher is live, this handler never sees a document drop: the catcher takes or stops it.)
+    // Image-only drops are not kept: the catcher doesn't take those (the Reader places them on a page).
+    var held = null, heldSince = 0;
+    function isImageOnly(files) {
+        for (var i = 0; i < files.length; i++) {
+            if (!(files[i].type && files[i].type.indexOf('image/') === 0)) return false;
+        }
+        return files.length > 0;
+    }
+    function holdForCatcher(dt) {
+        var files = dt && dt.files ? Array.prototype.slice.call(dt.files, 0, 64) : [];
+        if (files.length === 0 || isImageOnly(files)) return;
+        held = files;
+        heldSince = Date.now();
+        deliverHeld();
+    }
+    // The catcher's input is live once Blazor's InputFile has set itself up on it (it marks the element);
+    // should that mark ever go away, an input that has been there for a second is taken as live.
+    var inputSeen = 0;
+    function catcherInput() {
+        var input = document.querySelector('.pdrop input[type=file]');
+        if (!input) { inputSeen = 0; return null; }
+        if (!inputSeen) inputSeen = Date.now();
+        return (input._blazorInputFileNextFileId !== undefined || Date.now() - inputSeen > 1000) ? input : null;
+    }
+    function deliverHeld() {
+        if (!held) return;
+        var input = catcherInput();
+        if (!input) {
+            if (Date.now() - heldSince < 20000) setTimeout(deliverHeld, 150); else held = null;
+            return;
+        }
+        var files = held;
+        held = null;
+        try {
+            var dt = new DataTransfer();
+            files.forEach(function (f) { dt.items.add(f); });
+            input.files = dt.files;
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+        } catch (err) {
+            // A browser that can't put files into an input: the drop is lost, as before.
+        }
+    }
+
+    window.chvdPortal = { guardLeave: guardLeave, pick: pick, download: download, print: print, copyImage: copyImage, copyText: copyText, openLink: openLink, watchViewport: watchViewport, leave: leave, trackActivity: trackActivity, stillHere: stillHere, dropCatcherLive: function () { return !!catcherInput(); } };
 })();

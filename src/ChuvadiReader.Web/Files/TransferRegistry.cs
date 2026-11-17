@@ -289,7 +289,7 @@ public sealed class UploadFile
                 {
                     IsRejected = true;
                     Discard();
-                    return $"{Name} isn't a valid {System.IO.Path.GetExtension(Name).TrimStart('.').ToUpperInvariant()} file.";
+                    return FileKinds.Refusal(Name, head);
                 }
 
                 IsComplete = true;

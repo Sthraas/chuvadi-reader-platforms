@@ -60,6 +60,9 @@ with sync_playwright() as p:
         return { over: over.defaultPrevented, drop: !target.dispatchEvent(drop), effect: dt.dropEffect };
     }""")
     check("a drop that misses the catcher is cancelled and doesn't leave Chuvadi", cancelled["over"] and cancelled["drop"], str(cancelled))
+    # The script puts files straight into the catcher's input, which a person cannot do before it is live
+    # (it takes no pointer until then); wait for that, or the browser's change event has no listener yet (WT-27).
+    page.wait_for_function("() => window.chvdPortal && window.chvdPortal.dropCatcherLive()", timeout=15000)
     page.set_input_files(".pdrop input[type=file]", files=[{"name": "fake.pdf", "mimeType": "application/pdf", "buffer": b"just text"}])
     try:
         page.wait_for_selector("text=fake.pdf isn't a valid PDF", timeout=15000)

@@ -116,6 +116,35 @@ with sync_playwright() as p:
     open_text(back)
     check("signed out and in again, the same person starts from Automatic", shows(back, AS_UTF8) and chosen_row(back) == "Automatic")
     back.keyboard.press("Escape")
+
+    # --- WT-26 / D-197: UTF-16 text comes in when it carries its byte-order mark ---------------------------
+    words = "Un café en UTF-16, déjà vu.\nSecond line, plain.\n"
+    for name, data, label in [("utf16le.txt", b"\xff\xfe" + words.encode("utf-16-le"), "UTF-16 LE"),
+                              ("utf16be.txt", b"\xfe\xff" + words.encode("utf-16-be"), "UTF-16 BE")]:
+        path = os.path.join(out, name)
+        open(path, "wb").write(data)
+        back.goto(base + "/")
+        back.wait_for_selector("nav.leftbar >> text=Upload", timeout=30000)
+        with back.expect_file_chooser(timeout=15000) as fc:
+            back.click("nav.leftbar >> text=Upload")
+        fc.value.set_files(path)
+        ok = shows(back, "café en UTF-16, déjà vu", timeout=30000)
+        said = enc_button(back).inner_text().strip() if ok else ""
+        check("a %s text file with its byte-order mark opens, read right" % label, ok and said == label, said or back.evaluate(TEXT)[:60])
+
+    nomark = os.path.join(out, "utf16-nomark.txt")
+    open(nomark, "wb").write(words.encode("utf-16-le"))
+    back.goto(base + "/")
+    back.wait_for_selector("nav.leftbar >> text=Upload", timeout=30000)
+    with back.expect_file_chooser(timeout=15000) as fc:
+        back.click("nav.leftbar >> text=Upload")
+    fc.value.set_files(nomark)
+    try:
+        back.wait_for_selector("text=UTF-16 text saved without a byte-order mark", timeout=15000)
+        message = back.locator("text=UTF-16 text saved without a byte-order mark").first.inner_text()
+        check("UTF-16 without the mark is refused, and the message says what to do", "Save it as UTF-8, or as UTF-16 with a byte-order mark" in message and "isn't a valid" not in message, message[:160])
+    except Exception as ex:  # noqa: BLE001
+        check("UTF-16 without the mark is refused, and the message says what to do", False, str(ex)[:120])
     check("no page errors", not errors, "; ".join(errors[:3]))
     sign_out(again, base)
     b.close()
