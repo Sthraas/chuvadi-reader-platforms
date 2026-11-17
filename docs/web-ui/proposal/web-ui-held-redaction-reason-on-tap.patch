@@ -1,0 +1,30 @@
+diff --git a/src/ChuvadiReader.Ui/Pages/Reader.Shell.cs b/src/ChuvadiReader.Ui/Pages/Reader.Shell.cs
+index 9c43a94c..1fe39c17 100644
+--- a/src/ChuvadiReader.Ui/Pages/Reader.Shell.cs
++++ b/src/ChuvadiReader.Ui/Pages/Reader.Shell.cs
+@@ -545,8 +545,10 @@ public partial class Reader
+         // Protect
+         // D-198: redaction stays in the list, greyed, saying when it comes back (same rule as tools not built yet).
+         string? redactOff = LibraryHolds.RedactionHeld ? LibraryHolds.RedactionBack : Entitlements.CanRedact ? null : "Not in this edition";
+-        yield return new("p.redact", "Redact box", "Protect", "redact", LocalMode == DocMode.Protect && redactOff is null ? "R" : null, () => GoRedact(false), redactOff);
+-        yield return new("p.find", "Find & redact", "Protect", "find-in-page", null, () => GoRedact(true), redactOff);
++        // As the certificate (D-187): on a touch screen a held tool still runs, so a tap can say why (GoRedact says it).
++        var redactTap = LibraryHolds.RedactionHeld && ChuvadiReader.Ui.Components.Platform.PlatformText.ReasonOnTap(Platform);
++        yield return new("p.redact", "Redact box", "Protect", "redact", LocalMode == DocMode.Protect && redactOff is null ? "R" : null, () => GoRedact(false), redactTap ? null : redactOff) { Dimmed = redactTap };
++        yield return new("p.find", "Find & redact", "Protect", "find-in-page", null, () => GoRedact(true), redactTap ? null : redactOff) { Dimmed = redactTap };
+         yield return new("p.stamp", "Stamp (header & footer)", "Protect", "stamp", null, T(() => OpenProtectCard("stamp")));
+         yield return new("p.watermark", "Watermark", "Protect", "watermark", null, T(() => OpenProtectCard("watermark")));
+         // D-187: off on the Web portal. Greyed with its reason; on a touch screen it still runs, and the card gives the reason.
+diff --git a/src/ChuvadiReader.Ui/Pages/Reader.razor b/src/ChuvadiReader.Ui/Pages/Reader.razor
+index dc0644b8..15a993da 100644
+--- a/src/ChuvadiReader.Ui/Pages/Reader.razor
++++ b/src/ChuvadiReader.Ui/Pages/Reader.razor
+@@ -1207,7 +1207,7 @@
+                     @if (LibraryHolds.RedactionHeld)
+                     {
+                         @* D-198: where redaction was, it says when it comes back (greyed; the reason shows on hover and on a tap). *@
+-                        <RailButton Icon="redact" Label="Redaction" Disabled="true" DisabledReason="@LibraryHolds.RedactionBack" ReasonOnTap="true" />
++                        <RailButton Icon="redact" Label="Redaction" DisabledReason="@LibraryHolds.RedactionBack" ReasonOnTap="@ChuvadiReader.Ui.Components.Platform.PlatformText.ReasonOnTap(Platform)" OnClick="() => GoRedact(false)" />
+                     }
+                     else
+                     {

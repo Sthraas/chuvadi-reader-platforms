@@ -1,6 +1,28 @@
 # Web portal UI — existing-file hooks
 
-## Still to apply — the close card's long button labels stay on one line on the phone (found 18 Nov, checking patch 32 / D-194, D-195)
+## Still to apply — a tap on held Redaction says why, on tablet and phone (found 18 Nov, checking patch 33 / D-198, D-199)
+**`proposal/web-ui-held-redaction-reason-on-tap.patch`**, against foundation-pr **9e00fdf** (applies cleanly). Two files in `Ui/Pages`, 5 lines added and 3 removed.
+
+Why: with redaction held, the greyed tools give their reason only as a tooltip, and a touch screen has no tooltip. A tap does nothing:
+- the tablet's Protect rail (Redaction);
+- the phone's Protect bar, where the two held tools read only "Box" and "Find".
+
+So on a tablet or phone a person sees dead tools and no reason. The certificate next to them does answer a tap (D-187), and patch 33's own comment says the reason shows "on hover and on a tap". The cause is in `RailButton`: a greyed button answers a tap only when it is not also `Disabled`, and the Redaction button passes `Disabled="true"` and no `OnClick`. The phone's tools come from the command list, where the two redaction commands carry their reason as a hard "off".
+
+The change, the same as the certificate:
+- **`Reader.razor`:** the Redaction rail button drops `Disabled="true"` and takes `ReasonOnTap="@PlatformText.ReasonOnTap(Platform)"` and `OnClick="() => GoRedact(false)"`. `GoRedact` already says `LibraryHolds.RedactionBack` when redaction is held.
+- **`Reader.Shell.cs`:** "Redact box" and "Find & redact" stay tappable but dimmed on a touch screen (`Dimmed`, reason passed as null), exactly as `p.cert` does.
+
+Measured (Chromium / Firefox / WebKit):
+- **Before (patch 33):** a tap on tablet Redaction or phone Box / Find shows nothing; the certificate shows its sentence.
+- **After:** each tap shows "Redaction comes back with the next update." The look is unchanged: greyed (opacity 0.38), "soon" on the tablet rail. The page doesn't move (`/reader`). The certificate is as before.
+- **Portal desktop and Windows profile:** unchanged. The button is still disabled, with the reason on hover and "soon" in the rail.
+- **Build and tests:** `-warnaserror` 0 warnings; 608 tests pass with the change in.
+- **Screenshot:** `screenshots/webkit-held-redaction-tap-phone.png` (before and after).
+
+Pros: the held tools explain themselves on touch, like the certificate; two small edits; nothing changes for a mouse. Cons: none found. The message comes as the app's usual note, which has a green tick (see OPTIONS).
+
+## Routed to the Foundation (coordinator 18 Nov 01:35), not yet applied — the close card's long button labels stay on one line on the phone (found 18 Nov, checking patch 32 / D-194, D-195)
 **`proposal/web-ui-close-card-phone-labels.patch`**, against foundation-pr **149f4fc** (applies cleanly). One line in `Ui/wwwroot/css/shell.css`:
 `html[data-shell="phone"] .closeq .fc-btn { min-height: 44px; flex: 1; }` → `{ min-height: 44px; flex: 1 1 auto; white-space: nowrap; }`
 
@@ -13,7 +35,7 @@ Measured (Chromium / Firefox / WebKit, phone at 360 and 390 px wide):
 - Tablet, desktop and Windows: not touched (the rule is phone-only).
 - Pros: one line of CSS; no wording change. Cons: the buttons are no longer exactly equal widths (the primary one is the widest, which reads naturally).
 
-## Still to apply — the encoding picker's rows are finger-sized on tablet and phone (found 16 Nov, checking patch 31 / D-191)
+## Routed to the Foundation (coordinator 18 Nov 01:35), not yet applied — the encoding picker's rows are finger-sized on tablet and phone (found 16 Nov, checking patch 31 / D-191)
 **`proposal/web-ui-encoding-rows-finger-size.patch`**, against foundation-pr **b895750** (applies cleanly). One file, `Ui/wwwroot/css/shell.css`, 2 lines added after the `.enc-*` rules:
 `html[data-shell="tablet"] .enc-row, html[data-shell="phone"] .enc-row { min-height: 44px; }`, the same pattern as AT-25 and AT-26 in patch 31.
 

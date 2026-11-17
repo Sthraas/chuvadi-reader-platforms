@@ -307,3 +307,42 @@ Checked in Chromium, Firefox and WebKit on portal desktop, tablet, phone and the
 5. **For Web (when it takes patch 32):** the Ui asks on Sign out only if the host's `IAccount.SignOutAsync` first calls `IUnsavedWork.ConfirmCloseAsync` (Services.cs: "The portal calls the same before Sign out"). Today `WebPlatform.SignOutAsync` (95c44b0) goes straight to `/signout`. Also, a Save as… or Save session… chosen at Sign out is delivered as a download, so the move to `/signout`, which wipes the session's files, must wait until that download has been handed to the browser. In my preview I did the first part to test the cards; the second can only be proved on the real portal.
 
 **Closed:** the encoding choice after a reload (point 4 of the patch 31 check). Web Test proved it on the real portal (`encoding_picker.py` 12/12 × 3: survives a reload, not seen by a second person, gone after sign-out).
+
+## Observations from the patch 33 check (18 Nov): what is held until the next library update (D-198, D-199, D-200)
+Checked in Chromium, Firefox and WebKit on portal desktop, tablet, phone and the Windows profile. My test files:
+- a plain PDF;
+- the Foundation's `rich.pdf` (bookmarks, page labels, language) and `layered.pdf`;
+- a PDF signed with the app's own signing service (self-signed certificate);
+- an Excel file with one conditional-colour rule.
+
+**As designed:**
+- **Page operations ask first** (Arrange › Bind and Bind all). Title "The new file will not have everything", buttons Continue and Cancel, and the keyboard starts on Cancel. Tab stays in the card; Esc cancels, and the next Bind asks again. After Continue, the same file isn't asked about again in that run.
+  - A plain file is still asked about ("…has none of what is left out (bookmarks, form fields, links to places in the file, page labels, language, tags)").
+  - `rich.pdf` names its bookmarks, page labels and language.
+  - `layered.pdf` adds "It has layers: a layer that is hidden in the file may show in the new one. Check the result before you rely on it."
+  - Two files: one line per file, then "Files with layers: …". The phone shows them as a list.
+  - The card is the close card's style, one row of buttons (44 px on touch), always inside the screen.
+- **Redaction held:**
+  - Desktop: Protect's rail shows Redaction greyed, with "soon" and the reason on hover.
+  - The R key, Ctrl K and the redact page don't open it. The redact page says "Redaction comes back with the next update.", gives its one-line reason, and offers only "Back to the document", which works.
+  - Arrange no longer offers "Send to Redact".
+- **Signature check:**
+  - The banner and status bar say "Signed by A. Shiva · 17 Nov 2026 · not checked in this version" and "1 signature · not checked in this version".
+  - The card says "Not checked" and ends "Shown here is what the signature states. Whether it is valid, and whether the file changed after it, is not checked in this version: checking comes back with the next update." No "Valid" or "Trusted" anywhere.
+- **Excel:** "Conditional colours return with the next update", one line under the sheet that has the rule (phone included). Its tooltip: "This sheet colours some cells by rule. Those colours are not drawn in this version; the values are." The rule's cell has no colour, and the sheet without rules has no line.
+- **Tone:** plain and calm throughout. Each message says what is missing, that it comes back, and what to do. Nothing alarming, nothing hidden.
+
+**For the coordinator to decide or pass on:**
+1. **On tablet and phone a tap on held Redaction says nothing** (the phone's tools read only "Box" and "Find"); the certificate next to them does say why. → diff in HOOKS (`web-ui-held-redaction-reason-on-tap.patch`), measured in three browsers. **The one thing in patch 33 I'd fix before Phase 1.**
+2. **"…the bookmarks, page labels and the document's language of rich.pdf."** "The document's language of" reads awkwardly; in the two-file list it's "its bookmarks, page labels and the document's language".
+   - (a) Leave it.
+   - (b) Say "language": "…the bookmarks, page labels and language of rich.pdf" / "its bookmarks, page labels and language". One word list in `PageOperationCheck`.
+   - **I recommend (b)**, mildly; I'll write the diff if wanted.
+3. **Ctrl K cuts the reason** to "Redaction comes back with the nex…", so the important word is lost. The command list's reason column is narrow for every greyed command; this is the first long reason a person will meet there often. Options:
+   - (a) Leave it: the full sentence is in the tooltip and on the redact page.
+   - (b) Let the reason wrap to a second line in the command list (one CSS rule; changes every command with a long reason).
+   - **I recommend (a) for Phase 1.** It goes away with Pdf 3.35.1.
+4. **Small, no change suggested:**
+   - The rail tooltip stutters ("Redaction — Redaction comes back with the next update."), from the "Label — reason" pattern.
+   - The note shown on a tap has the app's green tick, a "done" sign, for a "not available" message.
+   - The signature card's details line "valid to 17 Nov 2027" is the certificate's own end date, not a verdict.

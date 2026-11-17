@@ -529,3 +529,27 @@ In `tools/ChuvadiReader.WebUi.Preview` (mine, not shared code): Sign out asks `I
 
 ### 7. Web Test (f16176b)
 Nothing against the Web portal UI. My patch 31 point 4 (encoding choice after reload) is proved on the real portal.
+
+## 2026-11-18 — session 29 (coordinator 01:35: merge patch 33; check its wording in the portal)
+
+### 1. Last time's CI
+Run on 5fa28ec: all nine jobs green. The two diffs from sessions 27 and 28 were routed to the Foundation by the coordinator (HOOKS updated).
+
+### 2. Branches and merge
+Checked all: `platform/foundation-pr` 9e00fdf, `platform/foundation` e7ba750, `main` eed82d8 (the coordinator says b193ab0; not fetched yet here), `platform/web` 95c44b0, `platform/web-test` f16176b, `platform/mobile-ui` df420b5.
+`platform/foundation` e7ba750 has foundation-pr's code exactly, so I merged it. Clean; **byte-identical to foundation-pr 9e00fdf**.
+
+### 3. Build and tests
+Build `-warnaserror` 0 warnings. Tests 448 + 16 + 41 + 103 = **608 pass**, 0 fail, 6 skipped (the Foundation's).
+
+### 4. Patch 33 in the portal
+`p33.py` (test files in the scratchpad):
+- the page-operation question with a plain, a bookmarked and a layered file, and two files at once;
+- Redaction held in Protect, the R key, Ctrl K, the redact page and Arrange;
+- the signature banner and card, with a signed copy made by the app's own signing service;
+- the Excel line, with a sheet that has one conditional-colour rule.
+
+Three browsers × four profiles, all as designed; four points in OPTIONS. One gap on touch (a tap on held Redaction says nothing) → `proposal/web-ui-held-redaction-reason-on-tap.patch`, measured before and after.
+
+### 5. Portal surfaces against patch 32's screenshots
+63 screenshots. Text identical apart from the clock and, on purpose, the redact page ("Upload…" → "Back to the document"; status "Redaction comes back with the next update."). Pixels the same elsewhere apart from the known Chromium chip sliver. Drop overlay 6 of 6, no console errors.
