@@ -556,5 +556,8 @@ Arun asked that all chats use Opus 5.5: the coordinator switched all twelve chat
 ## D-200 — Excel conditional colours skipped until the library fix
 18 Nov 2026, 01:05 IST. Arun chose (a): for all files, the Reader does not evaluate conditional formats (no EvaluateConditionalFormats call) until the Sheets release that fixes SEC-08 / SEC-10 is taken in the library move. Cell values and their shown text are untouched; only the conditional colours are not drawn. A short line on a sheet that has conditional formats says its conditional colours return with the next update. All hosts (shared Core). In patch 33.
 
+## D-201 — PR #25 merged; handover document
+18 Nov 2026, 01:31 IST. PR #25 merged on Arun's word: Reader main b193ab0 (patch 33: Protect hidden, signatures without a verdict, page operations ask first, Excel conditional colours skipped). All twelve chats wrote their pending lists; the coordinator compiled them into "Chuvadi Reader - handover and pending work" (https://claude.ai/artifact/An8jNo2sKZpmr5yHfkB8yi), with 55 open items for Arun. Coordinator routed to Foundation for its next patch: Mobile UI hooks-14 (H-27, H-28, H-29) and Web portal UI's two diffs (phone card labels, encoding rows 44 px). Found: Android has not applied Mobile UI hooks since 9 Nov, so those fixes are not on device until Foundation lands them; Web's patch 32 work (Sign-out card) is unpushed.
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).
