@@ -632,6 +632,8 @@ def sv5_arrange():
     mark_time()
     hit = tap("Bind all", "Bind desk", "Bind", sel=".ph-fab, .ph-pager, .rb, .bt-bind, button")
     time.sleep(2)
+    time.sleep(1.5)
+    ask = page_op_ask("Bind all")
     picker = folder_picker("at-bind")
     time.sleep(5)
     files = new_pdfs()
@@ -1136,7 +1138,55 @@ def sv14_excel_resize():
 
 
 XLSX_MD5 = None
-CASES = [("SV-1", sv1_text), ("SV-2", sv2_shape), ("SV-3", sv3_form), ("SV-4", sv4_redact), ("SV-7", sv7_password), ("SV-8", sv8_compress),
+try:
+    RUNCFG = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "run.json")))
+except Exception:
+    RUNCFG = {}
+HELD = bool(RUNCFG.get("patch33"))          # D-198: redaction held back, page operations ask first, conditional colours skipped
+
+
+def page_op_ask(where):
+    """D-198: before a page operation the Reader names what the new file leaves out. Record it, answer Continue."""
+    q = cdp.js("(() => { const c = document.querySelector('.pageopq'); if (!c) return null; const r = c.getBoundingClientRect();"
+               " return {title: (c.querySelector('.closeq-title') || {}).innerText, text: (c.querySelector('.closeq-text') || {}).innerText.slice(0, 400),"
+               " inside: r.left >= 0 && r.top >= 0 && r.right <= innerWidth + 1 && r.bottom <= innerHeight + 1,"
+               " buttons: [...c.querySelectorAll('button')].map(b => { const k = b.getBoundingClientRect(); return {t: b.innerText.trim(), x: k.left + k.width / 2, y: k.top + k.height / 2, w: Math.round(k.width), h: Math.round(k.height)}; })}; })()")
+    if HELD:
+        small = [b for b in (q or {}).get("buttons", []) if b["h"] < 44]
+        R.check(f"D-198 {where}: asks first, names what the new file leaves out, Continue and Cancel at least 44 px, whole on screen",
+                bool(q and "will not have" in (q.get("title") or "") and q["inside"] and not small and {"Continue", "Cancel"} <= {b["t"] for b in q["buttons"]}), q)
+    if q:
+        c = next((b for b in q["buttons"] if b["t"] == "Continue"), None)
+        if c:
+            tap_xy(c["x"], c["y"])
+            time.sleep(2)
+    return q
+
+
+def sv4_held():
+    """D-198: redaction is held back; Protect keeps its other tools and says when redaction returns."""
+    if not pick_open("sv-redact.pdf")["opened"]:
+        R.check("SV-4 file opened through the picker", False, None)
+        return
+    mode("Protect")
+    time.sleep(1.5)
+    lab = labels()
+    st = cdp.js("(() => { " + VIS + " return [...document.querySelectorAll('button, [role=menuitem]')].filter(vis).filter(b => /redact/i.test((b.innerText || '') + (b.getAttribute('aria-label') || '') + (b.title || ''))).map(b => ({t: (b.innerText || b.getAttribute('aria-label') || '').trim().slice(0, 40), disabled: b.disabled || b.getAttribute('aria-disabled') === 'true', title: (b.title || '').slice(0, 80)})); })()")
+    t = None
+    if st and not all(x["disabled"] for x in st):
+        t = tool("Protect: Box", "Protect: Redact box", "Redact box")
+        time.sleep(1.5)
+    body = cdp.js("document.body.innerText") or ""
+    said = "Redaction comes back with the next update" in body
+    boxes = cdp.js("(document.body.innerText.match(/(\\d+) box/) || [])[1] || null")
+    shot("sv4-held")
+    R.check("SV-4h (D-198) redaction is held back: no redaction box can be drawn and the Reader says it comes back with the next update",
+            boxes in (None, "0") and (said or (st and all(x["disabled"] for x in st))), {"redact_controls": st, "tool_tapped": t, "message_on_screen": said, "boxes": boxes})
+    keep = [x for x in ("Password", "Flatten", "Stamp", "Watermark", "Sign") if any(x.lower() in (l or "").lower() for l in (lab or []))]
+    R.check("SV-4k (D-198) Protect keeps password, flatten, stamp, watermark and signing", len(keep) >= 3, {"found": keep, "controls": lab})
+
+
+CASES = [("SV-1", sv1_text), ("SV-2", sv2_shape), ("SV-3", sv3_form), ("SV-4", sv4_held if HELD else sv4_redact), ("SV-7", sv7_password), ("SV-8", sv8_compress),
          ("SV-9", sv9_flatten), ("SV-10", sv10_rotated), ("SV-12", sv12_zoom), ("SV-11", sv11_excel), ("SV-14", sv14_excel_resize), ("SV-13", sv13_close_card), ("SV-15", sv15_pinch_modes), ("SV-16", sv16_other_outputs), ("SV-6", sv6_print), ("SV-5", sv5_arrange)]
 if phone():
     # Round 11: the phone stopped answering after the third Mark › Save as. Everything else first, so it is covered whatever happens.
