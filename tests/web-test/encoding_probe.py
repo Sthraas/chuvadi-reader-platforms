@@ -37,7 +37,24 @@ with sync_playwright() as p:
     if "Prix: 5 € – déjà" not in t and encbtn(pg).count(): choose(pg, "Windows-1252"); fr = [f for f in pg.frames if f != pg.main_frame]; t = pg.evaluate(BODY) + " ".join((f.locator("body").inner_text() if f.locator("body").count() else "") for f in fr)
     check("the Windows-1252 HTML reads right (on Automatic or once chosen)", "Prix: 5 € – déjà" in t, t.strip()[-50:])
     check("script in the HTML file did not run", pg.title() != "x" and all(f.evaluate("document.title") != "x" for f in fr if not f.is_detached()), pg.title())
-    with pg.expect_file_chooser() as fc: pg.click("nav.leftbar >> text=Upload")
-    fc.value.set_files("/tmp/enc/utf16.txt"); pg.wait_for_timeout(4000); d = pg.locator(".chvd-portal-overlay")
-    check("a UTF-16 text file (with its byte-order mark) opens — WT-26", "utf16.txt" in pg.locator(".rtab-name").all_inner_texts(), d.inner_text().replace("\n", " | ")[:120] if d.count() else "")
+    def tryup(f, wait=4000):
+        with pg.expect_file_chooser() as fc: pg.click("nav.leftbar >> text=Upload")
+        fc.value.set_files(f); pg.wait_for_timeout(wait); d = pg.locator(".chvd-portal-overlay")
+        msg = d.inner_text().replace("\n", " | ")[:220] if d.count() else ""
+        opened = os.path.basename(f) in pg.locator(".rtab-name").all_inner_texts()
+        if d.count():
+            b2 = d.locator("button").first
+            if b2.count(): b2.click(); pg.wait_for_timeout(400)
+        return opened, msg
+    for f, txt in (("/tmp/enc/utf16.txt", "Unicode sixteen: தமிழ் café"), ("/tmp/enc/utf16be.txt", "BE sixteen: தமிழ் café"), ("/tmp/enc/utf16le.md", "தமிழ் LE markdown")):
+        ok, msg = tryup(f)
+        if ok: pg.click(f".rtab:has(.rtab-name:text-is('{os.path.basename(f)}'))"); pg.wait_for_timeout(1200)
+        t = pg.evaluate(BODY) if ok else ""
+        check(f"WT-26: {os.path.basename(f)} (UTF-16 with byte-order mark) opens and reads right", ok and txt in t, (msg, label(pg), t.strip()[:60]))
+        if ok: check(f"WT-26: the status bar names UTF-16 for {os.path.basename(f)}", "UTF-16" in (label(pg) or ""), label(pg))
+    ok, msg = tryup("/tmp/enc/utf16le-nobom.txt")
+    check("WT-26: UTF-16 without the mark is refused, and the message says how to save it", not ok and "byte-order mark" in msg and "isn't a valid" not in msg, msg)
+    for f in ("utf32.txt", "zeros.txt", "badsurr.txt", "exe-as.txt"):
+        ok, msg = tryup("/tmp/enc/" + f)
+        check(f"WT-26: a binary under a text name stays refused ({f})", not ok and msg != "", msg[:120])
     check("no page errors", not errs, errs[:3]); b.close()
