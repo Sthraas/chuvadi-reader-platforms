@@ -74,6 +74,9 @@ static struct
     guint monitor_signal;
     char *hold_reason;        /* non-NULL: .NET wants the sign-out held, with this reason */
     char *hold_request;       /* the portal's request object that is the hold */
+    char *hold_request_named; /* the path we asked the portal to give that request, to hear its refusal */
+    guint hold_refusal;       /* the subscription to that request's Response */
+    guint hold_serial;        /* makes each request's name its own */
     guint hold_cookie;        /* or the GNOME session manager's cookie */
     int hold_pending;         /* a call asking for the hold is under way */
     int query_end_owed;       /* the desktop is waiting for our answer to "about to end" */
@@ -631,6 +634,17 @@ static void session_answer_query_end(void)
     }
 }
 
+static void session_stop_listening_for_refusal(void)
+{
+    if (S.hold_refusal)
+    {
+        g_dbus_connection_signal_unsubscribe(S.bus, S.hold_refusal);
+        S.hold_refusal = 0;
+    }
+
+    g_clear_pointer(&S.hold_request_named, g_free);
+}
+
 static void session_release(void)
 {
     if (!S.bus)
@@ -638,6 +652,7 @@ static void session_release(void)
         return;
     }
 
+    session_stop_listening_for_refusal();
     if (S.hold_request)
     {
         g_dbus_connection_call(S.bus, PORTAL_NAME, S.hold_request, "org.freedesktop.portal.Request", "Close",
@@ -678,29 +693,73 @@ static void on_gnome_inhibit(GObject *source, GAsyncResult *result, gpointer dat
     session_hold_settled();
 }
 
+/* The GNOME session manager's own call: where there is no portal, or the portal's desktop said no. */
+static void session_take_from_gnome(void)
+{
+    S.hold_pending = 1;
+    g_dbus_connection_call(S.bus, GNOME_SM_NAME, GNOME_SM_PATH, GNOME_SM_NAME, "Inhibit",
+                           g_variant_new("(susu)", g_get_prgname() ? g_get_prgname() : "chuvadi-reader", (guint32)0,
+                                         S.hold_reason, (guint32)1 /* logout */),
+                           G_VARIANT_TYPE("(u)"), G_DBUS_CALL_FLAGS_NONE, -1, NULL, on_gnome_inhibit, NULL);
+}
+
 static void on_portal_inhibit(GObject *source, GAsyncResult *result, gpointer data)
 {
     (void)data;
     GVariant *reply = g_dbus_connection_call_finish(G_DBUS_CONNECTION(source), result, NULL);
     if (reply)
     {
-        g_variant_get(reply, "(o)", &S.hold_request);
+        if (S.hold_request_named)
+        {
+            g_variant_get(reply, "(o)", &S.hold_request); /* still ours: not refused in the meantime */
+        }
+
         g_variant_unref(reply);
-        session_hold_settled();
-        return;
+        if (S.hold_request || !S.hold_reason)
+        {
+            session_hold_settled();
+        }
+
+        return; /* refused before the reply: on_portal_refusal has already gone on to the session manager */
     }
 
+    session_stop_listening_for_refusal();
     if (!S.hold_reason)
     {
         session_hold_settled();
         return;
     }
 
-    /* No portal (or it has no Inhibit): the GNOME session manager's own call. */
-    g_dbus_connection_call(S.bus, GNOME_SM_NAME, GNOME_SM_PATH, GNOME_SM_NAME, "Inhibit",
-                           g_variant_new("(susu)", g_get_prgname() ? g_get_prgname() : "chuvadi-reader", (guint32)0,
-                                         S.hold_reason, (guint32)1 /* logout */),
-                           G_VARIANT_TYPE("(u)"), G_DBUS_CALL_FLAGS_NONE, -1, NULL, on_gnome_inhibit, NULL);
+    session_take_from_gnome(); /* no portal, or it has no Inhibit */
+}
+
+/* The portal took the call but its desktop refused the lock: the request ends with a Response other than 0
+ * (a lock that is granted sends none and simply stays). A refused request is not a lock (Linux Test B-35). */
+static void on_portal_refusal(GDBusConnection *bus, const char *sender, const char *path, const char *iface,
+                              const char *signal, GVariant *params, gpointer data)
+{
+    (void)bus;
+    (void)sender;
+    (void)iface;
+    (void)signal;
+    (void)data;
+    guint32 response = 0;
+    g_variant_get_child(params, 0, "u", &response);
+    if (response == 0 || !S.hold_request_named || g_strcmp0(path, S.hold_request_named) != 0)
+    {
+        return;
+    }
+
+    session_stop_listening_for_refusal();
+    g_clear_pointer(&S.hold_request, g_free); /* the request is gone with its Response: nothing to close */
+    if (S.hold_reason && !S.hold_cookie)
+    {
+        session_take_from_gnome();
+    }
+    else
+    {
+        session_hold_settled();
+    }
 }
 
 static void session_take(void)
@@ -710,9 +769,20 @@ static void session_take(void)
         return;
     }
 
+    /* The request's path is ours to name, so its refusal can be listened for before the call is made. */
+    char *token = g_strdup_printf("chvd_hold%u", ++S.hold_serial);
+    char *sender = g_strdup(g_dbus_connection_get_unique_name(S.bus) + 1);
+    g_strdelimit(sender, ".", '_');
+    S.hold_request_named = g_strdup_printf(PORTAL_PATH "/request/%s/%s", sender, token);
+    g_free(sender);
+    S.hold_refusal = g_dbus_connection_signal_subscribe(S.bus, PORTAL_NAME, "org.freedesktop.portal.Request", "Response",
+                                                        S.hold_request_named, NULL, G_DBUS_SIGNAL_FLAGS_NONE,
+                                                        on_portal_refusal, NULL, NULL);
     GVariantBuilder options;
     g_variant_builder_init(&options, G_VARIANT_TYPE("a{sv}"));
+    g_variant_builder_add(&options, "{sv}", "handle_token", g_variant_new_string(token));
     g_variant_builder_add(&options, "{sv}", "reason", g_variant_new_string(S.hold_reason));
+    g_free(token);
     S.hold_pending = 1;
     g_dbus_connection_call(S.bus, PORTAL_NAME, PORTAL_PATH, PORTAL_INHIBIT, "Inhibit",
                            g_variant_new("(sua{sv})", "", (guint32)1 /* logout */, &options),

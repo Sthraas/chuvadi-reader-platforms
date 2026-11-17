@@ -2,7 +2,10 @@
  *
  *   fake-session portal   owns org.freedesktop.portal.Desktop: Inhibit, CreateMonitor, QueryEndResponse,
  *                         and Request.Close on the handles it gave out
- *   fake-session gnome    owns org.gnome.SessionManager: Inhibit, Uninhibit (no portal on the bus)
+ *   fake-session gnome    owns org.gnome.SessionManager: Inhibit, Uninhibit
+ *   fake-session portal gnome          both, as on a GNOME desktop
+ *   fake-session portal refuse gnome   the portal takes Inhibit and then refuses it (the request ends with
+ *                                      Response 2), as a desktop behind the portal that says no
  *
  * Every call is written to stdout as one line. A line on stdin makes it act: "query-end" sends the portal's
  * StateChanged (session-state 2) to every monitor, as a desktop does when the person signs out; "quit" ends it.
@@ -17,6 +20,7 @@
 static GDBusConnection *bus;
 static GPtrArray *monitors; /* session object paths */
 static guint next_id = 1;
+static gboolean refuse;
 
 static const char PORTAL_XML[] =
     "<node>"
@@ -27,7 +31,8 @@ static const char PORTAL_XML[] =
     "<signal name='StateChanged'><arg type='o'/><arg type='a{sv}'/></signal>"
     "<property name='version' type='u' access='read'/>"
     "</interface>"
-    "<interface name='org.freedesktop.portal.Request'><method name='Close'/></interface>"
+    "<interface name='org.freedesktop.portal.Request'><method name='Close'/>"
+    "<signal name='Response'><arg type='u'/><arg type='a{sv}'/></signal></interface>"
     "</node>";
 
 static const char GNOME_XML[] =
@@ -87,11 +92,23 @@ static void portal_call(GDBusConnection *c, const char *sender, const char *path
         const char *reason = "";
         g_variant_get(params, "(&su@a{sv})", &window, &flags, &options);
         g_variant_lookup(options, "reason", "&s", &reason);
-        char *token = g_strdup_printf("hold%u", next_id++);
+        const char *asked = NULL;
+        g_variant_lookup(options, "handle_token", "&s", &asked);
+        char *token = asked ? g_strdup(asked) : g_strdup_printf("hold%u", next_id++);
         char *handle = g_strdup_printf("/org/freedesktop/portal/desktop/request/%s/%s", who, token);
-        g_dbus_connection_register_object(c, handle, portal_info->interfaces[1], &request_vtable, NULL, NULL, NULL);
+        guint object = g_dbus_connection_register_object(c, handle, portal_info->interfaces[1], &request_vtable, NULL, NULL, NULL);
         say("Inhibit %s flags=%u reason=%s", token, flags, reason);
         g_dbus_method_invocation_return_value(inv, g_variant_new("(o)", handle));
+        if (refuse)
+        {
+            GVariantBuilder results;
+            g_variant_builder_init(&results, G_VARIANT_TYPE("a{sv}"));
+            g_dbus_connection_emit_signal(c, sender, handle, "org.freedesktop.portal.Request", "Response",
+                                          g_variant_new("(ua{sv})", (guint32)2, &results), NULL);
+            g_dbus_connection_unregister_object(c, object);
+            say("Refused %s", token);
+        }
+
         g_variant_unref(options);
         g_free(token);
         g_free(handle);
@@ -182,9 +199,41 @@ static void on_line(GObject *source, GAsyncResult *result, gpointer loop)
     g_data_input_stream_read_line_async(G_DATA_INPUT_STREAM(source), G_PRIORITY_DEFAULT, NULL, on_line, loop);
 }
 
+static gboolean take_name(const char *name)
+{
+    GError *error = NULL;
+    GVariant *owned = g_dbus_connection_call_sync(bus, "org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "RequestName",
+                                                  g_variant_new("(su)", name, 4u), G_VARIANT_TYPE("(u)"), G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
+    if (!owned)
+    {
+        fprintf(stderr, "could not take %s: %s\n", name, error->message);
+        return FALSE;
+    }
+
+    guint32 got = 0;
+    g_variant_get(owned, "(u)", &got);
+    g_variant_unref(owned);
+    if (got != 1)
+    {
+        fprintf(stderr, "%s is already taken on this bus (a real portal or session manager): use a bus of its own\n", name);
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
 int main(int argc, char **argv)
 {
-    gboolean gnome = argc > 1 && g_strcmp0(argv[1], "gnome") == 0;
+    gboolean portal = FALSE, gnome = FALSE;
+    GString *kinds = g_string_new(NULL);
+    for (int i = 1; i < argc; i++)
+    {
+        portal |= g_strcmp0(argv[i], "portal") == 0;
+        gnome |= g_strcmp0(argv[i], "gnome") == 0;
+        refuse |= g_strcmp0(argv[i], "refuse") == 0;
+        g_string_append_printf(kinds, "%s%s", i > 1 ? " " : "", argv[i]);
+    }
+
     GError *error = NULL;
     bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
     if (!bus)
@@ -198,32 +247,23 @@ int main(int argc, char **argv)
     {
         GDBusNodeInfo *info = g_dbus_node_info_new_for_xml(GNOME_XML, NULL);
         g_dbus_connection_register_object(bus, "/org/gnome/SessionManager", info->interfaces[0], &gnome_vtable, NULL, NULL, NULL);
+        if (!take_name("org.gnome.SessionManager"))
+        {
+            return 1;
+        }
     }
-    else
+
+    if (portal)
     {
         portal_info = g_dbus_node_info_new_for_xml(PORTAL_XML, NULL);
         g_dbus_connection_register_object(bus, "/org/freedesktop/portal/desktop", portal_info->interfaces[0], &portal_vtable, NULL, NULL, NULL);
+        if (!take_name("org.freedesktop.portal.Desktop"))
+        {
+            return 1;
+        }
     }
 
-    GVariant *owned = g_dbus_connection_call_sync(bus, "org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "RequestName",
-                                                  g_variant_new("(su)", gnome ? "org.gnome.SessionManager" : "org.freedesktop.portal.Desktop", 4u),
-                                                  G_VARIANT_TYPE("(u)"), G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
-    if (!owned)
-    {
-        fprintf(stderr, "could not take the name: %s\n", error->message);
-        return 1;
-    }
-
-    guint32 got = 0;
-    g_variant_get(owned, "(u)", &got);
-    g_variant_unref(owned);
-    if (got != 1)
-    {
-        fprintf(stderr, "the name is already taken on this bus (a real portal or session manager): use a bus of its own\n");
-        return 1;
-    }
-
-    say("ready %s", gnome ? "gnome" : "portal");
+    say("ready %s", kinds->str);
     GMainLoop *loop = g_main_loop_new(NULL, FALSE);
     GInputStream *in = g_unix_input_stream_new(0, FALSE);
     GDataInputStream *lines = g_data_input_stream_new(in);

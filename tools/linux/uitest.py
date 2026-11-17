@@ -1860,7 +1860,7 @@ def sign_out_is_held():
                                  env=app.env, capture_output=True, text=True, check=True).stdout.split()
             self.bus_pid = int(bus[1])
             app.env["DBUS_SESSION_BUS_ADDRESS"] = bus[0]
-            self.proc = subprocess.Popen([tool, kind], env=app.env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, bufsize=1)
+            self.proc = subprocess.Popen([tool, *kind.split()], env=app.env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, bufsize=1)
             threading.Thread(target=lambda: [self.lines.append(l.strip()) for l in self.proc.stdout], daemon=True).start()
             app.wait(lambda: any(l.startswith("ready") for l in self.lines), 10, f"the stand-in {kind} on its bus")
 
@@ -1909,6 +1909,12 @@ def sign_out_is_held():
             raise AssertionError(f"no '{label}' on the card")
         time.sleep(1.0)
 
+    def discard_the_marked_tab():
+        app.js("document.querySelector('.rtab.active .rtab-x').click(); return 1")
+        app.wait(lambda: card() is not None, 6, "the question on closing the marked tab")
+        answer("Discard")
+
+    took = lambda d: [l for l in d.lines if l.startswith("Inhibit")]
     said = []
     desktop = Desktop("portal")
     try:
@@ -1923,54 +1929,90 @@ def sign_out_is_held():
         desktop.tell("query-end")  # nothing unsaved: the sign-out goes on
         app.wait(lambda: "QueryEndResponse" in desktop.lines, 5, "the answer to a sign-out with nothing unsaved")
         time.sleep(0.5)
-        if any(l.startswith("Inhibit") for l in desktop.lines) or card() or held() != 0 or not app.alive():
+        if took(desktop) or card() or held() != 0 or not app.alive():
             raise AssertionError(f"a sign-out with nothing unsaved was held or asked about: {desktop.lines}, card {card()}")
-        said.append("nothing unsaved: the sign-out is answered at once and not held")
+        said.append("nothing unsaved: no lock, and the sign-out is answered at once")
 
-        mark()
+        # The lock is taken when the work becomes unsaved, before any notice (IUnsavedWork.Changed).
         del desktop.lines[:]
+        mark()
+        app.wait(lambda: len(took(desktop)) == 1 and held() == 2, 6, f"the lock as soon as a mark is unsaved (saw {desktop.lines}, state {held()})")
+        if f"flags=1 reason={reason}" not in took(desktop)[0]:
+            raise AssertionError(f"the lock: {took(desktop)[0]}")
+        first = took(desktop)[0].split()[1]
         desktop.tell("query-end")
-        app.wait(lambda: "QueryEndResponse" in desktop.lines, 5, "the answer to a sign-out with a mark unsaved")
-        took = [l for l in desktop.lines if l.startswith("Inhibit")]
-        if len(took) != 1 or f"flags=1 reason={reason}" not in took[0] or desktop.lines.index(took[0]) > desktop.lines.index("QueryEndResponse"):
-            raise AssertionError(f"the hold was not in place before the desktop got its answer: {desktop.lines}")
-        app.wait(lambda: card() is not None, 6, "the question in the window")
-        if held() != 2 or "held.pdf" not in card():
-            raise AssertionError(f"hold state {held()}, card {card()}")
+        app.wait(lambda: "QueryEndResponse" in desktop.lines and card() is not None, 6, "the question in the window on a sign-out")
+        if len(took(desktop)) != 1 or "held.pdf" not in card():
+            raise AssertionError(f"on the notice: {desktop.lines}, card {card()}")
         app.shot("42-sign-out-held")
         answer("Cancel")
         if card() or held() != 2 or not app.alive():
             raise AssertionError(f"after Cancel: card {card()}, hold state {held()}")
-        said.append(f"a mark unsaved: the portal hold (logout, \"{reason}\") is taken before the desktop is answered, the window asks, Cancel keeps the hold")
+        said.append(f"a mark unsaved: the portal lock (logout, \"{reason}\") is taken at once, before any notice; on the notice the window asks; Cancel keeps window and lock")
 
+        # B-34: the lock goes when the unsaved work goes.
+        discard_the_marked_tab()
+        app.wait(lambda: f"Close {first}" in desktop.lines and held() == 0, 6, f"the lock given up once the mark is discarded (saw {desktop.lines}, state {held()})")
         del desktop.lines[:]
         desktop.tell("query-end")
-        app.wait(lambda: "QueryEndResponse" in desktop.lines and card() is not None, 6, "the question again on a second sign-out")
-        if any(l.startswith("Inhibit") for l in desktop.lines):
-            raise AssertionError(f"a second hold was taken: {desktop.lines}")
+        app.wait(lambda: "QueryEndResponse" in desktop.lines, 5, "the answer to a sign-out after the discard")
+        time.sleep(0.5)
+        if took(desktop) or card():
+            raise AssertionError(f"a sign-out after the discard was held or asked about: {desktop.lines}, card {card()}")
+        said.append("the mark discarded: the lock is given up at once (B-34), and a sign-out then goes on unasked")
+
+        # Unsaved again: a new lock; the notice asks; Save writes the file and the window closes.
+        mark()
+        app.wait(lambda: len(took(desktop)) == 1 and held() == 2, 6, f"a new lock for new unsaved work (saw {desktop.lines})")
+        desktop.tell("query-end")
+        app.wait(lambda: card() is not None, 6, "the question again")
         answer("Save", closes=True)
         app.wait(lambda: not app.alive(), 15, "the window to close once the file is saved")
         if hashlib.sha256(open(pdf, "rb").read()).hexdigest() == before:
             raise AssertionError("Save on the sign-out's question did not write the mark into the file")
-        said.append(f"a second sign-out asks again without a second hold; Save wrote the file and the app closed (exit {app.proc.returncode}), so the sign-out can go on")
+        said.append(f"unsaved again: a new lock; Save on the question wrote the file and the app closed (exit {app.proc.returncode}), so the sign-out can go on")
     finally:
         desktop.stop()
 
-    # No portal: the GNOME session manager's own hold. It sends no notice, so the sign-out is stood in for.
+    # No portal: the GNOME session manager's own lock. It sends this app no notice, so that is stood in for.
     desktop = Desktop("gnome")
     try:
         shutil.copyfile(PDF, pdf)
         app.restart(log_name="app-session-gnome.log")
         mark()
+        app.wait(lambda: len(took(desktop)) == 1 and held() == 3, 6, f"the GNOME session manager's lock (saw {desktop.lines}, state {held()})")
+        line = took(desktop)[0]
+        if f"flags=1 reason={reason}" not in line or "app=in.chuvadi.Reader" not in line:
+            raise AssertionError(f"the GNOME lock: {line}")
+        cookie = line.split()[1]
+        discard_the_marked_tab()
+        app.wait(lambda: f"Uninhibit {cookie}" in desktop.lines and held() == 0, 6, f"the GNOME lock given up on discard (saw {desktop.lines})")
+        mark()
+        app.wait(lambda: len(took(desktop)) == 2 and held() == 3, 6, "a new GNOME lock")
         app.send("session-end")
-        app.wait(lambda: any(l.startswith("Inhibit") for l in desktop.lines), 6, f"the GNOME session manager's hold (got {desktop.lines})")
-        took = [l for l in desktop.lines if l.startswith("Inhibit")][0]
-        if f"flags=1 reason={reason}" not in took or "app=in.chuvadi.Reader" not in took:
-            raise AssertionError(f"the GNOME hold: {took}")
-        app.wait(lambda: card() is not None and held() == 3, 6, f"the question in the window (hold state {held()})")
+        app.wait(lambda: card() is not None, 6, "the question in the window")
         answer("Discard", closes=True)
         app.wait(lambda: not app.alive(), 15, "the window to close after Discard")
-        said.append(f"without a portal the GNOME session manager's hold is taken ({took.split(' ', 2)[2]}); Discard closes the app")
+        said.append(f"without a portal: the GNOME session manager's lock ({line.split(' ', 2)[2]}) is taken, given up on discard, taken again; Discard on the question closes the app")
+    finally:
+        desktop.stop()
+
+    # B-35: the portal takes the call and then refuses the lock; the GNOME session manager is asked instead.
+    desktop = Desktop("portal refuse gnome")
+    try:
+        shutil.copyfile(PDF, pdf)
+        app.restart(log_name="app-session-refused.log")
+        mark()
+        app.wait(lambda: any(l.startswith("Inhibit cookie") for l in desktop.lines) and held() == 3, 6,
+                 f"the GNOME lock after the portal's refusal (saw {desktop.lines}, state {held()})")
+        order = [l.split()[0] + (" cookie" if "cookie" in l else "") for l in desktop.lines if l.split()[0] in ("Inhibit", "Refused")]
+        if order != ["Inhibit", "Refused", "Inhibit cookie"]:
+            raise AssertionError(f"a refused portal lock: {desktop.lines}")
+        desktop.tell("query-end")
+        app.wait(lambda: "QueryEndResponse" in desktop.lines and card() is not None, 6, "the question in the window")
+        answer("Discard", closes=True)
+        app.wait(lambda: not app.alive(), 15, "the window to close after Discard")
+        said.append("a portal that takes the call and then refuses: not counted as a lock, the GNOME session manager's is taken instead (B-35)")
     finally:
         desktop.stop()
     app.restart(log_name="app-after-session.log")

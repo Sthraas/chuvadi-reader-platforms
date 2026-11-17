@@ -132,6 +132,10 @@ public static class Program
                 Native.Close);
             GtkHost.SessionEnding += sessionGuard.OnSessionEnding;
             Native.SessionWatch();
+            // The lock is held from the moment work is unsaved and given up when it is saved or discarded
+            // (Linux Test B-34): Changed comes on whatever thread the change happened.
+            unsaved.Changed += () => GtkHost.Post(sessionGuard.Refresh);
+            sessionGuard.Refresh();
 
             _ = manager.AddRootComponentAsync(typeof(ChuvadiReader.Ui.App), "#app", ParameterView.Empty);
             Mark("root component added");
