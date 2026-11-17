@@ -57,7 +57,7 @@ check("T1.5 bundle id", info.get("CFBundleIdentifier") == "in.sthraas.chuvadi.re
 check("T1.5 copyright", info.get("NSHumanReadableCopyright") == "Copyright © 2026 Sthraas Intelligence Pvt Ltd. All rights reserved.",
       info.get("NSHumanReadableCopyright", ""))
 check("T1.5 document types", not miss and ranks == ["Alternate"], f"missing/wrong role: {miss}; ranks {ranks}", utis=utis)
-check("T1.5 LSMinimumSystemVersion ≤ 12.0", minos != "" and ver(minos) <= (12, 0, 0), f"LSMinimumSystemVersion={minos!r}")
+check("T1.5 LSMinimumSystemVersion ≤ 14.0 (D-195)", minos != "" and ver(minos) <= (14, 0, 0), f"LSMinimumSystemVersion={minos!r}")
 check("T1.5 UIDeviceFamily 6 (Mac idiom)", info.get("UIDeviceFamily") == [6], str(info.get("UIDeviceFamily")))
 check("T1.5 versions", bool(info.get("CFBundleShortVersionString")) and bool(info.get("CFBundleVersion")),
       f"{info.get('CFBundleShortVersionString')} ({info.get('CFBundleVersion')})")
@@ -140,14 +140,14 @@ for rel, f in R["files"].items():
     if not ("arm64" in archs and "x86_64" in archs):
         single_arch.append(f"{rel}: {archs}")
     for m in mins:
-        # Mac Catalyst minos is the iOS-numbered version: 15.0 = macOS 12.
-        if ver(m) > (15, 0, 0):
+        # Mac Catalyst minos is the iOS-numbered version: 17.0 = macOS 14 (D-195).
+        if ver(m) > (17, 0, 0):
             high_minos.append(f"{rel}: minos {m}")
     for l in linked:
         if not (l.startswith(("/System/", "/usr/lib/", "@rpath/", "@executable_path/", "@loader_path/"))):
             foreign_libs.append(f"{rel} → {l}")
 check("T1.4 universal (every Mach-O)", not single_arch, "; ".join(single_arch) or f"{len(R['machos'])} Mach-O files, all arm64 + x86_64")
-check("T1.9 minimum OS (LC_BUILD_VERSION)", not high_minos, "; ".join(high_minos) or "every Mach-O minos ≤ maccatalyst 15.0 (= macOS 12)")
+check("T1.9 minimum OS (LC_BUILD_VERSION)", not high_minos, "; ".join(high_minos) or "every Mach-O minos ≤ maccatalyst 17.0 (= macOS 14)")
 check("T1.11 linked libraries", not foreign_libs, "; ".join(foreign_libs) or "only /System, /usr/lib and in-bundle (@rpath) libraries")
 
 # ---- assemblies
