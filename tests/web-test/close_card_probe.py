@@ -40,16 +40,16 @@ with sync_playwright() as p:
     check("Esc closes the card and keeps the tab and mark", pg.locator(".closeq").count() == 0 and marks(pg) == 1, (pg.locator(".closeq").count(), marks(pg)))
     pg.locator(".rtab:has(.rtab-name:text-is('text-13.pdf')) .rtab-x").click(); pg.wait_for_selector(".closeq", timeout=10000)
     try:
-        with pg.expect_download(timeout=20000) as dl: pg.locator(".closeq button:text-is('Save')").click()
+        with pg.expect_download(timeout=20000) as dl: pg.locator(".closeq button:text-is('Save as…')").click()
         path = f"{OUT}/saved-{eng}.pdf"; dl.value.save_as(path)
         from pypdf import PdfReader
         def data(page):
             o = page["/Contents"].get_object()
             return b"".join(x.get_object().get_data() for x in o) if isinstance(o, list) else o.get_data()
         r = PdfReader(path); cont = data(r.pages[0]); orig = data(PdfReader(A).pages[0])
-        check("Save on the card delivers the file with the mark in it", len(r.pages) == 13 and len(cont) > len(orig) and b" Do" in cont[len(orig) - 20:], (len(r.pages), len(orig), len(cont)))
-    except Exception as ex: check("Save on the card delivers the file with the mark in it", False, str(ex)[:150])
-    pg.wait_for_timeout(1000); check("after Save the tab is closed, the other stays", pg.locator(".rtab-name").all_inner_texts() == ["plain.pdf"], pg.locator(".rtab-name").all_inner_texts())
+        check("Save as… on the card delivers the file with the mark in it", len(r.pages) == 13 and len(cont) > len(orig) and b" Do" in cont[len(orig) - 20:], (len(r.pages), len(orig), len(cont)))
+    except Exception as ex: check("Save as… on the card delivers the file with the mark in it", False, str(ex)[:150])
+    pg.wait_for_timeout(1000); check("after Save as… the tab is closed, the other stays", pg.locator(".rtab-name").all_inner_texts() == ["plain.pdf"], pg.locator(".rtab-name").all_inner_texts())
     seen.clear()
     try: pg.reload(timeout=8000)
     except Exception: pass

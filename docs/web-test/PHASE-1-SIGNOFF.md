@@ -1,17 +1,17 @@
 # Web — what remains for a Phase 1 sign-off (Web Test chat)
 
-> **Updated 18 Nov 2026, 04:00 IST** — head **95c44b01** (patch 31 with the WT-26 and WT-27 fixes; first signed on 21665a3). The section below supersedes everything after it.
+> **Updated 18 Nov 2026, 05:30 IST** — head **0e971fa3** (patches 32 and 33; signed before on 21665a3 and 95c44b01). The section below supersedes everything after it.
 
-> **18 Nov, 04:00 IST — the sign-off moves to 95c44b01.** WT-26 and WT-27 verified fixed there, full regression clean (RESULTS.md, 18 Nov). Patch 32/33 head (0e971fa3) is being tested next.
-
-## Phase 1 sign-off for Web — signed off on 95c44b01, with the limits below
-**Web Test's finding:** on `platform/web` 95c44b01 (first signed on 21665a3) the Web portal does what Phase 1 asks, in Chrome, Firefox and WebKit, with marks also checked on WebKit 17.4. Every bug I raised is fixed and re-verified: **WT-01 to WT-27, M-27, LIB-1, LIB-2 — all fixed and re-verified; none open.** Results table: `RESULTS.md`, 17 Nov (and 16 Nov on 3f80768 for design and speed).
+## Phase 1 sign-off for Web — signed off on 0e971fa3, with the limits below
+**Web Test's finding:** on `platform/web` 0e971fa3 (first signed on 21665a3, then 95c44b01) the Web portal does what Phase 1 asks, in Chrome, Firefox and WebKit, with marks also checked on WebKit 17.4. Every bug I raised is fixed and re-verified: **WT-01 to WT-27, M-27, LIB-1, LIB-2 — fixed and re-verified.** Open, both Low and not blocking: **WT-28** (a reload within a second of a worker crash needs a second reload; Web) and **WT-29** (wording on the page-operation card; Foundation). Results table: `RESULTS.md`, 17 Nov (and 16 Nov on 3f80768 for design and speed).
 
 **What the sign-off rests on**
 - Build from clean, 0 warnings, all tests pass, package holds only .NET / ASP.NET Core and the product's own assemblies.
 - Sign-in against a real Sangam (rc.16), sessions, idle and 8-hour expiry, reload, come-back — including a worker killed or frozen while a session ends.
 - One person can't reach another's files, page images or print tickets; hostile files are refused cleanly while others keep working.
 - PDF, Word and Excel open and show the file's own content; marks land under the pointer at every zoom; save, print, redact, close card.
+
+**What patch 33 holds back on this head (D-198, until Pdf 3.35.1):** redaction is off; signatures are shown without a verdict; every page operation asks first; Excel conditional colours are not drawn. These come back with the patched libraries in Phase 2 and must be re-tested then (Redact at a zoom included).
 
 **Limits of this sign-off — what I did not prove**
 1. **Design:** screenshots taken and looked through for layout on 3f80768; no frame-by-frame comparison with the handout; Firefox and WebKit desktop not re-shot; the close card not checked at phone width.
@@ -24,7 +24,8 @@
 **Left to do**
 | When | What |
 |---|---|
-| Patch 32 head | Close card with Save as only, also on Sign out (D-194) — re-test with regression; the sign-off moves to that head |
+| Phase 2, with the patched libraries | Lift the D-198 holds; re-test redaction (and Redact at a zoom on WebKit 17.4), the signature verdict, page operations without the card, Excel conditional colours |
+| Web / Foundation | WT-28, WT-29 (Low) |
 | Phase 2, production server | 40-person load (sessions kept 30 min after a browser closes count against `MaxWorkers = 40`), V-1 to V-7, https back-channel, M-1 to M-4 incl. Safari 17/18 devices, G-12, speed at 20–40 people |
 | Runbook | `dotnet workload update` once per build machine; `Workers:ControlTimeout` (10 s) is a new setting |
 

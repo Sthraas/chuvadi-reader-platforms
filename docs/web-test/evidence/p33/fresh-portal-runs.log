@@ -1,0 +1,20 @@
+== WT-27 flows.py firefox, first visit on fresh portals
+fresh portal 1: 12 pass, 0 fail
+fresh portal 2: 12 pass, 0 fail
+fresh portal 3: 12 pass, 0 fail
+fresh portal 4: 12 pass, 0 fail
+fresh portal 5: 12 pass, 0 fail
+fresh portal 6: 12 pass, 0 fail
+== WT-27 early_drop.py, fresh portal each
+early_drop chrome: 5 pass, 0 fail
+early_drop firefox: 5 pass, 0 fail
+early_drop webkit: 5 pass, 0 fail
+early_drop chromium: 5 pass, 0 fail
+== worker_crash.py, fresh portal each
+worker_crash chrome: 11 pass, 0 fail
+1
+worker_crash firefox: 11 pass, 0 fail
+1
+worker_crash webkit: 11 pass, 0 fail
+1
+DONE-18A
