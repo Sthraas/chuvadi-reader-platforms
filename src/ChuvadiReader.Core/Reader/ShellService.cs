@@ -142,6 +142,10 @@ public sealed class ShellService
     /// when the person backed out of the save, or the reason it failed.</summary>
     public Func<bool, Task<string?>>? SaveMarksHandler { get; set; }
 
+    /// <summary>D-195: set by the Reader page while it is shown. Saves the active tab's edited bookmarks into the
+    /// file, as "Save bookmarks" does. Returns null when they are saved, otherwise why not.</summary>
+    public Func<Task<string?>>? SaveBookmarksHandler { get; set; }
+
     /// <summary>Set by the page that owns the counter; called with a 1-based target.</summary>
     public Func<int, Task>? CounterHandler { get; set; }
 
