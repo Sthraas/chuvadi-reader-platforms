@@ -742,7 +742,10 @@ check("back steps back through the app's screens, then leaves the app; the proce
 launch()
 r1 = wait_for(lambda s: s.get("route"), 20, "the app to come back")
 shot("p10-relaunched")
-last_route = steps[-1]["from"] if steps else None
+# The screen the person left from: when the close question was asked, the one they pressed Back on (the Ui
+# moves to Arrange only to show the question; after Discard the app comes back where they were).
+asked_at = next((st_ for st_ in steps if st_.get("asked")), None)
+last_route = asked_at["from"] if asked_at else (steps[-1]["from"] if steps else None)
 r1 = wait_for(lambda s: s.get("route") == last_route, 10, "the screen it left from")
 check("relaunch returns to the same process and the screen it left from", pid() == pid0 and r1.get("route") == last_route and resumed() == PKG,
       {"pid": [pid0, pid()], "route": [last_route, r1.get("route")]})
