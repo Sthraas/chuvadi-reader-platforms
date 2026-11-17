@@ -57,7 +57,7 @@ git apply docs/web-ui/proposal/mobile-ui-request-phoneshell-slot.patch docs/web-
 DOTNET_ROOT=<sdk dir> tools/ChuvadiReader.WebUi.Preview/test/serve.sh
 #   portal desktop :5101 · Windows :5102 · portal tablet :5103 · portal phone :5104
 ```
-Pages: `/_preview/sign-in` (`?error=…&busy=true&id=true` to show the U-9 ID field), `/_preview/gate`, `/_preview/open?path=/abs/file.pdf` (one file), plus every Ui route. Tablet and phone use Mobile UI's `mobile.css`/`PhoneShell` (on `platform/foundation` since the combined patch); the phone account block needs the two patches above.
+Pages: `/_preview/sign-in` (`?error=…&busy=true&id=true` to show the U-9 ID field), `/_preview/gate`, `/_preview/open?path=/abs/file.pdf` (one file), `/_preview/arrange?path=/abs/file.pdf` (all its pages on a desk in Arrange), `/_preview/close-app` (stands in for a window close: reach it with `Blazor.navigateTo`; the answer is left in `window.__previewClose`), plus every Ui route. Sign out asks about unsaved work first, as the portal does; with `PREVIEW_SAVE_DIR` set, Save as… and Save session… write a new file there instead of being cancelled. Tablet and phone use Mobile UI's `mobile.css`/`PhoneShell` (on `platform/foundation` since the combined patch); the phone account block needs the two patches above.
 
 ## Screenshot tests (external tools, testing only)
 Python 3 + Playwright (Chromium, Firefox, WebKit) + Pillow, in a throwaway venv; never part of the build.

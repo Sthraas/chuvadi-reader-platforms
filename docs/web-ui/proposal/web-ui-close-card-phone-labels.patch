@@ -1,0 +1,12 @@
+diff --git a/src/ChuvadiReader.Ui/wwwroot/css/shell.css b/src/ChuvadiReader.Ui/wwwroot/css/shell.css
+index b9acadd7..cb0ecb7b 100644
+--- a/src/ChuvadiReader.Ui/wwwroot/css/shell.css
++++ b/src/ChuvadiReader.Ui/wwwroot/css/shell.css
+@@ -484,6 +484,6 @@ html[data-platform] .psi-or span { height: 0; background: none; border-top: 0.5p
+ .closeq-gap { flex: 1; }
+ .closeq-edge { position: absolute; width: 0; height: 0; outline: none; }   /* focus stops that keep Tab inside the card */
+ html[data-shell="phone"] .closeq { top: auto; bottom: calc(16px + env(safe-area-inset-bottom)); }
+-html[data-shell="phone"] .closeq .fc-btn { min-height: 44px; flex: 1; }
++html[data-shell="phone"] .closeq .fc-btn { min-height: 44px; flex: 1 1 auto; white-space: nowrap; }   /* sized to the label first, so "Save bookmarks" and "Save session…" stay on one line */
+ html[data-shell="tablet"] .closeq .fc-btn { min-height: 44px; min-width: 80px; }   /* AT-26: finger-sized on the tablet too */
+ html[data-shell="phone"] .closeq-gap { display: none; }

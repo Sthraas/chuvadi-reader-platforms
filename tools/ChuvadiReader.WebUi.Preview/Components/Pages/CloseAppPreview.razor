@@ -1,0 +1,25 @@
+@page "/_preview/close-app"
+@using Microsoft.JSInterop
+@inject ChuvadiReader.Platform.IUnsavedWork Work
+@inject Microsoft.JSInterop.IJSRuntime JS
+@*
+    Stands in for a host's window close (the close button, Alt F4): asks about unsaved work as a host does
+    (IUnsavedWork, D-190, D-194). Reach it inside the running page (Blazor.navigateTo('/_preview/close-app')),
+    not by loading the address, which would start a new connection. The answer is left in
+    window.__previewClose ("had-unsaved;closed", "had-unsaved;stays-open", "nothing-unsaved;closed"); the page
+    does not navigate again, which would ask a second time.
+*@
+<div id="preview-close">asking</div>
+@code {
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (!firstRender) return;
+        _ = InvokeAsync(async () =>
+        {
+            var had = Work.HasUnsavedWork;
+            var close = !had || await Work.ConfirmCloseAsync();
+            var state = (had ? "had-unsaved;" : "nothing-unsaved;") + (close ? "closed" : "stays-open");
+            try { await JS.InvokeVoidAsync("eval", $"window.__previewClose='{state}'"); } catch (Microsoft.JSInterop.JSException) { }
+        });
+    }
+}

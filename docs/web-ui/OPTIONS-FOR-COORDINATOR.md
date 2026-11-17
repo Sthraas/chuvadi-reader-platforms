@@ -279,3 +279,31 @@ Checked in Chromium, Firefox and WebKit on portal desktop, tablet, phone and the
 2. **Two names for one thing.** The status button and the card say "Read this file as…"; the Document and ⋮ menus say "Text encoding…". By the WT-10 rule (one word for one action) the menu entry could read "Read this file as…" too. Pros: one name everywhere. Cons: "Text encoding…" is the word a person who knows the term looks for in a menu, and Ctrl K still finds it by "encoding" either way (the command keeps those keywords).
 3. **The keyboard doesn't land in the card.** Opened from the status button, the focus stays on that button, and the first row is 20 Tabs away (22 on the Windows profile), because the status bar is last on the page. Arrow keys don't move between the rows. Both are how every card and radio group in the app behaves today (FloatCard has no focus handling; Print's page range and the Settings segments are the same), so the picker is consistent with the design language; the gap is the app's, not the picker's. A fix belongs in FloatCard, for all cards at once.
 4. **Not provable in my preview: the choice after a page reload.** Here a reload forgets it, because the preview has no session storage. On the real portal Recents live in the session's storage on the server (`SessionAppStorage`), so the choice should survive F5. For Web Test: choose an encoding, press F5, expect it kept.
+
+## Observations from the patch 32 check (18 Nov): the close questions and Find (D-194, D-195)
+Checked in Chromium, Firefox and WebKit on portal desktop, tablet, phone and the Windows profile: 12 runs, 6 cases each, every case passing.
+
+**As designed:**
+- **Marks** (portal): Save as…, Discard, Cancel. On Windows: Save, Save as…, Discard, Cancel. The keyboard starts on the first button, Tab and Shift Tab stay inside the card, Esc cancels. Save as… writes a new file and leaves the original untouched.
+- **Bookmarks:** "Save the bookmarks of <file>?" Save bookmarks, Discard, Cancel. Save bookmarks writes them into the file.
+- **Redaction areas:** "Discard the redaction areas on <file>?" Discard and Cancel only, and the keyboard starts on Cancel, not on Discard. Discard leaves the file untouched.
+- **Arrange:** "Save what you arranged?" Save session…, Discard, Cancel. The question shows Arrange behind it. Save session… writes a session file.
+- **Both at once:** Arrange is asked first, then the file. Cancel on the second question stops the whole close.
+- **On Sign out** (portal: account menu on desktop and tablet; ⋮ on the phone; Account › Sign out on the phone's Home): the same cards. Cancel keeps the person signed in; an answer signs them out.
+- **Find:** the current match is never under the Find bar or off screen: 16 steps of 16 in all 12 runs. The bar moves aside for 12 of the 16, as it should for matches on the top line.
+- **Look:** all four cards use the house card style (LiPi Sans, the binding colour for the main action, danger red for Discard), one row of buttons, always inside the screen. Buttons are 44 px tall on tablet and phone.
+
+**Your wording rule ("keep as built, unless it reads wrongly in a new card"):** the file name in the title reads well in all four cards. Two small points; neither is wrong enough to need changing on its own:
+1. **"Save the marks *on* <file>?" but "Save the bookmarks *of* <file>?"** Both read naturally; "on" for marks and redaction areas, "of" for bookmarks is how people would say it. My view: leave it.
+2. **"…nor saved in a session" in the Arrange card, shown at Sign out.** On the portal "session" already means the sign-in ("Files live only for your session", "kept for this session"), so at Sign out "saved in a session" can be read as "kept in this sign-in", the opposite of what it means. Options:
+   - (a) Leave it. Pros: no work; Arrange calls these files "sessions" on every platform. Cons: the clash above, on the portal only.
+   - (b) Say "saved in a session file" everywhere (one word added; the button "Save session…" stays). Pros: clearer on every platform, no portal-only wording. Cons: one wording change through the Foundation.
+   - (c) A portal-only wording through PlatformText. Pros: desktop untouched. Cons: two wordings for one card.
+   - **My recommendation: (b).** I'll write the exact diff if you choose it.
+
+**For the coordinator to decide or pass on:**
+3. **Phone: two long labels break onto two lines** ("Save bookmarks", "Save session…") → diff in HOOKS (`web-ui-close-card-phone-labels.patch`), measured in three browsers, including the four-button Android card.
+4. **Bookmarks on the portal.** "Save bookmarks" writes the session's working copy and downloads it under the file's own name. So the person does get their file, unlike a plain Save, which D-194 removed for marks. I think this is right as built; I'm only flagging that the bookmarks card doesn't follow the marks card's "Save as only" rule.
+5. **For Web (when it takes patch 32):** the Ui asks on Sign out only if the host's `IAccount.SignOutAsync` first calls `IUnsavedWork.ConfirmCloseAsync` (Services.cs: "The portal calls the same before Sign out"). Today `WebPlatform.SignOutAsync` (95c44b0) goes straight to `/signout`. Also, a Save as… or Save session… chosen at Sign out is delivered as a download, so the move to `/signout`, which wipes the session's files, must wait until that download has been handed to the browser. In my preview I did the first part to test the cards; the second can only be proved on the real portal.
+
+**Closed:** the encoding choice after a reload (point 4 of the patch 31 check). Web Test proved it on the real portal (`encoding_picker.py` 12/12 × 3: survives a reload, not seen by a second person, gone after sign-out).

@@ -21,13 +21,23 @@ internal sealed class MemoryStorage : IAppStorage
     }
 }
 
-/// <summary>No pickers in the preview: every pick is cancelled.</summary>
+/// <summary>No pickers in the preview: every pick is cancelled. For the close questions (D-194) a save can be let
+/// through: with PREVIEW_SAVE_DIR set, "Save as" and "Save session" get a new file in that folder.</summary>
 internal sealed class NoPicker : IFilePicker
 {
+    private static string? SaveTo(string suggestedName, string extension)
+    {
+        var dir = Environment.GetEnvironmentVariable("PREVIEW_SAVE_DIR");
+        if (string.IsNullOrEmpty(dir)) return null;
+        Directory.CreateDirectory(dir);
+        var name = Path.GetFileNameWithoutExtension(suggestedName);
+        return Path.Combine(dir, $"{name}-{Guid.NewGuid():N}{extension}");
+    }
+
     public Task<string?> PickDocumentAsync(CancellationToken ct = default) => Task.FromResult<string?>(null);
     public Task<IReadOnlyList<string>> PickDocumentsAsync(CancellationToken ct = default) => Task.FromResult<IReadOnlyList<string>>([]);
-    public Task<string?> PickSavePdfAsync(string suggestedName, CancellationToken ct = default) => Task.FromResult<string?>(null);
-    public Task<string?> PickSaveSessionAsync(string suggestedName, CancellationToken ct = default) => Task.FromResult<string?>(null);
+    public Task<string?> PickSavePdfAsync(string suggestedName, CancellationToken ct = default) => Task.FromResult(SaveTo(suggestedName, ".pdf"));
+    public Task<string?> PickSaveSessionAsync(string suggestedName, CancellationToken ct = default) => Task.FromResult(SaveTo(suggestedName, ".chuvadi-session"));
     public Task<string?> PickOpenSessionAsync(CancellationToken ct = default) => Task.FromResult<string?>(null);
     public Task<string?> PickSaveImageAsync(string suggestedName, CancellationToken ct = default) => Task.FromResult<string?>(null);
     public Task<string?> PickFolderAsync(CancellationToken ct = default) => Task.FromResult<string?>(null);
@@ -57,7 +67,8 @@ internal sealed class PreviewDroppedFiles : IDroppedFiles
 }
 
 /// <summary>A signed-in Sangam person, as in the handout (12b).</summary>
-internal sealed class FakeSangamAccount : IAccount
+/// <summary>Sign out asks about unsaved work first, as the portal does (IUnsavedWork, D-194).</summary>
+internal sealed class FakeSangamAccount(IServiceProvider services) : IAccount
 {
     public bool IsSignedIn { get; private set; } = true;
     public string DisplayName => IsSignedIn ? "Arun S." : "";
@@ -72,11 +83,16 @@ internal sealed class FakeSangamAccount : IAccount
         return Task.FromResult(true);
     }
 
-    public Task SignOutAsync(CancellationToken ct = default)
+    public async Task SignOutAsync(CancellationToken ct = default)
     {
+        if (services.GetService(typeof(IUnsavedWork)) is IUnsavedWork work && work.HasUnsavedWork
+            && !await work.ConfirmCloseAsync())
+        {
+            return;   // Cancel: still signed in
+        }
+
         IsSignedIn = false;
         Changed?.Invoke();
-        return Task.CompletedTask;
     }
 }
 

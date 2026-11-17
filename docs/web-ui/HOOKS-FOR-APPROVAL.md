@@ -1,5 +1,18 @@
 # Web portal UI — existing-file hooks
 
+## Still to apply — the close card's long button labels stay on one line on the phone (found 18 Nov, checking patch 32 / D-194, D-195)
+**`proposal/web-ui-close-card-phone-labels.patch`**, against foundation-pr **149f4fc** (applies cleanly). One line in `Ui/wwwroot/css/shell.css`:
+`html[data-shell="phone"] .closeq .fc-btn { min-height: 44px; flex: 1; }` → `{ min-height: 44px; flex: 1 1 auto; white-space: nowrap; }`
+
+Why: `flex: 1` gives every button the same width whatever its label. The patch 32 cards have two long labels, and on the phone both break onto two lines: "Save / bookmarks" and "Save / session…" (screenshot: `screenshots/webkit-close-card-phone-labels.png`, before and after). With the change each button first takes its label's width, then they share the room left over.
+
+Measured (Chromium / Firefox / WebKit, phone at 360 and 390 px wide):
+- **Before:** three equal buttons, 91 px each (360) and 101 px each (390); "Save bookmarks" and "Save session…" on two lines.
+- **After:** one line each. At 390: Save bookmarks 138–140, Discard 84–85, Cancel 79–81 px; Save session… 131–134 px. Always one row, 44 px tall, inside the card.
+- **Four buttons, as on an Android phone (Save, Save as…, Discard, Cancel):** one row at 360 px in all three browsers; the smallest, Save, is 52 px wide.
+- Tablet, desktop and Windows: not touched (the rule is phone-only).
+- Pros: one line of CSS; no wording change. Cons: the buttons are no longer exactly equal widths (the primary one is the widest, which reads naturally).
+
 ## Still to apply — the encoding picker's rows are finger-sized on tablet and phone (found 16 Nov, checking patch 31 / D-191)
 **`proposal/web-ui-encoding-rows-finger-size.patch`**, against foundation-pr **b895750** (applies cleanly). One file, `Ui/wwwroot/css/shell.css`, 2 lines added after the `.enc-*` rules:
 `html[data-shell="tablet"] .enc-row, html[data-shell="phone"] .enc-row { min-height: 44px; }`, the same pattern as AT-25 and AT-26 in patch 31.

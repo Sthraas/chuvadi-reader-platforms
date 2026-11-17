@@ -1,0 +1,19 @@
+@page "/_preview/arrange"
+@inject ChuvadiReader.Core.Reader.BenchService Bench
+@inject NavigationManager Nav
+@*
+    Puts every page of ?path=/abs/file.pdf on a desk in Arrange, as dragging the file there does, then shows
+    Arrange. For the "Save what you arranged?" question (D-194).
+*@
+@code {
+    [SupplyParameterFromQuery(Name = "path")] public string? Path { get; set; }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || string.IsNullOrEmpty(Path)) return;
+        int source = await Bench.EnsureSourceAsync(Path, System.IO.Path.GetFileName(Path));
+        Bench.EnsureDesk();
+        var desk = Bench.Desks.FirstOrDefault(d => d.IsEmpty) ?? Bench.AddDesk();
+        Bench.AddSourceAllToDesk(desk.Id, source);
+        Nav.NavigateTo("/bench");
+    }
+}

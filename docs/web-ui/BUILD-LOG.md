@@ -505,3 +505,27 @@ In patch 31 (6f7790e). Re-checked: Tab and Shift Tab cycle inside the card and E
 
 ### 6. Portal surfaces against patch 30's screenshots
 63 screenshots: text identical; pixels identical apart from the known flaky Chromium chip sliver (Home's date and greeting masked). Drop overlay 6 of 6.
+
+## 2026-11-18 — session 28 (coordinator 17 Nov 23:58: merge patch 32; check the close questions and Find in the portal)
+
+### 1. Last time's CI
+Run on b5cd853: all nine jobs green.
+
+### 2. Branches and merge
+Checked all: `platform/foundation-pr` 149f4fc, `platform/foundation` c80f76a, `main` 73d3573, `platform/web` 95c44b0, `platform/web-test` f16176b, `platform/mobile-ui` 9e3f987.
+`platform/foundation` c80f76a has foundation-pr's code exactly (`src`, `tests`, `tools`, `ci`, `global.json`), so I merged it. The merge was clean and the code is **byte-identical to foundation-pr 149f4fc**.
+
+### 3. Build and tests
+Build `-warnaserror` 0 warnings. Tests 446 + 16 + 41 + 103 = **606 pass**, 0 fail, 6 skipped (the Foundation's).
+
+### 4. My preview, so the close questions can be tested
+In `tools/ChuvadiReader.WebUi.Preview` (mine, not shared code): Sign out asks `IUnsavedWork` first, as the portal will. `PREVIEW_SAVE_DIR` lets Save as… and Save session… write a file. Two new pages: `/_preview/arrange` (fills a desk) and `/_preview/close-app` (stands in for a window close on the Windows profile). My first version of `close-app` navigated again after the answer, which asked a second time; I fixed it to leave the answer in a page variable, and re-ran that case in three browsers.
+
+### 5. Patch 32 in the portal
+`p32.py`: marks, bookmarks, redaction areas, Arrange, Arrange and marks together, and Find over `tools/PixelProof/fixtures/top.pdf`. Three browsers × four profiles, every case passing; details and two wording points in OPTIONS. One look problem on the phone (two long labels on two lines) → `proposal/web-ui-close-card-phone-labels.patch`, measured before and after at 360 and 390 px.
+
+### 6. Portal surfaces against patch 31's screenshots
+63 screenshots. Text identical apart from the status bar's clock; pixels the same apart from that clock and the known flaky Chromium chip sliver. Drop overlay 6 of 6, no console errors.
+
+### 7. Web Test (f16176b)
+Nothing against the Web portal UI. My patch 31 point 4 (encoding choice after reload) is proved on the real portal.
