@@ -11,6 +11,17 @@ Runs (one each, read before the next — no retries):
 | 3 | 42494662734 | ⌘O found not to open a panel → the Open button; app stdout per launch; diagnostic exception build |
 | 4 | 42517758923 | panel path set through Accessibility (typing into the Go-to field was lossy) → documents open; timing sets skipped |
 
+## platform/mac c5b681a5 (17 Nov, patch 33 = Reader main b193ab0) — NOT signed off: M-29
+
+Built on `xcode-27` (macOS 27 SDK, pin 10.0.403 as pushed, minimum macOS 14). Shared run 44173284605, full run 44182323548; macOS 26, 15, 15-Intel.
+
+- **M-29 Excel column resize: failed on 15-Intel and, for the first time, on macOS 26** (moved 0 px, no "File's own sizes"; screenshot `p29-xlsx-resized` shows column A unchanged); passed on macOS 15. Tally on xcode-27 builds: **15-Intel 5 of 6 fail, macOS 15 1 of 6, macOS 26 1 of 6.**
+- **Patch 33 carries no app-side fix for M-29.** The commit that names M-29 (45ce8c4) changes only Foundation's PixelProof proof script (reading rectangles under CSS zoom on older WebKit). In the app, `viewers.js` `gridResize` changed only for fingers (D-193: rest 350 ms before a finger takes an edge); the mouse path is as before.
+- **M-25 seen** on 15-Intel in the shared run (T4.0 ⌘O after Esc; first sighting in a shared run). The full run's T4.0 passed on all three. 6 sightings, all Intel.
+- **Tab keys** (⌃Tab, ⌃⇧Tab, ⌘1, ⌘2, two focus states): pass on all three.
+- Full suite clean on all three runners apart from the two known macOS 26 harness items (T4.6, T4.9). Minimum-OS audit (T1.5/T1.9) now passes. Windows startup and the Chromium reference job fail on the global.json pin (harness).
+- Everything else passes: M-27 marks at four zooms, stall, several files in order, rotated page prints whole and vector, Excel formats/Find, ⌘O five states, the save question on close and quit, Immersive/Esc.
+
 ## platform/mac 2ef3ade1 (17 Nov, rewritten branch: M-08 ⌃Tab change for macOS 15, D-195, patch 32) — all pass; superseded by c5b681a5 (patch 33)
 
 Built on `xcode-27` (macOS 27 SDK, pin 10.0.403 as pushed). Shared run 44165468256, full run 44165632545; macOS 26, 15, 15-Intel.
