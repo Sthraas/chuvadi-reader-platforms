@@ -186,10 +186,13 @@ public interface IAppLifecycle
 }
 
 /// <summary>
-/// D-190: work that closing the app would lose (marks drawn on a PDF and not saved). The kit fills this; a host
+/// D-190, D-194: work that closing the app would lose (marks drawn on a PDF and not saved; desks arranged and
+/// neither bound nor saved in a session). The kit fills this; a host
 /// only reads it. Before its window closes (the close button, Alt F4, Cmd Q, the last Back on Android) a host
 /// checks <see cref="HasUnsavedWork"/> and, when it is true, holds the close and awaits
-/// <see cref="ConfirmCloseAsync"/>: the Ui shows each such file and asks Save / Save as / Discard / Cancel.
+/// <see cref="ConfirmCloseAsync"/>: the Ui shows each such file and asks Save / Save as / Discard / Cancel
+/// (only Save as where <see cref="PlatformCapabilities.SaveInPlace"/> is false, as on the portal), after asking
+/// about Arrange (Save session / Discard / Cancel). The portal calls the same before Sign out.
 /// True: close now. False: the person chose Cancel, or the question is already on screen; stay open.
 /// A close the host cannot hold (the computer shutting down, the app swiped away) cannot be asked about.
 /// </summary>
@@ -201,6 +204,12 @@ public interface IUnsavedWork
     /// <summary>Asks the person. Callable from any thread (the Ui moves to its own dispatcher); the task
     /// completes when the person has answered. Bring the window to the front first if it is not.</summary>
     Task<bool> ConfirmCloseAsync();
+
+    /// <summary>D-194: raised when <see cref="HasUnsavedWork"/> changes, on whatever thread the change happened.
+    /// For a host that must act before a close is under way: on Linux a sign-out or shutdown can only be held
+    /// by a lock taken beforehand, so the host takes it when this turns true and gives it up when it turns
+    /// false. Hosts that only ask at close time need not listen.</summary>
+    event Action? Changed;
 }
 
 /// <summary>One command the Ui offers (the same list the Ctrl K command bar shows).</summary>

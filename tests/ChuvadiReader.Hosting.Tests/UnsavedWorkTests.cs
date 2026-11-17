@@ -62,4 +62,48 @@ public sealed class UnsavedWorkTests
         }
         finally { File.Delete(path); }
     }
+
+    [Fact]
+    public async Task It_covers_Arrange_too_asks_about_it_first_and_says_when_the_answer_changes()
+    {
+        var services = new ServiceCollection();
+        services.AddChuvadiReader(AppStateLifetime.Process);
+        services.AddSingleton<IAppStorage>(new MemoryStorage());
+        using var provider = services.BuildServiceProvider();
+        var work = provider.GetRequiredService<IUnsavedWork>();
+        var tabs = provider.GetRequiredService<TabsService>();
+        var bench = provider.GetRequiredService<BenchService>();
+        int told = 0;
+        work.Changed += () => told++;
+
+        bench.EnsureDesk();
+        bench.AddBlankToDesk(bench.Desks[0].Id);                 // D-194: arranging nobody has kept yet
+        Assert.True(work.HasUnsavedWork);
+        Assert.Equal(1, told);
+
+        var path = Path.Combine(Path.GetTempPath(), $"chvd-unsaved-{Guid.NewGuid():N}.txt");
+        File.WriteAllText(path, "x");
+        try
+        {
+            var tab = await tabs.OpenAsync(path, "x.txt", DocumentFormat.Text);
+            tab.Marks = new Marks();
+            tabs.NoteUnsavedMarksChanged();
+            Assert.Equal(1, told);                                // already unsaved: nothing new to tell a host
+
+            var order = new List<string>();
+            bench.CloseGuard = () => { order.Add("arrange"); return Task.FromResult(true); };
+            tabs.CloseGuard = _ => { order.Add("files"); return Task.FromResult(false); };
+            Assert.False(await work.ConfirmCloseAsync());         // Cancel on a file, after Arrange said go ahead
+            Assert.Equal(new[] { "arrange", "files" }, order);    // files last: their Discard is the one that destroys
+
+            bench.MarkAllKept();
+            Assert.True(work.HasUnsavedWork);                     // the marks are still unsaved
+            Assert.Equal(1, told);
+            tab.Marks.Discard();
+            tabs.NoteUnsavedMarksChanged();
+            Assert.False(work.HasUnsavedWork);
+            Assert.Equal(2, told);                                // told once more: nothing is unsaved now
+        }
+        finally { File.Delete(path); }
+    }
 }
