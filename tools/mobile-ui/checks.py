@@ -82,9 +82,16 @@ async def main():
         await pg.context.close()
 
         # 3. Redact on a phone opens at fit width
+        pg = None
         if phone:
             pg = await fresh()
             await pg.locator(".ph-nav-b:nth-child(4)").click(); await pg.wait_for_timeout(600)
+            if await pg.locator(".ph-tool:first-child").get_attribute("aria-disabled") == "true":
+                # D-198: redaction is held until the next library update; the redaction page can't be opened.
+                # closework.py checks the held state. This check returns with redaction.
+                print("NOTE Redact opens at fit width: not run, redaction is held (D-198)")
+                await pg.context.close(); pg = None
+        if phone and pg is not None:
             await pg.locator(".ph-tool:first-child").click(); await pg.wait_for_timeout(3000)
             r = await pg.evaluate('''() => { const d = document.querySelector('.rd-desk'), p = d && d.querySelector('.rpage');
                 if (!d || !p) return null; const b = p.getBoundingClientRect();

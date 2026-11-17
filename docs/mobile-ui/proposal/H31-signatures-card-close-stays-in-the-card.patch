@@ -1,0 +1,14 @@
+diff --git a/src/ChuvadiReader.Ui/Components/Cards/SignaturesCard.razor.css b/src/ChuvadiReader.Ui/Components/Cards/SignaturesCard.razor.css
+index 07d6d7d1..e56fcfd4 100644
+--- a/src/ChuvadiReader.Ui/Components/Cards/SignaturesCard.razor.css
++++ b/src/ChuvadiReader.Ui/Components/Cards/SignaturesCard.razor.css
+@@ -16,7 +16,8 @@
+ }
+ .head { display: flex; align-items: baseline; gap: 8px; }
+ .title { font-family: var(--chvd-serif-display); font-size: 21px; line-height: 1.1; }
+-.meta { margin-left: auto; font-family: var(--chvd-mono); font-size: 10.5px; color: var(--chvd-ink-muted); white-space: nowrap; }
++.meta { margin-left: auto; font-family: var(--chvd-mono); font-size: 10.5px; color: var(--chvd-ink-muted); white-space: nowrap;
++        min-width: 0; overflow: hidden; text-overflow: ellipsis; }   /* D-198's longer line must not push Close out of the card */
+ .close {
+     align-self: center;
+     display: inline-flex; align-items: center; justify-content: center;

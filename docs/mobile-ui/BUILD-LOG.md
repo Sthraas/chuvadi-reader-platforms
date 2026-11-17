@@ -766,3 +766,50 @@ Evidence:
   card, the close card, the encoding card, Export, Press, Merge, Split and the desk menu identical apart from
   the clock; Arrange and Home show 4 and 17 pixels one colour level off (the known noise).
 
+## 18 Nov, 01:35: Foundation 9e00fdf (patch 33) merged; held redaction, the unchecked signature, the page-operation question
+- Merged platform/foundation-pr 9e00fdf: no conflicts. H-27, H-28, H-29 landed exactly as sent (6257ecb): their
+  patches and hooks-14 moved to `proposal/landed/`.
+- Correction recorded (README, FOR-FOUNDATION): Android's `compose.sh` has not applied Mobile UI hooks since 9 Nov;
+  hooks reach Android only through Foundation. Earlier rounds here said otherwise.
+- **Held redaction (D-198):**
+  - Phone (mine, PhoneToolStrip + PhoneShell): Box and Find in Protect's strip were plainly disabled and a tap
+    said nothing. A greyed tool with a reason now answers a tap with that reason as a notice ("Redaction comes
+    back with the next update."), on screen and on top. Applies to any strip tool that is off for a reason.
+  - Tablet and desktop (Foundation's Reader.razor) → **H-30**: the held "Redaction" rail button passes
+    `Disabled="true"`, which cancels its own `ReasonOnTap`, so no reason can be read on touch; and "Save redacted
+    copy" stays as the bright primary button though it only says redaction comes back. Diff: soft button that
+    notifies; Save redacted copy hidden while held.
+- **The unchecked signature (D-198)** (new tool `tools/mobile-ui/signature.py`, 7 checks; a PDF signed with a
+  self-signed certificate for testing):
+  - The banner above the page ran off both edges on phone portrait and Details could not be reached; Details
+    41×18 and its × 20×20 at every size. Fixed (mine, mobile.css): the banner stays inside the page area and
+    wraps on the phone; Details, ×, the card's Close and Details / Hide details are 44 px boxes drawn as before.
+  - The Signatures card's header line ("1 signature · not checked in this version") doesn't wrap and pushes Close
+    out of the card, under the rail, on the tablet and on desktop → **H-31** (one CSS line). mobile.css holds the
+    same rule on touch until it lands (marked for removal).
+- **The page-operation question (D-198)** (new tool `tools/mobile-ui/pageop.py`, 16 checks): from Arrange (desk ···
+  › Bind desk), Merge and Split, by finger. Continue / Cancel each 44 px, on top, inside the screen, 8 px apart,
+  also with system-bar insets and the keyboard up; a plain file told it loses nothing; each Merge file named and
+  the layer line there for a layered file; Cancel stops; after Continue the same file isn't asked again.
+  Foundation's styling holds; nothing changed.
+- closework.py: its Protect part now checks the held state (a tap says why; no Save redacted copy), since there
+  are no redaction areas to ask about while redaction is held.
+- README: lists every touch check script and the tooling traps.
+- `mobile-ui-hooks-15.patch` = H-30 + H-31 (for Foundation only).
+- **Found on the full run (mine):** phone landscape with the keyboard up (212 px window), the Merge question (two
+  files and the layer line) scrolled inside its height limit and Continue / Cancel fell below the fold. The
+  answers of every question card now stay pinned to its foot while the text scrolls; a card that fits looks
+  exactly as before (Arrange question 380×226 before and after).
+- checks.py: "Redact opens at fit width" (H-7) can't run while redaction is held; it now says so (NOTE) and goes
+  on; it returns with redaction. The phone's checks are 11 for now.
+- A container restart cut the first phone run short; the phone sizes were run again in full.
+- Results (hooks-15 applied): 608 tests pass, 6 skipped by Foundation: 448 + 103 + 41 + 16; touch at the four
+  sizes: 506 checks pass, 0 fail (tablet 126 each: gestures 8, checks 12, pinchmarks 18, xlresize 15, cards 4,
+  encpicker 11, findaside 3, turned 13, closecard 6, closework 13, pageop 16, signature 7; phone 127 each:
+  gestures 9, checks 11, findaside 4, the rest the same); box audit clean at all four. Desktop before (9e00fdf) /
+  after at 1440×900, on fresh hosts: Read, Mark, the mark card, the close card, the encoding card, Export, Press,
+  Merge, Split, Arrange, the desk menu and the signature banner identical apart from the clock; Protect and the
+  Signatures card differ exactly as H-30 and H-31 intend (Save redacted copy gone from the rail; Close back in the
+  card); Home shows its 12 known noise pixels. (A first pass compared hosts with different open tabs and differed
+  everywhere; redone.)
+

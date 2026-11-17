@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # TESTING ONLY. D-195 on touch sizes: the three other questions asked before unsaved work is lost.
 #   * Bookmarks (closing a tab with a bookmark not saved):  Save bookmarks / Discard / Cancel
-#   * Protect   (closing a tab with redaction areas drawn):  Discard / Cancel
+#   * Protect   while redaction is held (D-198): the greyed tool says why on a tap; no Save redacted copy
+#               (the redaction-areas question returns with redaction)
 #   * Arrange   (closing the app with pages on a desk):      Save session… / Discard / Cancel
 # For each: the answers are the ones named, each a 44 px box, the top element at its centre, inside the screen;
 # the same with the system bars' insets set (24 px top, 48 px bottom) and with the keyboard up (a shorter
@@ -99,38 +100,28 @@ async def main():
             report("Bookmarks: the question is there", False, "no card after Ctrl+B, Enter and Close (could not make a bookmark here)")
 
         # ── Protect ──
+        # D-198 (patch 33): while redaction is held there are no redaction areas to ask about. The greyed tool must
+        # say why on a tap instead (phone: Box on the strip; tablet: Redaction on the rail), and Save redacted copy
+        # must not be offered.
         await open_doc(copy("closework-protect.pdf"))
         await mode("Protect")
-        tool = pg.locator(".ph-strip .ph-tool", has_text="Box").first if phone else pg.locator('.srail .rb[aria-label="Redact box"]').first
-        await tool.tap(); await pg.wait_for_timeout(600)
-        layer = pg.locator(".mk-layer").first
-        if await layer.count():
-            pb = await layer.bounding_box(); bar = await pg.evaluate("(() => { const e = document.querySelector('.ph-bar, .tabtop, header'); return e ? e.getBoundingClientRect().bottom : 0; })()")
-            x0, y0 = max(pb["x"], 0) + 50, max(pb["y"], bar) + 50
-            await touch("touchStart", [(x0, y0)])
-            for k in range(1, 9):
-                await touch("touchMove", [(x0 + 12 * k, y0 + 6 * k)]); await pg.wait_for_timeout(30)
-            await touch("touchEnd", []); await pg.wait_for_timeout(900)
-        for x in await pg.locator(".fcard .fcard-x").all():
-            if await x.is_visible(): await x.tap(); await pg.wait_for_timeout(300)
-        drawn = await pg.evaluate("document.querySelectorAll('.mk-layer > *').length")
-        # Box opens the redaction page (/redact); its areas stay with the tab (D-195). Back to the document to close it.
-        if "/redact" in pg.url:
-            if phone:
-                await pg.locator('.ph-bar button[aria-label="Back"]').tap(); await pg.wait_for_timeout(1500)
-                report("Protect: Back on the redaction page goes back to the document", pg.url.rstrip("/").endswith("/reader"), pg.url)
-            else:
-                await pg.goto(url + "/reader"); await pg.wait_for_timeout(1500)
-        await ask_close_tab()
-        if await pg.locator(".closeq").count():
-            await look("Protect", ["Discard", "Cancel"])
-            await answer("Cancel")
-            report("Protect: Cancel keeps the tab", await pg.locator(".closeq").count() == 0 and await has_name("closework-protect"))
-            await ask_close_tab(); await answer("Discard")
-            report("Protect: Discard closes the tab", await pg.locator(".closeq").count() == 0 and not await has_name("closework-protect"))
+        held = pg.locator(".ph-strip .ph-tool", has_text="Box").first if phone else pg.locator('.srail .rb[aria-label="Redaction"]').first
+        if await held.count() and (phone and await held.get_attribute("aria-disabled") == "true" or not phone):
+            bb = await held.bounding_box()
+            await pg.touchscreen.tap(bb["x"] + bb["width"] / 2, bb["y"] + bb["height"] / 2); await pg.wait_for_timeout(900)
+            note = await pg.evaluate("""(() => { const e = [...document.querySelectorAll('body *')].find(x => x.children.length === 0 && x.textContent.includes('Redaction comes back with the next update'));
+                if (!e) return null; const r = e.getBoundingClientRect(); const t = document.elementFromPoint(r.left + Math.min(20, r.width / 2), r.top + r.height / 2);
+                return { box: [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)], top: !!t && (e === t || e.contains(t) || t.contains(e)),
+                         inside: r.left >= 0 && r.right <= innerWidth + 0.5 && r.top >= 0 && r.bottom <= innerHeight + 0.5 }; })()""")
+            report("Protect (redaction held, D-198): a tap on the greyed redaction tool says when it comes back, on screen and on top",
+                   bool(note) and note["top"] and note["inside"] and "/redact" not in pg.url, note)
+            offered = await pg.evaluate("[...document.querySelectorAll('.ph-fab, .srail .rb')].some(e => /Save redacted copy/.test(e.getAttribute('aria-label') || '') && e.getBoundingClientRect().width)")
+            report("Protect (redaction held): Save redacted copy is not offered", not offered, "offered" if offered else "")
         else:
-            report("Protect: the question is there", False, f"no card after drawing {drawn} redaction area(s) by finger, back, and Close")
-        if await pg.locator(".ph-nav-b, .lb-mode").count(): await mode("Read")
+            report("Protect: the redaction tool shows its hold (D-198)", False, "redaction is not held here, or its tool was not found")
+        await mode("Read")
+        await ask_close_tab()
+        if await pg.locator(".closeq").count(): await answer("Discard")
 
         # ── Arrange (asked when the app is closed) ──
         desks0 = post("/__preview/arrange?path=" + urllib.parse.quote(copy("closework-arrange.pdf")))

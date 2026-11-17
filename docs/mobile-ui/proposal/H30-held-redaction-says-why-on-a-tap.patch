@@ -1,0 +1,30 @@
+diff --git a/src/ChuvadiReader.Ui/Pages/Reader.razor b/src/ChuvadiReader.Ui/Pages/Reader.razor
+index dc0644b8..04a7e8c6 100644
+--- a/src/ChuvadiReader.Ui/Pages/Reader.razor
++++ b/src/ChuvadiReader.Ui/Pages/Reader.razor
+@@ -1206,8 +1206,9 @@
+                 <SideRail Kind="tools" Heading="TOOLS" Label="PROTECT">
+                     @if (LibraryHolds.RedactionHeld)
+                     {
+-                        @* D-198: where redaction was, it says when it comes back (greyed; the reason shows on hover and on a tap). *@
+-                        <RailButton Icon="redact" Label="Redaction" Disabled="true" DisabledReason="@LibraryHolds.RedactionBack" ReasonOnTap="true" />
++                        @* D-198: where redaction was, it says when it comes back (greyed; the reason shows on hover and on a tap).
++                           Not Disabled: that would cancel ReasonOnTap. GoRedact says the reason while redaction is held. *@
++                        <RailButton Icon="redact" Label="Redaction" DisabledReason="@LibraryHolds.RedactionBack" ReasonOnTap="true" OnClick="() => GoRedact(false)" />
+                     }
+                     else
+                     {
+@@ -1220,8 +1221,11 @@
+                     <RailButton Icon="doc-lock" Label="Password" Active='_card == "password"' OnClick='() => ToggleCard("password")' />
+                     <RailButton Icon="certification" Label="Sign with certificate" DisabledReason="@ChuvadiReader.Ui.Components.Platform.PlatformText.CertificateSigningOff(Platform)" ReasonOnTap="@ChuvadiReader.Ui.Components.Platform.PlatformText.ReasonOnTap(Platform)" Active='_card == "cert"' OnClick='() => ToggleCard("cert")' />
+                     <RailButton Icon="sliders" Label="View" Class="rb-viewfold" Active='_card == "view"' OnClick='() => ToggleCard("view")' />
+-                    <RailSpacer />
+-                    <RailButton Icon="download" Label="Save redacted copy" Primary="true" OnClick="() => GoRedact(false)" />
++                    @if (!LibraryHolds.RedactionHeld)   @* D-198: nothing to save while redaction is held *@
++                    {
++                        <RailSpacer />
++                        <RailButton Icon="download" Label="Save redacted copy" Primary="true" OnClick="() => GoRedact(false)" />
++                    }
+                 </SideRail>
+             }
+             else

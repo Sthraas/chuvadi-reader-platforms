@@ -51,7 +51,7 @@
 
     @if (StripItems is { } items)
     {
-        <PhoneToolStrip Items="items" Active="@_activeTool" OnPick="PickTool" />
+        <PhoneToolStrip Items="items" Active="@_activeTool" OnPick="PickTool" OnReason="reason => Shell.Notify(reason)" />
     }
 
     @if (!OnDocView)

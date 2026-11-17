@@ -1,53 +1,42 @@
-# Mobile app UI → Foundation: hooks and hand-off (updated 18 Nov, patch 32)
+# Mobile app UI → Foundation: hooks and hand-off (updated 18 Nov, patch 33)
 
-## Outstanding for Foundation: H-27, H-28 and H-29 (`proposal/mobile-ui-hooks-14.patch`)
-Checked against foundation-pr 149f4fc (patch 32): all three still apply (with the coordinator for patch 33). H-25 and H-26 landed in patch 30 (`proposal/landed/`).
-`mobile-ui-hooks-14.patch` is what Android's `compose.sh` applies: the `viewers.js` diff (H-27 and H-28 together,
-they touch the same function) and the `Reader.razor` diff (H-29). On their own:
-`proposal/H27-excel-resize-gives-way-to-a-pinch.patch` (H-27 alone),
-`proposal/H28-excel-resize-by-finger-takes-a-hold.patch` (H-27 + H-28: take this one if both are wanted),
-`proposal/H29-export-and-press-cards-get-class-names.patch`.
+**Android's `compose.sh` does not apply these patches** (since 9 Nov). A hook reaches Android builds only when
+Foundation lands it. (Earlier rounds here said otherwise; that was wrong.)
 
-### H-28: by finger, an Excel edge is taken by resting on it (D-193; settles F-4)
-(`Ui/wwwroot/js/viewers.js`, `gridResize`; with H-27: +38 / −13)
-- Decided by the coordinator (D-193, option B of F-4): a hold of about 350 ms on a header edge starts a
-  resize, the guide line showing when the hold has taken; a finger that moves at once scrolls; two taps to
-  fit stay; mouse and pen unchanged.
-- The change: for a touch pointer, `pointerdown` on an edge starts a 350 ms hold instead of the drag. A move
-  of more than 8 px, a lift, a cancel or a second finger before it ends lets the edge go. When it ends the
-  drag begins as before and the guide line is drawn at once. The `touchstart` that blocked scrolling on an
-  edge is replaced by a `touchmove` that blocks it only once a drag has been taken, and the browser's
-  long-press menu is suppressed while an edge is held. Two presses within 450 ms still fit.
-- Checked by finger at 412×915, 915×412, 800×1280, 1280×800 (`tools/mobile-ui/xlresize.py`, 15 checks):
-  rest then drag 60 px → 60 px wider, guide line there after the hold, sheet not scrolling; a finger that
-  moves at once on an edge scrolls sideways and resizes nothing; a finger on an ordinary 20 px row number
-  scrolls (this was F-4); two taps fit; a mouse still takes the edge at once; a pinch from an edge only zooms.
-- **For:** scroll and resize can't be confused; the full 14 px finger edge stays. **Against:** resizing by
-  finger takes a moment longer and has to be found (the line is the cue).
-- Not run here: Foundation's own `tools/PixelProof/excel-resize.js` (mouse); the mouse path is unchanged
-  and one mouse drag is in my checks.
+## Outstanding for Foundation: H-30 and H-31 (`proposal/mobile-ui-hooks-15.patch`)
+Against foundation-pr 9e00fdf (patch 33). H-27, H-28 and H-29 landed in patch 33 exactly as sent (`proposal/landed/`).
+`mobile-ui-hooks-15.patch` is both; on their own: `proposal/H30-held-redaction-says-why-on-a-tap.patch`,
+`proposal/H31-signatures-card-close-stays-in-the-card.patch`.
 
-### H-27: Excel resize gives way to a pinch (D-190, by finger)
-(`Ui/wwwroot/js/viewers.js`, `gridResize`, +2 / −0; inside H-28's diff too)
-- A pinch whose first finger lands on a column's or row's edge both zoomed the sheet and resized it
-  (71754e1, 412×915 and 800×1280: zoom 1 → 1.69, column B 108 → 76 px at 100 %).
-- A second touch pointer down while an edge is held drops the resize. With H-28 the same holds while the
-  hold is still running.
-- **Against:** a second finger that lands outside the grid isn't seen by this listener.
+### H-30: held redaction says why on a tap, and Save redacted copy is not offered (D-198)
+(`Ui/Pages/Reader.razor`, Protect rail, +7 / −3)
+- The held "Redaction" button passes `Disabled="true"` with `ReasonOnTap="true"`. In RailButton, `Soft` is
+  `DisabledReason && ReasonOnTap && !Disabled`, so Disabled cancels ReasonOnTap: the button is plainly
+  disabled, a tap does nothing, and on a touch screen the reason can't be read at all (no hover). It also
+  has no OnClick to show it.
+- "Save redacted copy" stays on the rail as the bright primary button; a tap only says redaction comes back.
+- The change: drop `Disabled="true"` and give it `OnClick="() => GoRedact(false)"` (GoRedact notifies while
+  held); wrap Save redacted copy and its spacer in `@if (!LibraryHolds.RedactionHeld)`.
+- Checked: tablet 800×1280 and 1280×800, a tap on Redaction shows "Redaction comes back with the next update."
+  on top and inside the screen; no Save redacted copy. Desktop 1440×900: the Redaction button looks the same;
+  the only change is the Save button gone from the rail's foot.
+- **For:** the hold explains itself on every platform; no button that does nothing. **Against:** none seen.
+- The phone does the same in its own strip (mine: a greyed tool with a reason answers a tap with it).
 
-### H-29: the Export as image and Press cards get class names (AT-28)
-(`Ui/Pages/Reader.razor`, 20 lines changed, markup only: `class="…"` added, no style touched)
-- Both cards are written with inline styles and no classes, so nothing outside can address their controls.
-  Android Test measured them at 16 to 34 px on phone and tablet (AT-28).
-- Added: `rdlg` on each card; `rdlg-chip` (and `on` when chosen) on the format, pages, resolution and preset
-  chips; `rdlg-x` on Close; `rdlg-link` on "change…"; `rdlg-go` on Export → and Press →; `rdlg-open` on
-  "Open result"; `rdlg-num`, `rdlg-range` on the number boxes and the slider; `rdlg-check` on the two tick rows.
-- No rule in the shared CSS uses these names, so desktop is unchanged (checked: both cards pixel-identical
-  before and after at 1440×900). mobile.css (mine) uses them on the phone and tablet to make every control a
-  44 px box drawn as before.
-- **For:** the cards can be styled per platform without touching Reader.razor again. **Against:** names that
-  only touch uses today. A fuller clean-up (move the inline styles into the stylesheet) is Foundation's call;
-  my rules need `!important` where they replace an inline value, and would get simpler with it.
+### H-31: the Signatures card's Close stays in the card (D-198)
+(`Ui/Components/Cards/SignaturesCard.razor.css`, `.meta`, +1 / −0)
+- Patch 33's header line "1 signature · not checked in this version" is `nowrap` and longer than the card, so
+  it pushes Close out of the card: on desktop at 1440×900 Close sits under the View rail (1380 to 1394, card
+  ends at 1308) and can't be clicked; the same on the tablet.
+- The change: `.meta { min-width: 0; overflow: hidden; text-overflow: ellipsis; }` — the line ends in "…"
+  and Close is back in the card's corner.
+- **For:** the card can be closed again. **Against:** the line is cut ("not checked in th…"); the same words
+  are in full in the card's body. mobile.css holds the same rule on touch until this lands (then I remove it).
+
+## Landed: H-27, H-28, H-29 (patch 33, 6257ecb), exactly as sent
+- H-27: an Excel edge gives way to a pinch. H-28: by finger an edge is taken after a ~350 ms hold (D-193; settled
+  F-4). H-29: the Export as image and Press cards carry class names, so mobile.css makes their controls 44 px
+  (AT-28). The patches are in `proposal/landed/`.
 
 ## Patch 32 on touch: nothing for Foundation to change
 - The three new questions (Bookmarks, Protect, Arrange) were checked by finger at the four sizes
@@ -88,7 +77,7 @@ they touch the same function) and the `Reader.razor` diff (H-29). On their own:
     touch shells don't have yet.
   - I'd take B. Nothing is built for this yet.
 
-## Seen on touch, for Foundation to weigh (not patched)
+## Closed: F-3 — the Find bar steps aside (D-195, patch 32)
 ### F-3: the Find bar lies over the top of the desk, so a match under it is hidden (tablet, desktop)
 - The bar floats at the desk's top right (428 × 44 px, 12 px down). `scrollToMatch` keeps the match's page
   top at the desk top where it can, so a match in the first ~56 px of a page, under the bar's width, is

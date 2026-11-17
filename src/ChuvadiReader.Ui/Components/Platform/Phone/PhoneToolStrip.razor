@@ -1,16 +1,20 @@
 @*
     Tool strip (12h Mark, 12j Protect): one 62 px row above the bottom bar, 52 × 50 items with the
     label under the icon. Scrolls sideways when the tools don't fit. Tools that aren't built yet
-    stay visible and greyed, with the reason as their tooltip (same rule as the desktop rails).
+    stay visible and greyed, with the reason as their tooltip and, on a tap, as a notice (same rule as the rails).
 *@
 <div class="ph-strip" role="toolbar" aria-label="Tools">
     @foreach (var pick in Items)
     {
         var p = pick;
         var on = Active == p.Item.Label;
-        <button class="ph-tool @(on ? "on" : null) @(p.Command.Dimmed ? "dim" : null)" disabled="@(!p.Command.IsEnabled)" aria-pressed="@(on ? "true" : "false")"
+        // A tool that is off for a reason (not built yet, held back until an update, not in this edition) stays
+        // greyed but answers a tap with that reason: a phone has no hover to read a tooltip (D-187, D-198).
+        var said = !p.Command.IsEnabled && p.Command.DisabledReason is not null;
+        <button class="ph-tool @(on ? "on" : null) @(p.Command.Dimmed || said ? "dim" : null)" disabled="@(!p.Command.IsEnabled && !said)"
+                aria-disabled="@(said ? "true" : null)" aria-pressed="@(on ? "true" : "false")"
                 title="@(p.Command.DisabledReason is null ? p.Command.Label : $"{p.Command.Label} — {p.Command.DisabledReason}")"
-                @onclick="() => OnPick.InvokeAsync(p)">
+                @onclick="() => said ? OnReason.InvokeAsync(p.Command.DisabledReason!) : OnPick.InvokeAsync(p)">
             <Icon Name="@p.Item.Icon" Size="19" />
             <span>@p.Item.Label</span>
         </button>
@@ -21,4 +25,7 @@
     [Parameter, EditorRequired] public IReadOnlyList<(StripItem Item, ShellCommand Command)> Items { get; set; } = Array.Empty<(StripItem, ShellCommand)>();
     [Parameter] public string? Active { get; set; }
     [Parameter] public EventCallback<(StripItem Item, ShellCommand Command)> OnPick { get; set; }
+
+    /// <summary>A greyed tool was tapped: show why it is off.</summary>
+    [Parameter] public EventCallback<string> OnReason { get; set; }
 }

@@ -978,3 +978,37 @@ html[data-shell="tablet"] .enc-list { padding-block: 5px; margin-block: -5px; }
    top bar's place, above the page, so it never covers one; were it ever asked to step aside it would land on the
    bottom bar. It stays where it is. */
 html[data-shell="phone"] .rfind.aside { top: 0; bottom: auto; }
+
+/* D-198 (patch 33): the signature banner above the page now ends "· not checked in this version", longer than
+   a phone is wide. Centred and unwrapped it ran off both edges and its Details button could not be reached.
+   On touch the banner keeps inside the page area (8 px each side) and wraps on the phone; Details, the banner's
+   × and the Signatures card's own Close and Details are 44 px boxes, drawn as before. */
+html[data-shell="phone"] .rsigbanner,
+html[data-shell="tablet"] .rsigbanner { max-width: calc(100% - 16px); }
+html[data-shell="phone"] .rsigbanner .sig-banner,
+html[data-shell="tablet"] .rsigbanner .sig-banner { min-width: 0; }
+html[data-shell="phone"] .rsigbanner .sig-banner { white-space: normal; height: auto; min-height: 32px; padding-block: 6px; line-height: 1.35; }
+html[data-shell="phone"] .rsigbanner .sig-banner .text { overflow: visible; }
+html[data-shell="phone"] .sig-banner .details,
+html[data-shell="tablet"] .sig-banner .details { min-width: 44px; min-height: 44px; margin: -13px -2px; display: inline-flex; align-items: center; justify-content: center; }
+html[data-shell="phone"] .rsigbanner-x,
+html[data-shell="tablet"] .rsigbanner-x {
+    box-sizing: border-box; width: 44px; height: 44px; margin: -12px; border: 12px solid transparent; background-clip: padding-box; flex: none;
+}
+html[data-shell="phone"] .chvd-card[aria-label="Signatures"] .close,
+html[data-shell="tablet"] .chvd-card[aria-label="Signatures"] .close {
+    /* the box grows to the left only (22 px), so it stays inside the card at the screen's edge */
+    box-sizing: border-box; width: 44px; height: 44px; flex: none; margin: -11px -4px -11px -22px;
+    border-style: solid; border-color: transparent; border-width: 11px 0 11px 22px; background-clip: padding-box;
+}
+html[data-shell="phone"] .chvd-card[aria-label="Signatures"] .link,
+html[data-shell="tablet"] .chvd-card[aria-label="Signatures"] .link { min-height: 44px; min-width: 44px; margin-block: -13px; display: inline-flex; align-items: center; }
+/* Until H-31 lands: the card's header line "1 signature · not checked in this version" does not wrap and pushed
+   Close out of the card, under the rail. On touch it is cut with an ellipsis instead. (Remove when H-31 is in.) */
+html[data-shell="phone"] .chvd-card[aria-label="Signatures"] .meta,
+html[data-shell="tablet"] .chvd-card[aria-label="Signatures"] .meta { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* The question cards (close, bookmarks, Arrange, page operation) scroll when taller than the screen (a long file
+   list with the keyboard up in landscape). Their answers stay pinned to the card's foot, so they are always on
+   screen; the text scrolls under them. */
+html[data-shell="phone"] .closeq-btns,
+html[data-shell="tablet"] .closeq-btns { position: sticky; bottom: -14px; margin-bottom: -14px; padding-bottom: 14px; background: var(--chvd-surface-hi); }
