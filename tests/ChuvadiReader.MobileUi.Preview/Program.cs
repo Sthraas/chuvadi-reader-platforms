@@ -116,6 +116,26 @@ app.MapPost("/__preview/open", async (string path) =>
     return Results.Ok(new { tab.Id });
 });
 
+// POST /__preview/arrange?path=…: puts every page of a PDF on a desk in Arrange, as dragging the file there does (D-194).
+// GET /__preview/unsaved: what a host reads, and how many times it was told the answer changed.
+var unsavedTold = 0;
+app.Services.GetRequiredService<ChuvadiReader.Platform.IUnsavedWork>().Changed += () => Interlocked.Increment(ref unsavedTold);
+app.MapPost("/__preview/arrange", async (string path) =>
+{
+    var bench = app.Services.GetRequiredService<BenchService>();
+    int source = await bench.EnsureSourceAsync(path, Path.GetFileName(path));
+    bench.EnsureDesk();
+    var desk = bench.Desks.FirstOrDefault(d => d.IsEmpty) ?? bench.AddDesk();
+    bench.AddSourceAllToDesk(desk.Id, source);
+    return Results.Ok(new { desks = bench.Desks.Count, unsaved = bench.HasUnsavedWork });
+});
+app.MapGet("/__preview/unsaved", () => Results.Ok(new
+{
+    hasUnsavedWork = app.Services.GetRequiredService<ChuvadiReader.Platform.IUnsavedWork>().HasUnsavedWork,
+    told = Volatile.Read(ref unsavedTold),
+    desksUnsaved = app.Services.GetRequiredService<BenchService>().UnsavedDeskCount,
+}));
+
 // POST /__preview/close-app: what a host does when its window is asked to close (D-190). Answers at once with
 // "closed" when nothing is unsaved; otherwise the Ui asks, and the answer comes when the person has answered.
 app.MapPost("/__preview/close-app", async () =>

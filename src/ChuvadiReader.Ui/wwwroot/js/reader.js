@@ -1062,6 +1062,24 @@ export function scrollToPage(deskEl, index, frac) {
 // Find: bring the current match itself into view, not only the top of its page — on a zoomed or tall
 // page the match can sit a screen or more below it (Android Test AT-09). The highlight renders with the
 // page, so after bringing the page in, wait for it (up to 1.5 s), then put it a third of the way down.
+// Where the current match will be on screen once the desk is at (top, left), against where the Find bar sits when
+// it is in its own place. Returns the top to scroll to; moves the bar aside when scrolling cannot clear it.
+function clearOfFindBar(deskEl, hl, top, left, snaps) {
+    const bar = (deskEl.parentElement || document).querySelector('.rfind');
+    if (!bar) return top;
+    bar.classList.remove('aside');                       // measured in its own place
+    const b = bar.getBoundingClientRect(), h = hl.getBoundingClientRect();
+    const dy = deskEl.scrollTop - top, dx = deskEl.scrollLeft - left;   // how far the match will move on screen
+    const m = { top: h.top + dy, bottom: h.bottom + dy, left: h.left + dx, right: h.right + dx };
+    const gap = 8;
+    const under = m.left < b.right + gap && m.right > b.left - gap && m.top < b.bottom + gap && m.bottom > b.top - gap;
+    if (!under) return top;
+    const need = b.bottom + gap - m.top;                 // how much lower on screen the match has to be
+    if (!snaps && top - need >= 0) return top - need;
+    bar.classList.add('aside');
+    return top;
+}
+
 export async function scrollToMatch(deskEl, index) {
     if (!deskEl) return;
     scrollToPage(deskEl, index);
@@ -1097,6 +1115,11 @@ export async function scrollToMatch(deskEl, index) {
                 // during the scroll put the view back on the page's top, the match below it off screen).
                 if (r.height) { anchor = { page: index, frac: Math.max(0, (top - wTop) / r.height) }; anchorStale = false; }
             }
+            // F-3 (D-195): the Find bar floats over the top of the page area and covered a match that came to rest
+            // under it. Where the view is free to scroll, it stops a little higher so the match is below the bar.
+            // Page at a time the page's top is pinned, so there (and at the very top of a file) the bar steps
+            // aside to the bottom while the match would be under it, and returns for the next match.
+            top = clearOfFindBar(deskEl, hl, top, left, snaps);
             // The highlight can arrive late (its page had to be drawn): this second scroll gets its own quiet time,
             // and the page on screen is reported when it ends (AT-16).
             suppressUntil = Math.max(suppressUntil, performance.now() + 900);

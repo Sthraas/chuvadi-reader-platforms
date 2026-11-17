@@ -859,3 +859,7 @@ details.rempty-sub summary { cursor: pointer; }
 .mdrawer .bm-foot { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-top: var(--chvd-stroke) solid var(--chvd-border-soft); }
 .sig-preview { min-height: 56px; display: flex; align-items: center; justify-content: center; background: var(--chvd-page); border: var(--chvd-stroke) solid var(--chvd-border-soft); border-radius: 8px; color: #111; overflow: hidden; }
 .rfind { top: 12px; left: 50%; right: auto; transform: translateX(-50%); }
+
+/* F-3 (D-195): the Find bar steps aside to the bottom while the current match would be under it and the view
+   cannot scroll clear (page at a time, or the very top of a file). reader.js sets and clears the class. */
+.rfind.aside { top: auto; bottom: 14px; }
