@@ -153,7 +153,10 @@ for f in $PICKS; do
     fail "M-16 Open panel $f: ${line:-no Ui report}"
   fi
 done
-wait_for 'CHUVADI ui-later .*active=large-a0' 50 || true   # an A0 raster takes a while on the VM
+# An A0 raster takes seconds to draw on a slow runner. The first reports naming large-a0 can come from the timers of
+# the tabs opened before it (6 s after it opened, on Intel); its own come 9 s and 30 s after it opened. Wait for one
+# that shows the image, as long as its own last report.
+wait_for 'CHUVADI ui-later? .*pageimg=200.*active=large-a0' 45 || true
 li=$(grep -E "CHUVADI ui-later? " "$LOG" | grep "active=large-a0" | grep "pageimg=200" | tail -1)
 [ -n "$li" ] || li=$(grep -E "CHUVADI ui-later " "$LOG" | grep "active=large-a0" | tail -1)
 [[ "$li" == *"pageimg=200/image/png"* ]] && pass "D-158 a raster page's image is served from memory by address (page-image hook)" \
