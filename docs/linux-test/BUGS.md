@@ -43,12 +43,14 @@ Every bug gets fixed; I re-verify on the fixing commit and mark it here.
 | B-31 | S2 | **library** (Chuvadi.Sheets, SH-L1) | Excel time-only cells (stored 0 to 1, e.g. 6:00 PM) show `########`, and the stored value on hover, in the value bar and in copy is wrong (0.75 reads as -0.25). On bf60da9 they showed `1899-12-30 18:00` | **open** — still on 7cd960c: `########`, stored value shown as -0.25 for 0.75 |
 | B-32 | S2 | **library + shared Ui/Core** | A PDF page's `/Rotate` (90, 180, 270) is ignored on screen: the page shows unrotated. Same on bf60da9 | **verified fixed 7cd960c** (86996dd) — 90, 180 and 270 turned as the file says, on vector pages, on a cropped page and on heavy raster sheets (Arun's CAD sheets are `/Rotate 270` and now show landscape) |
 | B-33 | S2 | **shared Ui/Core** (Foundation's B-33) | Excel: the title bar's sheet arrows do nothing, and typing a sheet number moves the number but not the sheet shown. Patch 29 says this is fixed; on Linux it is not | **verified fixed b08b0e5** (patch 31, 6c85f06) — Next, Previous and a typed number change the sheet from Home, after a PDF tab, on a second workbook and back on the first; the same test fails on fc20516 |
+| B-34 | S3 | Linux | D-194, first part: after a sign-out is held and cancelled, the lock on the session stays when the work is later saved or discarded, so the desktop still lists Chuvadi as having unsaved work until the next sign-out notice | **open** — found on 3c83e7a. Goes away once `SessionEndGuard.Refresh()` is called on `IUnsavedWork.Changed` (planned with patch 32); re-check then |
+| B-35 | S4 | Linux | D-194: when the desktop's portal accepts the `Inhibit` call but then refuses the lock (its request ends with Response 2), the app counts the lock as held and doesn't try the GNOME session manager | **open** — found on 3c83e7a with a stand-in desktop; not seen on a real one |
 | K-01 | — | Linux | GNOME close-only layout showed all three buttons (known, 7 Nov) | **verified fixed f7d0034, re-verified f3d5978** (6 layouts) |
 
 Routing (coordinator, 8 Nov): **Linux** → the Linux chat. **shared Ui/Core** → Foundation's combined patch, as exact diffs from the Linux chat or Foundation. **library** → the coordinator compiles them for Arun (library coordinator).
 | Route | Bugs |
 |---|---|
-| Linux chat | B-01, B-04, B-05, B-06, B-12, B-13, B-14, B-15, B-17, B-19, B-20, B-21, and the Linux stanzas of B-02 |
+| Linux chat | B-01, B-04, B-05, B-06, B-12, B-13, B-14, B-15, B-17, B-19, B-20, B-21, B-34, B-35, and the Linux stanzas of B-02 |
 | shared Ui/Core | B-03, B-07, B-08b, B-10, B-11b, B-16, B-18, B-22, B-23, B-24, B-25, B-26, and the OFL texts next to the fonts in B-02 |
 | library | B-27 (with shared: parse/render time and memory on the CAD drawing), B-08a (Chuvadi.Docs input limits), B-09a (Chuvadi.Sheets: don't materialise to the sheet's extent), B-11a (chuvadi-pdf: rebuild the xref on a bad `startxref`) |
 B-09's "no cancel / no timeout" half is the same fix as B-08b.
@@ -981,3 +983,83 @@ in Mark leaves no mark.
 pinch on PDF, Excel and Word; Find and Fit on turned pages; hidden Excel matches named; B-24 + B-08b Cancel; B-25;
 owner-password printing; single instance (1 window, 4 tabs); drops; print byte-identical; `/Rotate` on screen; no
 files left in `/tmp`. B-31 is unchanged (open).
+
+## Linux Test — 17 Nov, build log 62 on `platform/linux` 3c83e7a (standing watch)
+
+Build log 62: a sign-out or shutdown with unsaved work is held and asked about (D-194), first part. Patch 32 is
+not merged on this head. Built from source with SDK 10.0.114 (`global.json` set aside in my test copy only).
+CI run 44119798714 is green. New tools, test only: `tools/t_session.py` and `tools/fake_desktop.py`, my own
+stand-in for the desktop's side of a sign-out, on a private session bus with no service files so the real
+portal can't answer in its place. No desktop session runs here, so what GNOME and KDE show is not checked.
+
+**D-194 with a portal ✅** (`t_session.py portal`)
+
+| Step | Result |
+|---|---|
+| At start | The app asks for the session monitor once; no lock is taken; the "running" state the portal sends is ignored |
+| Notice, nothing unsaved | Answered in 3 ms, no lock, no card |
+| Notice, one mark unsaved | Lock asked for 6 ms after the notice (`flags` 1 = logout, reason "Chuvadi has work that is not saved."), the answer sent 9 ms after, so the lock is in place first. The window asks Save / Save as… / Discard / Cancel for that file |
+| A second notice while the card is open | Answered; still one card; no second lock |
+| Cancel | Card gone, mark kept, lock kept |
+| A third notice | Asks again, no second lock. Escape on the card keeps everything |
+| A fourth notice, Save | The file is written with the mark, the app exits 0 and leaves the bus; the clean file is untouched |
+
+**The other cases ✅**
+
+| Case | Result |
+|---|---|
+| Only a GNOME session manager on the bus | Lock taken through it (app `in.chuvadi.Reader`, flags 1, the same reason); Cancel keeps it; Discard closes the app and the file is byte-identical |
+| A portal whose lock call fails, plus a GNOME session manager | Falls back to the session manager's lock |
+| A session bus with nobody on it | No lock (none to take); the window still asks; no error |
+| No session bus, and a bus address that points nowhere | The app starts in the usual time (2.8–3.0 s here), nothing is asked of a bus, the window still asks; no error |
+| State 3, "ending" with no question | Nothing is asked and nothing is held, as the build log says |
+| The CI package itself (not my test build) | On the stand-in portal it asks for the monitor and answers a notice in 2 ms |
+
+In every run the app's log has no error and no GLib critical. The package's `Depends` line is unchanged.
+
+**What the first part does not do yet** (the build log says so; confirmed here)
+- The lock is taken at the notice, not when the mark is drawn: after drawing a mark the hold state is 0 and the
+  desktop has seen no lock. A desktop that sends no notice (GNOME's session manager without a portal) is
+  therefore not held in real use yet. This waits for patch 32 (`IUnsavedWork.Changed`).
+- The power button's own action, `systemctl poweroff` and a kill are not held and can't be.
+
+## B-34 — D-194: the lock stays after the work is saved or discarded (S3, Linux)
+
+**Steps** (`t_session.py stale`): two files open, a mark on one. Send the notice: the lock is taken and the
+window asks. Cancel. Close the marked tab and choose Discard, so nothing is unsaved.
+**Seen:** the hold state is still 2 and the lock has not been given up. A real desktop would go on listing
+Chuvadi with "Chuvadi has work that is not saved." in its sign-out dialog. At the next notice the app gives the
+lock up and answers, with no card, so the sign-out is not blocked for good.
+**Expected:** the lock goes when the unsaved work goes.
+
+| Option | For | Against |
+|---|---|---|
+| A. Call `SessionEndGuard.Refresh()` on `IUnsavedWork.Changed` when patch 32 lands (already planned) | Fixes this, and takes the lock as soon as work is unsaved, which also covers a desktop that sends no notice | Waits for patch 32 |
+| B. Until then, call `Refresh()` from Linux code after each close-card answer and each save | No wait | Interim code that patch 32 replaces |
+
+I'd take A: it is the planned design and B would be thrown away.
+
+## B-35 — D-194: a lock the desktop refuses is counted as held (S4, Linux)
+
+**Steps** (`t_session.py refused`): the stand-in portal accepts `Inhibit`, returns the request, then ends it with
+Response 2 (refused). A GNOME session manager, if there is one, is not tried.
+**Seen:** hold state 2 ("held through the portal"). The window still asks, so no work is lost by this alone; but
+such a desktop would not wait.
+**Expected:** a refused request is not a lock.
+As far as I know a real portal with no backend for this doesn't offer the interface at all, in which case the
+call fails and the fallback already works; so this needs a backend that is there and says no. Not seen on a real
+desktop.
+
+| Option | For | Against |
+|---|---|---|
+| A. Listen for the request's `Response`; on a non-zero answer drop it and try the GNOME session manager | The state is true, and such a desktop is still held where it can be | About 30 lines of native code, and one more step before the notice is answered |
+| B. Leave it and note it in the build log | Nothing to build | The state can say "held" when nothing is |
+
+Low priority either way; A if the session code is opened again for patch 32.
+
+**Regression on 3c83e7a ✅.** Sheet pager in four situations; encoding picker; a pinch in Mark leaves no mark;
+patch 29 (marks kept with the tab, ask before closing on every way of closing, Excel resize byte-identical);
+marks after pinch steps to 55, 100 and 150 % (18 exact on screen, within 1–3 pt saved); pinch on PDF, Excel and
+Word; Find and Fit on turned pages; hidden Excel matches named; B-24 + B-08b Cancel; B-25; owner-password
+printing; single instance (1 window, 4 tabs); drops; print byte-identical; `/Rotate` on screen; no files left in
+`/tmp`. B-31 is unchanged (open).
