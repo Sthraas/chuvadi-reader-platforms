@@ -24,6 +24,7 @@ internal static class SignatureStyles
     public static string Label(SignatureCheckStatus s) => s switch
     {
         SignatureCheckStatus.Valid => "Valid",
+        SignatureCheckStatus.NotChecked => "Not checked",
         SignatureCheckStatus.UnknownTrust => "Signer not verified",
         SignatureCheckStatus.ModifiedAfterSigning => "Changed after signing",
         SignatureCheckStatus.Invalid => "Not valid",

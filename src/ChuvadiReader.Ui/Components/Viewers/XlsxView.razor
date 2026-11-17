@@ -112,6 +112,11 @@
                     </button>
                 }
             </div>
+            @if (s.ConditionalColoursHeld)
+            {
+                @* D-200: until the next update conditional formats are not evaluated; the cells are as the file holds them. *@
+                <span class="xv-drawings xv-condheld" title="This sheet colours some cells by rule. Those colours are not drawn in this version; the values are.">@LibraryHolds.ConditionalColoursBack</span>
+            }
             @if (s.Drawings > 0)
             {
                 <span class="xv-drawings" title="Pictures, shapes and charts are part of this sheet. Chuvadi can't draw them yet.">@(s.Drawings == 1 ? "1 picture or chart isn't shown" : $"{s.Drawings} pictures or charts aren't shown")</span>
