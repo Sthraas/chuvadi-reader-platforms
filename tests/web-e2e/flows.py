@@ -131,6 +131,19 @@ with sync_playwright() as p:
         printed = page.evaluate("window.__chvdPrinted || 0")
         check("browser print called once", printed == 1, "calls=%s" % printed)
 
+    # D-198 (patch 33): until Pdf 3.35.1 every page operation asks first when a file holds something the new
+    # file won't keep (bookmarks, page labels, links, layers…). Continue goes on.
+    asked = []
+
+    def go_and_answer():
+        page.click("button.tbtn-go")
+        try:
+            page.wait_for_selector("button.fc-btn.primary:text-is('Continue')", timeout=8000)
+        except Exception:  # noqa: BLE001 - nothing in the file to lose: no question
+            return
+        asked.append(page.locator(".closeq").first.inner_text().replace("\n", " ")[:160])
+        page.click("button.fc-btn.primary:text-is('Continue')")
+
     # 3. merge two uploads -> download
     page.goto(base + "/merge")
     page.wait_for_selector("text=Add files", timeout=30000)
@@ -140,7 +153,7 @@ with sync_playwright() as p:
     fc.value.set_files([pdf, pdf])
     page.wait_for_selector("button.tbtn-go:not([disabled])", timeout=30000)
     with page.expect_download(timeout=60000) as dl:
-        page.click("button.tbtn-go")
+        go_and_answer()
     d = dl.value
     target = os.path.join(out, "downloaded-" + d.suggested_filename)
     d.save_as(target)
@@ -157,7 +170,7 @@ with sync_playwright() as p:
     downloads = []
     page.on("download", lambda d: downloads.append(d))
     with page.expect_download(timeout=60000) as dl:
-        page.click("button.tbtn-go")
+        go_and_answer()
     d = dl.value
     target = os.path.join(out, "downloaded-" + d.suggested_filename)
     d.save_as(target)
@@ -172,6 +185,8 @@ with sync_playwright() as p:
     check("split to folder downloads one zip of every page",
           d.suggested_filename.endswith(".zip") and len(downloads) == 1 and len(pdfs) == len(names) >= 2,
           "%s, %d download(s), %d entries" % (d.suggested_filename, len(downloads), len(names)))
+    check("page operations ask first, naming what the new file won't keep (D-198), and Continue goes on",
+          len(asked) == 2 and all("will not have" in a or "won't have" in a or "layer" in a for a in asked), str(asked))
 
     check("no console errors", not errors, "; ".join(errors[:3]))
     sign_out(ctx, base)

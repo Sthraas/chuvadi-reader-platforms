@@ -1,11 +1,12 @@
-"""M-27 on the portal: a mark and a redact box drawn by mouse land where they were drawn, at any zoom, in every engine.
+"""M-27 on the portal: a mark (and, when redaction is back, a redact box) drawn by mouse lands where it was drawn, at any zoom, in every engine.
 
 Older WebKit reports a zoomed element's rectangle unzoomed, which would put a mark drawn at a zoom in the
 wrong place (patch 27 made mark placement engine-independent). For each zoom (as opened, zoomed in twice,
 zoomed out three times from there) this draws a rectangle on the first page with the mouse and compares the
-drawn mark's box on screen with the drag: each edge within a few pixels. Then the same on the Redact page
-(Protect, "Redact box") with a redaction box, and a look at "Sign with certificate": greyed out on the portal
-with its reason (D-187). Development sign-in.
+drawn mark's box on screen with the drag: each edge within a few pixels. A look at "Sign with certificate":
+greyed out on the portal with its reason (D-187). Then, while redaction is held back (D-198, until Pdf 3.35.1),
+that Protect shows one greyed "Redaction" saying when it returns and the R key does nothing; once it is back,
+the same measurement on the Redact page ("Redact box") with a redaction box at each zoom. Development sign-in.
 
 Usage: python3 mark_zoom.py <portal base> <some.pdf> [--browser chrome|chromium|firefox|webkit]
 """
@@ -103,13 +104,28 @@ with sync_playwright() as p:
         page.click("button.rb[aria-label='Clear all marks']")
         page.wait_for_function("() => document.querySelectorAll('.mk-shape.rect').length === 0", timeout=10000)
     page.click("nav.leftbar >> text=Protect")
-    page.wait_for_selector("button.rb[aria-label='Redact box']", timeout=15000)
+    page.wait_for_selector("button.rb[aria-label='Redact box'], button.rb[aria-label='Redaction']", timeout=15000)
     cert = page.locator("button.rb[aria-label='Sign with certificate']").first
     check("Sign with certificate is greyed out on the portal", cert.count() == 1 and not cert.is_enabled())
     tip = cert.get_attribute("title") or ""
     check("... and says why", "desktop app" in tip and "private key" in tip, tip)
 
-    # --- Redact: a redaction box drawn by mouse, at each zoom ---------------------------------------------
+    # --- D-198: until Pdf 3.35.1 redaction is held back: one greyed "Redaction" that says when it returns ----
+    held = page.locator("button.rb[aria-label='Redaction']")
+    if held.count() > 0:
+        tip = held.first.get_attribute("title") or ""
+        check("redaction is held back on the portal (D-198): greyed, saying when it returns",
+              not held.first.is_enabled() and "Redaction comes back with the next update" in tip
+              and page.locator("button.rb[aria-label='Redact box']").count() == 0, tip)
+        page.keyboard.press("r")
+        page.wait_for_timeout(800)
+        check("... and the R key does nothing", "/redact" not in page.url, page.url)
+        check("no page errors", not errors, "; ".join(errors[:3]))
+        sign_out(ctx, base)
+        b.close()
+        sys.exit(0 if all(results) else 1)
+
+    # --- Redact: a redaction box drawn by mouse, at each zoom (when redaction is back) ------------------------
     page.click("button.rb[aria-label='Redact box']")
     page.wait_for_url("**/redact**", timeout=30000)
     page.wait_for_selector(".rd-desk .rpage svg", timeout=60000)
