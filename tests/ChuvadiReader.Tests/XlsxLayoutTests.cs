@@ -116,15 +116,21 @@ public sealed class XlsxLayoutTests
     }
 
     [Fact]
-    public void Data_bars_and_icons_are_drawn_from_the_rules()
+    public void Conditional_colours_wait_for_the_next_update_and_the_sheet_says_so()
     {
-        Assert.True(At("A9").Bar!.Percent < At("A10").Bar!.Percent);
-        Assert.True(At("A10").Bar!.Percent < At("A11").Bar!.Percent);
-        Assert.Equal("#638EC6", At("A9").Bar!.Color);
-        Assert.Equal(("3Arrows", 0, 3), (At("B9").Icon!.Set, At("B9").Icon!.Index, At("B9").Icon!.Count));
-        Assert.Equal(1, At("B10").Icon!.Index);
-        Assert.Equal(2, At("B11").Icon!.Index);
+        // D-200: until the Sheets update that fixes SEC-08 and SEC-10, the rules are not evaluated at all. Before,
+        // A9 to A11 had data bars (#638EC6, growing) and B9 to B11 arrows (3Arrows 0, 1, 2); with the update they
+        // come back and this test returns to checking them.
+        Assert.True(LibraryHolds.ConditionalFormatsHeld);
+        foreach (var a in new[] { "A9", "A10", "A11", "B9", "B10", "B11" })
+        {
+            Assert.Null(At(a).Bar);
+            Assert.Null(At(a).Icon);
+        }
+
         Assert.Equal("10", At("A9").Value);                     // the value is untouched
+        Assert.True(Layout.ConditionalColoursHeld);             // and the sheet says its colours come back
+        Assert.False(Book.Sheets[1].ConditionalColoursHeld);    // a sheet without rules says nothing
     }
 
     [Fact]

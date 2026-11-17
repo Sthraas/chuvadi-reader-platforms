@@ -313,7 +313,7 @@ public class LayersMeasureSignatureTests
         var svc = new SignatureCheckService();
 
         // Self-signed: intact, but not issued by a trusted root.
-        var untrusted = await svc.CheckAsync(output, options: new SignatureCheckOptions { UseSystemTrustStore = false });
+        var untrusted = await svc.CheckAsync(output, options: new SignatureCheckOptions { CheckTrust = true, UseSystemTrustStore = false });
         var s = Assert.Single(untrusted.Signatures);
         Assert.Equal("A. Shiva", s.SignerName);
         Assert.Equal("Approved for discharge", s.Reason);
@@ -328,7 +328,7 @@ public class LayersMeasureSignatureTests
         Assert.Contains("document unchanged since signing", s.Summary);
 
         // With the certificate trusted explicitly → valid.
-        var trusted = await svc.CheckAsync(output, options: new SignatureCheckOptions { UseSystemTrustStore = false, TrustedCertificates = new[] { der } });
+        var trusted = await svc.CheckAsync(output, options: new SignatureCheckOptions { CheckTrust = true, UseSystemTrustStore = false, TrustedCertificates = new[] { der } });
         var t = Assert.Single(trusted.Signatures);
         Assert.Equal(SignatureCheckStatus.Valid, t.Status);
         Assert.True(t.TrustValidated);
@@ -336,6 +336,21 @@ public class LayersMeasureSignatureTests
         Assert.Equal($"Signed by A. Shiva · {day} · certificate valid · document unchanged since signing", t.Summary);
         Assert.True(trusted.AllValid);
         Assert.Equal("1 signature valid", trusted.Headline);
+
+        // D-198, until Pdf 3.35.1: the app's own call (default options) gives no verdict at all, even for a
+        // certificate that would be trusted: what the signature states is shown, valid or not is not said.
+        var held = await svc.CheckAsync(output, options: new SignatureCheckOptions { UseSystemTrustStore = false, TrustedCertificates = new[] { der } });
+        var h = Assert.Single(held.Signatures);
+        Assert.False(held.TrustChecked);
+        Assert.False(held.AllValid);
+        Assert.Equal(SignatureCheckStatus.NotChecked, h.Status);
+        Assert.Equal("A. Shiva", h.SignerName);
+        Assert.Equal($"Signed by A. Shiva · {day} · not checked in this version", h.Summary);
+        Assert.DoesNotContain("valid", h.Summary, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("unchanged", h.Summary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("comes back with the next update", h.Detail);
+        Assert.Equal("1 signature · not checked in this version", held.Headline);
+        Assert.False((await svc.CheckAsync(output)).TrustChecked);
     }
 
     [Fact]
@@ -346,7 +361,7 @@ public class LayersMeasureSignatureTests
         await TestSigning.SignWithPfxAsync(AuthoredPdf(), output, pfx, "pw");
 
         var report = await new SignatureCheckService().CheckAsync(output,
-            options: new SignatureCheckOptions { UseSystemTrustStore = false, TrustedCertificates = new[] { der } });
+            options: new SignatureCheckOptions { CheckTrust = true, UseSystemTrustStore = false, TrustedCertificates = new[] { der } });
         Assert.Equal(SignatureCheckStatus.Valid, Assert.Single(report.Signatures).Status);
     }
 
@@ -357,7 +372,7 @@ public class LayersMeasureSignatureTests
         var signedPath = TestPdf.TempOutput();
         await TestSigning.SignWithPfxAsync(AuthoredPdf(), signedPath, pfx, "pw");
         var signed = File.ReadAllBytes(signedPath);
-        var opts = new SignatureCheckOptions { UseSystemTrustStore = false, TrustedCertificates = new[] { der } };
+        var opts = new SignatureCheckOptions { CheckTrust = true, UseSystemTrustStore = false, TrustedCertificates = new[] { der } };
         var svc = new SignatureCheckService();
 
         // Bytes appended after the signed range (an incremental update would do this).
@@ -387,7 +402,7 @@ public class LayersMeasureSignatureTests
         await TestSigning.SignWithPfxAsync(once, twice, pfx, "pw", new CertificateSignOptions { Reason = "Countersigned" });
 
         var report = await new SignatureCheckService().CheckAsync(twice,
-            options: new SignatureCheckOptions { UseSystemTrustStore = false, TrustedCertificates = new[] { der } });
+            options: new SignatureCheckOptions { CheckTrust = true, UseSystemTrustStore = false, TrustedCertificates = new[] { der } });
         Assert.Equal(2, report.Signatures.Count);
         Assert.Equal("Signature1", report.Signatures[0].FieldName);
         Assert.Equal("Signature2", report.Signatures[1].FieldName);
@@ -409,7 +424,7 @@ public class LayersMeasureSignatureTests
         await svc.SignWithPfxAsync(src, output, pfx, "pw", new CertificateSignOptions { Reason = "Approved", Location = "Pune" });
 
         Assert.Equal(before, File.ReadAllBytes(src)); // the source is never written to
-        var report = await new SignatureCheckService().CheckAsync(output, options: new SignatureCheckOptions { UseSystemTrustStore = false });
+        var report = await new SignatureCheckService().CheckAsync(output, options: new SignatureCheckOptions { CheckTrust = true, UseSystemTrustStore = false });
         var sig = Assert.Single(report.Signatures);
         Assert.True(sig.IntegrityVerified);
         Assert.True(sig.CoversWholeDocument);

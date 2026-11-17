@@ -46,6 +46,14 @@ const sha = f => crypto.createHash('sha256').update(fs.readFileSync(f)).digest('
 
   // ── Protect's redaction areas ──
   await sw(B);
+  // D-198: redaction is hidden until Pdf 3.35.1 (Protect's rail shows one greyed "Redaction"). Then there are no
+  // areas to keep, and this half has nothing to prove; it runs again when redaction comes back.
+  await p.locator('.rdesk').click({ position: { x: 20, y: 20 } }).catch(() => { }); await p.keyboard.press('4'); await p.waitForTimeout(900);
+  if (await p.locator('button[aria-label="Redaction"][disabled], button[aria-label="Redaction"][aria-disabled="true"]').count()) {
+    console.log('SKIP  redaction areas: redaction is hidden until the next update (D-198)');
+    check(errs.length === 0, 'no script errors', JSON.stringify(errs.slice(0, 3)));
+    await b.close(); process.exit(fail ? 1 : 0);
+  }
   const toProtect = async () => { await p.locator('.rdesk').click({ position: { x: 20, y: 20 } }).catch(() => { }); await p.keyboard.press('4'); await p.waitForTimeout(700); await p.keyboard.press('r'); await p.waitForSelector('.mk-layer.drawmode', { timeout: 20000 }); await p.waitForTimeout(1200); };   // Protect, then its Redact box tool
   await toProtect();
   const boxes = () => p.evaluate(() => document.querySelectorAll('.mk-box-x').length);

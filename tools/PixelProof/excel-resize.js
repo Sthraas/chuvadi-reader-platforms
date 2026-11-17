@@ -1,7 +1,7 @@
 // TESTING ONLY (never shipped). D-190: Excel columns and rows can be resized on screen (drag an edge, press it twice
 // to fit), for viewing only. Usage: node excel-resize.js <port> <workbook path>   with a desktop preview on <port>
 // opened on tools/OfficeCorpus's layout.xlsx as the last file (sheets: Layout, Settings (right to left, 150 %), ...).
-const { chromium } = require('playwright'); const fs = require('fs'); const crypto = require('crypto');
+const { chromium: chromiumEngine, webkit } = require(process.env.PW_MODULE || 'playwright'); const chromium = process.env.ENGINE === 'webkit' ? webkit : chromiumEngine; const fs = require('fs'); const crypto = require('crypto');
 const [port, file] = process.argv.slice(2);
 let fail = 0;
 const check = (ok, what, extra = '') => { if (!ok) fail++; console.log(`${ok ? 'PASS' : 'FAIL'}  ${what}${extra ? '  ' + extra : ''}`); };
@@ -11,7 +11,7 @@ const sha = () => crypto.createHash('sha256').update(fs.readFileSync(file)).dige
   const b = await chromium.launch(); const ctx = await b.newContext({ viewport: { width: 1440, height: 900 }, hasTouch: true }); const p = await ctx.newPage();
   const errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.goto(`http://127.0.0.1:${port}/reader`, { waitUntil: 'networkidle' }); await p.waitForSelector('.xv-canvas'); await p.waitForTimeout(1200);
-  const hdr = (kind, n) => p.evaluate(([kind, n]) => { const e = document.querySelector(`.xv-${kind}hdr[data-${kind === 'col' ? 'c' : 'r'}="${n}"]`); if (!e) return null; const r = e.getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, w: r.width, h: r.height, own: e.classList.contains('own'), css: parseFloat(kind === 'col' ? e.style.width : e.style.height) }; }, [kind, n]);
+  const hdr = (kind, n) => p.evaluate(([kind, n]) => { const e = document.querySelector(`.xv-${kind}hdr[data-${kind === 'col' ? 'c' : 'r'}="${n}"]`); if (!e) return null; const r0 = e.getBoundingClientRect(); /* an older engine (WebKit 18, macOS 15) gives rectangles inside a CSS zoom in the zoomed element's own units: put them on screen */ const pr = document.createElement('div'); pr.style.cssText = 'position:fixed;width:10px;zoom:2;visibility:hidden'; document.body.appendChild(pr); const unz = Math.abs(pr.getBoundingClientRect().width - 10) < 0.5; pr.remove(); let z = 1; if (unz) for (let x = e; x && x.nodeType === 1; x = x.parentElement) { const v = parseFloat(getComputedStyle(x).zoom); if (v > 0) z *= v; } const r = { left: r0.left * z, right: r0.right * z, top: r0.top * z, bottom: r0.bottom * z, width: r0.width * z, height: r0.height * z }; return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, w: r.width, h: r.height, own: e.classList.contains('own'), css: parseFloat(kind === 'col' ? e.style.width : e.style.height) }; }, [kind, n]);
   const drag = async (x0, y0, x1, y1) => { await p.mouse.move(x0, y0); await p.mouse.down(); await p.mouse.move((x0 + x1) / 2, (y0 + y1) / 2, { steps: 4 }); await p.mouse.move(x1, y1, { steps: 4 }); await p.mouse.up(); await p.waitForTimeout(600); };
   const twice = async (x, y) => { await p.mouse.move(x, y); await p.mouse.down(); await p.mouse.up(); await p.waitForTimeout(90); await p.mouse.down(); await p.mouse.up(); await p.waitForTimeout(900); };
   const resetBtn = () => p.locator('.xv-resetsizes').count();
@@ -73,10 +73,10 @@ const sha = () => crypto.createHash('sha256').update(fs.readFileSync(file)).dige
   const cdp = await ctx.newCDPSession(p);
   const touch = (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y, id: 1 }] });
   const scroll0 = await p.evaluate(() => { const g = document.querySelector('.xv-gridwrap'); return [g.scrollLeft, g.scrollTop]; });
-  await touch('touchStart', S3.left + 8, S3.top + 8); for (let i = 1; i <= 6; i++) await touch('touchMove', S3.left + 8 - i * 8, S3.top + 8); await touch('touchEnd'); await p.waitForTimeout(700);
+  await touch('touchStart', S3.left + 8, S3.top + 8); await p.waitForTimeout(450); /* D-193: a finger takes the edge after resting on it */ for (let i = 1; i <= 6; i++) await touch('touchMove', S3.left + 8 - i * 8, S3.top + 8); await touch('touchEnd'); await p.waitForTimeout(700);
   let S3b = await hdr('col', 3);
   const scroll1 = await p.evaluate(() => { const g = document.querySelector('.xv-gridwrap'); return [g.scrollLeft, g.scrollTop]; });
-  check(near(S3b.w, S3.w + 48, 3) && JSON.stringify(scroll0) === JSON.stringify(scroll1), 'a finger within reach of an edge (8 px inside) drags it, and the sheet does not scroll instead', `(${S3.w.toFixed(1)} → ${S3b.w.toFixed(1)})`);
+  check(near(S3b.w, S3.w + 48, 3) && JSON.stringify(scroll0) === JSON.stringify(scroll1), 'a finger within reach of an edge (8 px inside), rested on it, drags it, and the sheet does not scroll instead', `(${S3.w.toFixed(1)} → ${S3b.w.toFixed(1)})`);
 
   // ── back to the file's own sizes ──
   await p.locator('.xv-resetsizes').click(); await p.waitForTimeout(700);

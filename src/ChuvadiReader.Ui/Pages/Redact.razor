@@ -12,6 +12,21 @@
 @inject ChuvadiReader.Platform.IFileWriteBack WriteBack
 @inject ChuvadiReader.Platform.IPlatformInfo Platform
 
+@if (LibraryHolds.RedactionHeld)
+{
+    @* D-198: redaction is hidden until the Reader is on Pdf 3.35.1 (a redacted copy could leak). This page is only
+       reached from an old link or a host's own route; the Reader offers no way in. *@
+    <div class="redact-root mview rd-held">
+        <div class="rd-empty" role="status">
+            <Icon Name="redact" Size="40" />
+            <div class="rd-empty-t">@LibraryHolds.RedactionBack</div>
+            <div class="rd-empty-sub">@LibraryHolds.RedactionWhy</div>
+            <button class="rd-empty-btn" @onclick='() => Nav.NavigateTo("/reader")'>Back to the document</button>
+        </div>
+    </div>
+}
+else
+{
 <div class="redact-root mview">
     <div class="rd-col">
     @* ── Redaction rail ──────────────────────────────────────────────────── *@
@@ -245,6 +260,7 @@
     </div>
 </div>
 
+}
 @code {
     private IPdfSession? _session;
     private string? _path;
@@ -383,6 +399,14 @@
 
     protected override async Task OnInitializedAsync()
     {
+        if (LibraryHolds.RedactionHeld)
+        {
+            // D-198: nothing is opened here; the page only says when redaction comes back.
+            Shell.SetMode(DocMode.Protect, Tabs.Active?.Id);
+            Shell.SetActivity("Protect · " + LibraryHolds.RedactionBack);
+            return;
+        }
+
         // Entitlement guard: Redact may be Enterprise-gated later. Today CanRedact is true.
         if (!Entitlements.CanRedact)
         {
@@ -461,6 +485,7 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (LibraryHolds.RedactionHeld) return;   // D-198: nothing on this page to publish or measure
         ShellPublish();
         // D-194: a host that must act before a close is under way hears when unsaved work appears or goes.
         bool unsavedNow = _work.HasUnsaved;
