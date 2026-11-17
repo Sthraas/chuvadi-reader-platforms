@@ -894,3 +894,25 @@ On b08b0e5d (patch 31, signed off by Linux Test). Patch 32 is not merged here ye
   laptop: sign out, restart and power off from the desktop's menu with a mark unsaved.
 - **Not held, and cannot be asked about:** the power button's own action, `systemctl poweroff` from a terminal,
   a kill. They do not go through the desktop's sign-out.
+
+### 63. Patch 32 merged (149f4fc); D-194 finished: the lock follows the unsaved work (B-34), a refused lock is not one (B-35) (18 Nov)
+- **Merge of `platform/foundation-pr` 149f4fc** (PR 24, Reader main 6c33eab): clean; shared `src` and `tests`
+  identical to 149f4fc. Release build `-warnaserror` clean on SDK 10.0.403. Unit tests: Reader 446 passed /
+  6 skipped, host kit 103, Linux 73, Web Ui 41, Mobile Ui 16. Full UI pass under Xvfb: **130/130**.
+- **B-34.** `IUnsavedWork.Changed` (patch 32) now calls `SessionEndGuard.Refresh()` on the window's thread, and
+  once at start: the session lock is taken as soon as work is unsaved (marks, and with patch 32 bookmark edits,
+  redaction areas, changed Arrange desks) and given up as soon as it is saved or discarded. A desktop that sends
+  no notice is held too.
+- **B-35.** The portal request is given our own `handle_token`, so its `Response` is listened for before the
+  call is made. A non-zero Response (refused) drops it, and the GNOME session manager is asked instead.
+- **UI step 42**, against the stand-in desktop (which can now refuse, and offer both a portal and a GNOME session
+  manager): nothing unsaved, no lock; a mark, the portal lock at once with no notice; the notice asks, Cancel
+  keeps it; Discard on the tab gives the lock up (`Request.Close`) and the next sign-out goes on unasked; a new
+  mark, a new lock, Save on the question writes the file and the app exits 0; GNOME only: `Inhibit`, `Uninhibit`
+  on discard, `Inhibit` again, Discard closes; portal refuses: `Inhibit`, `Refused`, then the GNOME `Inhibit`.
+- **For a real laptop:** sign out, restart and power off from the desktop's menu with unsaved work.
+- **Print note (advisory item 2i), nothing changed:** the app talks IPP to `ipp://localhost:631` (loopback TCP;
+  CUPS listens only on localhost and its socket). A CUPS server named in `CUPS_SERVER` or `client.conf` gets the
+  printer list and the job as plain `ipp://<server>:631`. Network printers are reached by the local CUPS, never
+  by the app. GTK's print dialog (libcups) lists a named server's printers itself.
+- **D-198:** what a parsing helper can use on Linux, measured: `D-198-PARSE-HELPER-LINUX.md`.
