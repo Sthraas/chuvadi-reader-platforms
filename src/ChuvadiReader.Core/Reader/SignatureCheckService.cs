@@ -29,6 +29,11 @@ public enum SignatureCheckStatus
 
     /// <summary>A signature kind the library can't verify (non-CMS sub-filter, unknown algorithm).</summary>
     Unsupported,
+
+    /// <summary>D-198, until Pdf 3.35.1: no verdict is given. What the signature states (signer, time, reason,
+    /// place, issuer) is shown; whether it is valid or trusted is not said, because the library's verdict can be
+    /// wrong (SIG-12).</summary>
+    NotChecked,
 }
 
 /// <summary>One signature as the Signatures card shows it.</summary>
@@ -55,6 +60,10 @@ public sealed record SignatureCheckInfo(
 /// <summary>All signatures in a file. <see cref="Error"/> is set when the file couldn't be read.</summary>
 public sealed record SignatureCheckReport(IReadOnlyList<SignatureCheckInfo> Signatures, string? Error = null)
 {
+    /// <summary>False when the signer's certificate was not checked against trusted roots
+    /// (<see cref="SignatureCheckOptions.CheckTrust"/> off, D-198): no signature can be "Valid" then.</summary>
+    public bool TrustChecked { get; init; } = true;
+
     public bool HasSignatures => Signatures.Count > 0;
 
     /// <summary>True when every signature is <see cref="SignatureCheckStatus.Valid"/>.</summary>
@@ -78,6 +87,11 @@ public sealed record SignatureCheckReport(IReadOnlyList<SignatureCheckInfo> Sign
 
             int ok = Signatures.Count(s => s.Status == SignatureCheckStatus.Valid);
             string noun = n == 1 ? "signature" : "signatures";
+            if (!TrustChecked)
+            {
+                return $"{n} {noun} · not checked in this version";
+            }
+
             return ok == n ? $"{n} {noun} valid" : $"{n} {noun} · {n - ok} need{(n - ok == 1 ? "s" : "")} attention";
         }
     }
@@ -92,6 +106,13 @@ public sealed class SignatureCheckOptions
 
     /// <summary>Extra trusted root/issuer certificates (DER), e.g. an organisation's own CA.</summary>
     public IReadOnlyList<byte[]>? TrustedCertificates { get; init; }
+
+    /// <summary>Whether a verdict is given at all (valid, changed, not valid, trusted). <b>Off by default until the
+    /// Reader is on Pdf 3.35.1 (D-198, library advisory D-405/D-406):</b> on 3.32.0 a signature can be reported
+    /// valid while the page shows what an attacker added (SIG-12), so the check shows only what the signature
+    /// states and every signature is <see cref="SignatureCheckStatus.NotChecked"/>. No trust store is built.
+    /// Tests turn it on to keep the verdict code proven for when it returns.</summary>
+    public bool CheckTrust { get; init; }
 }
 
 /// <summary>
@@ -125,15 +146,15 @@ public sealed class SignatureCheckService
                 return new SignatureCheckReport(Array.Empty<SignatureCheckInfo>());
             }
 
-            var verifyOptions = new SignatureVerifyOptions { TrustStore = BuildTrustStore(options) };
+            var verifyOptions = new SignatureVerifyOptions { TrustStore = options.CheckTrust ? BuildTrustStore(options) : null };
             var list = new List<SignatureCheckInfo>(signatures.Count);
             foreach (var sig in signatures)
             {
                 ct.ThrowIfCancellationRequested();
-                list.Add(Describe(sig, doc, pdfPath, fileLength, verifyOptions));
+                list.Add(Describe(sig, doc, pdfPath, fileLength, verifyOptions, options.CheckTrust));
             }
 
-            return new SignatureCheckReport(list);
+            return new SignatureCheckReport(list) { TrustChecked = options.CheckTrust };
         }
         catch (OperationCanceledException)
         {
@@ -145,7 +166,7 @@ public sealed class SignatureCheckService
         }
     }
 
-    private static SignatureCheckInfo Describe(PdfSignature sig, PdfDocument doc, string path, long fileLength, SignatureVerifyOptions verifyOptions)
+    private static SignatureCheckInfo Describe(PdfSignature sig, PdfDocument doc, string path, long fileLength, SignatureVerifyOptions verifyOptions, bool trustChecked)
     {
         bool covers = CoversWholeFile(sig.ByteRange, path, fileLength);
 
@@ -177,7 +198,7 @@ public sealed class SignatureCheckService
         string signer = FirstNonBlank(cert?.Subject?.CommonName, sig.Name, cert?.Subject?.ToString(), sig.FieldName) ?? "Unknown signer";
         DateTimeOffset? when = result is { TimestampValidated: true, SignatureTimestamp: { } ts } ? ts : cmsTime ?? sig.SigningTimeFromDictionary;
 
-        var (status, detail) = Classify(sig, result, verifyError, covers);
+        var (status, detail) = Classify(sig, result, verifyError, covers, trustChecked);
         string libStatus = result?.Status.ToString() ?? (verifyError is null ? "Unknown" : "Error");
 
         return new SignatureCheckInfo(
@@ -198,15 +219,22 @@ public sealed class SignatureCheckService
             status,
             libStatus,
             detail,
-            Summarise(sig.IsDocumentTimestamp, signer, when, status));
+            Summarise(sig.IsDocumentTimestamp, signer, when, status, trustChecked));
     }
 
     private static (SignatureCheckStatus Status, string Detail) Classify(
-        PdfSignature sig, SignatureVerificationResult? r, string? verifyError, bool covers)
+        PdfSignature sig, SignatureVerificationResult? r, string? verifyError, bool covers, bool trustChecked)
     {
         if (!sig.IsCmsBased)
         {
             return (SignatureCheckStatus.Unsupported, $"This signature type ({sig.SubFilter}) can't be checked.");
+        }
+
+        if (!trustChecked)
+        {
+            // D-198: no verdict until Pdf 3.35.1, whatever the library says; what the signature states is shown.
+            return (SignatureCheckStatus.NotChecked,
+                "Shown here is what the signature states. Whether it is valid, and whether the file changed after it, is not checked in this version: checking comes back with the next update.");
         }
 
         if (r is null)
@@ -255,13 +283,14 @@ public sealed class SignatureCheckService
         return (SignatureCheckStatus.UnknownTrust, why + " The document is unchanged since signing.");
     }
 
-    private static string Summarise(bool isTimestamp, string signer, DateTimeOffset? when, SignatureCheckStatus status)
+    private static string Summarise(bool isTimestamp, string signer, DateTimeOffset? when, SignatureCheckStatus status, bool trustChecked)
     {
         string head = isTimestamp ? $"Timestamped by {signer}" : $"Signed by {signer}";
         string date = when is { } w ? " · " + w.ToLocalTime().ToString("d MMM yyyy", CultureInfo.InvariantCulture) : string.Empty;
         return status switch
         {
             SignatureCheckStatus.Valid => $"{head}{date} · certificate valid · document unchanged since signing",
+            SignatureCheckStatus.NotChecked => $"{head}{date} · not checked in this version",
             SignatureCheckStatus.UnknownTrust => $"{head}{date} · document unchanged since signing · certificate not verified",
             SignatureCheckStatus.ModifiedAfterSigning => $"{head}{date} · document changed after signing",
             SignatureCheckStatus.Invalid => $"{head}{date} · signature is not valid",

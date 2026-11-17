@@ -271,6 +271,43 @@
 
     <CommandBar @ref="_cmdBar" Commands="AllCommands" FindText="@(OnDocView ? Shell.FindTextHandler : null)" />
 
+    @* D-198, until Pdf 3.35.1: before every page operation, what each file will lose. Same card as the close
+       question; Cancel is where the keyboard starts. *@
+    @if (_pageOpAsk is { } opFiles)
+    {
+        <div class="closeq-scrim"></div>
+        <div class="closeq pageopq" role="alertdialog" aria-modal="true" aria-labelledby="pageopq-title" @onkeydown="OnPageOpAskKey">
+            <span class="closeq-edge" tabindex="0" aria-hidden="true" @onfocus="() => FocusPageOpAskAsync(last: true)"></span>
+            <div class="closeq-title" id="pageopq-title">The new file will not have everything</div>
+            <div class="closeq-text">
+                Until the next update, making a new file from pages leaves some of the original out.
+                @if (opFiles.Count == 1)
+                {
+                    <span class="pageopq-file">@PageOpLine(opFiles[0], one: true)</span>
+                }
+                else
+                {
+                    <ul class="pageopq-list">
+                        @foreach (var f in opFiles)
+                        {
+                            <li><b>@f.FileName</b>: @PageOpLine(f, one: false)</li>
+                        }
+                    </ul>
+                }
+                @if (opFiles.Any(f => f.HasLayers))
+                {
+                    <span class="pageopq-layers">@(opFiles.Count == 1 ? "It has layers" : "Files with layers"): a layer that is hidden in the file may show in the new one. Check the result before you rely on it.</span>
+                }
+            </div>
+            <div class="closeq-btns">
+                <button class="fc-btn primary" @ref="_pageOpAskFirst" @onclick="() => AnswerPageOp(true)">Continue</button>
+                <span class="closeq-gap"></span>
+                <button class="fc-btn" @ref="_pageOpAskLast" @onclick="() => AnswerPageOp(false)">Cancel</button>
+            </div>
+            <span class="closeq-edge" tabindex="0" aria-hidden="true" @onfocus="() => FocusPageOpAskAsync(last: false)"></span>
+        </div>
+    }
+
     @* D-190: the question before a tab, several tabs or the app closes with unsaved marks. One file at a time. *@
     @if (_closeAsk is { } ask)
     {
@@ -599,6 +636,51 @@
 
     private void AnswerClose(CloseAnswer answer) => _closeAnswer?.TrySetResult(answer);
 
+    // D-198: the page-operation question (ShellService.ConfirmPageOperationAsync asks through here).
+    private IReadOnlyList<PageOperationFile>? _pageOpAsk;
+    private TaskCompletionSource<bool>? _pageOpAnswer;
+    private ElementReference _pageOpAskFirst, _pageOpAskLast;
+    private bool _pageOpAskFocus;
+
+    private static string PageOpLine(PageOperationFile f, bool one)
+    {
+        if (f.Lost.Count == 0)
+            return one ? $"{f.FileName} has none of what is left out (bookmarks, form fields, links to places in the file, page labels, language, tags)."
+                       : "none of what is left out";
+        string items = f.Lost.Count == 1 ? f.Lost[0] : string.Join(", ", f.Lost.Take(f.Lost.Count - 1)) + " and " + f.Lost[^1];
+        return one ? $"The new file will not have the {items} of {f.FileName}." : $"its {items}";
+    }
+
+    private Task<bool> AskAboutPageOpAsync(IReadOnlyList<PageOperationFile> files)
+    {
+        var done = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _ = InvokeAsync(async () =>
+        {
+            _pageOpAnswer?.TrySetResult(false);            // one question at a time
+            var answer = _pageOpAnswer = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _pageOpAsk = files;
+            _pageOpAskFocus = true;
+            StateHasChanged();
+            bool goOn = await answer.Task;
+            if (ReferenceEquals(_pageOpAnswer, answer)) { _pageOpAsk = null; _pageOpAnswer = null; StateHasChanged(); }
+            done.TrySetResult(goOn);
+        });
+        return done.Task;
+    }
+
+    private void AnswerPageOp(bool goOn) => _pageOpAnswer?.TrySetResult(goOn);
+
+    private async Task FocusPageOpAskAsync(bool last)
+    {
+        try { await (last ? _pageOpAskLast : _pageOpAskFirst).FocusAsync(); }
+        catch (Exception ex) when (ex is JSException or InvalidOperationException or JSDisconnectedException) { }
+    }
+
+    private void OnPageOpAskKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") AnswerPageOp(false);
+    }
+
     private async Task FocusCloseAskAsync(bool last)
     {
         try { await (last ? _closeAskLast : _closeAskFirst).FocusAsync(); }
@@ -622,6 +704,7 @@
         _statusSlot.Changed += OnStatusSlotChanged;
         Tabs.CloseGuard = ConfirmCloseAsync;
         Bench.CloseGuard = ConfirmArrangeCloseAsync;
+        Shell.PageOperationAskHandler = AskAboutPageOpAsync;
         Theme.Changed += OnThemeChanged;
         Win.StateChanged += OnWinChanged;
         Tabs.Changed += OnTabsChanged;
@@ -1009,6 +1092,13 @@
             catch (Exception ex) when (ex is JSException or InvalidOperationException or JSDisconnectedException) { }
         }
 
+        if (_pageOpAskFocus && _pageOpAsk is not null)
+        {
+            _pageOpAskFocus = false;
+            try { await _pageOpAskLast.FocusAsync(); }
+            catch (Exception ex) when (ex is JSException or InvalidOperationException or JSDisconnectedException) { }
+        }
+
         // The shell's own commands, for hosts with a native menu bar (IAppCommands; macOS). Only raises
         // Shell.Changed when they actually differ, so this can't re-render in a loop. Other hosts have no
         // menu bar to fill, so they skip it: no extra render at startup, nothing changes there.
@@ -1147,6 +1237,8 @@
         if (Tabs.CloseGuard == ConfirmCloseAsync) Tabs.CloseGuard = null;
         if (Bench.CloseGuard == ConfirmArrangeCloseAsync) Bench.CloseGuard = null;
         _closeAnswer?.TrySetResult(CloseAnswer.Cancel);
+        if (Shell.PageOperationAskHandler == AskAboutPageOpAsync) Shell.PageOperationAskHandler = null;
+        _pageOpAnswer?.TrySetResult(false);
         Theme.Changed -= OnThemeChanged;
         Win.StateChanged -= OnWinChanged;
         Tabs.Changed -= OnTabsChanged;
