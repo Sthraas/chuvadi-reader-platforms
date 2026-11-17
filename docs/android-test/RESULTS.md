@@ -302,6 +302,20 @@ Build from clean: 0 errors, 0 warnings. As-built Release: 0 crashes, device heal
 | Design / touch targets (shell) | 42 of 42 | 30 of 30 |
 | AT-13 | 5 of 5 (4.0–4.1 s) | 5 of 5 (6.9–7.5 s) |
 
+## Round 15 (run 44165454934, Android dfdad15 + Foundation 149f4fc (patch 32) + Mobile UI 9e3f987, Release, API 36)
+Build from clean: 0 errors, 0 warnings. As-built Release: 0 crashes, device health normal throughout.
+
+| Area | Phone | Tablet |
+|---|---|---|
+| Save suite | 39 of 43 — my pinch-in check (card up), three n/a | 40 of 44 — no failures, four n/a |
+| Close card by touch (Cancel, Save as…) | PASS | PASS |
+| Drift suite | 7 of 8 — **Find 1 of 5 on the right page (AT-24)** | 7 of 8 — Find 3 of 5; the two misses are "Enter on the same search doesn't go back to the match" |
+| AT-10 text box | whole — closed | whole — closed |
+| Function | 17 of 20 — my old print step ×2, my at-once rotation variant | 17 of 20 — my old print step ×2, F-03 box said 2 with page 3 on screen (once) |
+| Design / touch targets (shell) | 42 of 42 | 30 of 30 |
+| Export card sizes (AT-28) | unchanged | unchanged |
+| AT-13 | 5 of 5 (4.2–4.4 s) | 5 of 5 (8.5–9.7 s) |
+
 ## Blocked in CI: Reader on Android 15 (API 35)
 The API 35 image ships WebView 124, so the app correctly shows only its update screen (D-105). Updating it in CI from the API 36
 image's WebView failed twice: that WebView needs the Trichrome static library, which my donor job couldn't locate on the API 36
