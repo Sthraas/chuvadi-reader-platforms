@@ -121,4 +121,46 @@ public sealed class CloseGuardTests
         onScreen.SetResult(true);
         Assert.True(await first);
     }
+
+    [Fact]
+    public async Task Bookmark_edits_and_redaction_areas_are_asked_about_like_marks()
+    {
+        var (tabs, a, b, c) = await ThreeTabsAsync();
+        a.Bookmarks = new Marks(3);            // D-195: bookmarks edited, not saved
+        b.Redactions = new Marks(2);           // redaction areas in no redacted copy yet
+        List<string>? askedAbout = null;
+        tabs.CloseGuard = unsaved => { askedAbout = unsaved.Select(t => t.FileName).ToList(); return Task.FromResult(false); };
+
+        Assert.True(a.HasUnsavedWork);
+        Assert.False(a.HasUnsavedMarks);       // marks only
+        Assert.True(tabs.HasUnsavedMarks);
+        Assert.False(await tabs.ConfirmCloseAllAsync());
+        Assert.Equal(new[] { "a.pdf", "b.pdf" }, askedAbout);
+        await tabs.CloseAsync(b.Id);
+        Assert.Contains(b, tabs.Tabs);         // Cancel keeps it
+        _ = c;
+    }
+
+    [Fact]
+    public async Task A_file_open_only_in_Protect_keeps_its_areas_and_is_asked_about_when_the_app_closes()
+    {
+        var (tabs, a, _, _) = await ThreeTabsAsync();
+
+        var holder = tabs.WorkHolderFor("/elsewhere/contract.pdf", "contract.pdf");
+        Assert.True(tabs.IsDetached(holder));
+        Assert.DoesNotContain(holder, tabs.Tabs);                                     // never a tab in the strip
+        Assert.Same(holder, tabs.WorkHolderFor("/ELSEWHERE/contract.pdf", "contract.pdf"));
+        Assert.False(tabs.HasUnsavedMarks);
+
+        holder.Redactions = new Marks(4);
+        Assert.True(tabs.HasUnsavedMarks);
+        List<string>? askedAbout = null;
+        tabs.CloseGuard = unsaved => { askedAbout = unsaved.Select(t => t.FileName).ToList(); return Task.FromResult(true); };
+        Assert.True(await tabs.ConfirmCloseAllAsync());
+        Assert.Equal(new[] { "contract.pdf" }, askedAbout);
+
+        // A file that has a tab keeps its work with the tab.
+        Assert.Same(a, tabs.WorkHolderFor(a.Path, a.FileName));
+        Assert.False(tabs.IsDetached(a));
+    }
 }
