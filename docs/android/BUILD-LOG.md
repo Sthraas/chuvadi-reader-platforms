@@ -963,3 +963,4 @@ Step 68, result: run 43899989183 (head 60171388; Foundation 4b704c8d3d32c9c21c5c
 ## Step 71 — patch 33 (Reader main b193ab0) + Mobile UI df420b5 — coordinator, 18 Nov 01:35 IST
 - Composed platform/foundation-pr 9e00fdf (patch 33: Protect hidden until the next library update, signatures shown without a verdict, every page operation asks first, Excel conditional colours skipped) with platform/mobile-ui df420b5. Merge clean; the merge touches only mobile.css, mobile.js and Mobile UI's docs. Mobile UI's hook patches (H-27 to H-29) are not applied (compose.sh never applies them); they come in when Foundation lands them.
 - Sandbox: Debug 0 warnings; Core 448 (+6 skipped), Hosting 103, MobileUi 16, WebUi 41.
+- Result: run 44165854839 (head f2ebf064), all four green. Phone API 36: gestures 11/11, platform 39/39; tablet API 36: gestures 13/13, platform 37/37; API 35 phone and tablet: WebView gate 4/4.
