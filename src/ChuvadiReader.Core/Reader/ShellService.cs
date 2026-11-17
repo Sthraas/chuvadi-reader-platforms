@@ -146,6 +146,28 @@ public sealed class ShellService
     /// file, as "Save bookmarks" does. Returns null when they are saved, otherwise why not.</summary>
     public Func<Task<string?>>? SaveBookmarksHandler { get; set; }
 
+    /// <summary>D-198: set by the layout. Shows what a page operation will leave out of each file and returns
+    /// whether the person chose to go on.</summary>
+    public Func<IReadOnlyList<ChuvadiReader.Core.Documents.PageOperationFile>, Task<bool>>? PageOperationAskHandler { get; set; }
+
+    private readonly HashSet<string> _pageOpsAccepted = new(StringComparer.Ordinal);
+
+    /// <summary>D-198, until Pdf 3.35.1: call before every page operation (Merge, Split and extract, anything
+    /// Arrange writes) with the files it takes pages from. Every file is asked about, naming what the result
+    /// will not have and whether it has layers; a file the person agreed to is not asked about again while the
+    /// app runs. True means go on.</summary>
+    public async Task<bool> ConfirmPageOperationAsync(IEnumerable<string?> paths)
+    {
+        var list = paths.Where(p => !string.IsNullOrEmpty(p)).Select(p => p!).Distinct(StringComparer.Ordinal).ToList();
+        lock (_pageOpsAccepted) list.RemoveAll(_pageOpsAccepted.Contains);
+        if (list.Count == 0 || PageOperationAskHandler is not { } handler) return true;
+
+        var files = await Task.Run(() => list.Select(ChuvadiReader.Core.Documents.PageOperationCheck.Inspect).ToList()).ConfigureAwait(false);
+        if (!await handler(files).ConfigureAwait(false)) return false;
+        lock (_pageOpsAccepted) foreach (var path in list) _pageOpsAccepted.Add(path);
+        return true;
+    }
+
     /// <summary>Set by the page that owns the counter; called with a 1-based target.</summary>
     public Func<int, Task>? CounterHandler { get; set; }
 

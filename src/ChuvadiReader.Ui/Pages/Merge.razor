@@ -1,6 +1,7 @@
 @page "/merge"
 @inject IFilePicker Picker
 @inject PdfToolsService Tools
+@inject ShellService Shell
 @inject TabsService Tabs
 @inject OpenDocumentService OpenDoc
 @inject NavigationManager Nav
@@ -127,6 +128,7 @@
             return;
         }
 
+        if (!await Shell.ConfirmPageOperationAsync(_entries.Select(e => e.Path))) return;   // D-198
         var outPath = await Picker.PickSavePdfAsync("merged.pdf");
         if (string.IsNullOrEmpty(outPath))
         {
