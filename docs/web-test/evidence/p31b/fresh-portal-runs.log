@@ -1,0 +1,24 @@
+== WT-27 flows.py firefox, first visit on fresh portals
+cat: /tmp/portal-6095.pid: No such file or directory
+fresh portal 1: 10 pass, 0 fail
+fresh portal 2: 10 pass, 0 fail
+fresh portal 3: 10 pass, 0 fail
+fresh portal 4: 10 pass, 0 fail
+fresh portal 5: 9 pass, 1 fail
+FAIL a dropped file that isn't what it says is refused with a message — Page.wait_for_selector: Timeout 15000ms exceeded.
+fresh portal 6: 10 pass, 0 fail
+fresh portal 7: 10 pass, 0 fail
+fresh portal 8: 10 pass, 0 fail
+== WT-27 early_drop.py, fresh portal each
+early_drop chrome: 5 pass, 0 fail
+early_drop firefox: 5 pass, 0 fail
+early_drop webkit: 5 pass, 0 fail
+early_drop chromium: 5 pass, 0 fail
+== worker_crash.py, fresh portal each
+worker_crash chrome: 11 pass, 0 fail
+1
+worker_crash firefox: 11 pass, 0 fail
+1
+worker_crash webkit: 11 pass, 0 fail
+1
+DONE-17A

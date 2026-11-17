@@ -351,3 +351,17 @@ Tooling fixed in this pass (stale selectors after the viewer changes, not produc
 | **Excel** | ✅ `excel_p29.py` 11/11 × 3; large files and the four over-limit refusals as before |
 | **Regression** | ✅ `page_images.py` 7/7, `reload.py` 11/11, `leave_guard.py`, `office_limits.py` 6/6, `sangam_signin.py` 18/18 — × 3; `reload_tabs.py` 11/11, `leave_prompt.py` 5/5, `page_image_sec.py` 19/19 — × 3; `verify_fixes.py` 12/12 (WebKit 10/10); `sec_browser.py` 20/20 (second person 67–86 ms); fidelity 14/14 and 23/23 × 3. `flows.py` 10/10 Chrome, WebKit; **Firefox 9/10 on a person's first visit → WT-27** |
 | Not checked | B-33 (pager after going from one Excel tab to another), the close card's keyboard trap, finger sizes on tablet |
+
+## 18 Nov 2026 — `platform/web` @ **95c44b01** (patch 31 + WT-26, WT-27 fixes, advisory note)
+**Build from clean:** 0 warnings; Reader **438** (+6 skipped), Hosting **102**, Mobile UI **16**, Web UI **41**; Web **195/195**; `check-package.sh` PASS.
+
+| Area | Result |
+|---|---|
+| **WT-26** | ✅ `encoding_probe.py` 19/19 × 3; `encoding_picker.py` 15/15 × 3 |
+| **WT-27** | ✅ `early_drop.py` 5/5 × 4 (fresh portal each); `flows.py` Firefox first visit 7/8 fresh portals; probe 16/16 |
+| **Advisory §3 — a worker killed mid-open** | ✅ `worker_crash.py` 11/11 × Chrome, Firefox, WebKit, fresh portal each; one "ended with code" line each |
+| **WT-24 / WT-25** | ✅ `gone_browser.py` 4/4 + 4/4 × 3; `linger.py` 40–42 s in all six cases; `expiry.py` 12/12 × 3; `comeback.py` 5/5 × 3 (Firefox also 5/5, 5/5, one run cut by OBS-1) |
+| **M-27** | ✅ Chromium, WebKit 26.6, WebKit 17.4 16/16; Firefox 13/16 (three `goto` time-outs, OBS-1); worst 0.9 px, 0.4 %. `zoom_tools.py` 5/5 × 4; `mark_zoom.py` 9/9 × 3 |
+| **Close card, Excel, Leave site, reload** | ✅ `close_card.py` 14/14 × 3; `close_card_probe.py` 10/10 × 3; `excel_p29.py` 11/11 × 3; `leave_prompt.py` 5/5 × 3; `leave_guard.py` 7/7, 6/6 Firefox; `reload.py` 11/11 × 3; `reload_tabs.py` 11/11 × 3 (Firefox once cut by OBS-1, re-run 11/11) |
+| **Sign-in, page images, isolation** | ✅ `sangam_signin.py` 18/18 × 3; `page_images.py` 7/7 × 3; `page_image_sec.py` 19/19 × 3; `sec_browser.py` 20/20, second person's next page 68–101 ms through 13 hostile files |
+| **Excel limits, fidelity, earlier fixes** | ✅ four over-limit workbooks "too large to open" (0.3–1.1 s); 100k rows 4.5 s, 1,048,576 rows 5.8 s; Word 14/14 and Excel 23/23 on four files × 3; `verify_fixes.py` 12/12 Chromium, Firefox, 10/10 WebKit (print checks can't run headless); `flows.py` 10/10, `office_limits.py` 6/6 × 3 |
