@@ -856,3 +856,41 @@ No app change: one UI step added (38). Build under test: 7cd960c5.
   - the three files are byte-for-byte as written afterwards.
 - Not checked by hand beyond the pass: the outline after moving between viewer tabs, the first key in a new text
   box, the close card keeping the keyboard.
+
+### 62. A sign-out or shutdown with unsaved work is held and asked about (D-194), first part (17 Nov)
+On b08b0e5d (patch 31, signed off by Linux Test). Patch 32 is not merged here yet.
+- **Why a lock.** The desktop ends the session without a close request to the window, so §59's close guard never
+  hears of it. A sign-out can only be held by a lock on the session, over D-Bus. GLib's D-Bus is used (in
+  `chvdhost.c`, "the session"); nothing external, nothing new in the package.
+- **The lock.** `chvd_session_hold(reason)`: `org.freedesktop.portal.Inhibit.Inhibit("", 1 = logout, {reason})`;
+  closing the request it returns gives the lock up. Where the portal call fails (no portal), the GNOME session
+  manager's `Inhibit(app, 0, reason, 1)` / `Uninhibit(cookie)`. The reason the desktop shows: "Chuvadi has work
+  that is not saved."
+- **The notice.** `chvd_session_watch()` asks the portal for a session monitor (`CreateMonitor`). On its
+  `StateChanged` with session-state 2 ("about to end") the host raises `GtkHost.SessionEnding`, and sends
+  `QueryEndResponse` only after any lock just asked for is in place.
+- **Asking.** `SessionEndGuard.OnSessionEnding`: takes the lock if work is unsaved, then asks the window to
+  close: the close `WindowCloseGuard` already holds and asks about (`IUnsavedWork.ConfirmCloseAsync`: Save /
+  Save as / Discard / Cancel). Every file answered: the window closes, the lock goes with the process, the
+  sign-out can go on. Cancel: the window and the lock stay.
+- **No session bus** (no `DBUS_SESSION_BUS_ADDRESS`, no `$XDG_RUNTIME_DIR/bus`): nothing is asked for and no bus
+  is started.
+- **Waits for patch 32:** `SessionEndGuard.Refresh()` takes and gives up the lock to match
+  `IUnsavedWork.HasUnsavedWork`; it is to be called on `IUnsavedWork.Changed` (patch 32), so the lock is held
+  from the moment work is unsaved. Until then it is taken at the notice, which only a desktop that sends the
+  notice gives (the portal's monitor).
+- **Tests.** `SessionEndGuardTests` (5). UI step 42 with a stand-in for the desktop's side
+  (`tools/linux/fake-session.c`, test only, built by the step, each on a session bus of its own): nothing
+  unsaved, answered at once and not held; a mark unsaved, `Inhibit flags=1` with the reason arrives before
+  `QueryEndResponse`, the window asks, Cancel keeps the lock; a second notice asks again with no second
+  `Inhibit`; Save writes the file and the app exits 0; with only a GNOME session manager on the bus, its
+  `Inhibit` (app `in.chuvadi.Reader`, flags 1) is taken and Discard closes the app. Full UI pass: **130/130**.
+  Unit tests: Reader 438 / 6 skipped, host kit 102, Linux 73, Web Ui 41, Mobile Ui 16.
+- **Against the real portal** (xdg-desktop-portal with its gtk backend is installed on this machine, interface
+  version 3): `Inhibit` and `CreateMonitor` with exactly these arguments are accepted and return their handles.
+  Found on the way: on the test run's own bus that real portal answers to the name first, which is why the
+  stand-in gets its own bus.
+- **Not checked here:** what GNOME and KDE show and whether they wait (no desktop session runs here). For a real
+  laptop: sign out, restart and power off from the desktop's menu with a mark unsaved.
+- **Not held, and cannot be asked about:** the power button's own action, `systemctl poweroff` from a terminal,
+  a kill. They do not go through the desktop's sign-out.
