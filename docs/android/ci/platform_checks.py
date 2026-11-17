@@ -664,6 +664,14 @@ if npc.get("printCard"):
     tap_el('section.chvd-card[aria-label="Print"] button.close')
     time.sleep(1)
 
+def closeq_text():
+    """The close question's text when it is on screen (D-190, D-194), else None."""
+    try:
+        return cdp.evaluate("(() => { const q = document.querySelector('.closeq'); return q ? q.innerText.slice(0, 160) : null; })()")
+    except BaseException:  # noqa: BLE001 — page not reachable
+        return None
+
+
 # ── 7. Back ──────────────────────────────────────────────────────────────────
 wait_for(lambda s: True, 5, "the app")
 if not safe_state().get("printCard"):
@@ -703,6 +711,7 @@ if phone():
 r0 = safe_state()
 pid0 = pid()
 steps = []
+arrange_asked = []
 for _ in range(12):   # back steps through the app's own screens (WebView history), then leaves
     before = safe_state() if resumed() == PKG else {}
     key("KEYCODE_BACK")
@@ -711,8 +720,22 @@ for _ in range(12):   # back steps through the app's own screens (WebView histor
     steps.append({"from": before.get("route"), "to": safe_state().get("route") if now == PKG else None, "resumed": now})
     if now != PKG:
         break
+    # D-194 (patch 32): gestures.py leaves desks arranged and not saved, so the Back that would leave asks
+    # about Arrange first. Answer Discard, as the person would, and let the Back go on.
+    q = closeq_text()
+    if q:
+        arrange_asked.append(q.split("\n")[0])
+        steps[-1]["asked"] = arrange_asked[-1]
+        shot("p9b-arrange-question")
+        tap_el(".closeq button", "Discard")
+        time.sleep(3)
+        if resumed() != PKG:
+            steps.append({"from": steps[-1]["to"], "to": None, "resumed": resumed(), "after": "Discard"})
+            break
+check("the last Back with an arrangement not saved asks about Arrange first (D-194)",
+      bool(arrange_asked) and "arranged" in arrange_asked[0], {"asked": arrange_asked})
 left = steps[-1]["resumed"] if steps else None
-dead = [st_ for st_ in steps if st_["resumed"] == PKG and st_["from"] == st_["to"]]
+dead = [st_ for st_ in steps if st_["resumed"] == PKG and st_["from"] == st_["to"] and not st_.get("asked")]
 check("back steps back through the app's screens, then leaves the app; the process stays",
       left not in (PKG, None) and pid() == pid0 and not dead,
       {"steps": steps, "pid": [pid0, pid()], "deadPresses": len(dead)})
