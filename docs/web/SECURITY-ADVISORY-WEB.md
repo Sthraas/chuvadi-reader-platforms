@@ -3,7 +3,7 @@
 **For:** the coordinator and the Foundation's shared assessment. **From:** Web. **Build looked at:** `platform/web` at patch 31 with the WT-26 and WT-27 fixes (the code named below has not changed since `35a7adda`).
 **Asked:** until patched libraries land (Pdf 3.35.1, Sheets 2.2.1, Docs 2.4.1, Zip 1.0.2 and others), a crafted file can end the parsing process with a stack overflow that cannot be caught. Does the portal contain that? **Nothing in the product was changed for this note.** One test script was added (`tests/web-e2e/worker_crash.py`).
 
-> **Status, 18 Nov (D-198):** the patched libraries gate Phase 2; a separate parse process on every host is to be built, with this worker as the model. Gap 3 is done: the portal refuses `Portal:Mode=Single` outside Development (BUILD-LOG step 43). Gaps 1, 2 and 4 wait for the Foundation's design; what Web would do, with the memory measurements and the systemd question, is in `PARSE-PROCESS-NOTES-FOR-FOUNDATION.md`. The note below is as written on 17 Nov.
+> **Status, 18 Nov (D-198):** the patched libraries gate Phase 2; a separate parse process on every host is to be built, with this worker as the model. Gap 3 is done: the portal refuses `Portal:Mode=Single` outside Development (BUILD-LOG step 43). Gaps 1, 2 and 4 now follow the parse-process design Arun approved (D-202): each person's worker gets its own engine. What Web builds for it, and what it needs from the Foundation's kit, is in `PARSE-PROCESS-NOTES-FOR-FOUNDATION.md` (updated 18 Nov). The note below is as written on 17 Nov.
 
 ## The short answer
 

@@ -437,3 +437,8 @@ dotnet test tests/ChuvadiReader.Web.Tests -c Release   # 123 passed, 0 warnings
   - `flows.py` answers the new page-operation card (Continue) on Merge and Split and checks that it asked.
 - **A limit (not changed):** if a download is very large and slow, the person's worker can be stopped about 2 minutes after a sign-out with nothing else open, which would cut the download off.
 - Checks: shared solution 0 warnings and its tests (Reader 448 with 6 skipped by the Foundation, Hosting 103, Mobile UI 16, Web UI 41); Web 207/207; package check; the whole browser set green in four engines (with `flows.py` 12/12 after its update), and `sangam_signin.py` 18/18 in three.
+
+### 45. D-202 (the parse-process design) — 18 Nov, midday
+- Arun approved the Foundation's design: each person's worker gets an engine of its own; a crash kills only the engine and the person keeps their session and work; engine 1 GB cgroup cap plus heap cap; the worker's cap comes down once parsing leaves it; a file that stops an engine twice is refused at upload for that person for the session; 3 deaths a minute back off. The Foundation builds the worker-engine contract in the kit; Web builds the gateway parts.
+- `docs/web/PARSE-PROCESS-NOTES-FOR-FOUNDATION.md` rewritten to follow it: what Web builds (W-1 memory groups per worker and engine, W-2 the page after a worker death and WT-28 with it, W-3 a per-person crash ledger, W-4 refusing a twice-stopping file at upload, W-5 the real-host OOMPolicy test and the prototype bench, W-6 lowering the worker's cap), and six things Web needs from the kit's contract. Nothing built.
+- Sign out (D-194) needed no more work: it was pushed in step 43 (`aae1d69e`) and Web Test signed it off on `0e971fa3`.

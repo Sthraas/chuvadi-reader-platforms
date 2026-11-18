@@ -1,95 +1,92 @@
-# What Web would do for advisory gaps 1, 2 and 4 — notes for the Foundation's parse-process design
+# The portal under the parse-process design (D-202): what Web builds, and what it needs from the kit
 
-**For:** the Foundation (D-198: a separate parse process on every host; the portal's worker is the model it must fit) and the coordinator. **From:** Web, 18 Nov 2026. **Nothing here is built** (D-198: not until the Foundation's design says where the shared part sits). Gap 3 (Single mode refused in production) is built; see BUILD-LOG step 43. Background: `SECURITY-ADVISORY-WEB.md`.
+**For:** the Foundation and the coordinator. **From:** Web. **Updated 18 Nov 2026** to follow `PARSE-PROCESS-DESIGN.md` as Arun approved it (D-202). The portal is step 5 of the design's build order. **Nothing here is built yet**, apart from Single mode being refused in production (BUILD-LOG step 43). The first version of these notes (17–18 Nov, before D-202) proposed a gateway watchdog and a gateway-only fix; this replaces it.
 
-## What the portal's worker already is, as the model
+## 1. The portal under D-202, in one paragraph
 
-| Property | Today on the portal |
-|---|---|
-| One process holds every parsing library | The worker (`Portal:Mode=Worker`), one per signed-in person, started by the gateway. The gateway loads no Chuvadi library. |
-| Talks to its supervisor over a private channel | A Unix socket, every call signed with a per-worker secret, the secret given on standard input. The worker ends when that input closes. |
-| The supervisor can see whether it is alive | `/health` every 30 s (`tabs`, `circuits`, `connected`, `sessions`); three missed answers end it. Every supervisor call has a 10 s limit (WT-24). |
-| A crash is contained | Proven (`worker_crash.py`, three engines): gateway and other people untouched, files removed, the person carries on in a fresh worker. |
-| Memory | Managed-heap cap only (`DOTNET_GCHeapHardLimit`, 1,536 MB). No operating-system cap yet (gap 2). |
-| Time | None from outside (gap 1). |
+Each signed-in person keeps their own worker process; nothing changes for the gateway's relay, sign-in or sessions. Parsing leaves the worker: the worker starts an **engine** of its own (as the Linux host does), and every Chuvadi library call goes there. A file that kills the engine kills only the engine. The person's session, tabs and unsaved work stay, and they see the shared bar on the tab. Each engine has a **1 GB cgroup cap** plus a heap cap, and the worker's own cap comes down once parsing has left it. A file that stops an engine **twice** is refused at upload for that person for the rest of the session. **Three deaths in a minute** (of engines or of workers) and starts are held back. The Foundation builds the worker-engine contract in the kit; Web builds the gateway's parts.
 
-What a desktop host will not have that the portal has: a supervisor that already exists and outlives the parser. On the portal that is the gateway; on the desktop it would be the app itself.
+## 2. Who builds what
 
-## Gap 1 — a time limit on PDF open and draw, enforced from outside
+| Part | Foundation (kit, shared) | Web (portal) |
+|---|---|---|
+| The engine, its protocol, the app halves of the services | ✔ | |
+| `IParseEngineHost` for the portal: start the worker's engine, hand back its streams, end it | The contract | The portal's implementation, in the worker. It starts the engine as the Linux host does, with `PR_SET_PDEATHSIG` so the engine dies with its worker, and puts the engine in its own cgroup (W-1). |
+| Time limits per request (open 30 s, draw 30 s, Word/Excel 60 s, cells 10 s, jobs 60 s without progress) | ✔ The kit keeps the clock in the worker and ends the engine | Nothing extra. The gateway keeps supervising the worker as today (health every 30 s, three missed answers end it; every call has a 10 s limit, WT-24). |
+| The bar on the tab, "Try again" / "Close the file", the reasons | ✔ (shared Ui) | |
+| A file that stopped an engine twice: not reopened automatically | ✔ within one worker's life | Across the worker's death, and at upload (W-4) |
+| 3 deaths a minute → wait 5, 20, 60 s | ✔ for engines within one worker's life | The same rule per person across workers, and for workers themselves (W-3) |
+| Memory caps from the operating system | | Per engine 1 GB and per worker lowered: W-1. Unit changes and the real-host test: W-5 |
+| When a worker itself dies: a page that says what happened, and "Start again" | | W-2 (with WT-28) |
 
-**The problem.** A parse that spins without checking its cancellation cannot be stopped from inside the process. Today `/health` still answers while one thread spins, so the gateway sees a healthy worker.
+## 3. What Web will build (W-1 to W-6), in order
 
-**What the supervisor needs to know:** whether a parse operation is in progress, of what kind, and since when. Liveness alone is not enough.
+**W-1. Memory groups per worker and per engine**
 
-**What I would do:**
+- **Unit:** `Delegate=memory pids`, so the service user owns its part of the cgroup tree. `OOMPolicy=continue`, so one process ended for memory never stops the service. `MemoryMax=` stays as the last line for the whole service.
+- **The tree:** the gateway lives in a leaf `…/chuvadi-portal.service/gateway`, because cgroup v2 allows no process in an inner node. Each person gets `…/workers/<key8>/worker`, and each engine `…/workers/<key8>/engine-<n>`.
+- **Engine group:** `memory.max=1G`, `memory.swap.max=0`, `memory.oom.group=1`. The engine's heap cap stays below it (suggested 768 MB), so most over-large files fail politely inside the engine first. The design measured exactly that at 512 MB.
+- **Worker group:** a lowered cap, to be measured once parsing has left (W-6). My guess is 512 MB, with its heap cap at 384 MB; today the heap cap is 1,536 MB.
+- **Placing processes:** the gateway places each worker, and the worker places its engine. Both are the same user under delegation. The process is moved in right after it starts, before it reads anything.
+- **Fallback:** without delegation (for example a non-systemd host in development), log once and run with heap caps only.
 
-1. **A shared hook around every library call (this is the shared part).** For example `IParseWatch.Begin(kind, fileName) → IDisposable`, with kinds such as open, draw page, search and save. The Core wraps each call into Chuvadi.Pdf, Sheets, Docs and so on. The parse process exposes the operations in progress.
-2. **On the portal**, `/health` would add `busy: [{ kind, since }]`. A separate fast check in the gateway (every 2 s, its own call with the 10 s limit) ends the worker when an operation runs past its limit. Suggested limits: open 60 s (as Word and Excel already have inside), drawing one page 30 s. They must be measured against the Foundation's corpus of honest heavy files before they are fixed; the heaviest page I measured took about 1 GB and drew in seconds, not tens of seconds.
-3. **A worker that doesn't answer the fast check** within its limit three times running is ended too (a worker stuck in native code may not answer at all).
-4. **What the person sees** is gap 4's message, with the reason "took too long".
+**W-2. When a worker itself dies: say so, and "Start again"**
 
-**An alternative without the shared hook:** the gateway reads each worker's CPU time from `/proc/<pid>/stat` and ends one that has used about one core for T seconds without delivering a page. It needs no shared code, but it is a guess. It cannot tell a spinning parse from an honest heavy one, and it is Linux only, so it is no model for other hosts. **I recommend the hook.**
+- The gateway knows the exit code and whether it ended the worker itself.
+- The next page that person reaches shows, in plain words: "Your documents had to be reopened: the portal's reader for you stopped." Then a **Start again** button, instead of today's "Your session stopped. Please reload the page to start again."
+- **WT-28 is fixed in the same piece:** a reload within about a second of a worker's death lands on that message and needs a second reload. The gateway logs an antiforgery key the new worker doesn't have: each worker has its own data-protection keys, so a page from the dead worker can't post to its replacement.
+- A worker death should now be rare; what remains are worker bugs and the worker's own memory cap.
 
-**A cost to decide:** ending a worker closes **every** document that person has open, because there is one worker per person. A process per document would avoid that, but costs about 120 MB each when idle (measured: 118–122 MB for a new worker). For the portal I would keep one per person in Phase 2; the desktop may choose differently.
+**W-3. A per-person crash ledger in the gateway**
 
-## Gap 2 — an operating-system memory cap per worker, and the service-wide limit
+- Worker deaths (seen by the gateway), plus engine deaths, which the worker reports to the gateway as they happen.
+- Three in a minute: the next worker start for that person waits 5, then 20, then 60 s. The page says so and until when.
+- The ledger is handed to each new worker at start, so the kit's engine back-off carries on where it was rather than starting at zero.
+- It is per person, in memory only, and dropped when the session ends. Other people are never affected.
 
-### Measured here
+**W-4. Refusing at upload a file that stopped an engine twice**
 
-This machine runs cgroup v1 with no systemd as process 1. The scratch script is `/tmp/claude-0/-home-claude/7ffac0d2-b192-5ac5-a2f0-9f100b859181/scratchpad/memcap.py`; the heavy file is a PDF with one 5000 × 5000 image.
+- The kit tells the worker which file a dead engine was reading. The worker sends the gateway that file's fingerprint (SHA-256 of the whole file, computed in the worker) with the death.
+- After the second death, the fingerprint goes on that person's refused list. The gateway hands the list to the worker at start and on every change, so it survives a worker's death.
+- The upload check (`TransferRegistry`, already Web's) refuses a matching upload with: "This file stopped the portal's reader twice, so it isn't opened again in this sign-in."
+- In memory only, per person, dropped at session end. No file name or content is kept, only the fingerprint.
+
+**W-5. On the real host**
+
+1. **Test OOMPolicy before anything else.** Under the default `stop`, one process ended for memory should, per systemd's documentation, stop and restart the whole service. Under `continue`, only that process should go. Expected; not yet seen.
+2. Then the groups from W-1.
+3. Then the design's prototype bench on the portal's server (design section 9: `dotnet run -c Release --project tools/ParseProcessPrototype -- bench <folder>`).
+4. Update the runbook's sizing table. Per person the worst case becomes a worker (lowered) plus a viewing engine (1 GB cap) plus a tool engine during a job (1 GB cap).
+
+**W-6. Lowering the worker's cap**
+
+Measure the worker's memory with the engine in place (10 people, the usual files), then set the worker's heap and cgroup caps from that. Measure before deciding; my guess is in W-1.
+
+## 4. What Web needs from the kit (for the Foundation's contract)
+
+1. **An event on the engine client when an engine dies**, with the reason (crash, time limit, memory), the request that was running, and the path of the file it was reading. The worker turns that into the report to the gateway (W-3, W-4).
+2. **A way to seed the kit at worker start:** its back-off state (recent deaths and when) and the refused fingerprints. Then a worker that replaces a dead one carries on, rather than giving a hostile file three fresh tries.
+3. **When the engine starts, on the portal:** I recommend option E2, on the first document, as the design recommends for Android. With up to 40 people on a server, 27 MB for every signed-in person who has opened nothing adds up, and 25 ms on a first open is not noticed on the web. A per-host switch in the kit would do.
+4. **Tool engines (option A2) on the portal:** one at a time per person. A second writing job waits for the first, so one person can't hold several 1 GB engines. If the kit queues jobs per app instance, that is already so; please say.
+5. **Session end:** the kit ends the engines when the worker's last session ends, and their memory goes with them, so WT-21 (page images held until the worker stops) disappears for engine-held data. Please confirm that the page images stay in the worker, or move to the engine.
+6. **The fingerprint:** if the kit wants to keep "stopped twice" itself, use SHA-256 of the whole file, so the worker and gateway can share the same value.
+
+## 5. Measured on this machine (still valid; the method under W-1 is the same)
+
+This container runs cgroup v1, with no systemd as process 1. The scratch script is `/tmp/claude-0/-home-claude/7ffac0d2-b192-5ac5-a2f0-9f100b859181/scratchpad/memcap.py`; the heavy file is a PDF with one 5000 × 5000 image.
 
 | Setup | What happened |
 |---|---|
-| **Per worker:** the heavy person's worker alone in a memory group with a 600 MB limit | It reached 681 MB peak resident memory. After 3 s the kernel ended it (logged as "Memory cgroup out of memory: Killed process …"), and the gateway logged exit code 137. The gateway stayed healthy, the other person's next pages drew, and the files were cleaned up. The heap cap (1,536 MB) never came into play. |
-| **Service-wide:** gateway and all workers in one group, limit 650 MB (twice) | The kernel ended the **largest process, the heavy person's worker**, both times. The gateway and the other person were untouched. At 900 and 1,200 MB the limit was never reached (peak use of the whole group was 860 MB). |
-| **Address-space limit** (`prlimit --as`) on a worker-sized process | At 2 GB it could not even start ("Out of memory"). At 4 GB it started but failed under use. At 8 GB it worked. The .NET runtime reserves large ranges of address space, so this limit is **unusable** as a memory cap. |
+| Per worker: one worker in a 600 MB memory group | It peaked at 681 MB resident. The kernel ended it after 3 s and the gateway logged exit code 137. The gateway stayed healthy, the other person's next pages drew, and the files were cleaned up. The heap cap (1,536 MB) never came into play. |
+| Service-wide: gateway and every worker in one 650 MB group (twice) | The kernel ended the **largest process, the heavy person's worker**, both times; never the gateway. At 900 and 1,200 MB the limit was not reached (the whole group peaked at 860 MB). |
+| Address-space limit (`prlimit --as`) | At 2 GB the process could not start; at 4 GB it started but failed under use; at 8 GB it worked. Unusable, as the design also found. |
 
-**Bug found and fixed during this measurement (WorkerPool, Web).** When a worker was killed, the page reconnected at once and its replacement started in the same folder. The dead worker's exit handler, arriving late, could then delete the **live** worker's files and socket, or make the new start fail with an error the person saw. Both clean-ups now take a per-person lock, and a late one leaves a newer worker's files alone. Test: `A_dead_workers_late_clean_up_leaves_its_replacements_files_and_socket_alone`.
+**Found and fixed while measuring:** a dead worker's clean-up, arriving after its replacement had started in the same folder, could delete the live worker's files and socket. Fixed in step 43, with a test.
 
-### Not measured: what systemd does
+**Not testable here:** systemd's `OOMPolicy` (W-5).
 
-**I could not test OOMPolicy here,** because this container has no systemd running. systemd's documented default is `OOMPolicy=stop`: when the kernel ends any process of the service for memory, systemd stops **the whole service**. With `Restart=always` it starts again 3 s later, with everyone signed out and every open document gone. So the kernel's sensible choice above (end the heavy worker) would be turned into a portal-wide outage. **This has to be tested on the real host before Phase 2** (steps below). We should not rely on the default.
+## 6. What D-202 replaced in these notes
 
-### What I would do (portal only; no shared code)
-
-1. **In the unit:**
-   - `OOMPolicy=continue`, so one worker ended for memory never stops the service.
-   - `Delegate=memory pids`, so the gateway may manage memory groups under its own part of the tree.
-   - Keep `MemoryMax=` for the whole service as the last line.
-2. **The gateway gives each worker its own group:**
-   - Paths `…/chuvadi-portal.service/workers/<key8>` and the gateway itself in `…/gateway`, because cgroup v2 allows no process in an inner node.
-   - Settings per group: `memory.max` (suggested 1.5 GB), `memory.swap.max=0`, and `memory.oom.group=1` so the whole worker goes together.
-   - The worker is moved in right after it starts. The window before the move is a few milliseconds, before it reads anything, since a worker opens nothing until its first request.
-   - This uses only operating-system interfaces (files under `/sys/fs/cgroup`), so it is inside the no-externals rule.
-3. **Keep the heap cap below the group's limit**, so an over-large open usually fails politely inside the worker ("not enough memory to open this file") before the kernel has to end it. One caveat: what the worker does on reaching its heap cap is untested; it is part of the test below.
-4. **`OOMScoreAdjust=-500` for the gateway** (set by the unit on the service, then raised back to 0 for each worker as it starts), so that under the service-wide limit the kernel always prefers a worker.
-
-### Test on the real host (Ubuntu with systemd, before Phase 2)
-
-1. Install the service with the runbook's unit and `MemoryMax=1500M` for the test. Sign in as two people. One opens the heavy PDF until the kernel ends their worker.
-2. **With the default policy:** expect, per the documentation, the whole service to stop and restart. Record it with `journalctl -u chuvadi-portal`.
-3. **With `OOMPolicy=continue`:** expect only that worker to go, the other person to be unaffected, and the person to be put on a fresh worker.
-4. **With per-worker groups** (once built), the same at 1.5 GB per worker, with the service-wide limit not reached.
-
-## Gap 4 — a message when a person's worker died, and slowing down repeated crashes
-
-**What the gateway knows** when a worker ends: its exit code and signal (137 for killed, 134 for the runtime's own abort, which is what a stack overflow gives); whether the gateway itself ended it (gap 1's time limit, or no health answers); and, once gap 1's hook exists, which operation and file name were in progress at the last check.
-
-**The message (needs a shared Ui seam):**
-- The replacement worker is started with the reason, and the Ui shows a message on Home once, for example: "The portal had to stop while opening **report.pdf**, and your open documents were closed. If it happens again, the file may be damaged."
-- Variants for "took too long" and "used too much memory".
-- The shared part is a way for a host to hand the Ui a message to show at start (an existing message seam may do).
-- The file name stays in the gateway's memory only, for that person's session.
-
-**Slowing repeats (Web only):**
-- **Refuse the same file again:** the worker computes a SHA-256 of each upload as it is stored. The gateway keeps, in memory and for that person only, the hashes of files that were being opened when their worker ended. An upload with the same hash within the session is refused with "This file stopped the portal before, so it isn't opened again."
-- **Back off after repeated crashes:** 3 worker deaths in 10 minutes and the gateway holds new worker starts for that person for 1 minute, then 5 minutes on the next, with a page saying why and until when. It resets after 30 minutes without a crash. Sign-in and sign-out keep working; only opening is held.
-- Other people are never affected by this; it is per person.
-
-## Where the shared part would sit (my reading; the Foundation decides)
-
-| | Shared (Foundation) | Portal (Web) |
-|---|---|---|
-| 1 | The hook around library calls, and how a parse process reports operations in progress | The fast check in the gateway, the limits, ending the worker |
-| 2 | Nothing for the portal (a desktop parse process needs its own cap: Job objects on Windows, cgroups on Linux) | Unit settings, per-worker memory groups, the real-host test |
-| 4 | A way to hand the Ui a message at start; the file name from 1's hook | Counting deaths, refusing the same file, the back-off |
+- **A gateway watchdog for spinning parses** (CPU time, or a "busy since" in the worker's health): replaced by the kit's own per-request clock in the worker. The worker no longer parses, so a stuck parse can't make it miss its health answers.
+- **Refusing a file after one crash:** D-202 says twice.
+- **A message from the Ui on Home after a worker death:** most deaths are now engine deaths and get the shared bar on the tab. Only a worker death gets the gateway's page (W-2).
