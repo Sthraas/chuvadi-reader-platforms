@@ -30,9 +30,9 @@ on:
         default: ""
 
 env:
-  # platform/foundation-pr: patch 33 (Protect hidden, signatures without a verdict, page operations ask first, Excel conditional colours skipped) on Reader main b193ab0.
-  FOUNDATION_REF: 9e00fdf05363b62ec310bb81a0cc7215c6ae94ef
-  # platform/mobile-ui: df420b5 (its hook patches H-27 to H-29 are not applied here until Foundation lands them).
+  # platform/foundation-pr: patch 34 (AT-24, AT-30 greyed tools answer a tap, Arrange keeps desks on close, Mobile UI H-27 to H-29) on Reader main c160070.
+  FOUNDATION_REF: 5e6320298ebbd031d16bd39e9d59ef96f3529e32
+  # platform/mobile-ui: df420b5, the newest head that merges with patch 34 (a6e9016 and later conflict in PhoneToolStrip.razor: both did AT-30).
   MOBILEUI_REF: df420b56421cda94ecbc69b8ae7b4db62f34bd67
   DOTNET_NOLOGO: '1'
   DOTNET_CLI_TELEMETRY_OPTOUT: '1'

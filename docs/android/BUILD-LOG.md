@@ -996,3 +996,9 @@ Step 68, result: run 43899989183 (head 60171388; Foundation 4b704c8d3d32c9c21c5c
 - **Sandbox** (9e00fdf + Mobile UI df420b5 + P-10): Debug and Release 0 warnings; manifest check passes (7 types × 2
   filters, no permissions); Core 448 (+6), Hosting 103, MobileUi 16, WebUi 41.
 - Result: run 44319208118 (head 4ee03610), all four green. Phone API 36: gestures 11/11, platform 46/46; tablet API 36: gestures 13/13, platform 44/44 (the eight D-205 checks pass on both); API 35 phone and tablet: WebView gate 4/4; Release manifest: 7 types in both filters, no permissions.
+
+## Step 74 — patch 34 (Reader main c160070) — coordinator, 18 Nov 21:30 IST
+- Foundation: platform/foundation-pr 5e63202 (patch 34: AT-24, AT-30 greyed tools answer a tap with their reason, Arrange keeps desks on close, Mobile UI H-27 to H-29 including AT-28's class names).
+- Mobile UI's latest head fd5206c (and a6e9016, 2e0a30a) does **not** merge with 5e63202. The conflict is in `src/ChuvadiReader.Ui/Components/Platform/Phone/PhoneToolStrip.razor`: patch 34 and Mobile UI a6e9016 both built AT-30, Foundation with `SayWhy`, Mobile UI with an `OnReason` parameter. Mobile UI needs to merge 5e63202 and pick one. Until then the composition takes Mobile UI **df420b5**, which merges cleanly (H-27 to H-29 are in patch 34).
+- P-10 (Back = Cancel on a question) is still pending and applies on 5e63202.
+- Sandbox: Debug 0 warnings; Core 449 (+6 skipped), Hosting 103, MobileUi 16, WebUi 41.
