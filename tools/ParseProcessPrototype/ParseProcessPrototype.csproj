@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    TESTING ONLY (never shipped). D-198 B2: a measured prototype for PARSE-PROCESS-DESIGN.md. One program in two
+    roles: "engine" (the parse process: opens and draws documents with the Reader's own Core services) and "bench"
+    (the app's side: measures the engine against the same work done in-process, and what happens when it dies).
+    Run on each host by its chat to get that host's numbers: dotnet run -c Release (args: bench, fixtures folder)
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <TieredPGO>true</TieredPGO>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ChuvadiReader.Core\ChuvadiReader.Core.csproj" />
+  </ItemGroup>
+</Project>
