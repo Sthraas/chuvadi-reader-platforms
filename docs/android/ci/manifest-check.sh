@@ -13,8 +13,9 @@ TREE="$("$AAPT2" dump xmltree --file AndroidManifest.xml "$PKG_FILE")"
 fail=0
 
 # Must be gone (AT-02): web sign-in, Essentials' file provider, connectivity / battery / energy-saver receivers.
+# And the D-202 test probe (EngineProbeService / EngineProbeActivity) never ships.
 for name in WebAuthenticatorIntermediateActivity '\.IntermediateActivity' microsoft.maui.essentials.fileProvider \
-            ConnectivityBroadcastReceiver BatteryBroadcastReceiver EnergySaverBroadcastReceiver; do
+            ConnectivityBroadcastReceiver BatteryBroadcastReceiver EnergySaverBroadcastReceiver EngineProbeService EngineProbeActivity; do
     if grep -Eq "android:name\(0x01010003\)=\"[^\"]*${name}\"" <<<"$TREE"; then
         echo "FAIL still declared: $name"; fail=1
     else

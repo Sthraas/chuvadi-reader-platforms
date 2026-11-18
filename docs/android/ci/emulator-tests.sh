@@ -14,7 +14,10 @@
 #   SUITE=timeline (AT-14): instead of the checks, cold_open_timeline.py — 10 cold Open with runs of the
 #     Release as shipped, then of the Chuvadi-only full AOT variant, stage by stage
 #
-#   [SUITE=smoke|timeline] emulator-tests.sh <debug-apk> <results-dir> [<release-apk>] [<variant-apk>]
+#   SUITE=engine (D-202): instead of the checks, engine_probe.py on the test-only probe builds beside the
+#     Debug .apk (chuvadi-reader-engine-probe*.apk): the ":engine" process's start, memory, pipe, and crashes
+#
+#   [SUITE=smoke|timeline|engine] emulator-tests.sh <debug-apk> <results-dir> [<release-apk>] [<variant-apk>]
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 APK="$1"
@@ -34,6 +37,15 @@ if [ "${SUITE:-full}" = timeline ]; then
     fi
     [ $a -eq 0 ] && [ $b -eq 0 ]
     exit
+fi
+if [ "${SUITE:-full}" = engine ]; then
+    mkdir -p "$OUT"
+    rc=0
+    for P in "$(dirname "$APK")"/chuvadi-reader-engine-probe*.apk; do
+        L="$(basename "$P" .apk)"; L="${L#chuvadi-reader-engine-probe}"; L="engine${L:-}"
+        python3 "$HERE/engine_probe.py" "$P" "$L" "$OUT/engine" 10 || rc=1
+    done
+    exit $rc
 fi
 PKG="in.chuvadi.reader"
 

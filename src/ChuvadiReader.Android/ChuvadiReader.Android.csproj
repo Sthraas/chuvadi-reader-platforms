@@ -94,6 +94,20 @@
       <AndroidAsset Include="$(_ChuvadiAndroidNotices)" Link="notices/dotnet-android.txt" />
     </ItemGroup>
   </Target>
+  <!-- D-202 test probe (-p:ChuvadiEngineProbe=true): a second ":engine" process to measure; off by default, never shipped. -->
+  <PropertyGroup Condition="'$(ChuvadiEngineProbe)' == 'true'">
+    <DefineConstants>$(DefineConstants);CHUVADI_ENGINE_PROBE</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(ChuvadiEngineProbe)' != 'true'">
+    <Compile Remove="Platform/EngineProbe/**" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(ChuvadiEngineProbe)' == 'true' and '$(ChuvadiProbeHeapCap)' != ''">
+    <AndroidEnvironment Include="$(IntermediateOutputPath)chuvadi-probe-env.txt" />
+  </ItemGroup>
+  <Target Name="_ChuvadiProbeEnv" BeforeTargets="PrepareForBuild" Condition="'$(ChuvadiEngineProbe)' == 'true' and '$(ChuvadiProbeHeapCap)' != ''">
+    <WriteLinesToFile File="$(IntermediateOutputPath)chuvadi-probe-env.txt" Lines="MONO_GC_PARAMS=max-heap-size=$(ChuvadiProbeHeapCap)" Overwrite="true" />
+  </Target>
+
   <!-- AT-14 test variant: full AOT for Chuvadi's own assemblies (-p:ChuvadiFullAot=true); off by default. -->
   <Import Project="ChuvadiAot.targets" />
 </Project>

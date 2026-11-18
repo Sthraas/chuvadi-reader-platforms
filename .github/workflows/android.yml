@@ -19,11 +19,11 @@ on:
         required: true
         default: all
       suite:
-        description: "full (smoke, then gestures + platform, or the WebView gate), smoke (install, start, Ui, rotation, no crash), or timeline (AT-14: cold Open with, stage by stage, as shipped and with Chuvadi-only full AOT)"
+        description: "full (smoke, then gestures + platform, or the WebView gate), smoke (install, start, Ui, rotation, no crash), timeline (AT-14: cold Open with, stage by stage, as shipped and with Chuvadi-only full AOT), or engine (D-202: a second :engine process — start, memory, pipe, crashes; test-only probe build)"
         required: true
         default: full
         type: choice
-        options: [full, smoke, timeline]
+        options: [full, smoke, timeline, engine]
       workload_set:
         description: "Trial only: a workload set to use on the runner instead of global.json's (e.g. 10.0.401). Never committed; empty = the pin."
         required: false
@@ -169,6 +169,22 @@ jobs:
           echo "variant build: $(( $(date +%s) - start )) s"
           find src/ChuvadiReader.Android/bin/Release -name '*-Signed.apk' -exec cp {} ../out/chuvadi-reader-release-chuvadi-aot.apk \;
           find src/ChuvadiReader.Android/bin/Release -name '*-Signed.aab' -exec cp {} ../out/chuvadi-reader-release-chuvadi-aot.aab \;
+          ls -la ../out
+
+      # D-202 probe (never shipped): Release with a test-only ":engine" service (Platform/EngineProbe), built only for
+      # the engine suite: as is, and with Mono's heap capped (MONO_GC_PARAMS=max-heap-size=256m, which applies to
+      # every process of the app).
+      - name: Publish Release probe builds, a second :engine process (engine only)
+        if: inputs.suite == 'engine'
+        working-directory: reader
+        run: |
+          for cap in "" 256m; do
+            rm -rf src/ChuvadiReader.Android/obj/Release src/ChuvadiReader.Android/bin/Release
+            dotnet publish src/ChuvadiReader.Android/ChuvadiReader.Android.csproj -c Release -f net10.0-android \
+              -p:RestoreConfigFile=ci/nuget.config -p:AndroidSdkDirectory=$ANDROID_HOME -p:AndroidPackageFormats=apk \
+              -p:ChuvadiEngineProbe=true -p:ChuvadiProbeHeapCap=$cap
+            find src/ChuvadiReader.Android/bin/Release -name '*-Signed.apk' -exec cp {} ../out/chuvadi-reader-engine-probe${cap:+-cap$cap}.apk \;
+          done
           ls -la ../out
 
       - uses: actions/upload-artifact@v4
