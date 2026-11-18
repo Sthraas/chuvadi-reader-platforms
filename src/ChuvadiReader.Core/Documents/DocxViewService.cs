@@ -91,6 +91,20 @@ public sealed class DocxViewService(IPlatformInfo? platform = null)
         }
     }
 
+    // Which limit the file went past, in words. A small file refused for deep nesting was told it was "too large"
+    // (Windows bench, 18 Nov: hyperlinks-248 and ins-248 are under 2 KB).
+    internal static string RefusalText(DocxLimit limit) => limit switch
+    {
+        DocxLimit.XmlDepth =>
+            "This Word document is nested more deeply than Chuvadi allows, so it isn't opened. It may be damaged, or made to attack the reader.",
+        DocxLimit.Elements or DocxLimit.EntryCount =>
+            "This Word document has more parts than Chuvadi allows, so it isn't opened. It may be damaged.",
+        DocxLimit.SpinCount =>
+            "This document's password protection asks for more work than Chuvadi allows, so it isn't opened.",
+        _ =>
+            "This Word document is too large to open: its contents unpack to more than Chuvadi allows. It may be damaged.",
+    };
+
     private WordView LoadCore(string path, string? password, CancellationToken cancellationToken)
     {
         Document doc;
@@ -100,8 +114,7 @@ public sealed class DocxViewService(IPlatformInfo? platform = null)
         }
         catch (DocxSecurityLimitException ex)
         {
-            throw new DocumentViewException(ViewErrorReason.TooLarge,
-                "This Word document is too large to open: its contents unpack to more than Chuvadi allows. It may be damaged.", ex);
+            throw new DocumentViewException(ViewErrorReason.TooLarge, RefusalText(ex.Limit), ex);
         }
         catch (DocxPasswordRequiredException ex)
         {
