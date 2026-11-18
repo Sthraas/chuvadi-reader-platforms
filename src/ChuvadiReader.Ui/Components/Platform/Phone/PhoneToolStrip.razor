@@ -8,9 +8,12 @@
     {
         var p = pick;
         var on = Active == p.Item.Label;
-        <button class="ph-tool @(on ? "on" : null) @(p.Command.Dimmed ? "dim" : null)" disabled="@(!p.Command.IsEnabled)" aria-pressed="@(on ? "true" : "false")"
+        @* AT-30: a greyed tool still answers a tap, with its reason: a phone has no tooltip to read. *@
+        var why = p.Command.IsEnabled ? null : p.Command.DisabledReason;
+        <button class="ph-tool @(on ? "on" : null) @(p.Command.Dimmed || why is not null ? "dim" : null)" disabled="@(!p.Command.IsEnabled && why is null)"
+                aria-disabled="@(why is not null ? "true" : null)" aria-pressed="@(on ? "true" : "false")"
                 title="@(p.Command.DisabledReason is null ? p.Command.Label : $"{p.Command.Label} — {p.Command.DisabledReason}")"
-                @onclick="() => OnPick.InvokeAsync(p)">
+                @onclick="() => why is not null ? SayWhy(p.Command.Label, why) : OnPick.InvokeAsync(p)">
             <Icon Name="@p.Item.Icon" Size="19" />
             <span>@p.Item.Label</span>
         </button>
@@ -18,6 +21,14 @@
 </div>
 
 @code {
+    [Inject] private ChuvadiReader.Core.Reader.ShellService ShellSvc { get; set; } = default!;
+
+    private Task SayWhy(string label, string why)
+    {
+        ShellSvc.Notify($"{label}: {why}");
+        return Task.CompletedTask;
+    }
+
     [Parameter, EditorRequired] public IReadOnlyList<(StripItem Item, ShellCommand Command)> Items { get; set; } = Array.Empty<(StripItem, ShellCommand)>();
     [Parameter] public string? Active { get; set; }
     [Parameter] public EventCallback<(StripItem Item, ShellCommand Command)> OnPick { get; set; }
