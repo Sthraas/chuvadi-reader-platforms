@@ -1004,3 +1004,4 @@ Step 68, result: run 43899989183 (head 60171388; Foundation 4b704c8d3d32c9c21c5c
 - Sandbox: Debug 0 warnings; Core 449 (+6 skipped), Hosting 103, MobileUi 16, WebUi 41.
 - Run 44341679826 (head 6cec38d7, Mobile UI df420b5): all four green. Phone API 36: gestures 11/11, platform 46/46; tablet API 36: 13/13, 44/44; API 35: WebView gate 4/4.
 - Mobile UI then merged patch 34 (49d38dc, through af1b700). It merges cleanly, so the composition takes it. Sandbox: Debug 0 warnings; Core 449 (+6), Hosting 103, MobileUi 16, WebUi 41.
+- Result: run 44346677864 (head da53a253, Foundation 5e63202 + Mobile UI 49d38dc + P-10), all four green. Phone API 36: gestures 11/11, platform 46/46; tablet API 36: 13/13, 44/44; API 35 phone and tablet: WebView gate 4/4.
