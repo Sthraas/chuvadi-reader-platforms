@@ -1,0 +1,10 @@
+M29 1 gridResize attached unz=null ua=AppleWebKit/605.1.15 (KHTML, like Gecko)
+M29 2 doc pointerdown pt=mouse b=0 bs=1 x=307.0 y=49.0 sx=307 t=xv-colhdr trusted=true hdr=1 sr=244.0..308.0 gbcr=244.0..308.0 dFar=-1.0 dNear=63.0 unz=false ed
+M29 3 el pointerdown pt=mouse b=0 bs=1 x=307.0 y=49.0 sx=307 t=xv-colhdr trusted=true hdr=1 sr=244.0..308.0 gbcr=244.0..308.0 dFar=-1.0 dNear=63.0 unz=false edg
+M29 4 doc pointermove pt=mouse b=-1 bs=1 x=313.0 y=49.0 sx=313 t=xv-gridwrap xv-resizing trusted=true
+M29 5 doc pointermove pt=mouse b=-1 bs=1 x=343.0 y=49.0 sx=343 t=xv-gridwrap xv-resizing trusted=true
+M29 6 doc pointermove pt=mouse b=-1 bs=1 x=355.0 y=49.0 sx=355 t=xv-gridwrap xv-resizing trusted=true
+M29 7 doc pointerup pt=mouse b=0 bs=0 x=367.0 y=49.0 sx=367 t=xv-gridwrap xv-resizing trusted=true
+M29 8 el pointerup pt=mouse b=0 bs=0 x=367.0 y=49.0 sx=367 t=xv-gridwrap xv-resizing trusted=true
+M29 9 finish commit=true moved=true col=true idx=1
+M29 10 doc lostpointercapture pt=mouse b=0 bs=0 x=0.0 y=0.0 sx=0 t=xv-gridwrap trusted=true
