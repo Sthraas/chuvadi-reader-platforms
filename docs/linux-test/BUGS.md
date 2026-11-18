@@ -1184,3 +1184,13 @@ update." **Expected:** it looks as held as Redaction does.
 | C. Leave it | Nothing to build | Looks usable when it isn't |
 
 I'd take A: the same rule patch 33 uses for Redaction itself.
+
+## Linux Test — 18 Nov, `platform/linux` ecd0ee5 and 88d3a47 (CI and docs only)
+
+- **ecd0ee5:** a `parse-bench` job in `.github/workflows/linux.yml` that runs only for `[parse-bench]` commits,
+  and `tools/linux/make-parse-bench-files.py`. Test only; nothing goes into the package.
+- **88d3a47:** `docs/linux/D-198-PARSE-HELPER-LINUX.md` only.
+
+No change under `src/`, `tests/` or the packaging since 87e3dc9, so there was nothing to rebuild or re-test; the
+87e3dc9 results stand. Linux CI run 44253736500 on ecd0ee5 is green (both builds, both bench jobs). Its package,
+SHA-256 `f4abaf8b…`, is now in Arun's checklist. No new bugs; B-31 and B-36 are still open.

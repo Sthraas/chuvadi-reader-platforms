@@ -614,7 +614,7 @@ show on Log Out, Restart and Power Off still needs Arun's laptop (item 7): no de
 
 **Ready for Arun's check**, with B-31 known.
 
-## Sign-off — Linux 87e3dc9 (18 Nov, build log 64, patch 33): ready for Arun, with two things to know
+## Sign-off — Linux 87e3dc9 (18 Nov, build log 64, patch 33): ready for Arun, with two things to know (carried to 88d3a47 below)
 
 | Check | Result |
 |---|---|
@@ -638,9 +638,24 @@ What GNOME and KDE actually show on Log Out, Restart and Power Off still needs A
 
 **Ready for Arun's check**, with the holds, B-36 and B-31 known.
 
-## Arun's check — Linux 87e3dc9
+## Sign-off — Linux 88d3a47 (18 Nov): carried from 87e3dc9, the app is unchanged
 
-**Get the package.** GitHub → `Sthraas/chuvadi-reader-platforms` → Actions → run **Linux** on `87e3dc9` ([run 44169643909](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/44169643909), green) → Artifacts → **linux-x64** (ARM machine: `linux-arm64`). Unzip it and use **`deb/chuvadi-reader_1.0.0~preview_amd64.deb`** — the self-contained one (37.9 MB, needs no .NET; artifacts kept until 15 Feb 2027). SHA-256 `dacd7fe24aa8732b3c9acd0c792db67e9eab7995660ae96dcd69802a32194bf6`. (`deb-framework-dependent/` is the smaller variant that pulls in Microsoft's .NET runtime package.) Or with the CLI: `gh run download 44169643909 -R Sthraas/chuvadi-reader-platforms -n linux-x64`.
+The two commits after 87e3dc9 don't touch the app.
+- **ecd0ee5** adds a CI job for Foundation's parse-process bench. It runs only for a commit whose message holds
+  `[parse-bench]` and puts nothing into the package. It also adds the script that makes the bench's files.
+- **88d3a47** adds the bench's numbers to `docs/linux/D-198-PARSE-HELPER-LINUX.md`.
+
+`git diff 87e3dc9 88d3a47` changes nothing under `src/`, `tests/` or the packaging, so the 87e3dc9 results above
+stand and nothing needed rebuilding or re-testing. 88d3a47 is docs only and has no CI run of its own; the
+package is from the Linux run on ecd0ee5,
+[run 44253736500](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/44253736500), green: both
+package builds and both bench jobs passed.
+
+**Ready for Arun's check**, with the holds, B-36 and B-31 known (as for 87e3dc9).
+
+## Arun's check — Linux 88d3a47 (app as 87e3dc9)
+
+**Get the package.** GitHub → `Sthraas/chuvadi-reader-platforms` → Actions → run **Linux** on `ecd0ee5` ([run 44253736500](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/44253736500), green; the app is the same as on 87e3dc9 and 88d3a47) → Artifacts → **linux-x64** (ARM machine: `linux-arm64`). Unzip it and use **`deb/chuvadi-reader_1.0.0~preview_amd64.deb`** — the self-contained one (37.9 MB, needs no .NET; artifacts kept until 16 Feb 2027). SHA-256 `f4abaf8bdfa676c9fb1128284ea7743824ffb058b74799542fa51c76404d837e`. (`deb-framework-dependent/` is the smaller variant that pulls in Microsoft's .NET runtime package.) Or with the CLI: `gh run download 44253736500 -R Sthraas/chuvadi-reader-platforms -n linux-x64`.
 
 **Install** (Ubuntu 24.04 or 26.04, desktop):
 ```
