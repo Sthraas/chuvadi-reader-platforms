@@ -735,3 +735,13 @@ Rebased onto foundation-pr 9e00fdf (patch 33). Head ecb635c; no Mac code needed 
 first attempt — macos-15, macos-15-intel, xcode-27 **0 failed**; macos-26 1 failed (the last of ten files never
 drawn: many10.pdf at zoom 1.000, 31 SVG elements, no error — third sighting, now on the runner that decides). Re-run of
 macos-26: **0 failed**; zip handed out. Unit tests on all four: Core 457 passed, 6 skipped; Mac 23.
+
+### 2026-11-18 (afternoon) — D-198 / D-202 C1 proofs on the runners
+Smoke only (`Platform/EngineProbe.cs`, a branch in `Program.Main` before UIKit; a phase after M-03 in
+`mac-smoke.sh`, log `smoke-engine.log`). Results in `docs/mac/D-198-helper-process-on-mac.md` §0: the app starts its
+own program as a child (72–117 ms to ready on Apple silicon, ~410 ms Intel); the wire is inherited anonymous pipes
+(the child's Console is not usable on Catalyst); a heap cap from the environment is overwritten by the .NET for Mac
+start-up code, a baked one is honoured but applies to the app too; stated 16 MB stacks are honoured, defaults are
+under 10 MB; a stack overflow ends the process by signal (132/139) and leaves a crash report under the app's name.
+Trial patch kept as evidence: `docs/mac/trial-baked-heap-cap.patch` (not applied). Run 44260017671 (code 37c606d):
+**0 failed on all four runners**; zip handed out.
