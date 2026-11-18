@@ -2054,15 +2054,16 @@ def m29_probe():
             m = re.search(r'AXStaticText desc="%s" @(-?\d+),(-?\d+) (\d+)x(\d+)' % letter, t)
             return (int(m.group(1)), int(m.group(2)), int(m.group(3))) if m else None
         a, b = cx(t0, "A"), cx(t0, "B")
-        ev = {"A": a, "B": b, "attached": [l for l in m29_lines(f"m29-{it}-attach") if "attached" in l][:2], "tries": []}
+        ev = {"A": a, "B": b, "tries": []}
         if not (a and b):
             record(f"M-29 evidence run {it}", "fail", "column letters not found", **ev)
             quit_app(); continue
         mid = (a[0] + a[2] / 2 + b[0] + b[2] / 2) / 2   # halfway between the letters' centres
         y = a[1] + 8
         seen = set()
-        def attempt(label, x):
-            before = cx(axdump(f"m29-{it}-{label}-pre"), "B")
+        def attempt(label, x, before=None):
+            # the first try goes straight after the first look, as P29 does (no extra pause)
+            before = before or cx(axdump(f"m29-{it}-{label}-pre"), "B")
             drive("drag", round(x), y, round(x) + 60, y)
             time.sleep(1.5)
             tt = axdump(f"m29-{it}-{label}-post")
@@ -2075,7 +2076,8 @@ def m29_probe():
             if moved:
                 press("File's own sizes", role="AXButton"); time.sleep(1.5)
             return r
-        r0 = attempt("p29-aim(+4)", mid + 4)
+        r0 = attempt("p29-aim(+4), at once", mid + 4, before=b)
+        ev["attached"] = [l for t in ev["tries"] for l in t["log"] if "attached" in l][:2]
         for off in (0, -3, 3):
             attempt(f"mid{off:+d}", mid + off)
         # exact edge from the app's own numbers: screen x of the edge = drag x - (clientX - edge)
