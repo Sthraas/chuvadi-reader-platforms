@@ -180,6 +180,11 @@ details.rempty-sub summary { cursor: pointer; }
     gap: 0;
     padding-bottom: 18px;
     scroll-snap-align: start;
+    /* AT-24: a page box is never squeezed below its page. Page at a time gives each box min-height 100%, which
+       replaces the automatic "at least the content" minimum, so where a page fitted to the width is taller than
+       the view (a phone with the keyboard up, a phone on its side) the boxes shrank to the view's height and each
+       page ran over the next: Find's highlight at a page's foot was drawn on the next page, and the view went there. */
+    flex-shrink: 0;
 }
 
 /* page layouts driven by classes on .rdesk */

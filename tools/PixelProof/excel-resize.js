@@ -70,13 +70,19 @@ const sha = () => crypto.createHash('sha256').update(fs.readFileSync(file)).dige
 
   // ── a finger ──
   let S3 = await hdr('col', 3);
+  if (process.env.ENGINE === 'webkit') console.log('SKIP  the touch-pointer check needs Chromium\'s touch input (not WebKit)');
+  else {
   const cdp = await ctx.newCDPSession(p);
   const touch = (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y, id: 1 }] });
   const scroll0 = await p.evaluate(() => { const g = document.querySelector('.xv-gridwrap'); return [g.scrollLeft, g.scrollTop]; });
-  await touch('touchStart', S3.left + 8, S3.top + 8); await p.waitForTimeout(450); /* D-193: a finger takes the edge after resting on it */ for (let i = 1; i <= 6; i++) await touch('touchMove', S3.left + 8 - i * 8, S3.top + 8); await touch('touchEnd'); await p.waitForTimeout(700);
+  // M-29: this preview profile is a host with no touch screen, like the Mac, whose Mac Catalyst at times hands WebKit a
+  // mouse drag as a touch pointer. There it is taken at once, as a mouse is: no rest, mouse reach (1 px inside).
+  // (On touch hosts a finger rests 350 ms first, D-193: Mobile UI's own proofs cover that.)
+  await touch('touchStart', S3.left + 1, S3.top + 8); for (let i = 1; i <= 6; i++) await touch('touchMove', S3.left + 1 - i * 8, S3.top + 8); await touch('touchEnd'); await p.waitForTimeout(700);
   let S3b = await hdr('col', 3);
   const scroll1 = await p.evaluate(() => { const g = document.querySelector('.xv-gridwrap'); return [g.scrollLeft, g.scrollTop]; });
-  check(near(S3b.w, S3.w + 48, 3) && JSON.stringify(scroll0) === JSON.stringify(scroll1), 'a finger within reach of an edge (8 px inside), rested on it, drags it, and the sheet does not scroll instead', `(${S3.w.toFixed(1)} → ${S3b.w.toFixed(1)})`);
+  check(near(S3b.w, S3.w + 48, 3) && JSON.stringify(scroll0) === JSON.stringify(scroll1), 'M-29: on a host with no touch screen, a drag that arrives as a touch pointer takes the edge at once, like a mouse, and the sheet does not scroll instead', `(${S3.w.toFixed(1)} → ${S3b.w.toFixed(1)})`);
+  }
 
   // ── back to the file's own sizes ──
   await p.locator('.xv-resetsizes').click(); await p.waitForTimeout(700);

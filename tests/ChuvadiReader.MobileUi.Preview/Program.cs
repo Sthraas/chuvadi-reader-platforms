@@ -44,6 +44,10 @@ if (web)
 }
 
 var app = builder.Build();
+
+// D-203: each preview run starts with no kept Arrange desks, unless a proof asks to see them come back.
+if (Environment.GetEnvironmentVariable("CHVD_KEEP_ARRANGE") != "1")
+    app.Services.GetRequiredService<SessionService>().DiscardKeptDesks();
 // D-158: drawn page images by address. The preview is one person on one machine (owner "local"); the portal's
 // own endpoint checks the signed-in user's session instead and answers 404 to anyone else.
 app.MapGet("/" + ChuvadiReader.Core.Reader.PageImages.PathPrefix + "{file}", (string file, HttpContext http,
@@ -138,6 +142,15 @@ app.MapGet("/__preview/unsaved", () => Results.Ok(new
 
 // POST /__preview/close-app: what a host does when its window is asked to close (D-190). Answers at once with
 // "closed" when nothing is unsaved; otherwise the Ui asks, and the answer comes when the person has answered.
+// Find, as the phone's More › Find sends it (AT-24): the shell's find-text handler.
+app.MapPost("/__preview/find", async (string q) =>
+{
+    var shell = app.Services.GetRequiredService<ShellService>();
+    if (shell.FindTextHandler is not { } find) return Results.Ok(new { found = false });
+    await find(q);
+    return Results.Ok(new { found = true });
+});
+
 app.MapPost("/__preview/close-app", async () =>
 {
     var work = app.Services.GetRequiredService<ChuvadiReader.Platform.IUnsavedWork>();

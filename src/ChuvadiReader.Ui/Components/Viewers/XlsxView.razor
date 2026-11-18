@@ -9,6 +9,7 @@
 *@
 @inherits ViewerBase
 @inject XlsxViewService Xlsx
+@inject ChuvadiReader.Platform.IPlatformInfo PlatformInfo
 
 <div class="xv">
     @if (_locked)
@@ -385,7 +386,9 @@
             if (v == _version && on)
             {
                 _windowOn = true;
-                await JsVoidAsync("gridResize", _scroll, Self);   // D-190: drag a header's edge, double press to fit
+                // D-190: drag a header's edge, double press to fit. M-29: a host with no touch screen (the Mac) treats every
+                // pointer as a mouse, since Mac Catalyst at times hands WebKit a mouse drag as a touch.
+                await JsVoidAsync("gridResize", _scroll, Self, PlatformInfo.Input.HasFlag(ChuvadiReader.Platform.InputKinds.Touch));
             }
         }
 

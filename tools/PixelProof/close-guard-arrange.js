@@ -1,5 +1,5 @@
-// TESTING ONLY (never shipped). D-194: Arrange asks at app close when desks changed since the last bind or session
-// save; the host hears when "unsaved work" changes; and where the host does not save in place (the portal) the
+// TESTING ONLY (never shipped). D-203 (was D-194): Arrange asks at app close when desks changed since they were last
+// kept: Save keeps them for the next start with no file dialog, Discard clears them; the host hears when "unsaved work" changes; and where the host does not save in place (the portal) the
 // marks card offers only Save as.
 // Usage: node close-guard-arrange.js <port> desktop|web <a.pdf> <b.pdf>   (preview in that profile on <port>)
 const { chromium } = require('playwright');
@@ -49,16 +49,17 @@ const get = (path) => fetch(base + path).then(r => r.json());
 
     let closing = post('/__preview/close-app'); await p.waitForSelector('.closeq'); await p.waitForTimeout(500);
     let c = await card();
-    check(c.title === 'Save what you arranged?' && /^1 desk in Arrange/.test(c.text) && same(c.buttons, ['Save session…', 'Discard', 'Cancel']), 'closing the app asks about Arrange: Save session / Discard / Cancel', JSON.stringify(c));
+    check(c.title === 'Keep what you arranged?' && /^1 desk in Arrange has changed\. Save keeps your desks for the next time the app starts\. Discard clears them\./.test(c.text) && same(c.buttons, ['Save', 'Discard', 'Cancel']), 'closing the app asks about Arrange: Save / Discard / Cancel', JSON.stringify(c));
     check(new URL(p.url()).pathname === '/bench', 'and Arrange is the page on screen', p.url());
     await answer('Cancel'); r = await closing;
     u = await get('/__preview/unsaved');
     check(r.closed === false && u.hasUnsavedWork === true && !(await card()), 'Cancel: the app stays open and the desks are as they were', JSON.stringify(r));
 
     closing = post('/__preview/close-app'); await p.waitForSelector('.closeq'); await p.waitForTimeout(400);
-    await answer('Save session'); await p.waitForTimeout(800); r = await closing;
+    const dialogs = []; p.on('dialog', d => { dialogs.push(d.type()); d.dismiss(); }); p.on('filechooser', () => dialogs.push('file'));
+    await answer('Save'); await p.waitForTimeout(800); r = await closing;
     u = await get('/__preview/unsaved');
-    check(r.closed === true && u.hasUnsavedWork === false && u.told === told0 + 2, 'Save session: saved, the app may close, and the host is told it is no longer unsaved', JSON.stringify({ r, u }));
+    check(r.closed === true && u.hasUnsavedWork === false && u.told === told0 + 2 && dialogs.length === 0, 'Save: kept with no file dialog, the app may close, and the host is told it is no longer unsaved', JSON.stringify({ r, u, dialogs }));
     r = await post('/__preview/close-app');
     check(r.hadUnsavedWork === false && r.closed === true, 'asked again after the save: closes at once');
 
@@ -71,18 +72,21 @@ const get = (path) => fetch(base + path).then(r => r.json());
     await draw(); check(await shapes() === 1, 'a mark is drawn as well');
     closing = post('/__preview/close-app'); await p.waitForSelector('.closeq'); await p.waitForTimeout(500);
     c = await card();
-    check(c.title === 'Save what you arranged?', 'with marks and desks both unsaved, Arrange is asked about first', c.title);
+    check(c.title === 'Keep what you arranged?', 'with marks and desks both unsaved, Arrange is asked about first', c.title);
     await answer('Discard'); c = await card();
     check(!!c && /^Save the marks on/.test(c.title) && same(c.buttons, ['Save', 'Save as…', 'Discard', 'Cancel']), 'then the file with marks: Save / Save as / Discard / Cancel', JSON.stringify(c));
     await answer('Cancel'); r = await closing;
     u = await get('/__preview/unsaved');
-    check(r.closed === false && u.hasUnsavedWork === true && u.desksUnsaved === 1, 'Cancel on the file: the app stays open; the desks answered Discard are still there (nothing is destroyed until the app closes)', JSON.stringify({ r, u }));
+    check(r.closed === false && u.hasUnsavedWork === true && u.desksUnsaved === 2, 'Cancel on the file: the app stays open, its desks still there and asked about again next time (what was kept was cleared by Discard)', JSON.stringify({ r, u }));
     await p.waitForTimeout(500);
     if (!(await p.locator('button[aria-label="Rectangle"]').count())) { await p.keyboard.press('2'); await p.waitForTimeout(700); }
     check(await shapes() === 1, 'and the mark is still there');
     closing = post('/__preview/close-app'); await p.waitForSelector('.closeq'); await p.waitForTimeout(400);
-    await answer('Discard'); await answer('Discard'); r = await closing;
-    check(r.closed === true, 'Discard for both: the app may close', JSON.stringify(r));
+    c = await card();
+    check(!!c && /^2 desks in Arrange have changed/.test(c.text), 'asked again, now about both desks', c && c.text);
+    await answer('Save'); await answer('Discard'); r = await closing;
+    check(r.closed === true, 'Save the desks, Discard the marks: the app may close', JSON.stringify(r));
+    // The next start (arr.sh starts the preview again with CHVD_KEEP_ARRANGE=1) checks that both desks come back.
   }
   check(errs.length === 0, 'no script errors', JSON.stringify(errs.slice(0, 3)));
   await b.close(); process.exit(fail ? 1 : 0);

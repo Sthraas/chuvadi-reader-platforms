@@ -7,7 +7,7 @@
 #     choosing Windows-1252 takes the chip away again. Narrower than 1100 px the chip shows the encoding's name only
 #     (the note would reach the Document button); narrower than 760 px it sits under the top bar.
 #   encnote.py <url> <width> <height> [shot.png]   → PASS/FAIL per check, exit 1 on any FAIL
-# Needs the H-32 hook (proposal/mobile-ui-hooks-16.patch) applied to the preview. Writes one small Windows-1252
+# Needs the H-32 hook (proposal/mobile-ui-hooks-17.patch) applied to the preview. Writes one small Windows-1252
 # text file to a temp folder, opens it and closes its tab again.
 import asyncio, os, shutil, sys, tempfile, urllib.parse, urllib.request
 from playwright.async_api import async_playwright
