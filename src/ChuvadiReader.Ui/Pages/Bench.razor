@@ -1006,7 +1006,7 @@
                     <span>Clear the bench?</span>
                     <button @onclick="() => _showReset = false" aria-label="Close"><Icon Name="x" Size="16" /></button>
                 </div>
-                <p class="modal-body">This removes every source and desk. Bound files already saved are untouched.</p>
+                <p class="modal-body">This removes every source and desk, here and the next time the app starts. Files already saved are untouched.</p>
                 <div class="modal-foot">
                     <span style="flex:1"></span>
                     <button class="ghost" @onclick="() => _showReset = false">Cancel</button>
@@ -1263,6 +1263,14 @@
     protected override async Task OnInitializedAsync()
     {
         BenchSvc.EnsureDesk();
+        // D-203: the desks kept at the last close come back the first time Arrange is opened in this run.
+        await BenchSvc.EnsureRestoredAsync();
+        if (BenchSvc.RestoreResult is { } back)
+        {
+            _error = false;
+            _status = $"Your desks are back. Skipped {back.SourcesMissing} missing source(s) and {back.PagesSkipped} page(s): {string.Join("; ", back.Warnings.Take(4))}{(back.Warnings.Count > 4 ? "…" : "")}";
+        }
+
         BenchSvc.Changed += OnBenchChanged;
         ShellPublish();
         BenchDrop.SetBenchActive(true);
@@ -1590,7 +1598,6 @@
         {
             await Session.SaveSessionAsync(path, BenchSvc.ExportSession());
             await WriteBack.DeliverOrThrowAsync(path);
-            BenchSvc.MarkAllKept();   // D-194: the desks are in a session file now
             _error = false;
             _status = $"Session saved to {System.IO.Path.GetFileName(path)}.";
         }
@@ -2158,7 +2165,6 @@
         var path = await Picker.PickSavePdfAsync(BenchSvc.SuggestName(deskId) + ".pdf");
         if (string.IsNullOrWhiteSpace(path)) return;
         await RunSave(() => BenchSvc.BindDeskAsync(deskId, path!), path!, "Bound", "Binding desk…");
-        if (!_error) BenchSvc.MarkDeskKept(deskId);   // D-194: this desk is in a PDF the person keeps
     }
 
     private async Task LiftDesk(Guid deskId)
@@ -2180,7 +2186,6 @@
         {
             var n = await BenchSvc.BindAllAsync(folder!);
             if (n > 0) await WriteBack.DeliverOrThrowAsync(folder);
-            if (n > 0) BenchSvc.MarkAllKept();
             _status = n == 0 ? "Nothing to bind." : $"Bound {n} desk{(n == 1 ? "" : "s")} into {PathLabels.Describe(folder)}";
             _resultPath = null;
         }
@@ -2199,7 +2204,6 @@
         {
             var n = await BenchSvc.CombineAllAsync(path!);
             if (n > 0) await WriteBack.DeliverOrThrowAsync(path);
-            if (n > 0) BenchSvc.MarkAllKept();
             _status = n == 0 ? "Nothing to combine." : $"Combined {n} desk{(n == 1 ? "" : "s")} → {System.IO.Path.GetFileName(path)}";
             _resultPath = n == 0 ? null : path;
         }
@@ -2790,7 +2794,6 @@
             }
 
             _expBusy = true; StateHasChanged();
-            bool wholeDesk = false;
             try
             {
                 if (_expSelectedOnly && BenchSvc.SelectedInDesk(deskId) > 0)
@@ -2800,11 +2803,9 @@
                 else
                 {
                     await BenchSvc.BindDeskAsync(deskId, path);
-                    wholeDesk = true;
                 }
 
                 await WriteBack.DeliverOrThrowAsync(path);
-                if (wholeDesk) BenchSvc.MarkDeskKept(deskId);   // D-194: the whole desk exported as a PDF is a bind
                 _expDesk = null;
                 _status = $"Exported PDF: {System.IO.Path.GetFileName(path)}";
                 _error = false; _resultPath = path;

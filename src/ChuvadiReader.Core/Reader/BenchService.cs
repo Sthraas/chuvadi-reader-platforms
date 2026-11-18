@@ -37,9 +37,10 @@ public sealed class BenchService
 
     public const int MaxDesks = 30;
 
-    public BenchService(IPdfReader reader, BenchComposer composer, ChuvadiReader.Core.Documents.ExportService export, IAppPaths? paths = null)
+    public BenchService(IPdfReader reader, BenchComposer composer, ChuvadiReader.Core.Documents.ExportService export, IAppPaths? paths = null, SessionService? sessions = null)
     {
         _paths = paths;
+        _sessions = sessions;
         _stamp = new(paths);
         _reader = reader;
         _composer = composer;
@@ -250,64 +251,90 @@ public sealed class BenchService
         }
     }
 
-    // ── unsaved work (D-194) ─────────────────────────────────────────────────
+    // ── desks kept for the next start (D-203; replaces D-194's "kept in a file") ──────────────────
 
-    // Each desk as it was when it was last kept somewhere outside the app: bound to a PDF, or saved in (or opened
-    // from) a session file.
+    private readonly SessionService? _sessions;
+    private Task? _restore;
+
+    // Each desk as it was when last kept for the next start (or brought back from there). Arranging that differs is
+    // what the close card asks about.
     private readonly Dictionary<Guid, string> _kept = new();
     private bool _unsavedKnown;
 
-    /// <summary>D-194: true when a desk with pages has changed since it was last bound to a PDF or saved in a
-    /// session file (or was never either). Closing the app now would lose that arranging.</summary>
-    public bool HasUnsavedWork
+    /// <summary>What the kept desks brought back, when some of their files were missing (the page says so).</summary>
+    public SessionImportResult? RestoreResult { get; private set; }
+
+    /// <summary>D-203: brings back the desks kept at the last close, once, the first time Arrange is used in this
+    /// run (opened, or sent a file). Never at startup, so starting costs nothing. Every way of adding to Arrange
+    /// waits for it first, so nothing added is replaced by the restore.</summary>
+    public Task EnsureRestoredAsync(CancellationToken ct = default) => _restore ??= RestoreKeptAsync(ct);
+
+    private async Task RestoreKeptAsync(CancellationToken ct)
+    {
+        var kept = _sessions is null ? null : await _sessions.LoadKeptDesksAsync(ct).ConfigureAwait(false);
+        if (kept is { } dto && (dto.Sources.Count > 0 || dto.Desks.Any(d => d.Pages.Count > 0)) && !HasSources && IsEmpty)
+        {
+            var result = await ImportSessionAsync(dto, ct).ConfigureAwait(false);
+            if (result.HasWarnings) RestoreResult = result;
+        }
+
+        MarkAllKept();
+    }
+
+    /// <summary>D-203: true when Arrange was used in this run and its desks differ from what is kept for the next
+    /// start. An Arrange never opened this run, or with nothing on it, is never asked about.</summary>
+    public bool HasUnsavedWork => _restore is not null && UnsavedDeskCount > 0;
+
+    /// <summary>How many desks <see cref="HasUnsavedWork"/> is about: desks with pages that changed, and kept desks
+    /// that are gone.</summary>
+    public int UnsavedDeskCount
     {
         get
         {
-            foreach (var d in _desks)
-            {
-                if (!d.IsEmpty && !(_kept.TryGetValue(d.Id, out var kept) && kept == SignatureOf(d)))
-                {
-                    return true;
-                }
-            }
-
-            return false;
+            int changed = _desks.Count(d => !d.IsEmpty && !(_kept.TryGetValue(d.Id, out var kept) && kept == SignatureOf(d)));
+            int gone = _kept.Count(k => k.Value.Length > 0 && !_desks.Any(d => d.Id == k.Key && !d.IsEmpty));
+            return IsEmpty && !HasSources ? 0 : changed + gone;
         }
     }
-
-    /// <summary>How many desks <see cref="HasUnsavedWork"/> is about.</summary>
-    public int UnsavedDeskCount =>
-        _desks.Count(d => !d.IsEmpty && !(_kept.TryGetValue(d.Id, out var kept) && kept == SignatureOf(d)));
 
     /// <summary>Raised when <see cref="HasUnsavedWork"/> changes.</summary>
     public event Action? UnsavedChanged;
 
-    /// <summary>D-194: asked before the app closes with unsaved arranging. Returns false when the person chose
-    /// Cancel; a session they chose to save is saved by then. The shell sets it (it shows the card).</summary>
+    /// <summary>D-203: asked before the app closes with changed arranging: Save (kept for the next start, no file
+    /// dialog), Discard, Cancel. Returns false for Cancel. The shell sets it (it shows the card).</summary>
     public Func<Task<bool>>? CloseGuard { get; set; }
 
-    /// <summary>Asks about unsaved arranging, if there is any. True: go ahead and close.</summary>
-    public Task<bool> ConfirmCloseAsync() =>
-        HasUnsavedWork && CloseGuard is { } guard ? guard() : Task.FromResult(true);
-
-    /// <summary>The page calls this after this desk was bound to a PDF the person keeps (not after a working
-    /// copy made for printing or for another tool).</summary>
-    public void MarkDeskKept(Guid deskId)
+    /// <summary>Asks about changed arranging, if there is any. True: go ahead and close. An Arrange emptied in this
+    /// run is quietly kept empty, so old desks don't come back.</summary>
+    public async Task<bool> ConfirmCloseAsync()
     {
-        if (FindDesk(deskId) is { } d)
-        {
-            _kept[d.Id] = SignatureOf(d);
-            NoteUnsaved();
-        }
+        if (_restore is not null && IsEmpty && !HasSources && _kept.Values.Any(v => v.Length > 0)) DiscardKept();
+        return HasUnsavedWork && CloseGuard is { } guard ? await guard().ConfigureAwait(false) : true;
     }
 
-    /// <summary>The page calls this after every desk was bound, or the session was saved to a file.</summary>
+    /// <summary>D-203 Save: keeps the desks for the next start.</summary>
+    public async Task KeepAsync(CancellationToken ct = default)
+    {
+        if (_sessions is not null) await _sessions.KeepDesksAsync(ExportSession(), ct).ConfigureAwait(false);
+        MarkAllKept();
+    }
+
+    /// <summary>D-203 Discard, and Reset: nothing comes back on the next start. The desks on screen count as changed
+    /// afterwards, so a close cancelled later (on a file's question) asks about them again.</summary>
+    public void DiscardKept()
+    {
+        _sessions?.DiscardKeptDesks();
+        _kept.Clear();
+        NoteUnsaved();
+    }
+
+    /// <summary>Records every desk as kept as it is now.</summary>
     public void MarkAllKept()
     {
         _kept.Clear();
         foreach (var d in _desks)
         {
-            _kept[d.Id] = SignatureOf(d);
+            _kept[d.Id] = d.IsEmpty ? "" : SignatureOf(d);
         }
 
         NoteUnsaved();
@@ -456,6 +483,7 @@ public sealed class BenchService
     /// <see cref="AddImageToDesk"/>; they are not shelf sources.)</summary>
     public async Task AddSourceAsync(string path, string fileName, CancellationToken ct = default)
     {
+        await EnsureRestoredAsync(ct).ConfigureAwait(false);   // D-203: kept desks first, then what is added
         var existing = _sources.FirstOrDefault(s => string.Equals(s.FileName, fileName, StringComparison.OrdinalIgnoreCase)
                                                     && string.Equals(s.Path, path, StringComparison.OrdinalIgnoreCase));
         if (existing is null)
@@ -478,6 +506,7 @@ public sealed class BenchService
     /// Used by the Reader's "send this page to a desk" shortcut.</summary>
     public async Task<int> EnsureSourceAsync(string path, string fileName, CancellationToken ct = default)
     {
+        await EnsureRestoredAsync(ct).ConfigureAwait(false);   // D-203
         var existing = _sources.FirstOrDefault(s => string.Equals(s.FileName, fileName, StringComparison.OrdinalIgnoreCase)
                                                     && string.Equals(s.Path, path, StringComparison.OrdinalIgnoreCase));
         if (existing is not null) return existing.Index;
@@ -1756,6 +1785,7 @@ public sealed class BenchService
     public async Task<SessionImportResult> ImportSessionAsync(BenchSessionDto session, CancellationToken ct = default)
     {
         var result = new SessionImportResult();
+        _restore ??= Task.CompletedTask;   // D-203: a session opened by hand replaces what the restore would bring
 
         foreach (var source in _sources)
         {
@@ -1889,7 +1919,7 @@ public sealed class BenchService
         }
 
         ClearHistory();
-        MarkAllKept();   // just read from a session file: what is on the desks is what that file holds
+        NoteUnsaved();
         Raise();
         return result;
     }
@@ -1945,7 +1975,8 @@ public sealed class BenchService
         _selected.Clear();
         _selectionAnchor = null;
         _activeDesk = null;
-        _kept.Clear();
+        _restore ??= Task.CompletedTask;   // D-203: Reset is a use of Arrange; nothing kept is brought back after it
+        DiscardKept();
         EnsureDesk();
         ClearHistory();
         Raise();
