@@ -78,3 +78,39 @@ checked for side effects (other UIKit gesture recognisers, M-08/M-23 key handlin
 3. Both. **Recommendation: 1 first** (one line, root cause); 2 only if 1 does not change the type.
 
 Whoever takes it, I re-verify with P29 and the m29 suite on all three runners.
+
+## Addendum, 18 Nov evening — fix 5a500ec2 (patch 34) is not enough; the real mechanism
+
+Run 44341567745: P29 with logging patch v2 on platform/mac 57400e56 (patch 34). Resize passes on macOS 15 and 26,
+**still fails on 15-Intel**. Log: `M-29-p29-log-57400e56-macos-15-intel.txt`.
+
+On 15-Intel **one mouse press produces two pointers**: first a `mouse` pointer goes down, then, at the same spot,
+a `touch` pointer goes down too. All the moves then come on the **touch** pointer; the button release comes on both.
+
+```
+M29 2 doc pointerdown pt=mouse  x=307 t=xv-colhdr hdr=1 dFar=-1.0 ... edge=c1     ← mouse pointer takes the edge (st.drag, id = mouse)
+M29 4 doc pointerdown pt=touch  x=307 t=xv-colhdr hdr=1 dFar=-1.0 ...             ← same press, second pointer: ignored (st.drag set)
+M29 6 doc pointermove pt=touch  x=322 …                                            ← moves arrive on the touch pointer
+M29 7 doc pointermove pt=touch  x=355 …                                               gridResize: e.pointerId !== d.id → ignored
+M29 9 doc pointerup   pt=touch  x=367 …
+M29 12 doc pointerup  pt=mouse  x=367 t=xv-gridwrap xv-resizing
+M29 14 finish commit=true moved=false col=true idx=1                               ← drag ends with no movement seen
+```
+
+So `touchCapable=false` (5a500ec2) makes the touch pointer count as a mouse, but the drag belongs to the mouse
+pointer's id and every move comes from the touch pointer's id, which `pointermove` discards. Before patch 34 the same
+pair explains the earlier log: the touch pointerdown hit the "second finger = pinch" branch and dropped the drag
+(`finish commit=false`).
+
+### Options for Foundation
+1. **Where `touchCapable` is false, follow moves and the release from any pointer while a drag is held** (a Mac has
+   one pointing device; skip the `pointerId` check, or adopt the touch pointer's id when it goes down on the same
+   spot within a few ms). Pro: small, inside `gridResize`, matches what the log shows. Con: none seen for a
+   no-touch host.
+2. Ignore pointers of type `touch` entirely where `touchCapable` is false. Con: on 15-Intel the moves come *only*
+   as touch, so the drag would still see no movement — does not work.
+3. Mac: `UIApplicationSupportsIndirectInputEvents = YES` so Catalyst stops sending the touch twin. Pro: root cause
+   for every control in the page. Con: unproven; needs a regression pass.
+
+**Recommendation: 1 now** (it is what the log asks for), and 3 as a separate Mac trial, since every other
+drag in the page (marks, selection) could meet the same twin pointer on Intel.

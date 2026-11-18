@@ -1,0 +1,24 @@
+M29 1 gridResize attached unz=null ua=AppleWebKit/605.1.15 (KHTML, like Gecko)
+M29 2 doc pointerdown pt=mouse b=0 bs=1 x=307.0 y=49.0 sx=307 t=xv-colhdr trusted=true hdr=1 sr=244.0..308.0 gbcr=244.0..308.0 dFar=-1.0 dNear=63.0 unz=true edg
+M29 3 el pointerdown pt=mouse b=0 bs=1 x=307.0 y=49.0 sx=307 t=xv-colhdr trusted=true hdr=1 sr=244.0..308.0 gbcr=244.0..308.0 dFar=-1.0 dNear=63.0 unz=true edge
+M29 4 doc pointerdown pt=touch b=0 bs=1 x=307.0 y=49.0 sx=307 t=xv-colhdr trusted=true hdr=1 sr=244.0..308.0 gbcr=244.0..308.0 dFar=-1.0 dNear=63.0 unz=true edg
+M29 5 el pointerdown pt=touch b=0 bs=1 x=307.0 y=49.0 sx=307 t=xv-colhdr trusted=true hdr=1 sr=244.0..308.0 gbcr=244.0..308.0 dFar=-1.0 dNear=63.0 unz=true edge
+M29 6 doc pointermove pt=touch b=-1 bs=1 x=322.0 y=49.0 sx=322 t=xv-colhdr trusted=true
+M29 7 doc pointermove pt=touch b=-1 bs=1 x=355.0 y=49.0 sx=355 t=xv-colhdr trusted=true
+M29 8 doc pointermove pt=touch b=-1 bs=1 x=358.0 y=49.0 sx=358 t=xv-colhdr trusted=true
+M29 9 doc pointerup pt=touch b=0 bs=0 x=367.0 y=49.0 sx=367 t=xv-colhdr trusted=true
+M29 10 el pointerup pt=touch b=0 bs=0 x=367.0 y=49.0 sx=367 t=xv-colhdr trusted=true
+M29 11 doc lostpointercapture pt=touch b=0 bs=0 x=0.0 y=0.0 sx=0 t=xv-colhdr trusted=true
+M29 12 doc pointerup pt=mouse b=0 bs=0 x=367.0 y=49.0 sx=367 t=xv-gridwrap xv-resizing trusted=true
+M29 13 el pointerup pt=mouse b=0 bs=0 x=367.0 y=49.0 sx=367 t=xv-gridwrap xv-resizing trusted=true
+M29 14 finish commit=true moved=false col=true idx=1
+M29 15 doc lostpointercapture pt=mouse b=0 bs=0 x=0.0 y=0.0 sx=0 t=xv-gridwrap trusted=true
+M29 16 doc pointerdown pt=mouse b=0 bs=1 x=307.0 y=49.0 sx=307 t=xv-colhdr trusted=true hdr=1 sr=244.0..308.0 gbcr=244.0..308.0 dFar=-1.0 dNear=63.0 unz=true ed
+M29 17 el pointerdown pt=mouse b=0 bs=1 x=307.0 y=49.0 sx=307 t=xv-colhdr trusted=true hdr=1 sr=244.0..308.0 gbcr=244.0..308.0 dFar=-1.0 dNear=63.0 unz=true edg
+M29 18 doc pointerdown pt=touch b=0 bs=1 x=307.0 y=49.0 sx=307 t=xv-colhdr trusted=true hdr=1 sr=244.0..308.0 gbcr=244.0..308.0 dFar=-1.0 dNear=63.0 unz=true ed
+M29 19 el pointerdown pt=touch b=0 bs=1 x=307.0 y=49.0 sx=307 t=xv-colhdr trusted=true hdr=1 sr=244.0..308.0 gbcr=244.0..308.0 dFar=-1.0 dNear=63.0 unz=true edg
+M29 20 doc pointermove pt=touch b=-1 bs=1 x=346.0 y=49.0 sx=346 t=xv-colhdr trusted=true
+M29 21 doc mouseup pt=- b=0 bs=0 x=367.0 y=49.0 sx=367 t=xv-gridwrap xv-resizing trusted=true
+M29 22 doc pointerup pt=touch b=0 bs=0 x=367.0 y=49.0 sx=367 t=xv-colhdr trusted=true
+M29 23 el pointerup pt=touch b=0 bs=0 x=367.0 y=49.0 sx=367 t=xv-colhdr trusted=true
+M29 24 doc lostpointercapture pt=touch b=0 bs=0 x=0.0 y=0.0 sx=0 t=xv-colhdr trusted=true
