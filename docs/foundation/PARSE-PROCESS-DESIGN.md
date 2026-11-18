@@ -314,4 +314,3 @@ Arun ran the bench on his PC: Windows 11 10.0.26200, x64, 12 cores, .NET 10.0.15
   2. The engine switches off fault dialogs and error reporting for itself as its first act (`SetErrorMode`, `WerSetFlags`).
   3. The app always reads the engine's stderr. The moment the runtime writes "Stack overflow", "Fatal error" or "Process terminated", it ends the engine and starts the next one. It does not wait for the process to finish dying.
 - **All three are in the bench now** (`--job-mb N` for the job object's cap, and the crash watch, on by default; `--no-crash-watch` to compare), so Arun can re-run it and see the difference before step 1 is built. On Linux the crash watch makes no difference: 12–19 ms either way.
-EOF
