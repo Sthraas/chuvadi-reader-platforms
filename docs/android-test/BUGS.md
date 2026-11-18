@@ -609,7 +609,7 @@ Merge reaches its page ("add at least two PDFs"); Split was not reached in this 
 kept, nothing left only inside the app; the card's folder chip reads "Documents/Chuvadi Documents/Compressed". Export: the PNG is under
 `Documents/Chuvadi Documents/Export`. Both devices. Closed. (Scatter, Lift, Snapshot go the same route; not separately exercised.)
 
-## AT-24 · S2 · Foundation (shared Ui, Find) · **open, now every time on the phone**: patch 33 phone 0 of 6 Find jumps on the right page (patch 32: 1 of 5) — Phone: Find jumps to the wrong page and highlights the wrong words
+## AT-24 · S2 · Foundation (shared Ui, Find) · **verified** R17 (patch 34): 6 of 6 Find jumps on the right page on phone and tablet; one more clean round before closing — Phone: Find jumps to the wrong page and highlights the wrong words
 **Steps:** phone API 36, portrait. Open `drift-doc.pdf` (12 pages; the word "Zephyrine" is on page 3 only). More › Find, type
 `Zephyrine`.
 **Expected:** the view goes to page 3 and "Zephyrine" is highlighted (round 11, patch 27: box 3, page 3 — passed).
@@ -646,6 +646,9 @@ second, so this looks like the box catching up late after the patch 32 scroll; I
 intermittent on the phone; a person searching a word on the phone is taken to the next page and shown the wrong words.
 Tablet: 3, 3, 3, then 4 and 5 with no highlight on screen — the tablet's misses are again "Enter on the same search does not go back to
 the match" (`screenshots/r16/r16-tablet-find-try-4-and-protect-held.png`, left), not the AT-24 fault.
+**Round 17 (run 44361651321, Android 797555c + Foundation 5e63202 (patch 34) + Mobile UI 49d38dc, Release, API 36).** Phone: first jump 3/3 and all five repeats 3/3 — 6 of 6. Tablet: 6 of 6, and the "Enter on the same
+search doesn't return" misses of rounds 15–16 are gone too. Patch 34 names AT-24; it holds. I keep the n-of-6 check every round and
+close this after one more clean round, because it was intermittent before.
 
 ## AT-25 · S4 · Mobile UI · **verified, closed** R13: "File's own sizes" is 103 × 44 px on phone and tablet — Excel: the "File's own sizes" control is 24 px high on phone and tablet
 **Steps:** phone or tablet, open an `.xlsx`, drag a column edge wider with a finger (works: 64 → 135 px; row 20 → 61 px; the header
@@ -694,7 +697,7 @@ passing — worth comparing which tool it arms (mine: Rectangle).
 through whatever tool is armed. Mobile UI / Foundation between them.
 **Round 13 (run 43906867066, Android a0b3e66 + Foundation 4b704c8 (patch 30) + Mobile UI ae6ae6d, Release, API 36):** Read and Mark mode both 388 → 1,242 → 388 (phone) and 596 → 1,907 → 596 (tablet), 0 marks before and after. A rectangle drawn on the phone at the pinched zoom is saved within 0.1 pt of where it was drawn (page 2).
 
-## AT-28 · S3 · Mobile UI · **partly fixed** R14: Merge page buttons are 44–45 px; the Export card is unchanged (chips 28–29, Export → 34, change… 16–17, Close 19) on phone and tablet — Export card and Merge page: controls are 28–34 px high on phone and tablet
+## AT-28 · S3 · Mobile UI (H-27 to H-29 via patch 34) · **verified, closed** R17: Export card chips 45 px, Export → 45–46, change… 44, Close 44 on phone and tablet; Merge 44–45 — Export card and Merge page: controls are 28–34 px high on phone and tablet
 Measured in run 43885159508 (Android 5208bf0): Export as image card — format and range chips SVG / PNG / JPG / BMP, This page /
 All pages, 96–600 dpi: 28 px (phone), 29 px (tablet); **Export →** 34 px; "change…" 16–17 px; the card's Close 19 px. Merge page —
 Add files, Add open documents, Merge & Save: 32–33 px. The Press card is built the same way (its "change…" and **Press →** are the
@@ -705,6 +708,7 @@ buttons of Merge / Split; I am adding these cards to `ci/design.py` so they are 
 **Round 14 (run 43925116452, Android 582b3be + Foundation b895750 (patch 31) + Mobile UI 1720924, Release, API 36):** Merge: Add files, Add open documents, Merge & Save 44 px (phone), 45 px (tablet) — fixed. Export as image card: no change on either device. Still open for the Export card (and, built the same way, the Press card — to be measured).
 **Round 15:** unchanged, as expected — Mobile UI H-27 to H-29 are not in the Android build until Foundation lands them.
 **Round 16:** unchanged (Mobile UI H-27 to H-29 not in the Android build yet).
+**Round 17 (run 44361651321, Android 797555c + Foundation 5e63202 (patch 34) + Mobile UI 49d38dc, Release, API 36):** fixed — every Export card control measured 44–46 px on both devices. (Press card built the same way; to be measured with the design suite cards, still on my list.)
 
 ## AT-29 · S3 · Foundation / Mobile UI · **not reproduced** R14 with the page move settled before the turn (page 3 kept on the phone, page 2 on the tablet); stays on watch — Phone: turning the phone just after moving to another page can drop back to page 1
 **Steps:** phone API 36, portrait, a 12-page PDF. Next page twice (box "3 / 12"), then turn to landscape at once.
@@ -721,7 +725,7 @@ that waits two seconds before turning, to separate "always" from "only mid-move"
 turn, so there was no place to lose). Round 13's 3 → 1 therefore stands as one unexplained case in five; not a blocker on its own.
 **Round 15:** settled turn keeps the page on both (phone 3/12, tablet 2). Not reproduced; still watched.
 
-## AT-30 · S3 · Foundation (Protect, D-198) / Mobile UI (touch) · open — With redaction held back, touch gives no reason, and the tablet still offers "Save redacted copy"
+## AT-30 · S3 · Foundation patch 34 · **verified, closed** R17: a tap on a greyed redaction tool shows "Redaction comes back with the next update." on phone and tablet; the tablet's Save redacted copy is now disabled and writes nothing — With redaction held back, touch gives no reason, and the tablet still offers "Save redacted copy"
 **Steps:** patch 33, open a PDF, Protect.
 **Expected (D-198):** redaction greyed out and the Reader saying "Redaction comes back with the next update."
 **Actual:** the redaction tools are greyed and cannot be used — correct, and Protect keeps Stamp, Watermark, Flatten, Password and Sign
@@ -734,6 +738,7 @@ turn, so there was no place to lose). Round 13's 3 → 1 therefore stands as one
 (run 44172503791, Android 34cffd3 + Foundation 9e00fdf (patch 33) + Mobile UI df420b5, Release, API 36.)
 **Fix:** let a tap on a held tool say the line (the same `Shell.Notify(LibraryHolds.RedactionBack)` the desktop gets from its command),
 or show the line under the greyed tools on touch shells; hide "Save redacted copy" while `RedactionHeld`.
+**Round 17 (run 44361651321, Android 797555c + Foundation 5e63202 (patch 34) + Mobile UI 49d38dc, Release, API 36):** fixed on both. Phone: tap Box → the line shows. Tablet: tap Redaction → the line shows; Save redacted copy is disabled (its tooltip gives the same reason); nothing is written.
 
 ## D-198 checks (not bugs) — patch 33, round 16
 - **Page operations ask first (Bind all):** PASS on phone and tablet. "The new file will not have everything", names the file and what it

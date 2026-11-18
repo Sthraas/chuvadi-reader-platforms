@@ -331,6 +331,23 @@ Build from clean: 0 errors, 0 warnings. As-built Release: 0 crashes, device heal
 | Design / touch targets (shell) | 42 of 42 | 30 of 30 |
 | AT-13 | 5 of 5 (4.1–4.5 s) | 5 of 5 |
 
+## Round 17 (run 44361651321, Android 797555c + Foundation 5e63202 (patch 34) + Mobile UI 49d38dc, Release, API 36)
+Build from clean: 0 errors, 0 warnings. As-built Release: 0 app crashes (the tablet's two "FATAL EXCEPTION: UiAutomation" are my
+`uiautomator dump` tool, not the Reader). Shipped manifest: no `android:process` entries, no EngineProbe service or activity (D-202 probe
+stays out); Open with / Share now also take text/plain, text/markdown, text/x-markdown and text/html (D-205) — not exercised yet.
+
+| Area | Phone | Tablet |
+|---|---|---|
+| Find jump (AT-24) | **6 of 6** | **6 of 6** |
+| Greyed redaction answers a tap (AT-30) | PASS | PASS; Save redacted copy disabled |
+| Export card sizes (AT-28) | 44–45 px — PASS | 44–46 px — PASS |
+| D-198 page-operation ask, Bind all | PASS | PASS |
+| Save suite | 41 of 45 — my pinch-in check (card up); rest n/a | 41 of 46 — my tool's crash flag; rest n/a |
+| Drift suite | 8 of 8 | 8 of 8 |
+| Function | 17 of 20 — my print step ×2, my at-once rotation variant | 18 of 20 — my print step ×2 |
+| Design / touch targets (shell) | 42 of 42 | 30 of 30 |
+| AT-13 | 5 of 5 (3.7–4.0 s) | 5 of 5 (6.2–7.1 s) |
+
 ## Blocked in CI: Reader on Android 15 (API 35)
 The API 35 image ships WebView 124, so the app correctly shows only its update screen (D-105). Updating it in CI from the API 36
 image's WebView failed twice: that WebView needs the Trichrome static library, which my donor job couldn't locate on the API 36
