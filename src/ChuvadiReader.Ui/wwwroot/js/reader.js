@@ -1083,9 +1083,12 @@ function clearOfFindBar(deskEl, hl, top, left, snaps) {
 export async function scrollToMatch(deskEl, index) {
     if (!deskEl) return;
     scrollToPage(deskEl, index);
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 40; i++) {
         const hl = deskEl.querySelector('[data-page="' + index + '"] .rfind-hl.cur');
-        if (hl) {
+        // AT-24: place the view once the match's page is drawn. Before, its stand-in box can be shorter than the
+        // page, and a match at the page's foot, placed against the stand-in, was left below the view.
+        const drawn = !!deskEl.querySelector('.rpage-wrap[data-page="' + index + '"] .rpage svg');
+        if (hl && (drawn || i >= 30)) {
             suppressUntil = performance.now() + 1400;
             const d = deskEl.getBoundingClientRect(), h = hl.getBoundingClientRect();
             const hTop = deskEl.scrollTop + (h.top - d.top), view = deskEl.clientHeight;
@@ -1102,8 +1105,11 @@ export async function scrollToMatch(deskEl, index) {
                 // (Mobile UI H-26.) Where the page is taller than the view (fit to width on a wide screen) and the
                 // match is below the first screenful, the page's top would leave it off screen: there the match's
                 // own place is kept, never above the page's top.
-                const wTop = deskEl.scrollTop + (w.getBoundingClientRect().top - d.top);
+                const wr = w.getBoundingClientRect(), wTop = deskEl.scrollTop + (wr.top - d.top);
                 top = hTop + h.height <= wTop + view ? wTop : Math.max(wTop, top);
+                // AT-24: and never past the page's own end. The desk snaps to positions where one page covers the
+                // view; a view reaching into the next page is not one, and the desk settled on the next page.
+                if (wr.height > view) top = Math.min(top, wTop + wr.height - view);
             }
             if (w && !snaps) {
                 const r = w.getBoundingClientRect(), wTop = deskEl.scrollTop + (r.top - d.top), wEnd = wTop + r.height;
@@ -1120,6 +1126,12 @@ export async function scrollToMatch(deskEl, index) {
             // Page at a time the page's top is pinned, so there (and at the very top of a file) the bar steps
             // aside to the bottom while the match would be under it, and returns for the next match.
             top = clearOfFindBar(deskEl, hl, top, left, snaps);
+            // AT-24: the place kept while page heights change is the match's place, not its page's top: pages drawn
+            // around it after the jump moved the view back to the page's top, leaving a match at its foot unseen.
+            if (w) {
+                const wr = w.getBoundingClientRect(), wTop = deskEl.scrollTop + (wr.top - d.top);
+                if (wr.height) { anchor = { page: index, frac: Math.max(0, (top - wTop) / wr.height) }; anchorStale = false; }
+            }
             // The highlight can arrive late (its page had to be drawn): this second scroll gets its own quiet time,
             // and the page on screen is reported when it ends (AT-16).
             suppressUntil = Math.max(suppressUntil, performance.now() + 900);
