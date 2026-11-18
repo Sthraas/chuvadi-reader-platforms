@@ -553,3 +553,26 @@ Three browsers × four profiles, all as designed; four points in OPTIONS. One ga
 
 ### 5. Portal surfaces against patch 32's screenshots
 63 screenshots. Text identical apart from the clock and, on purpose, the redact page ("Upload…" → "Back to the document"; status "Redaction comes back with the next update."). Pixels the same elsewhere apart from the known Chromium chip sliver. Drop overlay 6 of 6, no console errors.
+
+## 2026-11-18 — session 30 (coordinator 21:30: merge patch 34; check my two diffs and "Keep what you arranged?" in the portal)
+
+### 1. Last time's CI
+Run on f177358: all nine jobs green.
+
+### 2. Branches and merge
+Checked all: `platform/foundation-pr` 5e63202, `platform/foundation` e2fb8c1 (parse-process bench work after patch 34), `main` e8cf326, `platform/web` b8f004c, `platform/web-test` 5c64d20, `platform/mobile-ui` fd5206c.
+`platform/foundation` badecc0 ("Build log 63: patch 34") has foundation-pr's code exactly, so I merged it. Clean; **byte-identical to foundation-pr 5e63202**. Both my diffs are in as sent (`git apply -R --check` succeeds). My held-Redaction diff no longer applies: the Foundation fixed that more widely (AT-30).
+
+### 3. Build and tests
+Build `-warnaserror` 0 warnings. Tests 449 + 16 + 41 + 103 = **609 pass**, 0 fail, 6 skipped (the Foundation's).
+
+### 4. Checks
+- `p34.py`: the Arrange card on Sign out (portal) and on window close (Windows) — wording, keyboard, Esc, Save (kept file written), the next start (desks back, not asked again), two desks, Discard (kept file gone). The preview's data folder was pointed at a scratch folder (`XDG_CONFIG_HOME`) so the kept file could be watched.
+- `enc44.py`: encoding rows 44 px on touch, 34 px with a mouse.
+- `wrap.py`: phone close-card labels.
+- `p33tap2.py`, `p34d.py`: held tools by tap and click.
+
+Three browsers × four profiles, all as designed. One finding: on the portal, Save in this card keeps the desks in the session's data folder, which Sign out deletes → OPTIONS, with options; recommendation (b).
+
+### 5. Portal surfaces against patch 33's screenshots
+63 screenshots: pixel-identical (clock masked). Drop overlay 6 of 6, no console errors.

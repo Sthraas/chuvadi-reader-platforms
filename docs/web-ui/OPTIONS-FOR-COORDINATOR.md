@@ -346,3 +346,37 @@ Checked in Chromium, Firefox and WebKit on portal desktop, tablet, phone and the
    - The rail tooltip stutters ("Redaction — Redaction comes back with the next update."), from the "Label — reason" pattern.
    - The note shown on a tap has the app's green tick, a "done" sign, for a "not available" message.
    - The signature card's details line "valid to 17 Nov 2027" is the certificate's own end date, not a verdict.
+
+## Observations from the patch 34 check (18 Nov): "Keep what you arranged?" (D-203), my two diffs, AT-30
+Checked in Chromium, Firefox and WebKit on portal desktop, tablet, phone and the Windows profile. All the same unless said.
+
+**As designed:**
+- **The card:** "Keep what you arranged?", "1 desk in Arrange has changed." (or "2 desks … have changed."), "Save keeps your desks for the next time the app starts. Discard clears them."
+  - Buttons Save (main), Discard, Cancel, on one row, always inside the screen; 44 px on touch, and on one line on the phone (my labels diff).
+  - The keyboard starts on Save; Tab cycles Save › Discard › Cancel; Esc cancels and you stay signed in.
+- **Behaviour:**
+  - Save writes `arrange-kept.json` in the app's data folder and the close or Sign out goes ahead.
+  - The next start brings the desks back the first time Arrange is used, and doesn't ask again while they're unchanged.
+  - Discard removes the kept file.
+- **My two diffs** are in as sent and measure as when I proved them:
+  - Encoding rows: 44 px on tablet and phone, 34 px on desktop and Windows.
+  - Phone close card: one line per label at 360 and 390 px, including the four-button Android case.
+- **AT-30:** every held tool answers a tap with its reason (see HOOKS). It supersedes my held-Redaction diff.
+- **The other 63 portal screens:** pixel-identical to patch 33; drop overlay 6 of 6.
+
+**For the coordinator and Arun to decide: the Arrange card on the portal promises something the portal can't keep.**
+- On the portal the only place this card appears is Sign out (there's no window to close).
+- On the portal the app's data folder is inside the session's own folder: `WebPlatform.AppDataFolder => <session root>/appdata`, `WebPlatform.cs:123`, `platform/web` b8f004c.
+- That folder is deleted when the session ends (`SessionStates.cs:149`).
+
+So on the portal, "Save keeps your desks for the next time the app starts" writes the desks into a folder that Sign out deletes a moment later. The person chooses Save, trusts the card, and loses the desks. My preview can't show the deletion (it uses the desktop's data folder); the two lines of Web's code above are the evidence.
+
+Options:
+- **(a) Leave it.** Pros: no work. Cons: the card says the opposite of what happens on the portal; work is lost after the person chose Save.
+- **(b) On the portal, the Arrange question at Sign out goes back to a download**, as patch 32 had ("Save session…"). Portal wording through PlatformText, for example: title "Keep what you arranged?", text "Your desks in Arrange go when you sign out. Save session… downloads them as a file you can open in Arrange again." Desktop keeps D-203 as it is.
+  - Pros: the person really keeps their work; no per-user storage on the server (Arun's rule); uses the download path Web already has for Save as at Sign out.
+  - Cons: one portal-only branch in the card; Web must wait for the download before `/signout` (already asked of Web for patch 32).
+- **(c) Keep the desks per user on the server** so they come back at the next sign-in. Pros: matches the desktop exactly. Cons: breaks Arun's "no per-user server storage" rule, so I don't offer it as a real option.
+- **(d) Don't ask about Arrange at Sign out on the portal.** Pros: no false promise. Cons: the desks go silently.
+
+**My recommendation: (b).** I'll write the exact diff (Ui, through PlatformText; desktop and Windows proved unchanged) once you choose.

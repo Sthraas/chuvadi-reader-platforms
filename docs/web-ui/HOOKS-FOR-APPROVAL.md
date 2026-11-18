@@ -1,6 +1,13 @@
 # Web portal UI — existing-file hooks
 
-## Still to apply — a tap on held Redaction says why, on tablet and phone (found 18 Nov, checking patch 33 / D-198, D-199)
+## Overtaken — the Foundation fixed it its own way (patch 34, commit b892a07, AT-30; checked on 5e63202) — a tap on held Redaction says why, on tablet and phone (found 18 Nov, checking patch 33 / D-198, D-199)
+My diff below no longer applies and isn't needed. The Foundation's AT-30 goes wider: `RailButton` and the phone's tool strip make **every** greyed tool answer a tap with its reason on touch. Checked on 5e63202 in Chromium, Firefox and WebKit:
+- **Tablet:** a tap on Redaction says "Redaction comes back with the next update."
+- **Phone:** "Box" and "Find" say "Redact box: Redaction comes back…" and "Find & redact: …".
+- **Certificate:** as before.
+- **Desktop and Windows:** a mouse click on Redaction now says it too (pointer cursor, `aria-disabled`).
+- Every tap and click leaves the page where it was.
+
 **`proposal/web-ui-held-redaction-reason-on-tap.patch`**, against foundation-pr **9e00fdf** (applies cleanly). Two files in `Ui/Pages`, 5 lines added and 3 removed.
 
 Why: with redaction held, the greyed tools give their reason only as a tooltip, and a touch screen has no tooltip. A tap does nothing:
@@ -22,7 +29,7 @@ Measured (Chromium / Firefox / WebKit):
 
 Pros: the held tools explain themselves on touch, like the certificate; two small edits; nothing changes for a mouse. Cons: none found. The message comes as the app's usual note, which has a green tick (see OPTIONS).
 
-## Routed to the Foundation (coordinator 18 Nov 01:35), not yet applied — the close card's long button labels stay on one line on the phone (found 18 Nov, checking patch 32 / D-194, D-195)
+## Applied by the Foundation (patch 34, commit ea191cf, as sent; checked on 5e63202) — the close card's long button labels stay on one line on the phone (found 18 Nov, checking patch 32 / D-194, D-195)
 **`proposal/web-ui-close-card-phone-labels.patch`**, against foundation-pr **149f4fc** (applies cleanly). One line in `Ui/wwwroot/css/shell.css`:
 `html[data-shell="phone"] .closeq .fc-btn { min-height: 44px; flex: 1; }` → `{ min-height: 44px; flex: 1 1 auto; white-space: nowrap; }`
 
@@ -35,7 +42,7 @@ Measured (Chromium / Firefox / WebKit, phone at 360 and 390 px wide):
 - Tablet, desktop and Windows: not touched (the rule is phone-only).
 - Pros: one line of CSS; no wording change. Cons: the buttons are no longer exactly equal widths (the primary one is the widest, which reads naturally).
 
-## Routed to the Foundation (coordinator 18 Nov 01:35), not yet applied — the encoding picker's rows are finger-sized on tablet and phone (found 16 Nov, checking patch 31 / D-191)
+## Applied by the Foundation (patch 34, commit ea191cf, as sent; checked on 5e63202) — the encoding picker's rows are finger-sized on tablet and phone (found 16 Nov, checking patch 31 / D-191)
 **`proposal/web-ui-encoding-rows-finger-size.patch`**, against foundation-pr **b895750** (applies cleanly). One file, `Ui/wwwroot/css/shell.css`, 2 lines added after the `.enc-*` rules:
 `html[data-shell="tablet"] .enc-row, html[data-shell="phone"] .enc-row { min-height: 44px; }`, the same pattern as AT-25 and AT-26 in patch 31.
 
