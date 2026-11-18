@@ -1172,12 +1172,32 @@ def sv4_held():
     time.sleep(1.5)
     lab = labels()
     st = cdp.js("(() => { " + VIS + " return [...document.querySelectorAll('button, [role=menuitem]')].filter(vis).filter(b => /redact/i.test((b.innerText || '') + (b.getAttribute('aria-label') || '') + (b.title || ''))).map(b => ({t: (b.innerText || b.getAttribute('aria-label') || '').trim().slice(0, 40), disabled: b.disabled || b.getAttribute('aria-disabled') === 'true', title: (b.title || '').slice(0, 80)})); })()")
+    # patch 34 (AT-30): a tap on a greyed redaction tool answers with the line
+    g = cdp.js("(() => { " + VIS + " const b = [...document.querySelectorAll('button, [role=menuitem]')].filter(vis).find(b => /redact/i.test((b.getAttribute('aria-label') || '') + (b.title || '')) && (b.disabled || b.getAttribute('aria-disabled') === 'true' || b.classList.contains('held'))); if (!b) return null; const r = b.getBoundingClientRect(); return {x: r.left + r.width / 2, y: r.top + r.height / 2, label: (b.getAttribute('aria-label') || b.title || '').slice(0, 60)}; })()")
     t = None
-    if st and not all(x["disabled"] for x in st):
-        t = tool("Protect: Box", "Protect: Redact box", "Redact box")
-        time.sleep(1.5)
+    if g:
+        tap_xy(g["x"], g["y"])
+        time.sleep(1.2)
+        t = g
     body = cdp.js("document.body.innerText") or ""
     said = "Redaction comes back with the next update" in body
+    shot("sv4-tap-greyed")
+    R.check("SV-4t (AT-30) a tap on a greyed redaction tool shows why (\"Redaction comes back with the next update\")", bool(g and said), {"tapped": g, "line_on_screen": said})
+    srb = cdp.js("(() => { " + VIS + " const b = [...document.querySelectorAll('button')].filter(vis).find(b => /save redacted copy/i.test((b.innerText || '') + (b.getAttribute('aria-label') || '') + (b.title || ''))); if (!b) return null; const r = b.getBoundingClientRect(); return {x: r.left + r.width / 2, y: r.top + r.height / 2, disabled: b.disabled || b.getAttribute('aria-disabled') === 'true'}; })()")
+    if srb:
+        mark_time()
+        if not srb["disabled"]:
+            tap_xy(srb["x"], srb["y"])
+            time.sleep(2.5)
+        picked = in_picker()
+        if picked:
+            sh("input keyevent KEYCODE_BACK")
+            time.sleep(1)
+        said2 = "Redaction comes back with the next update" in (cdp.js("document.body.innerText") or "")
+        R.check("SV-4s (AT-30) \"Save redacted copy\" is hidden while redaction is held, or says why and writes nothing",
+                bool(srb["disabled"] or (said2 and not picked and not new_pdfs())), {"button": srb, "picker_opened": picked, "line_on_screen": said2, "new_files": new_pdfs()})
+    else:
+        R.check("SV-4s (AT-30) \"Save redacted copy\" is hidden while redaction is held, or says why and writes nothing", True, {"button": None})
     boxes = cdp.js("(document.body.innerText.match(/(\\d+) box/) || [])[1] || null")
     shot("sv4-held")
     R.check("SV-4h (D-198) redaction is held back: no redaction box can be drawn and the Reader says it comes back with the next update",
