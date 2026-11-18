@@ -231,6 +231,8 @@ html[data-theme="dark"] .statusbar .status-dot.server { background: #8fa3e6; }
 .enc-n { flex: 1; min-width: 0; }
 .enc-d { font-family: var(--chvd-mono); font-size: 11px; color: var(--chvd-ink-muted); }
 .enc-foot { font-size: 11.5px; line-height: 1.45; color: var(--chvd-ink-muted); }
+/* Finger-sized where the card is worked by touch (as AT-25, AT-26): the rows are 34 px for a mouse. */
+html[data-shell="tablet"] .enc-row, html[data-shell="phone"] .enc-row { min-height: 44px; }
 .sb-progress { width: 120px; height: 4px; border-radius: 2px; background: var(--chvd-surface-lo); overflow: hidden; flex: none; }
 .sb-progress > span { display: block; height: 100%; background: var(--chvd-binding); transition: width var(--chvd-base); }
 .sb-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
@@ -484,7 +486,7 @@ html[data-platform] .psi-or span { height: 0; background: none; border-top: 0.5p
 .closeq-gap { flex: 1; }
 .closeq-edge { position: absolute; width: 0; height: 0; outline: none; }   /* focus stops that keep Tab inside the card */
 html[data-shell="phone"] .closeq { top: auto; bottom: calc(16px + env(safe-area-inset-bottom)); }
-html[data-shell="phone"] .closeq .fc-btn { min-height: 44px; flex: 1; }
+html[data-shell="phone"] .closeq .fc-btn { min-height: 44px; flex: 1 1 auto; white-space: nowrap; }   /* sized to the label first, so "Save bookmarks" and "Save session…" stay on one line */
 html[data-shell="tablet"] .closeq .fc-btn { min-height: 44px; min-width: 80px; }   /* AT-26: finger-sized on the tablet too */
 html[data-shell="phone"] .closeq-gap { display: none; }
 
