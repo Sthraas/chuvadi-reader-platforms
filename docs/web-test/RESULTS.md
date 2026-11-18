@@ -383,3 +383,21 @@ Tooling fixed in this pass (stale selectors after the viewer changes, not produc
 | **M-27** | ✅ Chromium, WebKit 26.6, WebKit 17.4 16/16; Firefox 14/16 (OBS-1); worst 0.9 px, 0.4 %. `zoom_tools.py` move and resize 4/4 × 4 |
 | **Sessions** | ✅ `expiry.py` 12/12, `comeback.py` 5/5, `gone_browser.py` 4/4 + 4/4 — × 3; `linger.py` 40–42 s in all six cases |
 | **Regression** | ✅ `flows.py` 12/12, `page_images.py` 7/7, `reload.py` 11/11, `leave_guard.py` 7/7 (Firefox 6/6), `office_limits.py` 6/6, `sangam_signin.py` 18/18 — × 3; `excel_p29.py` 11/11, `leave_prompt.py` 5/5, `reload_tabs.py` 11/11, `page_image_sec.py` 19/19 — × 3; `verify_fixes.py` 12/12, WebKit 10/10 (print checks can't run headless); fidelity 14/14 and 23/23 on four files × 3; large Excel and the four over-limit refusals as before; `sec_browser.py`: no failures, second person's next page 72–92 ms through the hostile files |
+
+## 19 Nov 2026 — `platform/web` @ **744be4f8** (Foundation patch 34: D-203 Arrange desks kept, AT-24, AT-30/B-36, M-29, Web UI phone labels and encoding rows; Web step 46 sign-out order)
+**Build from clean:** 0 warnings; Reader **449** (+6 skipped), Hosting **103**, Mobile UI **16**, Web UI **41**; Web **210/210**; `check-package.sh` PASS.
+
+| Claim / area | Result |
+|---|---|
+| **D-203 Arrange desks** | Sign out asks "Keep what you arranged?" (Save / Discard / Cancel); Cancel keeps the person and the desk ✅. **Save keeps nothing on the portal** — the same person signing in again finds Arrange empty → **WT-30** (Medium), × 3 engines |
+| **Sign out after the card (step 46)** | Web's `close_card.py` 19/19 Chrome, Firefox; WebKit 18/19 in 3 of 7 runs → **WT-31** (Low). `signout_reach.py`: the sign-out reaches the server 14/14 (Save as…) + 5/5 (Discard) in WebKit, 4/4 in Chromium |
+| **AT-30 greyed tools answer a tap (phone)** | ✅ phone shell, Protect: the held "Box" tool is greyed (aria-disabled) and a tap shows "Redact box: Redaction comes back with the next update." — × 3 (`p34_probe.py`) |
+| **B-36 Save redacted copy greyed** | ✅ desktop Protect: greyed, its title and a click say "Redaction comes back with the next update."; no download, no move to /redact — × 3 |
+| **AT-24 Find on a short screen** | ✅ phone 412 × 520, `find-page3-foot.pdf`: Find "zephyrine" lands on 3 / 12 with the match on screen and inside its own page, 5 of 5 — × 3 |
+| **Web UI: finger-sized encoding rows** | ✅ phone: all five rows 44 px — × 3 |
+| **M-29 Excel resize by mouse** | ✅ `excel_p29.py` 11/11 × 3 |
+| **M-27** | ✅ Chromium, Firefox, WebKit 26.6, **WebKit 17.4** — 16/16 each this time; worst 0.9 px, 0.4 % |
+| **Holds, encodings, close card** | ✅ `holds_probe.py` 17/17, `encoding_probe.py` 19/19, `encoding_picker.py` 15/15, `close_card_probe.py` 10/10 — × 3 |
+| **Sessions, crashes** | ✅ `expiry.py` 12/12, `comeback.py` 5/5, `gone_browser.py` 4/4 + 4/4 — × 3; `linger.py` 38–42 s in six cases; `worker_crash.py` 11/11 Chrome, WebKit, Firefox 11/11 twice (once 10/11 — exit-code line missing while I ran other probes alongside); `cleanup_race.py` 5/5 × 3; first visit in Firefox 6/6 fresh portals; `early_drop.py` 5/5 × 4 |
+| **Regression** | ✅ `flows.py` 12/12, `page_images.py` 7/7, `reload.py` 11/11, `leave_guard.py` 7/7 (Firefox 6/6), `office_limits.py` 6/6, `mark_zoom.py` 8/8, `sangam_signin.py` 18/18 — × 3; `leave_prompt.py` 5/5, `reload_tabs.py` 11/11, `page_image_sec.py` 19/19 — × 3; `verify_fixes.py` 12/12, WebKit 10/10 (print checks can't run headless); fidelity 14/14 and 23/23 on four files × 3; large Excel and the four over-limit refusals as before; `sec_browser.py` no failures, second person 67–87 ms |
+| Not covered | the phone close card's labels on one line (needs a mark drawn by touch); Arrange's restore when some files are missing |
