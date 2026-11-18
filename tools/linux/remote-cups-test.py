@@ -10,6 +10,9 @@ to it. Three cases:
   1. nothing configured        → the plain "can't reach the printing service" message (the old behaviour);
   2. CUPS_SERVER=localhost:8631 → the GTK dialog opens and the job is completed on that server;
   3. ServerName in ~/.cups/client.conf → the same.
+  4. CUPS_SERVER names another machine → refused at once, saying why, no dialog, nothing sent (D-205);
+  5. client.conf names another machine (an address that answers nothing) → the same, and quickly: the app does
+     not even try to reach it.
 Starts the stand-in with sudo when not root; needs what uitest.py needs, plus cups-pdf.
 """
 import os, subprocess, sys, tempfile, time
@@ -77,7 +80,7 @@ def completed_jobs():
     return len(r.stdout.split("\n")) - 1 if r.stdout.strip() else 0
 
 
-def run_case(n, label, env=None, client_conf=None, expect_print=True):
+def run_case(n, label, env=None, client_conf=None, expect_print=True, refused=None):
     app = App(APP_DIR, os.path.join(OUT, f"case{n}"), display=f":{83 + n}", env=env)
     if client_conf:
         os.makedirs(os.path.join(app.home, ".cups"), exist_ok=True)
@@ -93,6 +96,25 @@ def run_case(n, label, env=None, client_conf=None, expect_print=True):
         app.key("ctrl+p")
         time.sleep(1.2)
         app.click("section[aria-label=Print] button.primary")
+        if refused:
+            start = time.time()
+            msg = app.wait(lambda: app.js("var t=document.body.innerText; var i=t.search(/set to print through the print server/); "
+                                          "return i < 0 ? null : t.slice(i, i + 260)"), 15, "the refusal")
+            took = time.time() - start
+            app.shot(f"remote-cups-{n}")
+            msg = " ".join(msg.split())
+            if f'"{refused}"' not in msg or "Settings › Printers" not in msg:
+                raise AssertionError(f"the refusal does not name the server or the way out: {msg!r}")
+            if took > 5:
+                raise AssertionError(f"the refusal took {took:.1f} s: the app tried to reach the server")
+            time.sleep(2)
+            dialogs = subprocess.run(["xdotool", "search", "--onlyvisible", "--name", "^Print"], env=app.env,
+                                     capture_output=True, text=True).stdout.split()
+            if dialogs:
+                raise AssertionError("the GTK print dialog opened for a refused print server")
+            if completed_jobs() != before:
+                raise AssertionError("a job reached the stand-in server")
+            return f"{label}: refused in {took:.1f} s, no dialog, nothing sent: '{msg[:120]}…'"
         if not expect_print:
             msg = app.wait(lambda: app.js("var t=document.body.innerText; var i=t.search(/printing service|No printers are set up/); "
                                           "return i < 0 ? null : t.slice(i, i + 120)"), 15, "the explanation")
@@ -126,6 +148,8 @@ try:
         (1, "nothing configured", dict(expect_print=False)),
         (2, "CUPS_SERVER", dict(env={"CUPS_SERVER": SERVER})),
         (3, "~/.cups/client.conf", dict(client_conf=f"# test\nServerName {SERVER}\n")),
+        (4, "CUPS_SERVER names another machine", dict(env={"CUPS_SERVER": "office-printing.invalid"}, refused="office-printing.invalid")),
+        (5, "client.conf names another machine", dict(client_conf="ServerName 192.0.2.10:631\n", refused="192.0.2.10")),
     ]:
         try:
             results.append(run_case(n, label, **kwargs))

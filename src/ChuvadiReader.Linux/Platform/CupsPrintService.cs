@@ -68,6 +68,13 @@ public sealed class CupsPrintService : IPrintService
             return new CorePrintResult(PrintOutcome.Failed, 0, rangeError);
         }
 
+        // D-205: a print server that isn't this computer is refused before anything is sent to it, and before the
+        // dialog opens (GTK's dialog would list that server's printers).
+        if (CupsServer.Refusal(CupsServer.Configured()) is { } refused)
+        {
+            return new CorePrintResult(PrintOutcome.Unavailable, 0, refused);
+        }
+
         // B-20: no printer, or CUPS not running: say so instead of opening an empty dialog.
         int queueCount;
         try
@@ -154,11 +161,19 @@ public sealed class CupsPrintService : IPrintService
         Dictionary<string, string> answer, CancellationToken ct)
     {
         var printer = answer.GetValueOrDefault("printer") ?? string.Empty;
+        var configured = CupsServer.Configured();
+        if (CupsServer.Refusal(configured) is { } refused)
+        {
+            return new CorePrintResult(PrintOutcome.Failed, 0, refused); // named while the dialog was open
+        }
+
         string? uri;
         try
         {
-            uri = Queues(ct)
+            var queueUri = Queues(ct)
                 .FirstOrDefault(q => string.Equals(q.Name, printer, StringComparison.Ordinal))?.Uri;
+            // D-205: the job goes to the server the list came from, never to another machine a reply names.
+            uri = queueUri is null ? null : CupsServer.JobUri(configured ?? CupsServer.Local, queueUri);
         }
         catch (Exception ex) when (ex is IppException or IOException or System.Net.Http.HttpRequestException or TimeoutException)
         {

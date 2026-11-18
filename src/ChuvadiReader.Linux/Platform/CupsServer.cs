@@ -61,6 +61,62 @@ public static class CupsServer
         return null;
     }
 
+    /// <summary>The CUPS server on this computer when nothing else is named.</summary>
+    public const string Local = "ipp://localhost:631/";
+
+    /// <summary>
+    /// D-205 (advisory item 2i): until the Print patch makes the connection to a print server secure, Chuvadi prints
+    /// only through a CUPS server on this computer. A server named in CUPS_SERVER or client.conf that is not this
+    /// computer (by name or address: <c>localhost</c>, 127.x.x.x, ::1) is refused before anything is sent to it, with
+    /// this message. Null: the server is this computer's (or none is named), print as before.
+    /// </summary>
+    public static string? Refusal(string? configured)
+    {
+        if (configured is null || !Uri.TryCreate(configured, UriKind.Absolute, out var uri) || IsThisComputer(uri.Host))
+        {
+            return null;
+        }
+
+        return $"This computer is set to print through the print server \"{uri.Host.Trim('[', ']')}\". Until an update makes "
+             + "that connection secure, Chuvadi prints only to printers set up on this computer. Add the printer in "
+             + "Settings › Printers, then print again.";
+    }
+
+    /// <summary>True for this computer's own names and addresses only. Nothing is looked up on the network.</summary>
+    public static bool IsThisComputer(string host)
+    {
+        var h = host.Trim().Trim('[', ']').TrimEnd('.');
+        if (h.Equals("localhost", StringComparison.OrdinalIgnoreCase) || h.EndsWith(".localhost", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return System.Net.IPAddress.TryParse(h, out var ip) && System.Net.IPAddress.IsLoopback(ip);
+    }
+
+    /// <summary>Where a job for a queue goes: always the server the queues were listed from (<paramref name="server"/>),
+    /// at the queue's own path as CUPS gave it (<c>/printers/name</c> or <c>/classes/name</c>). The host in the
+    /// queue's address is not followed (a local CUPS may give its own host name; a reply could name any machine).
+    /// Any other path: null.</summary>
+    public static string? JobUri(string server, string queueUri)
+    {
+        if (!Uri.TryCreate(server, UriKind.Absolute, out var root) || !Uri.TryCreate(queueUri, UriKind.Absolute, out var queue))
+        {
+            return null;
+        }
+
+        var path = queue.AbsolutePath;
+        string? name = path.StartsWith("/printers/", StringComparison.Ordinal) ? path["/printers/".Length..]
+            : path.StartsWith("/classes/", StringComparison.Ordinal) ? path["/classes/".Length..]
+            : null;
+        if (string.IsNullOrEmpty(name) || name.Contains('/') || queue.Scheme is not ("ipp" or "ipps"))
+        {
+            return null;
+        }
+
+        return new UriBuilder(root) { Path = path, Query = string.Empty, Fragment = string.Empty }.Uri.ToString();
+    }
+
     /// <summary><c>host</c>, <c>host:port</c>, <c>[v6]:port</c> or <c>host/version=1.1</c> → <c>ipp://host:port/</c>;
     /// a socket path (<c>/run/cups/cups.sock</c>) → null, the local server.</summary>
     public static string? ToUri(string serverName)

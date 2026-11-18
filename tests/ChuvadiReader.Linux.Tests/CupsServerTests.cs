@@ -82,3 +82,72 @@ public sealed class CupsServerTests : IDisposable
         Assert.Null(CupsServer.Resolve(null, Missing, system));
     }
 }
+
+/// <summary>D-205 (advisory item 2i): until the Print patch, only a print server on this computer is used.</summary>
+public sealed class CupsServerRefusalTests
+{
+    [Theory]
+    [InlineData(null)]
+    [InlineData("ipp://localhost:631/")]
+    [InlineData("ipp://localhost:8631/")]
+    [InlineData("ipp://LOCALHOST:631/")]
+    [InlineData("ipp://printer.localhost:631/")]
+    [InlineData("ipp://127.0.0.1:631/")]
+    [InlineData("ipp://127.0.1.1:631/")]
+    [InlineData("ipp://[::1]:631/")]
+    public void This_computer_or_nothing_named_prints_as_before(string? configured) =>
+        Assert.Null(CupsServer.Refusal(configured));
+
+    [Theory]
+    [InlineData("ipp://printserver:631/", "printserver")]
+    [InlineData("ipp://printserver.example.in:8631/", "printserver.example.in")]
+    [InlineData("ipp://192.168.1.20:631/", "192.168.1.20")]
+    [InlineData("ipp://[fd00::20]:632/", "fd00::20")]
+    [InlineData("ipp://localhost.example.com:631/", "localhost.example.com")]
+    [InlineData("ipp://0.0.0.0:631/", "0.0.0.0")]
+    public void Another_machine_is_refused_and_named(string configured, string shown)
+    {
+        var message = CupsServer.Refusal(configured);
+        Assert.NotNull(message);
+        Assert.Contains($"\"{shown}\"", message);
+        Assert.Contains("Settings › Printers", message);
+    }
+
+    [Fact]
+    public void The_whole_chain_from_client_conf_refuses_a_named_server()
+    {
+        var dir = Directory.CreateTempSubdirectory("chvd-cups-").FullName;
+        try
+        {
+            var conf = Path.Combine(dir, "client.conf");
+            File.WriteAllText(conf, "ServerName office-printing\n");
+            Assert.NotNull(CupsServer.Refusal(CupsServer.Resolve(null, conf, Path.Combine(dir, "none"))));
+            File.WriteAllText(conf, "ServerName localhost:8631\n");
+            Assert.Null(CupsServer.Refusal(CupsServer.Resolve(null, conf, Path.Combine(dir, "none"))));
+            File.WriteAllText(conf, "ServerName /run/cups/cups.sock\n");
+            Assert.Null(CupsServer.Refusal(CupsServer.Resolve(null, conf, Path.Combine(dir, "none"))));
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Theory]
+    [InlineData("ipp://localhost:631/", "ipp://localhost:631/printers/Office", "ipp://localhost:631/printers/Office")]
+    [InlineData("ipp://localhost:631/", "ipp://myhost.local:631/printers/Office", "ipp://localhost:631/printers/Office")]
+    [InlineData("ipp://localhost:631/", "ipp://evil.example:631/printers/Office", "ipp://localhost:631/printers/Office")]
+    [InlineData("ipp://localhost:8631/", "ipp://localhost:631/classes/Floor2", "ipp://localhost:8631/classes/Floor2")]
+    [InlineData("ipp://localhost:631/", "ipps://localhost:443/printers/Office?waitjob=false", "ipp://localhost:631/printers/Office")]
+    public void A_job_goes_to_the_server_the_list_came_from(string server, string queue, string expected) =>
+        Assert.Equal(expected, CupsServer.JobUri(server, queue));
+
+    [Theory]
+    [InlineData("ipp://localhost:631/admin/")]
+    [InlineData("ipp://localhost:631/printers/")]
+    [InlineData("ipp://localhost:631/printers/a/b")]
+    [InlineData("http://localhost:631/printers/Office")]
+    [InlineData("not a uri")]
+    public void Anything_but_a_queue_path_is_not_followed(string queue) =>
+        Assert.Null(CupsServer.JobUri("ipp://localhost:631/", queue));
+}
