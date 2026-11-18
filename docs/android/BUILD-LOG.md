@@ -1002,3 +1002,5 @@ Step 68, result: run 43899989183 (head 60171388; Foundation 4b704c8d3d32c9c21c5c
 - Mobile UI's latest head fd5206c (and a6e9016, 2e0a30a) does **not** merge with 5e63202. The conflict is in `src/ChuvadiReader.Ui/Components/Platform/Phone/PhoneToolStrip.razor`: patch 34 and Mobile UI a6e9016 both built AT-30, Foundation with `SayWhy`, Mobile UI with an `OnReason` parameter. Mobile UI needs to merge 5e63202 and pick one. Until then the composition takes Mobile UI **df420b5**, which merges cleanly (H-27 to H-29 are in patch 34).
 - P-10 (Back = Cancel on a question) is still pending and applies on 5e63202.
 - Sandbox: Debug 0 warnings; Core 449 (+6 skipped), Hosting 103, MobileUi 16, WebUi 41.
+- Run 44341679826 (head 6cec38d7, Mobile UI df420b5): all four green. Phone API 36: gestures 11/11, platform 46/46; tablet API 36: 13/13, 44/44; API 35: WebView gate 4/4.
+- Mobile UI then merged patch 34 (49d38dc, through af1b700). It merges cleanly, so the composition takes it. Sandbox: Debug 0 warnings; Core 449 (+6), Hosting 103, MobileUi 16, WebUi 41.

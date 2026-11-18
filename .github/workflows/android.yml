@@ -32,8 +32,8 @@ on:
 env:
   # platform/foundation-pr: patch 34 (AT-24, AT-30 greyed tools answer a tap, Arrange keeps desks on close, Mobile UI H-27 to H-29) on Reader main c160070.
   FOUNDATION_REF: 5e6320298ebbd031d16bd39e9d59ef96f3529e32
-  # platform/mobile-ui: df420b5, the newest head that merges with patch 34 (a6e9016 and later conflict in PhoneToolStrip.razor: both did AT-30).
-  MOBILEUI_REF: df420b56421cda94ecbc69b8ae7b4db62f34bd67
+  # platform/mobile-ui: 49d38dc (patch 34 merged; D-205 encoding on the phone's ⋮ row and a tablet chip).
+  MOBILEUI_REF: 49d38dc3d08c372f90b96d86eca1fc27c69a8934
   DOTNET_NOLOGO: '1'
   DOTNET_CLI_TELEMETRY_OPTOUT: '1'
 
