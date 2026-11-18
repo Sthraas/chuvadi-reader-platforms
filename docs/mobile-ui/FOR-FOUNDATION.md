@@ -1,12 +1,39 @@
-# Mobile app UI → Foundation: hooks and hand-off (updated 18 Nov, patch 33)
+# Mobile app UI → Foundation: hooks and hand-off (updated 18 Nov, patch 33 + D-205)
 
 **Android's `compose.sh` does not apply these patches** (since 9 Nov). A hook reaches Android builds only when
 Foundation lands it. (Earlier rounds here said otherwise; that was wrong.)
 
-## Outstanding for Foundation: H-30 and H-31 (`proposal/mobile-ui-hooks-15.patch`)
+## Outstanding for Foundation: H-30, H-31 and H-32 (`proposal/mobile-ui-hooks-16.patch`)
 Against foundation-pr 9e00fdf (patch 33). H-27, H-28 and H-29 landed in patch 33 exactly as sent (`proposal/landed/`).
-`mobile-ui-hooks-15.patch` is both; on their own: `proposal/H30-held-redaction-says-why-on-a-tap.patch`,
-`proposal/H31-signatures-card-close-stays-in-the-card.patch`.
+`mobile-ui-hooks-16.patch` is all three; on their own: `proposal/H30-held-redaction-says-why-on-a-tap.patch`,
+`proposal/H31-signatures-card-close-stays-in-the-card.patch`, `proposal/H32-touch-shells-get-the-status-slot.patch`.
+(hooks-15 = H-30 + H-31 is replaced by hooks-16.)
+
+**Patch 34 overlap (seen on foundation-pr 5e63202, not merged here yet):** patch 34 makes the phone tool strip's
+greyed tools answer a tap with their reason (AT-30, `SayWhy` via `ShellSvc.Notify`). My a6e9016 does the same in
+`PhoneToolStrip.razor` (`OnReason`, wired in PhoneShell). At the next merge I take Foundation's version and drop
+mine; nothing for Foundation to do.
+
+### H-32: the touch shells get the status-bar slot (D-205, F-5 option B)
+(`Ui/Layout/MainLayout.razor`, +2 / −1)
+- D-205 puts the text encoding on touch: the phone's ⋮ row "Text encoding…" shows the encoding as its value
+  and, while bytes don't fit, the note in red under the label; the tablet shows a small chip beside the page
+  box only while there is a note (a tap opens "Read this file as"). All of that is in my files (PhoneShell,
+  TouchSupport, mobile.css).
+- What it reads, `StatusBarSlot` (D-191), is MainLayout's private `_statusSlot`, cascaded only around `@Body`.
+  PhoneShell and TouchSupport sit outside that cascade, so they can't get it. (F-5 said "all in my files"; that
+  was wrong — this one hook is needed. Sorry for that.)
+- The change: pass it as a parameter, `StatusSlot="_statusSlot"`, to TouchSupport and to PhoneShell. Both lines
+  are inside the touch-only branches, so the desktop and portal layouts render the same and Windows startup does
+  no more work.
+- Without H-32 my code shows nothing new (the row reads as before, no chip); with it, checked by finger at
+  412×915, 915×412, 800×1280, 1280×800 (and 1024×1366, 600×960) with `tools/mobile-ui/encnote.py`: 44 px, on top,
+  inside the screen; the chip never covers the page box, Document ▾ or Search; it goes when the file is read
+  as Windows-1252 again.
+- **For:** two lines, no new API; the slot already carries label, note, title and action. **Against:** the
+  touch shells now depend on the slot's shape (Label / Note / Title / Run / Changed); a rename there needs the
+  same rename in my two files.
+- Until it lands, D-205 is not on Android (agreed 18 Nov: hooks stay out of Android until Foundation lands them).
 
 ### H-30: held redaction says why on a tap, and Save redacted copy is not offered (D-198)
 (`Ui/Pages/Reader.razor`, Protect rail, +7 / −3)
@@ -75,7 +102,7 @@ Against foundation-pr 9e00fdf (patch 33). H-27, H-28 and H-29 landed in patch 33
   - **C. A notice when such a file opens** ("6 bytes don't fit UTF-8 · Read as…"), tapping it opens the card.
     For: seen exactly when it matters, on both. Against: needs a notice that goes away by itself, which the
     touch shells don't have yet.
-  - I'd take B. Nothing is built for this yet.
+  - I'd take B. **Decided 18 Nov: B (D-205); built, needs H-32 (above).**
 
 ## Closed: F-3 — the Find bar steps aside (D-195, patch 32)
 ### F-3: the Find bar lies over the top of the desk, so a match under it is hidden (tablet, desktop)

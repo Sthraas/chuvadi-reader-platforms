@@ -42,3 +42,26 @@ index 07d6d7d1..e56fcfd4 100644
  .close {
      align-self: center;
      display: inline-flex; align-items: center; justify-content: center;
+diff --git a/src/ChuvadiReader.Ui/Layout/MainLayout.razor b/src/ChuvadiReader.Ui/Layout/MainLayout.razor
+index 720af0ac..9b157c89 100644
+--- a/src/ChuvadiReader.Ui/Layout/MainLayout.razor
++++ b/src/ChuvadiReader.Ui/Layout/MainLayout.razor
+@@ -32,7 +32,7 @@
+     <ChuvadiReader.Ui.Components.Settings.PreferencesHost />
+     @if (ShellLayout is ChuvadiReader.Platform.ShellLayout.Tablet or ChuvadiReader.Platform.ShellLayout.Phone)
+     {
+-        <ChuvadiReader.Ui.Components.Platform.Phone.TouchSupport />
++        <ChuvadiReader.Ui.Components.Platform.Phone.TouchSupport StatusSlot="_statusSlot" />
+     }
+     @if (IsPortal && Platform.Capabilities.DropFiles)
+     {
+@@ -47,7 +47,8 @@
+                                                                Open="AddTab" Find="FindNow" Go="Go" OnDocView="OnDocView"
+                                                                SwitchTab="SwitchTab" CloseTab="CloseTab"
+                                                                OpenLabel="@(IsPortal ? "Upload" : "Open")" OpenIcon="@(IsPortal ? "upload" : "folder")"
+-                                                               MenuFooter="@(Platform.Chrome.AccountMenu ? PortalMenuFooter : null)">
++                                                               MenuFooter="@(Platform.Chrome.AccountMenu ? PortalMenuFooter : null)"
++                                                               StatusSlot="_statusSlot">
+             <CascadingValue Value="_statusSlot" IsFixed="true">@Body</CascadingValue>
+         </ChuvadiReader.Ui.Components.Platform.Phone.PhoneShell>
+     }

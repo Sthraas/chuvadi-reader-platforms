@@ -4,7 +4,7 @@
 @inject ShellService Shell
 
 @*
-    Touch behaviour for the tablet and phone shells: renders nothing; loads mobile.js, which adds what
+    Touch behaviour for the tablet and phone shells: renders nothing but the tablet's encoding chip (D-205); loads mobile.js, which adds what
     the desktop code lacks on a touchscreen —
       * swipe on a page that fits sideways → next / previous page (Read)
       * tap on the canvas → shows the per-page strip (the desktop shows it on hover)
@@ -14,7 +14,34 @@
     the tablet and phone layouts, so Windows and the portal pay nothing.
 *@
 
+@* D-205 (F-5 B): the tablet has no status bar either. While the file in view has bytes that don't fit the encoding it
+   was read as, a small chip beside the page box says so; a tap opens "Read this file as". Nothing otherwise. Where
+   the note would reach the Document button (portrait) the chip shows only the encoding's name; it reads the whole
+   note aloud either way, and the card it opens shows it. *@
+@if (Info.Shell() == ShellLayout.Tablet && StatusSlot is { Label: { } encLabel, Note: { } encNote })
+{
+    <button type="button" class="tb-encchip" title="@StatusSlot.Title" aria-label="@($"{StatusSlot.Title} Now {encLabel}. {encNote}")"
+            @onclick="() => StatusSlot.Run?.Invoke() ?? Task.CompletedTask">
+        <Icon Name="text-box" Size="13" /><span class="tb-encchip-long">@encNote</span><span class="tb-encchip-short">@encLabel</span>
+    </button>
+}
+
 @code {
+    /// <summary>The layout's status-bar slot (D-191). Null where the layout doesn't pass it (before H-32).</summary>
+    [Parameter] public ChuvadiReader.Ui.Layout.StatusBarSlot? StatusSlot { get; set; }
+
+    private ChuvadiReader.Ui.Layout.StatusBarSlot? _watchedSlot;
+
+    protected override void OnParametersSet()
+    {
+        if (!ReferenceEquals(_watchedSlot, StatusSlot))
+        {
+            if (_watchedSlot is not null) _watchedSlot.Changed -= OnChanged;
+            _watchedSlot = StatusSlot;
+            if (_watchedSlot is not null) _watchedSlot.Changed += OnChanged;
+        }
+    }
+
     private IJSObjectReference? _js;
     private DotNetObjectReference<TouchSupport>? _self;
     private bool _on;
@@ -96,6 +123,7 @@
     {
         Info.FormFactorChanged -= OnChanged;
         Shell.Changed -= OnModeMaybeChanged;
+        if (_watchedSlot is not null) _watchedSlot.Changed -= OnChanged;
         _self?.Dispose();
         if (_js is null)
         {

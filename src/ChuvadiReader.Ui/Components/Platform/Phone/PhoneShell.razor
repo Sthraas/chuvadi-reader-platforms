@@ -117,9 +117,26 @@
                         continue;
                     }
 
-                    <button class="ph-row" disabled="@(!cc.IsEnabled)" title="@(cc.DisabledReason ?? cc.Label)" @onclick="() => Then(cc.Run)">
-                        <Icon Name="@cc.Icon" Size="18" /><span class="ph-row-l">@cc.Label</span>
-                        @if (cc.DisabledReason is not null)
+                    @* D-205 (F-5 B): the phone has no status bar, so the Text encoding row carries what the status bar
+                       shows on Windows: the encoding the file was read as, and in red the bytes that don't fit. *@
+                    var enc = cc.Id == "doc.encoding" ? StatusSlot?.Label : null;
+                    var encNote = enc is not null ? StatusSlot?.Note : null;
+                    <button class="ph-row @(encNote is not null ? "ph-row-warn" : null)" disabled="@(!cc.IsEnabled)" title="@(cc.DisabledReason ?? cc.Label)"
+                            aria-label="@(enc is null ? null : encNote is null ? $"{cc.Label} Now {enc}" : $"{cc.Label} Now {enc}. {encNote}")" @onclick="() => Then(cc.Run)">
+                        <Icon Name="@cc.Icon" Size="18" />
+                        @if (encNote is not null)
+                        {
+                            <span class="ph-row-l ph-row-2"><span>@cc.Label</span><span class="ph-row-note">@encNote</span></span>
+                        }
+                        else
+                        {
+                            <span class="ph-row-l">@cc.Label</span>
+                        }
+                        @if (enc is not null)
+                        {
+                            <span class="ph-row-v">@enc</span>
+                        }
+                        else if (cc.DisabledReason is not null)
                         {
                             <span class="ph-row-v">@cc.DisabledReason</span>
                         }
@@ -256,6 +273,24 @@
     private PhoneSheetKind _sheet;
     private string? _activeTool;
     private DocMode _toolMode;
+
+    /// <summary>The layout's status-bar slot (D-191): the encoding a text file was read as. Null where the layout
+    /// doesn't pass it (before H-32); then the Text encoding row shows no value.</summary>
+    [Parameter] public ChuvadiReader.Ui.Layout.StatusBarSlot? StatusSlot { get; set; }
+
+    private ChuvadiReader.Ui.Layout.StatusBarSlot? _watchedSlot;
+
+    protected override void OnParametersSet()
+    {
+        if (!ReferenceEquals(_watchedSlot, StatusSlot))
+        {
+            if (_watchedSlot is not null) _watchedSlot.Changed -= OnSlotChanged;
+            _watchedSlot = StatusSlot;
+            if (_watchedSlot is not null) _watchedSlot.Changed += OnSlotChanged;
+        }
+    }
+
+    private void OnSlotChanged() => _ = InvokeAsync(StateHasChanged);
 
     protected override void OnInitialized()
     {
@@ -498,6 +533,7 @@
 
     public async ValueTask DisposeAsync()
     {
+        if (_watchedSlot is not null) _watchedSlot.Changed -= OnSlotChanged;
         Shell.Changed -= OnChanged;
         Tabs.Changed -= OnChanged;
         Nav.LocationChanged -= OnLocation;

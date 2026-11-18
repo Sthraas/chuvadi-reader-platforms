@@ -73,6 +73,7 @@ Each prints PASS / FAIL lines and exits 1 on any FAIL. Run at 412×915, 915×412
 | `xlresize.py` | Excel resize by finger (hold), scroll and pinch stay theirs | |
 | `cards.py` | Export and Press cards, Merge and Split pages | |
 | `encpicker.py` | "Read this file as" for text, Markdown, HTML | |
+| `encnote.py` | D-205: the encoding on the phone's ⋮ row (value + red note) and the tablet's chip beside the page box; needs H-32 (hooks-16) | |
 | `findaside.py` | the Find bar's bottom place with `tools/PixelProof/fixtures/top.pdf` | |
 | `signature.py` | the unchecked-signature banner and the Signatures card | a signed PDF |
 

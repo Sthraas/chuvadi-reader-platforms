@@ -813,3 +813,21 @@ Evidence:
   card); Home shows its 12 known noise pixels. (A first pass compared hosts with different open tabs and differed
   everywhere; redone.)
 
+
+## 18 Nov, 19:15: D-205 (F-5 option B) — the text encoding on the phone and tablet
+- **Phone** (PhoneShell): the ⋮ sheet's "Text encoding…" row shows the encoding the file is read as as its value;
+  while bytes don't fit it, the note in red (`--chvd-danger`, as the status bar) under the label, e.g. "6 bytes
+  don't fit UTF-8". The row stays a 44 px box; it reads both aloud. No note → the row looks as before plus the value.
+- **Tablet** (TouchSupport): a chip beside the page box only while there is a note; a tap opens "Read this file
+  as". Drawn 26 px high, its box 44 px. The room between the page box (centred) and Document ▾ is half the width
+  less 294 px, so: from 1100 px wide it shows the whole note; narrower it shows the encoding's name alone (the
+  note is read aloud and is on the card it opens); below 760 px (small portrait tablets) it sits under the top
+  bar, centred — the same place it takes where a WebView has no CSS anchor positioning. Found on the first check
+  run: at 800×1280 the whole note covered Document ▾; hence the name-only form.
+- Both read `StatusBarSlot` (D-191), which MainLayout cascades only around `@Body`; the touch shells are outside
+  it → **H-32** (MainLayout, 2 lines, touch-only branches). Without it nothing new shows. `mobile-ui-hooks-16.patch`
+  = H-30 + H-31 + H-32 (replaces hooks-15). Not on Android until Foundation lands it (agreed 18 Nov).
+- New check `tools/mobile-ui/encnote.py` (phone 5, tablet 8 checks).
+- Patch 34 (foundation-pr 5e63202, not merged here yet) does the phone tool strip's tap-for-reason (AT-30) as my
+  a6e9016 does; at the next merge I take theirs.
+- Leans accepted 18 Nov: phone Find bar over the top bar, 350 ms long-press, the redaction-page ⋮ as it is.
