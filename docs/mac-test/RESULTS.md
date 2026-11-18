@@ -11,6 +11,14 @@ Runs (one each, read before the next — no retries):
 | 3 | 42494662734 | ⌘O found not to open a panel → the Open button; app stdout per launch; diagnostic exception build |
 | 4 | 42517758923 | panel path set through Accessibility (typing into the Go-to field was lossy) → documents open; timing sets skipped |
 
+## platform/mac 57400e56 (18 Nov, patch 34 = Reader main 5e632029, with Foundation's M-29 fix 5a500ec2) — NOT signed off: M-29
+
+Built on `xcode-27` (macOS 27 SDK, pin as pushed, minimum macOS 14). Shared 44341351542, P29 with logging 44341567745, full 44351669752; macOS 26, 15, 15-Intel. (5663d2c6 after it is docs only.)
+
+- **M-29: fix 5a500ec2 is not enough — still fails on 15-Intel** (shared and P29-with-log); passes on macOS 15 and 26. The log shows why: on 15-Intel one mouse press produces a `mouse` pointerdown (which takes the drag) and a `touch` pointerdown at the same spot; every move comes on the touch pointer, which `gridResize` ignores (different pointer id), so the drag ends with `moved=false`. Details and options: `evidence/M-29-pointer-log.md` (addendum).
+- **M-25 not seen** (T4.0 passed on all three). **Tab keys** pass on all three.
+- Full suite clean apart from the two known macOS 26 harness items (T4.6, T4.9). Windows startup and the Chromium reference job fail on the global.json pin (harness).
+
 ## platform/mac 51c64ffc (18 Nov, D-198 probe and smoke changes only) — NOT signed off: M-29
 
 Built on `xcode-27` (macOS 27 SDK, pin as pushed, minimum macOS 14). Shared run 44273948760, full run 44279740214; macOS 26, 15, 15-Intel.
