@@ -27,7 +27,7 @@ def key(k): h.focus_main(); a.xdo("key", k); time.sleep(0.8)
 def desk_click():
     r = a.js("var e=document.querySelector('.rdesk') || document.querySelector('main'); var r=e.getBoundingClientRect(); return [r.left, r.top]")
     a.xdo("mousemove", str(int(r[0] + 20)), str(int(r[1] + 20))); a.xdo("click", "1"); time.sleep(0.3)
-def toast(): return a.js("return [...document.querySelectorAll('.toast, .snack, .notify, [role=status]')].map(e => e.innerText.trim()).filter(t => t).slice(-3)")
+def toast(): return a.js("return [...document.querySelectorAll('.msgs .msg, .toast, .snack, .notify, [role=status]')].map(e => e.innerText.trim()).filter(t => t).slice(-3)")
 opcard = lambda: a.js("var c=document.querySelector('.pageopq'); return c ? {title: c.querySelector('.closeq-title').textContent.trim(), text: c.querySelector('.closeq-text').textContent.replace(/\\s+/g,' ').trim(), buttons: [...c.querySelectorAll('button')].map(b => b.textContent.trim()), focus: document.activeElement ? document.activeElement.textContent.trim() : null} : null")
 def op_answer(label):
     a.js(f"var b=[...document.querySelectorAll('.pageopq button')].find(b => b.textContent.trim().startsWith('{label}')); b.click(); return 1"); time.sleep(1.2)
@@ -41,14 +41,18 @@ try:
     a.launch()
     if PART == "redaction":
         f = fresh("plain.pdf", "rd-plain.pdf"); open_tab(f); desk_click(); key("4"); time.sleep(0.5)
-        rail = a.js("return [...document.querySelectorAll('button')].filter(b => b.offsetParent && /Redact|Redaction|Find & redact/.test((b.getAttribute('aria-label')||'') + ' ' + b.textContent)).map(b => ({label: (b.getAttribute('aria-label') || b.textContent).trim().slice(0,60), disabled: b.disabled || b.getAttribute('aria-disabled') === 'true', title: (b.title || b.getAttribute('data-reason') || '').slice(0,120)}))")
+        rail = a.js("return [...document.querySelectorAll('button')].filter(b => b.offsetParent && /redact/i.test((b.getAttribute('aria-label')||'') + ' ' + b.textContent)).map(b => ({label: (b.getAttribute('aria-label') || b.textContent).trim().slice(0,60), disabled: b.disabled || b.getAttribute('aria-disabled') === 'true', title: (b.title || b.getAttribute('data-reason') || '').slice(0,120)}))")
         P("PROTECT rail, buttons about redaction:", json.dumps(rail))
         others = a.js("return [...document.querySelectorAll('.srail button')].filter(b => b.offsetParent).map(b => (b.getAttribute('aria-label')||b.textContent).trim().split(/\\s{2,}|\\n/)[0]).slice(0,20)")
         P("  the rest of Protect's rail:", others)
         btn = a.js("var b=[...document.querySelectorAll('.srail button')].find(b => b.offsetParent && /Redaction/.test((b.getAttribute('aria-label')||'') + b.textContent)); if(!b) return null; var r=b.getBoundingClientRect(); return [r.left + r.width/2, r.top + r.height/2]")
         if btn:
             a.xdo("mousemove", str(int(btn[0])), str(int(btn[1]))); time.sleep(1.2); a.xdo("click", "1"); time.sleep(1)
-            P("  tap on the greyed Redaction -> reason shown:", a.js("return [...document.querySelectorAll('.tip, .tooltip, .rb-reason, .reason, [role=tooltip], .toast')].map(e => e.innerText.trim()).filter(t => t).slice(-3)"), "| page:", a.js("return location.pathname"))
+            P("  tap on the greyed Redaction -> reason shown:", a.js("return [...document.querySelectorAll('.msgs .msg, .tip, .tooltip, .rb-reason, .reason, [role=tooltip], .toast')].map(e => e.innerText.trim()).filter(t => t).slice(-3)"), "| page:", a.js("return location.pathname"))
+        sv = a.js("var b=[...document.querySelectorAll('.srail button')].find(b => b.offsetParent && /Save redacted copy/.test((b.getAttribute('aria-label')||'') + b.textContent)); if(!b) return null; var r=b.getBoundingClientRect(); return [r.left + r.width/2, r.top + r.height/2]")
+        if sv:   # B-36: greyed with its reason from patch 34
+            a.xdo("mousemove", str(int(sv[0])), str(int(sv[1]))); time.sleep(1.2); a.xdo("click", "1"); time.sleep(1)
+            P("  click on Save redacted copy -> notice:", a.js("return [...document.querySelectorAll('.msgs .msg, .toast, [role=status], .notice')].map(e => e.innerText.trim()).filter(t => t).slice(-2)"), "| page:", a.js("return location.pathname"), "| save dialog:", bool(subprocess.run(["xdotool", "search", "--onlyvisible", "--name", "Save"], env=a.env, capture_output=True, text=True).stdout.split()))
         desk_click(); key("r"); time.sleep(0.8); P("R key in Protect -> page:", a.js("return location.pathname"), "| drawing layer:", a.js("return !!document.querySelector('.mk-layer.drawmode')"), "| notice:", toast())
         cmds = a.send("commands"); held = [c for c in (cmds if isinstance(cmds, list) else json.loads(cmds) if isinstance(cmds, str) and cmds.startswith('[') else []) if isinstance(c, dict) and c.get("id") in ("p.redact", "p.find")]
         P("COMMANDS p.redact, p.find:", json.dumps(held)[:400] if held else str(cmds)[:300])

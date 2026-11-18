@@ -2,8 +2,13 @@
 #   bookmarks   bookmark edits stay with the tab and are asked about on close (Save bookmarks / Discard / Cancel)
 #   redact      ten redaction areas drawn in a row are all kept, no text gets selected; they stay with the file
 #               through Read and Home; closing asks Discard / Cancel only, focus on Cancel; also at app close
-#   arrange     a new desk in Arrange is unsaved: closing the app asks Save session / Discard / Cancel, before marks
+#   arrange     a new desk in Arrange is unsaved: closing the app asks first, before marks. From patch 34 (D-203)
+#               "Keep what you arranged?": Save keeps the desks for the next start with no file dialog, Discard
+#               clears them; checked across real restarts (older heads: Save session… with a file dialog)
 #   find        the current Find match never rests under the Find bar (fixtures/find-top.pdf, word "topmark")
+#   findfoot    AT-24 (patch 34): a match at the foot of a page taller than the view (fixtures/find-page3-foot.pdf,
+#               "zephyrine" only at the foot of page 3; pass it as <find-top.pdf>): Fit width, continuous and Single
+#               page, Find five times each: the match is on screen, on page 3, inside its own page
 # Usage: t_patch32.py <work dir> <a.pdf (text)> <find-top.pdf> <part>
 import helpers as h, json, hashlib, shutil
 from lt_base import *
@@ -16,7 +21,7 @@ def fresh(*names):
     for n in names:
         p = os.path.join(WORK, n); shutil.copyfile(SRC, p); out.append(p)
     return out
-a = App(APP, EV + f"/patch32-{PART}", display=f":{ {'bookmarks': 61, 'redact': 62, 'arrange': 63, 'find': 64}[PART] }"); h.bind(a); a.start_display()
+a = App(APP, EV + f"/patch32-{PART}", display=f":{ {'bookmarks': 61, 'redact': 62, 'arrange': 63, 'find': 64, 'findfoot': 65}[PART] }"); h.bind(a); a.start_display()
 tabs = lambda: a.js("return [...document.querySelectorAll('.rtab .rtab-name')].map(e => e.textContent.trim())")
 card = lambda: a.js("var c=document.querySelector('.closeq'); return c ? {title: c.querySelector('.closeq-title').textContent.trim(), text: c.querySelector('.closeq-text').textContent.replace(/\\s+/g,' ').trim(), buttons: [...c.querySelectorAll('button')].map(b => b.textContent.trim()), focus: (document.activeElement||{}).textContent ? document.activeElement.textContent.trim() : null} : null")
 def wait_pages(t=30): a.wait(lambda: a.js("return document.querySelectorAll('.rdesk .rpage svg').length > 0"), t, "pages")
@@ -116,12 +121,39 @@ try:
         P("BOTH UNSAVED, Alt F4 -> first:", c1 and c1["title"], "| after Discard, next:", json.dumps(c2))
         answer("Cancel"); time.sleep(1); P("  Cancel on the file -> alive:", alive(), "| mark kept:", a.js("return document.querySelectorAll('.mk-layer .mk-shape').length"), "| hold:", a.send("session-hold"))
         key("alt+F4"); time.sleep(1.5); c = card(); P("AGAIN -> first:", c and c["title"])
-        out = os.path.join(WORK, "ar-session.chvbench"); [os.remove(out) for _ in [0] if os.path.exists(out)]
-        answer("Save session")
-        try: h.file_dialog("Save", out); time.sleep(2.5)
-        except Exception as e: P("  session dialog problem:", str(e)[:120])
-        c = card(); P("  Save session -> written:", [f for f in os.listdir(WORK) if f.startswith("ar-session")], "| next:", c and c["title"], "| alive:", alive())
-        answer("Discard"); time.sleep(3); P("  Discard on the file -> app exited:", not alive(), "code", a.proc.poll(), "| ar-mark byte-identical:", sha(fm) == sha(SRC), "| ar-a, ar-b untouched:", sha(fa) == sha(SRC) and sha(fb) == sha(SRC))
+        def kept():
+            for d, _, fs in os.walk(a.home):
+                if "arrange-kept.json" in fs: p = os.path.join(d, "arrange-kept.json"); return os.path.relpath(p, a.home), os.path.getsize(p)
+            return None
+        def dlg(): return subprocess.run(["xdotool", "search", "--onlyvisible", "--name", "Save"], env=a.env, capture_output=True, text=True).stdout.split()
+        if c and c["title"].startswith("Keep"):   # patch 34, D-203
+            P("  card:", json.dumps(c))
+            answer("Save"); time.sleep(2)
+            c = card(); P("  Save -> kept:", kept(), "| a file dialog opened:", bool(dlg()), "| next:", c and c["title"], "| alive:", alive())
+            answer("Discard"); time.sleep(3); P("  Discard on the file -> app exited:", not alive(), "code", a.proc.poll(), "| ar-mark byte-identical:", sha(fm) == sha(SRC), "| ar-a, ar-b untouched:", sha(fa) == sha(SRC) and sha(fb) == sha(SRC))
+            def bench():
+                a.js("Blazor.navigateTo('/bench'); return 1"); time.sleep(3)
+                return a.js("return {desks: document.querySelectorAll('.desk, .bench-desk').length, pages: document.querySelectorAll('.desk .dpage, .bench-desk .dpage, .desk [data-page], .desk img, .desk svg').length}")
+            a.launch(); time.sleep(4); P("NEXT START -> Arrange:", bench(), "| hold:", a.send("session-hold"), "| kept:", kept())
+            key("alt+F4"); time.sleep(2); up = alive(); P("  unchanged, Alt F4 -> card:", (card() or {}).get("title") if up else None, "| alive:", up)
+            if up: answer("Cancel")
+            else: a.launch(); time.sleep(4); bench()
+            a.js("Blazor.navigateTo('/reader'); return 1"); time.sleep(1.5); open_tab(fa); open_tab(fb); desk_click(); key("3"); time.sleep(2.5)
+            a.js("[...document.querySelectorAll('.shelf-tool')].find(b => (b.title||'').startsWith('Weave')).click(); return 1"); time.sleep(0.8)
+            a.js("var s=document.querySelectorAll('.shelf-interleave select'); if (s.length >= 2) { s[1].selectedIndex = 1; s[1].dispatchEvent(new Event('change')); } return 1"); time.sleep(0.6)
+            a.js("document.querySelector('.shelf-interleave .bt-prime').click(); return 1"); time.sleep(2.5)
+            P("  changed again -> Arrange:", a.js("return document.querySelectorAll('.desk, .bench-desk').length"), "desks | hold:", a.send("session-hold"))
+            key("alt+F4"); time.sleep(2); up = alive(); c = card() if up else None; P("  Alt F4 -> card:", c and c["title"], "| alive:", up)
+            if c: answer("Discard"); time.sleep(3)
+            P("  Discard -> app exited:", not alive(), "| kept:", kept())
+            a.launch(); time.sleep(4); P("NEXT START after Discard -> Arrange:", bench(), "| kept:", kept())
+        else:
+            out = os.path.join(WORK, "ar-session.chvbench"); [os.remove(out) for _ in [0] if os.path.exists(out)]
+            answer("Save session")
+            try: h.file_dialog("Save", out); time.sleep(2.5)
+            except Exception as e: P("  session dialog problem:", str(e)[:120])
+            c = card(); P("  Save session -> written:", [f for f in os.listdir(WORK) if f.startswith("ar-session")], "| next:", c and c["title"], "| alive:", alive())
+            answer("Discard"); time.sleep(3); P("  Discard on the file -> app exited:", not alive(), "code", a.proc.poll(), "| ar-mark byte-identical:", sha(fm) == sha(SRC), "| ar-a, ar-b untouched:", sha(fa) == sha(SRC) and sha(fb) == sha(SRC))
     if PART == "find":
         dst = os.path.join(WORK, "find-top.pdf"); shutil.copyfile(FIND, dst); open_tab(dst)
         key("ctrl+f"); a.xdo("type", "--delay", "60", "topmark"); a.xdo("key", "Return"); time.sleep(3)
@@ -137,6 +169,23 @@ try:
                 where.append(f"p{r['page']}{'A' if r['aside'] else ''}{'!UNDER' if r['under'] else ''}{'' if r['vis'] else '!OFF'}")
             a.xdo("key", "Return"); time.sleep(1.2)
         P("FIND topmark, 16 steps with Enter -> seen:", seen, "| under the bar or off screen:", bad, "|", " ".join(where))
+        P("  file untouched:", sha(dst) == sha(FIND))
+    if PART == "findfoot":
+        dst = os.path.join(WORK, "find-page3-foot.pdf"); shutil.copyfile(FIND, dst); open_tab(dst)
+        probe = """var h=document.querySelector('.rfind-hl.cur'), d=document.querySelector('.rdesk'); if(!h) return null;
+          var w=h.closest('.rpage-wrap'), a=h.getBoundingClientRect(), c=d.getBoundingClientRect(), r=w.getBoundingClientRect(), on=null, best=0;
+          for (const x of d.querySelectorAll('.rpage-wrap')) { const b=x.getBoundingClientRect(); const v=Math.min(b.bottom,c.bottom)-Math.max(b.top,c.top); if (v>best) {best=v; on=+x.getAttribute('data-page')+1;} }
+          return {page: +w.getAttribute('data-page')+1, onScreen: on, vis: a.top >= c.top-1 && a.bottom <= c.bottom+1, inside: a.top >= r.top-1 && a.bottom <= r.bottom+1, taller: Math.round(r.height) > Math.round(c.height)}"""
+        for mode in ("Fit width", "Single page"):
+            h.click_label(".srail", mode); time.sleep(1.5)
+            good, seen = 0, []
+            for t in range(5):
+                a.js("document.querySelector('.rdesk').scrollTop = 0; return 1"); time.sleep(1.2)
+                key("Escape"); key("ctrl+f"); a.xdo("key", "ctrl+a"); a.xdo("type", "--delay", "40", "zephyrine"); a.xdo("key", "Return"); time.sleep(3)
+                r = a.js(probe)
+                if r and r["page"] == 3 and r["onScreen"] == 3 and r["vis"] and r["inside"]: good += 1
+                seen.append("none" if not r else f"{r['onScreen']}{'' if r['vis'] else '(hidden)'}{'' if r['inside'] else '(outside its page)'}")
+            P(f"FIND zephyrine, {mode}: on page 3, on screen, inside its page: {good} of 5 | page taller than the view: {r and r['taller']} | pages on screen: {', '.join(seen)}")
         P("  file untouched:", sha(dst) == sha(FIND))
     log = open(a.log_path, errors="replace").read()
     P("LOG: 'Chuvadi error' lines:", log.count("Chuvadi error"), "| GLib criticals:", log.count("CRITICAL"))

@@ -45,15 +45,15 @@ Every bug gets fixed; I re-verify on the fixing commit and mark it here.
 | B-33 | S2 | **shared Ui/Core** (Foundation's B-33) | Excel: the title bar's sheet arrows do nothing, and typing a sheet number moves the number but not the sheet shown. Patch 29 says this is fixed; on Linux it is not | **verified fixed b08b0e5** (patch 31, 6c85f06) — Next, Previous and a typed number change the sheet from Home, after a PDF tab, on a second workbook and back on the first; the same test fails on fc20516 |
 | B-34 | S3 | Linux | D-194, first part: after a sign-out is held and cancelled, the lock on the session stays when the work is later saved or discarded, so the desktop still lists Chuvadi as having unsaved work until the next sign-out notice | **verified fixed ca415af** (3406c868) — the lock is taken when the mark is drawn and given up on Discard, through the portal (`Request.Close`) and through the GNOME session manager (`Uninhibit`); a new mark takes it again |
 | B-35 | S4 | Linux | D-194: when the desktop's portal accepts the `Inhibit` call but then refuses the lock (its request ends with Response 2), the app counts the lock as held and doesn't try the GNOME session manager | **verified fixed ca415af** (3406c868) — refused with no GNOME session manager: hold state 0; refused with one: the GNOME lock is taken at once (hold state 3) |
-| B-36 | S4 | **shared Ui/Core** | Patch 33 (D-198): with redaction held, Protect's rail still has "Save redacted copy", enabled. A click writes nothing and only shows "Redaction comes back with the next update." | **open** — found on 87e3dc9. Nothing is written, so no harm; it just looks usable |
-| B-37 | S3 (security) | Linux | D-205: a print-server name the app can't read (such as `192.0.2.2:631x` in `CUPS_SERVER` or `client.conf`) is taken as "this computer", but GTK's print dialog (libcups) reads it as port 631 and lists the other machine's printers | **open** — found on 52e3482. No job reached the other machine |
+| B-36 | S4 | **shared Ui/Core** | Patch 33 (D-198): with redaction held, Protect's rail still has "Save redacted copy", enabled. A click writes nothing and only shows "Redaction comes back with the next update." | **verified fixed bda022c** (patch 34, b27e252f) — greyed with the same reason as Redaction ("Redaction comes back with the next update."), shown on hover and on a click; a click opens no save dialog and writes nothing |
+| B-37 | S3 (security) | Linux | D-205: a print-server name the app can't read (such as `192.0.2.2:631x` in `CUPS_SERVER` or `client.conf`) is taken as "this computer", but GTK's print dialog (libcups) reads it as port 631 and lists the other machine's printers | **open** — found on 52e3482, still on bda022c (patch 34 doesn't touch print). No job reached the other machine |
 | K-01 | — | Linux | GNOME close-only layout showed all three buttons (known, 7 Nov) | **verified fixed f7d0034, re-verified f3d5978** (6 layouts) |
 
 Routing (coordinator, 8 Nov): **Linux** → the Linux chat. **shared Ui/Core** → Foundation's combined patch, as exact diffs from the Linux chat or Foundation. **library** → the coordinator compiles them for Arun (library coordinator).
 | Route | Bugs |
 |---|---|
 | Linux chat | B-01, B-04, B-05, B-06, B-12, B-13, B-14, B-15, B-17, B-19, B-20, B-21, B-34, B-35 (both fixed), B-37 (open), and the Linux stanzas of B-02 |
-| shared Ui/Core | B-03, B-07, B-08b, B-10, B-11b, B-16, B-18, B-22, B-23, B-24, B-25, B-26, B-36, and the OFL texts next to the fonts in B-02 |
+| shared Ui/Core | B-03, B-07, B-08b, B-10, B-11b, B-16, B-18, B-22, B-23, B-24, B-25, B-26, B-36 (fixed), and the OFL texts next to the fonts in B-02 |
 | library | B-27 (with shared: parse/render time and memory on the CAD drawing), B-08a (Chuvadi.Docs input limits), B-09a (Chuvadi.Sheets: don't materialise to the sheet's extent), B-11a (chuvadi-pdf: rebuild the xref on a bad `startxref`) |
 B-09's "no cancel / no timeout" half is the same fix as B-08b.
 
@@ -1265,3 +1265,39 @@ refused.
 
 I'd take A, with C as well if the Linux chat is happy to set the variable: A gives the right message, and C makes
 sure the dialog can't reach another machine through some reading nobody has thought of.
+
+## Linux Test — 18 Nov, build log 66 on `platform/linux` bda022c (patch 34 merged)
+
+Patch 34 (5e63202, PR 27) changes shared `src`, so I rebuilt (`-p:UiTest=true`) and re-tested everything.
+
+- **B-36, verified fixed.** "Save redacted copy" in Protect is greyed with the same reason as Redaction, "Redaction
+  comes back with the next update." It shows on hover and on a click. A click opens no save dialog and writes
+  nothing. Both buttons are now "soft" greyed (`aria-disabled`, not `disabled`), which is why the build log calls
+  the Redaction section "enabled again". The hold is unchanged: the R key draws nothing, and `/redact` shows only
+  the held message.
+- **D-203, Arrange keeps desks** (`t_patch32.py arrange`, extended across real restarts with the same profile).
+  The steps, all as described:
+  - Closing with a changed desk asks "Keep what you arranged?", with Save, Discard and Cancel, and focus on Save.
+  - Save writes `~/.config/Chuvadi/arrange-kept.json` (3,432 bytes) with no file dialog and then asks about the
+    unsaved mark. The source files are untouched.
+  - The next start brings the 2 desks back. Closing with them unchanged doesn't ask.
+  - After building another desk, close asks again; Discard deletes the kept file, and the next start has only
+    the default desk.
+  - With my stand-in desktop, the sign-out notice shows the same card (`t_session.py kinds`), and the lock is taken
+    and given up as before.
+- **AT-24** (new part `findfoot`, the head's `find-page3-foot.pdf`, now in `fixtures/`): Find "zephyrine" at the
+  foot of page 3, at Fit width and in Single page, five times each. All 10 land on page 3, on screen and inside its
+  own page. 52e3482 also gave 5 of 5 both ways at this window height: the bug was on short phone screens, and
+  desktop still lands correctly.
+- **Print (D-205):** unchanged. `remote-cups-test.py` passes 5/5, and B-37 is still there: the same 51 requests
+  for `:631x`, nothing printed.
+- **Regression:** the same as 52e3482. That covers the D-194 hold states and cards for every part, patch 33
+  signature, page operations, Bind and Excel, bookmarks, find, pager, encoding, pinch, marks at 54/100/150 % with
+  the saved files identical, patch 28 and 29, final, multi, drag, print and crop. In the full run the crop output
+  stopped after page 3; run again on its own it gave all 4 pages, the same as before.
+- My tools: `t_patch33.py` now reads the shell's messages (`.msgs .msg`) and finds "Save redacted copy"
+  (case-insensitive). Before, it reported an empty notice even when one was shown.
+- Linux CI [run 44345600360](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/44345600360) on
+  bda022c is green (x64 and arm64). Its package, SHA-256 `f28467ca…`, is now in Arun's checklist.
+
+No new bugs. Open: B-31 (library) and B-37 (Linux).
