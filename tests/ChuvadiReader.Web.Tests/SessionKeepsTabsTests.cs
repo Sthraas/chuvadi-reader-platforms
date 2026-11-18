@@ -344,6 +344,36 @@ public sealed class SessionKeepsTabsTests : IDisposable
     }
 
     [Fact]
+    public async Task Arranges_kept_desks_survive_a_reload_stay_with_the_session_and_end_with_it()
+    {
+        // D-203 on the portal: the Core keeps Arrange's desks in the platform's app-data folder, which on the
+        // portal is the signed-in session's own folder.
+        var first = new Connection(_states, _images, _options, new As("jaya", "sid-10"));
+        await first.Space.EnsureAsync(default);
+        var kept = Path.Combine(new SessionAppPaths(first.Space).AppDataFolder, "arrange-kept.json");
+        await File.WriteAllTextAsync(kept, "{\"desks\":[]}");
+        Assert.True(first.Space.Contains(kept));
+
+        var reloaded = new Connection(_states, _images, _options, new As("jaya", "sid-10"));
+        await reloaded.Space.EnsureAsync(default);
+        Assert.Equal(kept, Path.Combine(new SessionAppPaths(reloaded.Space).AppDataFolder, "arrange-kept.json"));
+        Assert.True(File.Exists(kept));
+
+        foreach (var other in new[] { new As("kiran", "sid-11"), new As("jaya", "sid-12") })
+        {
+            var theirs = new Connection(_states, _images, _options, other);
+            await theirs.Space.EnsureAsync(default);
+            Assert.False(File.Exists(Path.Combine(new SessionAppPaths(theirs.Space).AppDataFolder, "arrange-kept.json")));
+            await theirs.DisposeAsync();
+        }
+
+        await first.DisposeAsync();
+        await reloaded.DisposeAsync();
+        _states.End("jaya", "sid-10");
+        Assert.False(File.Exists(kept));
+    }
+
+    [Fact]
     public async Task An_ended_session_keeps_nothing_a_stale_connection_writes()
     {
         var stale = new Connection(_states, _images, _options, new As("dave", "sid-3"));

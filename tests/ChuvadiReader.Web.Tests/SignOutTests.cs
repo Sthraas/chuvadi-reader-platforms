@@ -21,7 +21,19 @@ public sealed class SignOutTests : IDisposable
 
         public Nav() => Initialize("https://reader.example.in/", "https://reader.example.in/reader");
 
-        protected override void NavigateToCore(string uri, bool forceLoad) => Went.Add(uri + (forceLoad ? " (full load)" : string.Empty));
+        protected override void NavigateToCore(string uri, bool forceLoad)
+        {
+            lock (Went)
+            {
+                Went.Add(uri + (forceLoad ? " (full load)" : string.Empty));
+            }
+
+            if (!forceLoad)
+            {
+                Uri = ToAbsoluteUri(uri).ToString();
+                NotifyLocationChanged(false);
+            }
+        }
     }
 
     private sealed class Work : IUnsavedWork
@@ -103,6 +115,38 @@ public sealed class SignOutTests : IDisposable
         _work.Answer = true; // Save as, or Discard
         await _account.SignOutAsync();
         Assert.Equal(2, _work.Asked);
+        Assert.Equal(["/signout (full load)"], _nav.Went);
+    }
+
+    [Fact]
+    public async Task After_the_card_sign_out_goes_only_once_the_uis_own_move_home_is_done()
+    {
+        // Found by close_card.py in Chrome and WebKit: after Save as the Ui closes the documents and goes Home;
+        // started after the sign-out's full page load, that move interrupted it.
+        _work.HasUnsavedWork = true;
+        _work.Answer = true;
+        _work.WhileAsking = () =>
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(200);
+                _nav.NavigateTo("/"); // the Ui, after closing the last document
+            });
+            return Task.CompletedTask;
+        };
+
+        await _account.SignOutAsync();
+        Assert.Equal(["/", "/signout (full load)"], _nav.Went);
+    }
+
+    [Fact]
+    public async Task When_the_ui_does_not_move_sign_out_waits_no_longer_than_a_moment()
+    {
+        _work.HasUnsavedWork = true;
+        _work.Answer = true;
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        await _account.SignOutAsync();
+        Assert.InRange(watch.ElapsedMilliseconds, 0, 3000);
         Assert.Equal(["/signout (full load)"], _nav.Went);
     }
 

@@ -183,6 +183,9 @@ public sealed class WebAccount : IAccount
     /// <summary>How long Sign out waits for the browser to ask for a download the card has just handed it.</summary>
     internal static readonly TimeSpan DownloadWait = TimeSpan.FromSeconds(10);
 
+    /// <summary>How long Sign out waits, after the card, for the Ui's own move to Home (when it makes one).</summary>
+    internal static readonly TimeSpan UiSettle = TimeSpan.FromSeconds(1);
+
     /// <summary>
     /// Sign out. D-194: with unsaved work (marks on a PDF, desks arranged and not saved) the Ui's card asks
     /// first — on the portal Save as (a download), Discard or Cancel — and Cancel keeps the person signed in.
@@ -191,10 +194,27 @@ public sealed class WebAccount : IAccount
     /// </summary>
     public async Task SignOutAsync(CancellationToken ct = default)
     {
-        if (_services?.GetService<IUnsavedWork>() is { HasUnsavedWork: true } work
-            && !await work.ConfirmCloseAsync()) // stays on the connection's own thread: the navigation below needs it
+        if (_services?.GetService<IUnsavedWork>() is { HasUnsavedWork: true } work)
         {
-            return; // Cancel, or the question is already on screen
+            // After Save as or Discard the Ui closes the documents and goes Home. That navigation must be over
+            // before the browser is sent to /signout: started after it, it interrupts the sign-out's page load
+            // (seen in Chrome and WebKit), and a sign-out cut off in the browser may not reach the server.
+            var moved = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            void Moved(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e) => moved.TrySetResult();
+            _nav.LocationChanged += Moved;
+            try
+            {
+                if (!await work.ConfirmCloseAsync()) // stays on the connection's own thread: the navigation below needs it
+                {
+                    return; // Cancel, or the question is already on screen
+                }
+
+                await Task.WhenAny(moved.Task, Task.Delay(UiSettle, ct));
+            }
+            finally
+            {
+                _nav.LocationChanged -= Moved;
+            }
         }
 
         if (_services?.GetService<SessionSpace>() is { } space && _services.GetService<TransferRegistry>() is { } registry)

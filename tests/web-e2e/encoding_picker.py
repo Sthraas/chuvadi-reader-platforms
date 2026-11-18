@@ -76,7 +76,16 @@ with sync_playwright() as p:
     who = sign_in_as(one, base, "enc-one-" + engine)
     page = one.new_page()
     errors = []
-    page.on("pageerror", lambda e: errors.append(str(e)))
+    # Firefox reports its circuit's socket closing as a page leaves (Sign out going to /signout); that is the
+    # browser leaving, not a portal error (as in flows.py and close_card.py).
+    leaving = ("was interrupted while the page was loading", "WebSocket closed with status code: 1006",
+               "WebSocket is not in the OPEN state", "Cannot send data if the connection is not in the 'Connected' State")
+
+    def page_error(e):
+        if not (engine == "firefox" and any(x in str(e) for x in leaving)):
+            errors.append(str(e))
+
+    page.on("pageerror", page_error)
     open_text(page)
     check("the file opens read automatically, accents right", shows(page, AS_UTF8), page.evaluate(TEXT)[:60])
     label = enc_button(page).inner_text().strip()
@@ -99,7 +108,7 @@ with sync_playwright() as p:
     two = b.new_context(viewport={"width": 1400, "height": 900})
     sign_in_as(two, base, "enc-two-" + engine)
     other = two.new_page()
-    other.on("pageerror", lambda e: errors.append(str(e)))
+    other.on("pageerror", page_error)
     open_text(other)
     check("a second person's file of the same name is read automatically", shows(other, AS_UTF8) and AS_1252 not in other.evaluate(TEXT), other.evaluate(TEXT)[:60])
     check("... Automatic is their choice: nothing of the first person's reached them", chosen_row(other) == "Automatic")
@@ -112,7 +121,7 @@ with sync_playwright() as p:
     again = b.new_context(viewport={"width": 1400, "height": 900})
     again.add_cookies([{"name": "chvd-dev-user", "value": who, "url": base}])  # the very same person
     back = again.new_page()
-    back.on("pageerror", lambda e: errors.append(str(e)))
+    back.on("pageerror", page_error)
     open_text(back)
     check("signed out and in again, the same person starts from Automatic", shows(back, AS_UTF8) and chosen_row(back) == "Automatic")
     back.keyboard.press("Escape")

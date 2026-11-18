@@ -309,6 +309,11 @@ Found and fixed while running this plan:
 - Shared solution 0 warnings and its tests (Reader 448 with 6 skipped by the Foundation, Hosting 103, Mobile UI 16, Web UI 41); Web 207/207; package check.
 - The whole browser set green in Chrome, Firefox, WebKit and Chromium, with `flows.py` 12/12 once it answers the new page-operation card (D-198); `mark_zoom.py` checks redaction held back. `worker_crash.py`, `expiry.py`, `sangam_signin.py` 18/18 (3 engines); `gone_browser.py` 5 runs; `comeback.py` (2 engines); `expiry_stall.py` 3 runs; `load.py` 3/3.
 
+**18 Nov, night (Foundation `5e63202`, patch 34, merged):**
+- Shared solution 0 warnings and its tests (Reader 449 with 6 skipped by the Foundation, Hosting 103, Mobile UI 16, Web UI 41); Web 210/210; package check.
+- First run: all green in four engines except `close_card.py` in Chrome and WebKit (Sign out after the card was interrupted by the Ui's move Home: a real fault, fixed, BUILD-LOG step 46) and `encoding_picker.py` in Firefox (leaving-page message, now filtered). After the fixes: `close_card.py` 19/19 three times in each of Chrome, Firefox, WebKit and Chromium; `encoding_picker.py` 15/15 in Firefox.
+- `worker_crash.py`, `expiry.py`, `sangam_signin.py` 18/18 (3 engines); `gone_browser.py` 5 runs; `comeback.py` (2 engines); `expiry_stall.py` 3 runs; `load.py` 3/3.
+
 ## 8. Known gaps
 - **Held back until the patched libraries (D-198, patch 33):** redaction, signature verdicts, Excel conditional colours; page operations ask first. The portal shows the shared Ui's own wording. Phase 2 is gated on the patched libraries.
 - **UTF-16 text without a byte-order mark cannot be uploaded** (decided, D-197). With the mark it can (WT-26). Without it the file cannot be told from a binary by rule, so it is refused with a message that says how to save it. Some programs write UTF-16 without the mark.
