@@ -1,4 +1,5 @@
 @inject ChuvadiReader.Platform.IPlatformInfo Platform
+@inject ChuvadiReader.Core.Reader.ShellService Shell
 @*
     One button on a D-10 rail (Tools, View or Arrange). Icons only until the rail is hovered;
     then the label and shortcut show. Unbuilt features pass DisabledReason: the button is
@@ -7,7 +8,7 @@
 <button class="rb @Class @(Active ? "on" : null) @(Primary ? "primary" : null) @(Danger ? "danger" : null) @(Soft ? "off" : null)"
         disabled="@((DisabledReason is not null && !Soft) || Disabled)" aria-disabled="@(Soft ? "true" : null)"
         title="@Tip" aria-label="@Label" aria-pressed="@(Active ? "true" : null)"
-        @onclick="OnClick">
+        @onclick="Click">
     <Icon Name="@Icon" Size="@Size" />
     <span class="rb-l">@Label</span>
     <span class="rb-k">@(DisabledReason is not null ? "soon" : ShownKeys)</span>
@@ -34,7 +35,20 @@
         ? $"{Label} — {DisabledReason}"
         : string.IsNullOrEmpty(Keys) ? Label : $"{Label} ({ShownKeys})";
 
-    private bool Soft => DisabledReason is not null && ReasonOnTap && !Disabled;
+    // AT-30: on touch shells every greyed button answers a tap with its reason, since a tooltip can't be read there;
+    // a button with nothing of its own to do then shows the reason itself. Desktop is unchanged.
+    private bool Soft => DisabledReason is not null && !Disabled
+        && (ReasonOnTap || ChuvadiReader.Ui.Components.Platform.PlatformText.ReasonOnTap(Platform));
+
+    private Task Click()
+    {
+        if (Soft && !OnClick.HasDelegate)
+        {
+            Shell.Notify($"{Label}: {DisabledReason}");
+            return Task.CompletedTask;
+        }
+        return OnClick.InvokeAsync();
+    }
 
     private string? ShownKeys => string.IsNullOrEmpty(Keys) ? Keys : Platform.Keys.Format(Keys);
 }

@@ -176,10 +176,13 @@ function screenRect(el) {
     return { left: r.left * zoom, top: r.top * zoom, width: r.width * zoom, height: r.height * zoom };
 }
 
-export function gridResize(el, dotnetRef) {
+// touchCapable (M-29): false where the host has no touch screen (the Mac). Mac Catalyst sometimes hands WebKit a
+// mouse drag as a "touch" pointer (seen on macOS 15 Intel, and once on macOS 26); there every pointer is a mouse.
+export function gridResize(el, dotnetRef, touchCapable) {
     if (!el || !el.isConnected) return false;
-    if (el._chvdResize) { el._chvdResize.dotnet = dotnetRef; return true; }
-    const st = el._chvdResize = { dotnet: dotnetRef, drag: null, lastPress: null };
+    if (el._chvdResize) { el._chvdResize.dotnet = dotnetRef; el._chvdResize.touchCapable = touchCapable !== false; return true; }
+    const st = el._chvdResize = { dotnet: dotnetRef, drag: null, lastPress: null, touchCapable: touchCapable !== false };
+    const isFinger = (e) => e.pointerType === 'touch' && st.touchCapable;
     const SMALLEST = 8;
 
     // The header edge under a point: { column, index, hdr, size (screen px), scale (screen px per px at 100 %) }.
@@ -187,7 +190,7 @@ export function gridResize(el, dotnetRef) {
         const hdr = e.target && e.target.closest ? e.target.closest('.xv-colhdr, .xv-rowhdr') : null;
         if (!hdr || !el.contains(hdr)) return null;
         const column = hdr.classList.contains('xv-colhdr');
-        const reach = e.pointerType === 'touch' ? 14 : 5;
+        const reach = isFinger(e) ? 14 : 5;
         const rtl = getComputedStyle(el).direction === 'rtl';
         const pick = (h) => {
             const r = screenRect(h), own = parseFloat(column ? h.style.width : h.style.height);
@@ -248,12 +251,12 @@ export function gridResize(el, dotnetRef) {
 
     el.addEventListener('pointerdown', (e) => {
         // A second finger while an edge is held is a pinch (the sheet zooms): the resize is dropped, nothing changes size.
-        if (st.drag && e.pointerType === 'touch' && e.pointerId !== st.drag.id) { st.lastPress = null; finish(false, e); return; }
+        if (st.drag && isFinger(e) && e.pointerId !== st.drag.id) { st.lastPress = null; finish(false, e); return; }
         if (st.hold && e.pointerId !== st.hold.id) { st.lastPress = null; dropHold(); return; }
         if (e.button > 0 || st.drag) return;
         const edge = edgeAt(e);
         if (!edge) { st.lastPress = null; return; }
-        const finger = e.pointerType === 'touch';
+        const finger = isFinger(e);
         if (!finger) e.preventDefault();
         const now = performance.now(), last = st.lastPress;
         if (last && last.column === edge.column && last.index === edge.index && now - last.time < 450) {
@@ -284,7 +287,7 @@ export function gridResize(el, dotnetRef) {
         if (st.hold && e.pointerId === st.hold.id && Math.hypot(e.clientX - st.hold.x, e.clientY - st.hold.y) > HOLD_SLOP) { dropHold(); st.lastPress = null; }
         const d = st.drag;
         if (!d) {
-            if (e.pointerType === 'mouse') {
+            if (!isFinger(e) && e.pointerType !== 'pen') {
                 const edge = edgeAt(e);
                 el.style.cursor = edge ? (edge.column ? 'col-resize' : 'row-resize') : '';
             }

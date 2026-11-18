@@ -69,6 +69,8 @@ public sealed class UnsavedWorkTests
         var services = new ServiceCollection();
         services.AddChuvadiReader(AppStateLifetime.Process);
         services.AddSingleton<IAppStorage>(new MemoryStorage());
+        var data = Path.Combine(Path.GetTempPath(), $"chvd-unsaved-data-{Guid.NewGuid():N}");
+        services.AddSingleton<IAppPaths>(new TempPaths(data));   // never the real app data: no kept desks from elsewhere
         using var provider = services.BuildServiceProvider();
         var work = provider.GetRequiredService<IUnsavedWork>();
         var tabs = provider.GetRequiredService<TabsService>();
@@ -77,7 +79,8 @@ public sealed class UnsavedWorkTests
         work.Changed += () => told++;
 
         bench.EnsureDesk();
-        bench.AddBlankToDesk(bench.Desks[0].Id);                 // D-194: arranging nobody has kept yet
+        await bench.EnsureRestoredAsync();                       // D-203: Arrange opened in this run
+        bench.AddBlankToDesk(bench.Desks[0].Id);                 // arranging not kept for the next start yet
         Assert.True(work.HasUnsavedWork);
         Assert.Equal(1, told);
 
@@ -104,6 +107,17 @@ public sealed class UnsavedWorkTests
             Assert.False(work.HasUnsavedWork);
             Assert.Equal(2, told);                                // told once more: nothing is unsaved now
         }
-        finally { File.Delete(path); }
+        finally
+        {
+            File.Delete(path);
+            try { Directory.Delete(data, true); } catch (IOException) { }
+        }
+    }
+
+    private sealed class TempPaths(string root) : IAppPaths
+    {
+        public string AppDataFolder => root;
+        public string WorkingFolder => Path.Combine(root, "work");
+        public string? DefaultSaveFolder => null;
     }
 }
