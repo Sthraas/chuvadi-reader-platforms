@@ -29,10 +29,15 @@ internal static unsafe class EngineProbe
             switch (mode)
             {
                 case "hello":
-                    // A round trip over the pipes: the parent writes a line, the child answers it.
+                    // The child's Console: on Mac Catalyst, Console.Out goes to the system log (stderr) and
+                    // Console.In is not supported — shown by this mode.
                     var line = Console.In.ReadLine();
                     Say("echo " + line);
                     return 0;
+                case "wire-pipe":
+                    return WirePipe(args);
+                case "wire-socket":
+                    return WireSocket(args);
                 case "alloc":
                     return Alloc();
                 case "deep16":
@@ -62,6 +67,55 @@ internal static unsafe class EngineProbe
             Say("caught " + ex.GetType().FullName + ": " + ex.Message);
             return 4;
         }
+    }
+
+    /// <summary>Anonymous pipes the parent made inheritable: args[2] is the parent→child end, args[3] child→parent.</summary>
+    private static int WirePipe(string[] args)
+    {
+        using var input = new System.IO.Pipes.AnonymousPipeClientStream(System.IO.Pipes.PipeDirection.In, args[2]);
+        using var output = new System.IO.Pipes.AnonymousPipeClientStream(System.IO.Pipes.PipeDirection.Out, args[3]);
+        return Serve(input, output, "pipe");
+    }
+
+    /// <summary>A Unix-domain socket the parent listens on: args[2] is its path.</summary>
+    private static int WireSocket(string[] args)
+    {
+        using var socket = new System.Net.Sockets.Socket(System.Net.Sockets.AddressFamily.Unix, System.Net.Sockets.SocketType.Stream, System.Net.Sockets.ProtocolType.Unspecified);
+        socket.Connect(new System.Net.Sockets.UnixDomainSocketEndPoint(args[2]));
+        using var stream = new System.Net.Sockets.NetworkStream(socket, ownsSocket: false);
+        return Serve(stream, stream, "socket");
+    }
+
+    /// <summary>"ready", then: a ping line → "pong", a length-prefixed block → its length back, and EOF → exit 0.</summary>
+    private static int Serve(Stream input, Stream output, string kind)
+    {
+        var w = new StreamWriter(output) { AutoFlush = true };
+        w.WriteLine("PROBE ready " + kind);
+        var r = new BinaryReader(input);
+        var ping = ReadLine(input);
+        w.WriteLine("PROBE pong " + ping);
+        var len = r.ReadInt32();
+        var buffer = new byte[1 << 20];
+        long got = 0;
+        while (got < len)
+        {
+            var n = input.Read(buffer, 0, (int)Math.Min(buffer.Length, len - got));
+            if (n == 0) { break; }
+            got += n;
+        }
+
+        w.WriteLine("PROBE got " + got);
+        var tail = input.Read(buffer, 0, 1); // the parent closes its end: 0 means end of stream
+        Say("wire " + kind + " end of stream=" + (tail == 0 ? 1 : 0));
+        return tail == 0 ? 0 : 5;
+    }
+
+    private static string ReadLine(Stream s)
+    {
+        var bytes = new List<byte>();
+        int b;
+        while ((b = s.ReadByte()) >= 0 && b != '\n') { bytes.Add((byte)b); }
+        return System.Text.Encoding.UTF8.GetString(bytes.ToArray());
     }
 
     private static void Say(string line)
@@ -166,6 +220,8 @@ internal static unsafe class EngineProbe
         var self = Environment.ProcessPath ?? string.Empty;
         MacSmoke.Log("engine-probe self=" + Path.GetFileName(self) + " exists=" + (File.Exists(self) ? 1 : 0));
         Run(self, "hello", null, 30);
+        Wire(self, socket: false);
+        Wire(self, socket: true);
         Run(self, "alloc", "max-heap-size=256m", 120);
         Run(self, "alloc", null, 120);                 // no cap: stops itself at 1024 MB
         Run(self, "deep16", null, 30);
@@ -175,6 +231,88 @@ internal static unsafe class EngineProbe
         Run(self, "overflow", null, 60);
         Run(self, "hang", null, 3);                    // the parent's own time limit ends it
         MacSmoke.Log("engine-probe done");
+    }
+
+    /// <summary>The engine's wire: start the child, wait for "ready", ping, send 8 MB, close, and time each part.</summary>
+    private static void Wire(string self, bool socket)
+    {
+        var tag = socket ? "wire-socket" : "wire-pipe";
+        try
+        {
+            var info = new ProcessStartInfo(self) { UseShellExecute = false, RedirectStandardError = true };
+            info.ArgumentList.Add(Switch);
+            info.ArgumentList.Add(tag);
+            info.Environment.Remove("CHUVADI_SMOKE");
+            info.Environment.Remove("CHUVADI_SMOKE_ENGINE");
+            Stream toChild, fromChild;
+            System.IO.Pipes.AnonymousPipeServerStream? outPipe = null, inPipe = null;
+            System.Net.Sockets.Socket? listener = null;
+            string? socketPath = null;
+            if (socket)
+            {
+                socketPath = Path.Combine(Path.GetTempPath(), "chvd-" + Environment.ProcessId + ".sock");
+                File.Delete(socketPath);
+                listener = new System.Net.Sockets.Socket(System.Net.Sockets.AddressFamily.Unix, System.Net.Sockets.SocketType.Stream, System.Net.Sockets.ProtocolType.Unspecified);
+                listener.Bind(new System.Net.Sockets.UnixDomainSocketEndPoint(socketPath));
+                listener.Listen(1);
+                info.ArgumentList.Add(socketPath);
+            }
+            else
+            {
+                outPipe = new System.IO.Pipes.AnonymousPipeServerStream(System.IO.Pipes.PipeDirection.Out, HandleInheritability.Inheritable);
+                inPipe = new System.IO.Pipes.AnonymousPipeServerStream(System.IO.Pipes.PipeDirection.In, HandleInheritability.Inheritable);
+                info.ArgumentList.Add(outPipe.GetClientHandleAsString());
+                info.ArgumentList.Add(inPipe.GetClientHandleAsString());
+            }
+
+            var clock = Stopwatch.StartNew();
+            using var child = Process.Start(info) ?? throw new InvalidOperationException("Process.Start returned null");
+            var errors = new List<string>();
+            child.ErrorDataReceived += (_, e) => { if (e.Data is not null) { lock (errors) { errors.Add(e.Data); } } };
+            child.BeginErrorReadLine();
+            if (socket)
+            {
+                var accepted = listener!.Accept();
+                toChild = fromChild = new System.Net.Sockets.NetworkStream(accepted, ownsSocket: true);
+            }
+            else
+            {
+                outPipe!.DisposeLocalCopyOfClientHandle();
+                inPipe!.DisposeLocalCopyOfClientHandle();
+                toChild = outPipe;
+                fromChild = inPipe;
+            }
+
+            var ready = ReadLine(fromChild);
+            var readyMs = clock.ElapsedMilliseconds;
+            var w = new StreamWriter(toChild) { AutoFlush = true };
+            var t0 = clock.Elapsed;
+            w.WriteLine("ping");
+            var pong = ReadLine(fromChild);
+            var pingUs = (clock.Elapsed - t0).TotalMilliseconds * 1000;
+            var block = new byte[8 * 1024 * 1024];
+            var t1 = clock.Elapsed;
+            toChild.Write(BitConverter.GetBytes(block.Length));
+            toChild.Write(block);
+            toChild.Flush();
+            var got = ReadLine(fromChild);
+            var mbps = 8 / Math.Max((clock.Elapsed - t1).TotalSeconds, 1e-6);
+            var t2 = clock.Elapsed;
+            toChild.Dispose();                      // the child sees end of stream and must exit by itself
+            if (!ReferenceEquals(toChild, fromChild)) { fromChild.Dispose(); }
+            var exited = child.WaitForExit(10000);
+            var endMs = (clock.Elapsed - t2).TotalMilliseconds;
+            if (!exited) { child.Kill(); }
+            child.WaitForExit();
+            MacSmoke.Log($"engine-probe {tag}: ready={readyMs}ms ({ready}) ping={pingUs:0}us ({pong}) 8MB={mbps:0}MB/s ({got}) exit-after-close={(exited ? endMs.ToString("0") + "ms code=" + child.ExitCode : "no (killed)")}");
+            lock (errors) { foreach (var l in errors.Take(4)) { MacSmoke.Log($"engine-probe {tag} err: {l}"); } }
+            listener?.Dispose();
+            if (socketPath is not null) { File.Delete(socketPath); }
+        }
+        catch (Exception ex)
+        {
+            MacSmoke.Log($"engine-probe {tag}: failed: {ex.GetType().FullName}: {ex.Message}");
+        }
     }
 
     private static void Run(string self, string mode, string? gcParams, int seconds)

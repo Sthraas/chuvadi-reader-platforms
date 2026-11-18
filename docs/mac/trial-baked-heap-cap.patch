@@ -1,0 +1,14 @@
+diff --git a/src/ChuvadiReader.Mac/ChuvadiReader.Mac.csproj b/src/ChuvadiReader.Mac/ChuvadiReader.Mac.csproj
+index a33d8161..5ef3e30f 100644
+--- a/src/ChuvadiReader.Mac/ChuvadiReader.Mac.csproj
++++ b/src/ChuvadiReader.Mac/ChuvadiReader.Mac.csproj
+@@ -167,4 +167,9 @@
+     <ProjectReference Include="..\ChuvadiReader.Platform\ChuvadiReader.Platform.csproj" />
+     <ProjectReference Include="..\ChuvadiReader.Hosting\ChuvadiReader.Hosting.csproj" />
+   </ItemGroup>
++  <!-- TRIAL ONLY (docs/mac/trial-baked-heap-cap.patch): a Mono heap cap baked into the app's start-up code. The
++       .NET for Mac start-up code sets MONO_GC_PARAMS itself (overwriting the environment), then applies these. -->
++  <ItemGroup>
++    <_BundlerEnvironmentVariables Include="MONO_GC_PARAMS" Value="major=marksweep,max-heap-size=768m" Overwrite="true" />
++  </ItemGroup>
+ </Project>

@@ -188,22 +188,6 @@ fi
 quit_app || fail "Open-panel run did not quit"
 sleep 2
 
-# D-198 / D-202 C1: the app starts its own program as a child (no UIKit) and reports what Mono does with a heap cap,
-# a deep stack and a stack overflow. One check (the child starts and answers over its pipes); the rest is a report.
-before_ips=$(ls ~/Library/Logs/DiagnosticReports 2>/dev/null | wc -l | tr -d ' ')
-LOG="$PWD/smoke-engine.log"; : > "$LOG"
-open -n --env CHUVADI_SMOKE=1 --env CHUVADI_SMOKE_ENGINE=1 --stdout "$LOG" --stderr "$LOG" -a "$APP"
-wait_for 'CHUVADI engine-probe done' 420 || fail "D-198 engine probes did not finish"
-echo "--- engine probes"; grep -E "CHUVADI engine-probe" "$LOG" | sed -E 's/^.*CHUVADI engine-probe //' | cut -c1-300
-grep -q "CHUVADI engine-probe hello: started=.* exit=0 " "$LOG" && grep -q "engine-probe hello out: PROBE echo ping-" "$LOG" \
-  && pass "D-198 the app starts its own program as a child and they talk over pipes" \
-  || fail "D-198 the app could not start its own program as a child"
-echo "--- crash reports written meanwhile: $(( $(ls ~/Library/Logs/DiagnosticReports 2>/dev/null | wc -l | tr -d ' ') - before_ips ))"
-ls -t ~/Library/Logs/DiagnosticReports 2>/dev/null | head -3
-for f in $(ls -t ~/Library/Logs/DiagnosticReports/*.ips 2>/dev/null | head -2); do cp "$f" "$PWD/engine-$(basename "$f")"; done
-quit_app || fail "engine-probe run did not quit"
-sleep 2
-
 SCRIPTS="$(cd "$(dirname "$0")" && pwd)"
 KEYS="$RUNNER_TEMP/keys"
 xcrun swiftc -O -o "$KEYS" "$SCRIPTS/keys.swift" && sudo python3 "$SCRIPTS/grant-post-event.py" "$KEYS"
@@ -588,6 +572,37 @@ else
   pass "M-03 quit without a crash report"
 fi
 grep -hE 'CHUVADI (quit|quit-window|quit-exception)' "$LOG" "$PWD/smoke-steps.log" "$PWD/smoke-open-panel.log" 2>/dev/null || true
+
+# --- D-198 / D-202 C1 (after M-03: the stack-overflow probe leaves a crash report on purpose) --------------
+# The app starts its own program as a child (engine mode, before UIKit) and reports: start time, the wire (anonymous
+# pipes and a Unix socket — the child's Console is not usable on Mac Catalyst), Mono's heap cap, stack sizes, a stack
+# overflow, a hang ended by the parent's clock. Checks: the child starts and answers over a pipe; the rest is a report.
+before_ips=$(ls "${REPORTS[@]}" 2>/dev/null | grep -c "^$EXE" || true)
+LOG="$PWD/smoke-engine.log"; : > "$LOG"
+open -n --env CHUVADI_SMOKE=1 --env CHUVADI_SMOKE_ENGINE=1 --stdout "$LOG" --stderr "$LOG" -a "$APP"
+wait_for 'CHUVADI engine-probe done' 420 || fail "D-198 engine probes did not finish"
+echo "--- engine probes"
+grep -E "CHUVADI engine-probe" "$LOG" | sed -E 's/^.*CHUVADI engine-probe //; s/[0-9-]+ [0-9:.]+ [A-Za-z.]+\[[0-9:]+\] //' | grep -vE "alloc [0-9]+MB rss=[0-9]+MB$" | cut -c1-300
+grep -qE "engine-probe wire-pipe .*PROBE pong" "$LOG" && pass "D-198 the app starts its own program as a child and they talk over pipes" \
+  || fail "D-198 the app could not start its own program as a child and talk to it over pipes"
+quit_app || fail "engine-probe run did not quit"
+sleep 12   # ReportCrash writes a few seconds after the process ends
+echo "--- crash reports written by the probes: $(( $(ls "${REPORTS[@]}" 2>/dev/null | grep -c "^$EXE" || true) - before_ips ))"
+for d in "${REPORTS[@]}"; do ls -t "$d" 2>/dev/null | grep "^$EXE" | head -2 | while read -r f; do
+  cp "$d/$f" "$PWD/engine-$f"
+  python3 - "$d/$f" <<'PYEOF'
+import json, sys
+t = open(sys.argv[1]).read().split("\n", 1)
+try:
+    r = json.loads(t[1])
+    e = r.get("exception", {}); th = r.get("threads", [])
+    crashed = next((x for x in th if x.get("triggered")), {})
+    frames = [f.get("symbol", "?") for f in crashed.get("frames", [])[:6]]
+    print("  report:", e.get("type"), e.get("signal"), "| termination:", r.get("termination", {}).get("indicator"), "| crashed thread frames:", frames)
+except Exception as x:
+    print("  report not readable:", x)
+PYEOF
+done; done
 
 echo "== ${#FAILED[@]} failed"
 for f in ${FAILED[@]+"${FAILED[@]}"}; do echo " - $f"; done
