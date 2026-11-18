@@ -927,3 +927,25 @@ On b08b0e5d (patch 31, signed off by Linux Test). Patch 32 is not merged here ye
   greyed (patch 33), so they are no longer clicked. Expected; nothing else changed in the list of steps.
 - Not checked by hand beyond the pass: the greyed redaction's reason, signatures shown as "not checked", the
   card before each page operation, Excel conditional colours.
+
+### 65. Print only through a CUPS server on this computer until the Print patch (D-205, advisory item 2i) (18 Nov)
+- **The rule.** A print server named in `CUPS_SERVER` or `client.conf` (`CupsServer.Configured()`) that is not this
+  computer is refused: `CupsServer.Refusal`. This computer means `localhost` (and `*.localhost`), 127.x.x.x and
+  `::1`, judged from the name alone (nothing is looked up). Any port is fine. A socket path or nothing named means
+  the local CUPS, as before.
+- **When.** In `PrintAsync` before the printer list is asked for and before GTK's dialog opens, so the refused
+  server is never contacted and its printers are never shown. Again in `Submit`, in case one was named while the
+  dialog was open.
+- **The message** (`PrintOutcome.Unavailable`): "This computer is set to print through the print server "<name>".
+  Until an update makes that connection secure, Chuvadi prints only to printers set up on this computer. Add the
+  printer in Settings › Printers, then print again."
+- **Where a job goes.** `CupsServer.JobUri`: always the server the printer list came from, at the queue's own
+  path (`/printers/<name>` or `/classes/<name>`); the host in the address CUPS reports for a queue is not
+  followed. Any other path is not printed to ("isn't set up as a printer").
+- **Tests.** `CupsServerRefusalTests` (this computer's names, other machines named in the message, the
+  `client.conf` chain, job addresses). Linux unit tests 98. `remote-cups-test.py` (CI step, local CUPS stopped):
+  cases 2 and 3 (`localhost:8631`) still print; new cases 4 (`CUPS_SERVER=office-printing.invalid`) and 5
+  (`client.conf` `ServerName 192.0.2.10:631`, an address that answers nothing): refused in 0.0 s, no dialog,
+  nothing sent. Full UI pass: **128/128**.
+- **Unchanged:** the local CUPS's own network printers; GTK's dialog itself (libcups) still lists a named server's
+  printers if it is opened by anything else, but Chuvadi never opens it for a refused server.
