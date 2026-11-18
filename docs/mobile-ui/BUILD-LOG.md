@@ -831,3 +831,10 @@ Evidence:
 - Patch 34 (foundation-pr 5e63202, not merged here yet) does the phone tool strip's tap-for-reason (AT-30) as my
   a6e9016 does; at the next merge I take theirs.
 - Leans accepted 18 Nov: phone Find bar over the top bar, 350 ms long-press, the redaction-page ⋮ as it is.
+- Results (hooks-16 applied): 608 tests pass, 6 skipped by Foundation (448 + 103 + 41 + 16); touch at the four
+  sizes: 532 checks pass, 0 fail (tablet 134 each: gestures 8, checks 12, pinchmarks 18, xlresize 15, cards 4,
+  encpicker 11, encnote 8, findaside 3, turned 13, closecard 6, closework 13, pageop 16, signature 7; phone 132
+  each: gestures 9, checks 11, findaside 4, encnote 5, the rest the same); box audit clean at all four. (pageop's
+  plain-file check needs a file without bookmarks or labels — `tools/PixelProof/fixtures/foot.pdf`, not rich.pdf.)
+  Desktop before (9e00fdf) / after at 1440×900 on fresh hosts: the status bar's encoding, the encoding card, the
+  mark card and the close card identical apart from the clock; mobile.js not loaded.
