@@ -204,8 +204,11 @@ html[data-shell="tablet"] .srail-view:hover { width: var(--sh-view); }
 html[data-shell="tablet"] .srail:hover .srail-h { text-align: center; padding-left: 0; }
 html[data-shell="tablet"] .srail:hover .rtext { justify-content: center; padding-left: 0; }
 
-/* Messages sit above the gesture bar, not above a status bar that isn't there. */
-html[data-shell="tablet"] .msgs { bottom: calc(14px + env(safe-area-inset-bottom)); }
+/* Messages sit above the gesture bar, not above a status bar that isn't there — and centred over the page: at
+   the bottom right they covered the side rail's last button (Save redacted copy on Protect, Save as new PDF on
+   Mark), so a tap meant for it hit the message's Dismiss. The rails on the right are 72–132 px wide. */
+html[data-shell="tablet"] .msgs { bottom: calc(14px + env(safe-area-inset-bottom)); right: auto; left: 50%; transform: translateX(-50%);
+    max-width: min(420px, calc(100vw - 2 * 150px)); align-items: center; }
 
 /* Arrange (12f "‹ 2 desks ›"): the desk counter Bench publishes on a tablet (D-46) reads "1 / 2 desks". */
 html[data-shell="tablet"] .tb-pg-box[aria-label="desk number"] + .tb-pg-total::after { content: " desks"; }

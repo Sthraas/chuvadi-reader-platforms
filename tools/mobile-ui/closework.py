@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # TESTING ONLY. D-195 on touch sizes: the three other questions asked before unsaved work is lost.
 #   * Bookmarks (closing a tab with a bookmark not saved):  Save bookmarks / Discard / Cancel
-#   * Protect   while redaction is held (D-198): the greyed tool says why on a tap; no Save redacted copy
+#   * Protect   while redaction is held (D-198): the greyed tool says why on a tap; Save redacted copy greyed, says why (B-36)
 #               (the redaction-areas question returns with redaction)
-#   * Arrange   (closing the app with pages on a desk):      Save session… / Discard / Cancel
+#   * Arrange   (closing the app with pages on a desk):      Save / Discard / Cancel (D-203)
 # For each: the answers are the ones named, each a 44 px box, the top element at its centre, inside the screen;
 # the same with the system bars' insets set (24 px top, 48 px bottom) and with the keyboard up (a shorter
 # window); Cancel keeps the work; Discard lets the close go on.
@@ -94,8 +94,10 @@ async def main():
             await look("Bookmarks", ["Save bookmarks", "Discard", "Cancel"])
             await answer("Cancel")
             report("Bookmarks: Cancel keeps the tab", await pg.locator(".closeq").count() == 0 and await has_name("closework-bookmarks"))
-            await ask_close_tab(); await answer("Discard")
-            report("Bookmarks: Discard closes the tab", await pg.locator(".closeq").count() == 0 and not await has_name("closework-bookmarks"))
+            await ask_close_tab()
+            await answer("Discard")
+            where = await pg.evaluate("[...document.querySelectorAll('body *')].filter(x => x.children.length === 0 && x.textContent.includes('closework-bookmarks') && x.getClientRects().length).map(x => x.className + ': ' + x.textContent.trim().slice(0, 80)).slice(0, 3)")
+            report("Bookmarks: Discard closes the tab", await pg.locator(".closeq").count() == 0 and not await has_name("closework-bookmarks"), where)
         else:
             report("Bookmarks: the question is there", False, "no card after Ctrl+B, Enter and Close (could not make a bookmark here)")
 
@@ -115,8 +117,17 @@ async def main():
                          inside: r.left >= 0 && r.right <= innerWidth + 0.5 && r.top >= 0 && r.bottom <= innerHeight + 0.5 }; })()""")
             report("Protect (redaction held, D-198): a tap on the greyed redaction tool says when it comes back, on screen and on top",
                    bool(note) and note["top"] and note["inside"] and "/redact" not in pg.url, note)
-            offered = await pg.evaluate("[...document.querySelectorAll('.ph-fab, .srail .rb')].some(e => /Save redacted copy/.test(e.getAttribute('aria-label') || '') && e.getBoundingClientRect().width)")
-            report("Protect (redaction held): Save redacted copy is not offered", not offered, "offered" if offered else "")
+            # B-36 (patch 34): Save redacted copy stays where it is, greyed with the same reason, and a tap says it.
+            save = await pg.evaluate("""(() => { const e = [...document.querySelectorAll('.ph-fab, .srail .rb')].find(x => /Save redacted copy/.test(x.getAttribute('aria-label') || '') && x.getBoundingClientRect().width);
+                if (!e) return null; const r = e.getBoundingClientRect(); const t = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+                return { over: t ? [t, t.parentElement, t.parentElement && t.parentElement.parentElement].filter(Boolean).map(x => x.tagName + '.' + (x.getAttribute('class') || '') + '[' + (x.getAttribute('aria-label') || '') + ']').join(' < ') : null, greyed: e.getAttribute('aria-disabled') === 'true' || e.disabled, w: Math.round(r.width), h: Math.round(r.height), top: !!t && e.contains(t), x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()""")
+            if save is None:
+                report("Protect (redaction held): Save redacted copy is not offered", True)
+            else:
+                report("Protect (redaction held, B-36): Save redacted copy is greyed, a 44 px box, on top", save["greyed"] and save["w"] >= 44 and save["h"] >= 44 and save["top"], save)
+                await pg.touchscreen.tap(save["x"], save["y"]); await pg.wait_for_timeout(900)
+                said = await pg.evaluate("[...document.querySelectorAll('body *')].some(x => x.children.length === 0 && x.textContent.includes('Redaction comes back with the next update') && x.getBoundingClientRect().width)")
+                report("Protect (redaction held, B-36): a tap on it says why and saves nothing", said and "/redact" not in pg.url, pg.url)
         else:
             report("Protect: the redaction tool shows its hold (D-198)", False, "redaction is not held here, or its tool was not found")
         await mode("Read")
@@ -128,7 +139,7 @@ async def main():
         closing = asyncio.create_task(asyncio.to_thread(post, "/__preview/close-app"))
         try:
             await pg.wait_for_selector(".closeq", timeout=15000); await pg.wait_for_timeout(700)
-            await look("Arrange", ["Save session…", "Discard", "Cancel"])
+            await look("Arrange", ["Save", "Discard", "Cancel"])   # D-203 (patch 34): Save keeps the desks, no file dialog
             await answer("Cancel"); r1 = await asyncio.wait_for(closing, 20)
             report("Arrange: Cancel stops the close", r1.get("closed") is False and await pg.locator(".closeq").count() == 0, r1)
             closing = asyncio.create_task(asyncio.to_thread(post, "/__preview/close-app"))

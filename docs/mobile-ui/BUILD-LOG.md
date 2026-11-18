@@ -838,3 +838,18 @@ Evidence:
   plain-file check needs a file without bookmarks or labels — `tools/PixelProof/fixtures/foot.pdf`, not rich.pdf.)
   Desktop before (9e00fdf) / after at 1440×900 on fresh hosts: the status bar's encoding, the encoding card, the
   mark card and the close card identical apart from the clock; mobile.js not loaded.
+
+## 18 Nov, 21:30: Foundation 5e63202 (patch 34) merged (af1b700b)
+- One conflict, `PhoneToolStrip.razor`: took Foundation's (AT-30, a greyed tool answers a tap with its reason)
+  and dropped my `OnReason` wiring in PhoneShell (a6e9016 did the same).
+- **H-30 landed in Foundation's own form (B-36):** held Redaction answers a tap (`SayRedactionHeld`); Save
+  redacted copy stays, greyed with the same reason, rather than left out. Moved to `proposal/landed/`.
+  Outstanding: `mobile-ui-hooks-17.patch` = H-31 + H-32.
+- Foundation's mouse proof `tools/PixelProof/excel-resize.js` on H-28 (desktop 1440×900, `hasTouch`): 19 / 19
+  pass, M-29 included; the workbook on disk unchanged.
+- closework.py brought up to patch 34: the Arrange close question's first answer is now "Save" (D-203, no file
+  dialog), and Save redacted copy is checked as greyed, 44 px, on top, a tap says why and saves nothing (B-36).
+- **Found and fixed (mine):** on a tablet the "Redaction comes back…" message sat bottom right, over the side
+  rail's last button, so a tap on Save redacted copy hit the message's Dismiss. My tablet rule put messages
+  there; they are now centred at the bottom over the page (the rails on the right are 72–132 px wide). Desktop
+  and phone unchanged.
