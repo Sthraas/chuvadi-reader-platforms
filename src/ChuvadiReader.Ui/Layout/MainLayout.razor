@@ -14,8 +14,6 @@
 @inject IAppStorage Storage
 @inject ShellService Shell
 @inject BenchService Bench
-@inject SessionService Sessions
-@inject ChuvadiReader.Platform.IFileWriteBack WriteBack
 @inject UserProfileService Profile
 @inject ChuvadiReader.Platform.IPlatformInfo Platform
 @inject ChuvadiReader.Platform.IPathLabels PathLabels
@@ -358,11 +356,12 @@
             }
             else
             {
-                @* D-194: Arrange's desks, changed since they were last bound to a PDF or saved in a session file. *@
-                <div class="closeq-title" id="closeq-title">Save what you arranged?</div>
+                @* D-203: Arrange's desks, changed since they were last kept. Save keeps them for the next start (no file
+                   dialog); Discard clears them; Cancel keeps the app open. *@
+                <div class="closeq-title" id="closeq-title">Keep what you arranged?</div>
                 <div class="closeq-text">
-                    @(ask.Of == 1 ? "1 desk in Arrange has pages that are neither bound to a PDF nor saved in a session. It is lost"
-                                  : $"{ask.Of} desks in Arrange have pages that are neither bound to a PDF nor saved in a session. They are lost") if you close without saving.
+                    @(ask.Of == 1 ? "1 desk in Arrange has changed." : $"{ask.Of} desks in Arrange have changed.")
+                    Save keeps your desks for the next time the app starts. Discard clears them.
                 </div>
             }
             @if (_closeAskError is { Length: > 0 } why)
@@ -372,7 +371,7 @@
             <div class="closeq-btns">
                 @if (ask.Kind == CloseKind.Arrange)
                 {
-                    <button class="fc-btn primary" @ref="_closeAskFirst" disabled="@_closeAskBusy" @onclick="() => AnswerClose(CloseAnswer.SaveAs)">Save session…</button>
+                    <button class="fc-btn primary" @ref="_closeAskFirst" disabled="@_closeAskBusy" @onclick="() => AnswerClose(CloseAnswer.Save)">Save</button>
                 }
                 else if (ask.Kind == CloseKind.Bookmarks)
                 {
@@ -559,8 +558,9 @@
             : "The file isn't on screen yet. Try again.";
     }
 
-    // ── D-194: Arrange asks at app close ────────────────────────────────────
-    /// <summary>BenchService.CloseGuard. Shows Arrange and asks Save session / Discard / Cancel.</summary>
+    // ── D-203 (was D-194): Arrange asks at app close ─────────────────────────
+    /// <summary>BenchService.CloseGuard. Shows Arrange and asks Save / Discard / Cancel. Save keeps the desks for
+    /// the next start in the app's own data, with no file dialog; Discard clears what is kept.</summary>
     private Task<bool> ConfirmArrangeCloseAsync()
     {
         var done = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -588,21 +588,23 @@
                 var answer = await _closeAnswer.Task;
 
                 if (answer == CloseAnswer.Cancel) return false;
-                if (answer == CloseAnswer.Discard) return true;   // nothing to undo: the app is closing
+                if (answer == CloseAnswer.Discard)
+                {
+                    Bench.DiscardKept();   // nothing comes back on the next start
+                    return true;
+                }
 
                 _closeAskBusy = true;
                 StateHasChanged();
-                var path = await Picker.PickSaveSessionAsync("bench-session");
-                if (string.IsNullOrEmpty(path)) continue;          // backed out of the save: ask again
                 try
                 {
-                    await Sessions.SaveSessionAsync(path, Bench.ExportSession());
-                    await WriteBack.DeliverOrThrowAsync(path);
-                    Bench.MarkAllKept();
+                    await Bench.KeepAsync();
                 }
-                catch (Exception ex)   // whatever stopped the save, the question stays up and says so
+                catch (Exception ex)   // whatever stopped the keep, the question stays up and says so
                 {
-                    _closeAskError = $"Couldn't save the session: {ex.Message}";
+                    _closeAskError = $"Couldn't keep the desks: {ex.Message}";
+                    _closeAskBusy = false;
+                    continue;
                 }
             }
 
