@@ -3,7 +3,7 @@ using ChuvadiReader.Platform;
 
 namespace ChuvadiReader.Hosting;
 
-/// <summary><see cref="IUnsavedWork"/> read from the open tabs' marks (D-190) and Arrange's desks (D-194): a host
+/// <summary><see cref="IUnsavedWork"/> read from the open tabs' marks (D-190) and Arrange's desks (D-203): a host
 /// asks this before its window closes, or before Sign out on the portal.</summary>
 public sealed class TabsUnsavedWork : IUnsavedWork, IDisposable
 {

@@ -42,6 +42,46 @@ public sealed class SessionService
         return dto;
     }
 
+    // ── desks kept for the next start (D-203) ─────────────────────────────────
+
+    private const string KeptDesksFile = "arrange-kept.json";
+
+    /// <summary>Where Arrange's desks are kept between runs: the app's own data folder (per session on the portal),
+    /// never a place the person picks. Null when the host gives no data folder.</summary>
+    public string? KeptDesksPath => _paths is null ? null : Path.Combine(_paths.AppDataFolder, KeptDesksFile);
+
+    /// <summary>D-203: the close card's Save. Written to a temporary name and then put in place, so a crash while
+    /// writing leaves the last kept desks, never half a file.</summary>
+    public async Task KeepDesksAsync(BenchSessionDto session, CancellationToken ct = default)
+    {
+        if (KeptDesksPath is not { } path) return;
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        var temp = path + ".writing";
+        await SaveSessionAsync(temp, session, ct).ConfigureAwait(false);   // the one serializer call (trimming)
+        File.Move(temp, path, overwrite: true);
+    }
+
+    /// <summary>The kept desks, or null when there are none (or the file can't be read: it is then left alone).</summary>
+    public async Task<BenchSessionDto?> LoadKeptDesksAsync(CancellationToken ct = default)
+    {
+        if (KeptDesksPath is not { } path || !File.Exists(path)) return null;
+        try
+        {
+            return await LoadSessionAsync(path, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is IOException or JsonException or InvalidDataException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>D-203: the close card's Discard, and Reset: nothing comes back on the next start.</summary>
+    public void DiscardKeptDesks()
+    {
+        if (KeptDesksPath is not { } path) return;
+        try { File.Delete(path); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+    }
+
     // ── desk templates (app-data library) ──────────────────────────────────────
 
     private const string TemplatesFile = "desk-templates.json";

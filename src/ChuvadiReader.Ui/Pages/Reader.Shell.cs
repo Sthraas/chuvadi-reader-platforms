@@ -907,6 +907,9 @@ public partial class Reader
     }
 
     // ── Protect → redaction workspace ────────────────────────────────────
+    // D-198, AT-30: where a tooltip can't be read (touch), a tap on a held redaction button says why it is greyed.
+    private void SayRedactionHeld() => Shell.Notify(LibraryHolds.RedactionBack);
+
     private async Task GoRedact(bool find)
     {
         if (LibraryHolds.RedactionHeld)
