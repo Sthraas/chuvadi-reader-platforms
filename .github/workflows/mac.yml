@@ -317,6 +317,7 @@ jobs:
             smoke-marks.log
             smoke-stall-*.log
             smoke-viewer-keys.log
+            smoke-engine.log
             *.ips
             chuvadi-logs-steps/
             chuvadi-logs-recovery/

@@ -339,6 +339,12 @@ internal static class MacSmoke
             });
         }
 
+        // D-198 proof: start this app's own program as a child and report (CHUVADI_SMOKE_ENGINE=1).
+        if (Environment.GetEnvironmentVariable("CHUVADI_SMOKE_ENGINE") == "1")
+        {
+            new Thread(EngineProbe.RunAll) { IsBackground = true, Name = "engine-probe" }.Start();
+        }
+
         // D-132 check: a warning that carries a path, a file name and a quoted secret, and (CHUVADI_SMOKE_LOGFILL=1)
         // 1.3 MB of warnings so the log must roll over. The script reads ~/Library/Logs/Chuvadi afterwards.
         var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger("ChuvadiReader.Mac.Smoke");
