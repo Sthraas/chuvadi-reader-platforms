@@ -969,3 +969,10 @@ Step 68, result: run 43899989183 (head 60171388; Foundation 4b704c8d3d32c9c21c5c
 - Test-only probe (never shipped; compiled only with `-p:ChuvadiEngineProbe=true`): `src/ChuvadiReader.Android/Platform/EngineProbe/EngineProbe.cs`. A bound service in `android:process=":engine"` answering over a hand-written Binder (ping with its stage times and memory; a pipe handed back through Binder; runaway allocation; stack overflow on a new thread and on the Binder thread), and a transparent test activity in the app's process that binds it and logs (tag ChuvadiProbe). In the engine process `MainApplication` sets up a bare MAUI app, not the Reader's. The SDK adds `mono.MonoRuntimeProvider_1` for `:engine`, so .NET starts there.
 - `manifest-check.sh` now fails if EngineProbeService or EngineProbeActivity is declared (checked: the probe build fails it, the shipped build passes).
 - CI: suite `engine` builds two Release probe .apks (as is, and with `MONO_GC_PARAMS=max-heap-size=256m`) and runs `docs/android/ci/engine_probe.py` on each.
+- Runs 44254177944 (Java-stream pipe; capped build first after boot) and 44257020519 (plain-fd pipe; capped second): all four green. Results written into `docs/android/D-198-ANDROID-HELPER-PROCESS.md` ("Measured on the emulators"). In short:
+  - first answer 0.2–0.7 s after bind (phone API 36 cold 236 ms median);
+  - engine idle PSS 45–48 MB;
+  - pipe 270–1360 MB/s on plain file descriptors;
+  - no heap cap: the low-memory killer ends 43–54 other processes (launcher and keyboard among them) before the engine;
+  - with a 256 MB cap the engine catches OutOfMemoryException (the cap applies to every process of the app);
+  - a stack overflow is a SIGSEGV that ends the engine; the app always lived.
