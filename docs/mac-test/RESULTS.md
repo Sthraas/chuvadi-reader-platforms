@@ -11,6 +11,15 @@ Runs (one each, read before the next — no retries):
 | 3 | 42494662734 | ⌘O found not to open a panel → the Open button; app stdout per launch; diagnostic exception build |
 | 4 | 42517758923 | panel path set through Accessibility (typing into the Go-to field was lossy) → documents open; timing sets skipped |
 
+## platform/mac 51c64ffc (18 Nov, D-198 probe and smoke changes only) — NOT signed off: M-29
+
+Built on `xcode-27` (macOS 27 SDK, pin as pushed, minimum macOS 14). Shared run 44273948760, full run 44279740214; macOS 26, 15, 15-Intel.
+
+- **M-29 failed on 15-Intel** in the shared run; passed on macOS 15 and 26. Tally on xcode-27 builds: 15-Intel 7 of 8, macOS 15 1 of 8, macOS 26 1 of 8.
+- **M-29 cause found on the runner** (P29 with a test-side logging patch, run 44274053905): on 15-Intel the mouse drag reaches the page as `pointerType touch`, so the patch 33 finger rule (rest 350 ms first) applies and the drag never takes the edge; on macOS 15 and 26 it arrives as `mouse` and resizes. The aim is right. Evidence and options: `evidence/M-29-pointer-log.md`. Likely cause: no `UIApplicationSupportsIndirectInputEvents` in the Mac Info.plist.
+- **M-25 not seen** (T4.0 passed on all three). **Tab keys** pass on all three.
+- Full suite clean apart from the two known macOS 26 harness items (T4.6, T4.9); Windows startup and the Chromium reference job fail on the global.json pin (harness).
+
 ## platform/mac 0383c44d (18 Nov, D-198 engine probe; Program.Main checks its first argument before UIKit) — NOT signed off: M-29
 
 Built on `xcode-27` (macOS 27 SDK, pin as pushed, minimum macOS 14). Shared run 44253384909, full run 44253497143; macOS 26, 15, 15-Intel.
