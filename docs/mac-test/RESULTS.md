@@ -11,6 +11,16 @@ Runs (one each, read before the next — no retries):
 | 3 | 42494662734 | ⌘O found not to open a panel → the Open button; app stdout per launch; diagnostic exception build |
 | 4 | 42517758923 | panel path set through Accessibility (typing into the Go-to field was lossy) → documents open; timing sets skipped |
 
+## platform/mac 0383c44d (18 Nov, D-198 engine probe; Program.Main checks its first argument before UIKit) — NOT signed off: M-29
+
+Built on `xcode-27` (macOS 27 SDK, pin as pushed, minimum macOS 14). Shared run 44253384909, full run 44253497143; macOS 26, 15, 15-Intel.
+
+- **Launch normal** on all three runners: the new check in `Program.Main` (probe switch) changes nothing for an ordinary start, Open With or several files at launch.
+- **M-29 Excel column resize: failed on 15-Intel** (moved 0 px, no "File's own sizes"); passed on macOS 15 and 26. No app change for it in this head. Tally on xcode-27 builds: **15-Intel 6 of 7 fail, macOS 15 1 of 7, macOS 26 1 of 7.**
+- **M-25 not seen** (T4.0 passed on all three in the full run; not seen in the shared run).
+- **Tab keys** pass on all three.
+- Full suite clean apart from the two known macOS 26 harness items (T4.6, T4.9). Windows startup and the Chromium reference job fail on the global.json pin (harness).
+
 ## platform/mac c5b681a5 (17 Nov, patch 33 = Reader main b193ab0) — NOT signed off: M-29
 
 Built on `xcode-27` (macOS 27 SDK, pin 10.0.403 as pushed, minimum macOS 14). Shared run 44173284605, full run 44182323548; macOS 26, 15, 15-Intel.
