@@ -853,3 +853,8 @@ Evidence:
   rail's last button, so a tap on Save redacted copy hit the message's Dismiss. My tablet rule put messages
   there; they are now centred at the bottom over the page (the rails on the right are 72–132 px wide). Desktop
   and phone unchanged.
+- Results (hooks-17 applied): 609 tests pass, 6 skipped by Foundation (449 + 103 + 41 + 16); touch at the four
+  sizes: 534 checks pass, 0 fail (tablet 135 each with closework 14; phone 132 each); box audit clean. The phone
+  runs were before the tablet-only message rule; the tablet runs after it. One closework run on the tablet host
+  crashed while it warmed up and left its tab open, which a later run read as "Discard did not close"; closed
+  the stray tab and reran clean.
