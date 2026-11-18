@@ -949,3 +949,14 @@ On b08b0e5d (patch 31, signed off by Linux Test). Patch 32 is not merged here ye
   nothing sent. Full UI pass: **128/128**.
 - **Unchanged:** the local CUPS's own network printers; GTK's dialog itself (libcups) still lists a named server's
   printers if it is opened by anything else, but Chuvadi never opens it for a refused server.
+
+### 66. Patch 34 merged (5e63202) (18 Nov)
+- **Merge of `platform/foundation-pr` 5e63202** (PR 27, Reader main c160070: Arrange keeps desks on close with
+  "Keep what you arranged?" (D-203); a greyed Save redacted copy with its reason (B-36); AT-24 page boxes never
+  squeezed; M-29): clean; shared `src` and `tests` identical to 5e63202. No Linux host change. Release build
+  `-warnaserror` clean on SDK 10.0.403. Unit tests: Reader 449 passed / 6 skipped, host kit 103, Linux 98, Web Ui 41,
+  Mobile Ui 16. Full UI pass under Xvfb: **129/129**.
+- 129, not 128: step 24 clicks each enabled Protect rail tool, and the "Redaction" section is enabled again in
+  patch 34 (only Save redacted copy stays greyed, with its reason). Expected.
+- Not checked by hand beyond the pass: "Keep what you arranged?" on closing an Arrange tab or the window, the
+  greyed Save redacted copy's reason, AT-24, M-29.
