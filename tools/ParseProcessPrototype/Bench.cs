@@ -16,13 +16,17 @@ static class Bench
         int heapMb = Opt(opts, "--heap-mb", 512);
         int limitS = Opt(opts, "--limit-s", 10);
         int pagesPerFile = Opt(opts, "--pages", 8);
+        EngineClient.JobMb = Opt(opts, "--job-mb", 0);                 // Windows: the job object's hard cap
+        EngineClient.CrashWatch = !opts.Contains("--no-crash-watch");   // to compare against the plain wait
         var pdfs = Directory.GetFiles(folder, "*.pdf").Where(p => !Path.GetFileName(p).StartsWith("bomb")).OrderBy(p => p).ToList();
         var bombs = Directory.GetFiles(folder, "bomb*.pdf").ToList();
         var docx = Directory.GetFiles(folder, "*.docx").OrderBy(p => p).ToList();
         var xlsx = Directory.GetFiles(folder, "*.xlsx").OrderBy(p => p).ToList();
 
         Console.WriteLine($"# Parse-process prototype — {RuntimeInformation.OSDescription}, {RuntimeInformation.ProcessArchitecture}, {Environment.ProcessorCount} cores, .NET {Environment.Version}");
-        Console.WriteLine($"engine: heap cap {heapMb} MB (DOTNET_GCHeapHardLimit), time limit {limitS} s per request");
+        Console.WriteLine($"engine: heap cap {heapMb} MB (DOTNET_GCHeapHardLimit), time limit {limitS} s per request" +
+            (OperatingSystem.IsWindows() ? $", job object {(EngineClient.JobMb > 0 ? EngineClient.JobMb + " MB cap" : "no memory cap")}" : "") +
+            $", crash watch {(EngineClient.CrashWatch ? "on" : "off")}");
         Console.WriteLine();
         Console.WriteLine($"## Stack sizes\napp process: {Stacks.Describe()}");
 

@@ -44,6 +44,7 @@ static class Engine
 
     public static async Task<int> RunAsync()
     {
+        if (Environment.GetEnvironmentVariable("CHVD_ENGINE_QUIET") == "1") WindowsJob.QuietCrashes();
         var input = Console.OpenStandardInput();
         var output = Console.OpenStandardOutput();
         var reader = new ChuvadiPdfReader();
@@ -103,6 +104,15 @@ sealed class EngineClient : IDisposable
 
     private EngineClient(Process p) { Process = p; _in = p.StandardInput.BaseStream; _out = p.StandardOutput.BaseStream; }
 
+    /// <summary>Windows: put each engine in a job object with this memory cap (MB; 0 none).</summary>
+    public static int JobMb;
+    /// <summary>Quiet crashes in the engine (no Windows Error Reporting round), and end it as soon as the runtime
+    /// says on stderr that it is going down ("Stack overflow", "Fatal error", "Process terminated").</summary>
+    public static bool CrashWatch = true;
+    private nint _job;
+    private volatile string? _dying;
+    private readonly ManualResetEventSlim _gone = new(false);
+
     public static EngineClient Start(int heapMb)
     {
         var self = Environment.ProcessPath!;
@@ -113,10 +123,27 @@ sealed class EngineClient : IDisposable
         psi.Environment["DOTNET_DbgEnableMiniDump"] = "0";
         psi.Environment["DOTNET_EnableCrashReport"] = "0";
         psi.Environment["DOTNET_gcServer"] = "0";
+        if (CrashWatch) psi.Environment["CHVD_ENGINE_QUIET"] = "1";
         var p = Process.Start(psi)!;
-        p.ErrorDataReceived += (_, e) => { if (e.Data is { Length: > 0 } d) LastError = d; };
+        var client = new EngineClient(p);
+        if (JobMb > 0 || CrashWatch) client._job = WindowsJob.Contain(p.Handle, JobMb);
+        // stderr is always read: an unread pipe can hold up a dying runtime that writes its whole stack there.
+        p.ErrorDataReceived += (_, e) =>
+        {
+            if (e.Data is not { Length: > 0 } d) return;
+            LastError = d;
+            if (CrashWatch && client._dying is null &&
+                (d.StartsWith("Stack overflow", StringComparison.Ordinal) || d.StartsWith("Fatal error", StringComparison.Ordinal) || d.StartsWith("Process terminated", StringComparison.Ordinal)))
+            {
+                client._dying = d;
+                try { p.Kill(entireProcessTree: true); } catch { }
+                client._gone.Set();
+            }
+        };
         p.BeginErrorReadLine();
-        return new EngineClient(p);
+        p.EnableRaisingEvents = true;
+        p.Exited += (_, _) => client._gone.Set();
+        return client;
     }
 
     public static string? LastError;
@@ -126,10 +153,16 @@ sealed class EngineClient : IDisposable
     {
         Wire.Write(_in, op, arg);
         var read = Task.Run(() => Wire.Read(_out));
-        if (!read.Wait(Limit))
+        int which = WaitHandle.WaitAny(new[] { ((IAsyncResult)read).AsyncWaitHandle, _gone.WaitHandle }, Limit);
+        if (which == WaitHandle.WaitTimeout)
         {
             try { Process.Kill(entireProcessTree: true); } catch { }
             throw new EngineGone($"passed its time limit ({Limit.TotalSeconds:0} s) and was ended");
+        }
+        if (which == 1 && !read.IsCompleted)
+        {
+            Process.WaitForExit(2000);
+            throw new EngineGone(_dying is { } why ? $"ended (the runtime said \"{why.Trim()}\"; ended at once)" : $"ended (exit code {(Process.HasExited ? Process.ExitCode : -1)})");
         }
         if (read.Result is not { } r)
         {
