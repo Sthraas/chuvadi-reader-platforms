@@ -46,12 +46,13 @@ Every bug gets fixed; I re-verify on the fixing commit and mark it here.
 | B-34 | S3 | Linux | D-194, first part: after a sign-out is held and cancelled, the lock on the session stays when the work is later saved or discarded, so the desktop still lists Chuvadi as having unsaved work until the next sign-out notice | **verified fixed ca415af** (3406c868) — the lock is taken when the mark is drawn and given up on Discard, through the portal (`Request.Close`) and through the GNOME session manager (`Uninhibit`); a new mark takes it again |
 | B-35 | S4 | Linux | D-194: when the desktop's portal accepts the `Inhibit` call but then refuses the lock (its request ends with Response 2), the app counts the lock as held and doesn't try the GNOME session manager | **verified fixed ca415af** (3406c868) — refused with no GNOME session manager: hold state 0; refused with one: the GNOME lock is taken at once (hold state 3) |
 | B-36 | S4 | **shared Ui/Core** | Patch 33 (D-198): with redaction held, Protect's rail still has "Save redacted copy", enabled. A click writes nothing and only shows "Redaction comes back with the next update." | **open** — found on 87e3dc9. Nothing is written, so no harm; it just looks usable |
+| B-37 | S3 (security) | Linux | D-205: a print-server name the app can't read (such as `192.0.2.2:631x` in `CUPS_SERVER` or `client.conf`) is taken as "this computer", but GTK's print dialog (libcups) reads it as port 631 and lists the other machine's printers | **open** — found on 52e3482. No job reached the other machine |
 | K-01 | — | Linux | GNOME close-only layout showed all three buttons (known, 7 Nov) | **verified fixed f7d0034, re-verified f3d5978** (6 layouts) |
 
 Routing (coordinator, 8 Nov): **Linux** → the Linux chat. **shared Ui/Core** → Foundation's combined patch, as exact diffs from the Linux chat or Foundation. **library** → the coordinator compiles them for Arun (library coordinator).
 | Route | Bugs |
 |---|---|
-| Linux chat | B-01, B-04, B-05, B-06, B-12, B-13, B-14, B-15, B-17, B-19, B-20, B-21, B-34, B-35 (both fixed), and the Linux stanzas of B-02 |
+| Linux chat | B-01, B-04, B-05, B-06, B-12, B-13, B-14, B-15, B-17, B-19, B-20, B-21, B-34, B-35 (both fixed), B-37 (open), and the Linux stanzas of B-02 |
 | shared Ui/Core | B-03, B-07, B-08b, B-10, B-11b, B-16, B-18, B-22, B-23, B-24, B-25, B-26, B-36, and the OFL texts next to the fonts in B-02 |
 | library | B-27 (with shared: parse/render time and memory on the CAD drawing), B-08a (Chuvadi.Docs input limits), B-09a (Chuvadi.Sheets: don't materialise to the sheet's extent), B-11a (chuvadi-pdf: rebuild the xref on a bad `startxref`) |
 B-09's "no cancel / no timeout" half is the same fix as B-08b.
@@ -1194,3 +1195,73 @@ I'd take A: the same rule patch 33 uses for Redaction itself.
 No change under `src/`, `tests/` or the packaging since 87e3dc9, so there was nothing to rebuild or re-test; the
 87e3dc9 results stand. Linux CI run 44253736500 on ecd0ee5 is green (both builds, both bench jobs). Its package,
 SHA-256 `f4abaf8b…`, is now in Arun's checklist. No new bugs; B-31 and B-36 are still open.
+
+## Linux Test — 18 Nov, build log 65 on `platform/linux` 52e3482 (D-205: print only through this computer's CUPS)
+
+d8e5f7f changes the app (`CupsPrintService.cs`, `CupsServer.cs`, new `CupsServerTests.cs`), so I rebuilt
+(`-p:UiTest=true`) and re-tested.
+
+- **The head's own test** (`tools/linux/remote-cups-test.py`, local CUPS stopped, as in CI): all 5 cases pass.
+  `localhost:8631` named in `CUPS_SERVER` or `client.conf` still prints (5 pages, job completed); another machine
+  named either way (`office-printing.invalid`, `192.0.2.10`) is refused in 0.0 s with the message naming the
+  server and Settings › Printers, no dialog, nothing sent.
+- **My probe** (`tools/t_d205.py`): a stand-in CUPS on this machine's network address, 192.0.2.2:631, which is
+  not loopback, so it counts as another machine by name. The local CUPS runs, and access logging is on for every
+  request. Nine cases:
+
+  | Name given | Refused | GTK dialog | Requests reaching the other machine |
+  |---|---|---|---|
+  | `CUPS_SERVER=192.0.2.2` (control) | yes | no | 0 |
+  | `CUPS_SERVER=print_srv.test` (underscore, via `/etc/hosts`) | yes | no | 0 |
+  | `client.conf ServerName print_srv.test` | yes | no | 0 |
+  | `CUPS_SERVER=192.0.2.2:631x` | **no** | **yes** | **51** |
+  | `client.conf ServerName 192.0.2.2:631x` | **no** | **yes** | **51** |
+  | same, then Print pressed in the dialog | no | yes | 51 while listing, **0 while printing, 0 files spooled** |
+  | `CUPS_SERVER=192.0.2.2:` | no | yes | 0 |
+  | `CUPS_SERVER=printsrv.test:ipp` | no | yes | 0 |
+  | `CUPS_SERVER=[192.0.2.2]` | no | no | 0, but the app shows a raw .NET message (below) |
+
+  → **B-37**. The job itself is safe: `Submit` matches the chosen printer against the app's own list, which here is
+  the local one, so nothing is sent to the other machine. But the dialog does contact it and shows its printers,
+  and D-205 says that must not happen.
+- **D-194, patch 32, patch 33 and regression:** the same as 87e3dc9. That covers every `t_session.py` part's hold
+  states and cards, all five `t_patch33.py` parts, bookmarks/arrange/find, pager, encoding, pinch, marks at
+  54/100/150 % with the saved files' ink positions identical, crop, final (B-24/B-08b Cancel at 10.0–10.4 s),
+  multi, drag and print (the submitted file is byte-identical to the source).
+
+  Two of my own test tools needed fixing:
+  - `t_patch32.py arrange` read the card before checking whether the app was still running. Alt+F4 with nothing
+    unsaved closes the app, which is right, and the script then broke. Fixed; it passed twice afterwards.
+  - The changed-pixel box for the text mark in `t_mark.py` is sometimes 39×11 and sometimes 267×65. It flips
+    between page 1 and page 2 from run to run on both builds: the screenshot sometimes catches the text box
+    before it commits. The mark's DOM and page positions and the saved file are the same every time.
+- Linux CI [run 44321921431](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/44321921431) on
+  52e3482 is green (x64 and arm64). Its package, SHA-256 `245e7232…`, is now in Arun's checklist.
+
+## B-37 — D-205: a print-server name the app can't read is taken as this computer, and GTK's dialog reaches the other machine (S3 security, Linux)
+
+**Steps:** `CUPS_SERVER=192.0.2.2:631x` (or `ServerName 192.0.2.2:631x` in `~/.cups/client.conf`), where
+192.0.2.2 is another machine running CUPS. Open a PDF and press Print.
+
+**Seen:** no refusal, and GTK's print dialog opens. The other machine's access log shows 51 requests while the
+dialog lists its printers, and its printer is shown. Printing from the dialog sent nothing to it: 0 requests and
+0 files spooled.
+
+**Why:** `CupsServer.ToUri` returns null for a name it can't read (the port `631x` is not a number), and null
+means "the local CUPS", so `Refusal` lets it through. libcups reads the same name with `atoi`, which gives port
+631, and that is what GTK's dialog uses. `Refusal` also returns null when the address fails `Uri.TryCreate`. With
+`[192.0.2.2]` that showed the raw message "Couldn't print: Not an absolute URI: ipp://[192.0.2.2]:631/ (Parameter
+'printerUri')". Names like `host:` and `host:ipp` also went through as local. They reached nothing on port 631
+here, but what libcups does with them is not something the app controls.
+
+**Expected:** a named server is either read as this computer's or refused. Anything that can't be read is
+refused.
+
+| Option | For | Against |
+|---|---|---|
+| A. Fail closed: a server named (not a socket path) that `ToUri` or `Uri.TryCreate` can't read is refused, with a message saying the print-server setting can't be read | Small, in `CupsServer`; covers every reading the app and libcups don't share; also replaces the raw .NET message | Someone with a typo in `client.conf` gets a refusal, though a message naming the setting points them to it |
+| B. Read the port the way libcups does (leading digits, 0 or none → 631) | The app and the dialog agree on these names | Copies libcups' parsing, which can drift with its versions; it doesn't cover the `Uri` failures |
+| C. Also set `CUPS_SERVER` for the app's own process to the server it checked (the local socket or `localhost`) before GTK's dialog opens | libcups can then never reach another machine, whatever the setting says | Changes the process environment; on its own it hides a misread setting instead of saying so |
+
+I'd take A, with C as well if the Linux chat is happy to set the variable: A gives the right message, and C makes
+sure the dialog can't reach another machine through some reading nobody has thought of.

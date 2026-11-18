@@ -93,7 +93,7 @@ try:
         close_x("rd-a.pdf"); answer("Discard"); P("  Discard on the tab -> closed:", "rd-a.pdf" not in tabs(), "| file byte-identical:", sha(fa) == before, "| hold:", a.send("session-hold"))
     if PART == "arrange":
         fa, fb, fm = fresh("ar-a.pdf", "ar-b.pdf", "ar-mark.pdf"); open_tab(fa); open_tab(fb)
-        key("alt+F4"); time.sleep(1.5); P("NOTHING UNSAVED, Alt F4 -> card:", card(), "| alive:", alive())
+        key("alt+F4"); time.sleep(1.5); up = alive(); P("NOTHING UNSAVED, Alt F4 -> card:", card() if up else None, "| alive:", up, "(closing at once is right: nothing to lose)")
         if not alive():
             a.launch(); open_tab(fa); open_tab(fb)
         desk_click(); key("3"); time.sleep(2.5)

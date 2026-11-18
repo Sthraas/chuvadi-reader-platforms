@@ -638,7 +638,7 @@ What GNOME and KDE actually show on Log Out, Restart and Power Off still needs A
 
 **Ready for Arun's check**, with the holds, B-36 and B-31 known.
 
-## Sign-off — Linux 88d3a47 (18 Nov): carried from 87e3dc9, the app is unchanged
+## Sign-off — Linux 88d3a47 (18 Nov): carried from 87e3dc9, the app is unchanged (superseded by 52e3482 below)
 
 The two commits after 87e3dc9 don't touch the app.
 - **ecd0ee5** adds a CI job for Foundation's parse-process bench. It runs only for a commit whose message holds
@@ -653,9 +653,29 @@ package builds and both bench jobs passed.
 
 **Ready for Arun's check**, with the holds, B-36 and B-31 known (as for 87e3dc9).
 
-## Arun's check — Linux 88d3a47 (app as 87e3dc9)
+## Sign-off — Linux 52e3482 (18 Nov, build log 65, D-205): ready for Arun, with B-37 to know
 
-**Get the package.** GitHub → `Sthraas/chuvadi-reader-platforms` → Actions → run **Linux** on `ecd0ee5` ([run 44253736500](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/44253736500), green; the app is the same as on 87e3dc9 and 88d3a47) → Artifacts → **linux-x64** (ARM machine: `linux-arm64`). Unzip it and use **`deb/chuvadi-reader_1.0.0~preview_amd64.deb`** — the self-contained one (37.9 MB, needs no .NET; artifacts kept until 16 Feb 2027). SHA-256 `f4abaf8bdfa676c9fb1128284ea7743824ffb058b74799542fa51c76404d837e`. (`deb-framework-dependent/` is the smaller variant that pulls in Microsoft's .NET runtime package.) Or with the CLI: `gh run download 44253736500 -R Sthraas/chuvadi-reader-platforms -n linux-x64`.
+d8e5f7f (D-205, advisory item 2i): Chuvadi prints only through a CUPS server on this computer. A print server on
+another machine, named in `CUPS_SERVER` or `client.conf`, is refused before anything is sent to it and before
+GTK's dialog opens.
+- The head's `remote-cups-test.py` passes all 5 cases: `localhost:8631` still prints, and another machine named
+  either way is refused in 0.0 s, with no dialog and nothing sent.
+- My probe (`tools/t_d205.py`, with a stand-in CUPS on this machine's non-loopback address) confirms the refusal
+  for plain names, IP addresses and underscore names. **B-37 (S3, Linux):** a name the app can't read, such as
+  `192.0.2.2:631x`, is taken as this computer, while GTK's dialog (libcups) reads it as port 631 and lists the
+  other machine's printers (51 requests). No job reached it. With `[192.0.2.2]` the app shows a raw .NET message.
+  Options are in `BUGS.md`; I'd take A (fail closed).
+- Regression is the same as 87e3dc9: D-194, patch 32 and patch 33 holds, marks, pinch, pager, encoding, crop,
+  final, multi, drag and print.
+- [Linux CI run 44321921431](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/44321921431) on
+  52e3482 is green (x64 and arm64), and Arun's checklist below uses its package.
+
+**Ready for Arun's check**, with the holds, B-31, B-36 and B-37 known. B-37 only matters on a computer set to print
+through another machine's print server.
+
+## Arun's check — Linux 52e3482
+
+**Get the package.** GitHub → `Sthraas/chuvadi-reader-platforms` → Actions → run **Linux** on `52e3482` ([run 44321921431](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/44321921431), green) → Artifacts → **linux-x64** (ARM machine: `linux-arm64`). Unzip it and use **`deb/chuvadi-reader_1.0.0~preview_amd64.deb`** — the self-contained one (38.0 MB, needs no .NET; artifacts kept until 16 Feb 2027). SHA-256 `245e72320cf4300b81467bf584c03f8f430d4f03164599bc0030cb61d6179c8c`. (`deb-framework-dependent/` is the smaller variant that pulls in Microsoft's .NET runtime package.) Or with the CLI: `gh run download 44321921431 -R Sthraas/chuvadi-reader-platforms -n linux-x64`.
 
 **Install** (Ubuntu 24.04 or 26.04, desktop):
 ```
@@ -670,7 +690,7 @@ It appears in the app grid as **Chuvadi Reader**; it also installs and loads its
 2. **Open a PDF by double-clicking it in Files**, then select **three files** → right-click → Open With → Chuvadi: each becomes its own tab in the one window.
 3. **Drag two files from Files onto the window** — two tabs.
 4. **The KDMC CAD drawing**: open it (the sheets should now show landscape, the right way up), page through all 5 sheets (try typing a sheet number, and jumping ahead then back), zoom in and out, close it. Note the time each sheet takes to draw, and the memory in System Monitor before opening, with 5 sheets, and just after closing. Here, on 2 CPUs with no GPU: sheet 1 takes ~6 s and each new sheet 4–6 s (B-27, known); the app goes from ~250 MB to ~0.9–1 GB with 5 sheets and back to ~270 MB on closing. Your real-hardware numbers are the useful ones. The window should stay responsive while it draws, and every sheet should draw and stay sharp. The rare fresh-open stall (a drawing stuck at 115 % with a tall blank page) is fixed on this head; if you ever see it, note what you did just before.
-5. **Print to your real printer**: a mixed portrait/landscape file, 2 copies; check it's crisp (vector), and that a file whose permissions forbid printing is refused — then works when opened with its owner password.
+5. **Print to your real printer**: a mixed portrait/landscape file, 2 copies; check it's crisp (vector), and that a file whose permissions forbid printing is refused — then works when opened with its owner password. **New in build 65 (D-205):** Chuvadi prints only through this computer's own CUPS. If your computer is set to print through a print server on another machine, Print now says so and doesn't print; add the printer in Settings › Printers instead. Printers your own CUPS has found on the network still work.
 6. **A password-protected PDF**: wrong password, then the right one.
 7. **Mark → annotate → Save as.** **Protect (patch 33):** Redaction is greyed and says on hover that it comes back with the next update; Stamp, Watermark, Flatten, Password and signing are there as before. Open a **signed PDF**: it should show who signed and when, with "not checked in this version" and no valid / not valid verdict. **Merge, Split and Arrange's Bind** should each ask first ("The new file will not have everything") and name what each file loses, such as bookmarks or page labels, with a line about layers if the file has them. **New in patch 29:** draw marks on two files and switch tabs: each tab should keep its own marks. Then close a tab with unsaved marks, and try Close all tabs and the window's close button: each should ask Save / Save as… / Discard / Cancel, and Cancel should keep everything. A tab with no marks should close without asking. **New in build 62:** with a mark unsaved, choose **Log Out** from the desktop's menu, then try **Restart** and **Power Off**: the desktop should hold it and say that Chuvadi has work that is not saved, and the Chuvadi window should ask Save / Save as… / Discard / Cancel. Cancel should keep the mark; Save should write the file and let the sign-out go on. Please note what your desktop shows and whether it waits: I can't run a desktop session here. The desktop should hold the sign-out from the moment you draw the mark, and not after you save or discard it. **New in patch 32:** add a bookmark (Ctrl B), then close the tab: it should ask Save bookmarks / Discard / Cancel. Put pages on a desk in Arrange, then close the app: it should ask Save session… / Discard / Cancel before anything else.
 8. **Word and Excel files** of your own — text should read exactly as in the file (spaces, spelling, case untouched). The Excel grid now follows the file: column widths, row heights, merged cells, borders and fills, hidden rows and columns, and hidden sheets listed dimmed. Numbers show in the file's own format; hover or click a cell for the stored value. Two known gaps: a time with no date shows `########` with a wrong stored value (B-31), and built-in short dates show as mm-dd-yy, not your system's format. **New in patch 29:** drag the edge of a column letter or a row number to resize it; this is for viewing only and never changes the file. Also try the sheet arrows and number box in the title bar: they should change the sheet, the same as the sheet tabs at the bottom. **Text files (new in patch 31):** the status bar shows the encoding the file was read as; click it to re-read the file as Automatic, UTF-8, Windows-1252 or UTF-16. This only changes how the file is read and never changes the file. **Patch 33:** a workbook with conditional formatting shows its values and the cells' own colours, but not the rule colours, data bars or icons; above the sheet it says "Conditional colours return with the next update".
