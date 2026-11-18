@@ -976,3 +976,22 @@ Step 68, result: run 43899989183 (head 60171388; Foundation 4b704c8d3d32c9c21c5c
   - no heap cap: the low-memory killer ends 43–54 other processes (launcher and keyboard among them) before the engine;
   - with a 256 MB cap the engine catches OutOfMemoryException (the cap applies to every process of the app);
   - a stack overflow is a SIGSEGV that ends the engine; the app always lived.
+
+## Step 73 — D-205: text, Markdown and HTML in Open with and Share; Back on a question is Cancel (P-10) — coordinator, 18 Nov 19:15 IST
+- **Open with and Share** (`Platforms/Android/MainActivity.cs`) now list text/plain, text/markdown, text/x-markdown and text/html
+  besides PDF, Word and Excel (constants in `Platform/DocumentTypes.cs`). The import path already took .txt, .md and .html.
+- **Shared text with no file:** listing text/plain in Share means Android offers Chuvadi for shared links and snippets too,
+  which carry no file. `DocumentImport` now says so on screen ("Chuvadi opens shared files. Text or a link shared on its own
+  isn't a file, so there is nothing to open."); before, it opened nothing silently.
+- **`manifest-check.sh`:** each of the seven types must be in both filters.
+- **Back = Cancel** needs the shared Ui, so it is proposal P-10 (MainLayout answers `BackRequested` while the close
+  question or the page-operation question is on screen). It is pending in `docs/android/proposal/`, so compose.sh
+  applies it until Foundation takes it. No host change.
+- **Device checks (`platform_checks.py`):**
+  - Open with lists Chuvadi for a text file, and the 1252 .txt now opens through plain Open with (the explicit-component
+    workaround is gone);
+  - .md and .html by Open with, .md by Share;
+  - shared text gets the message and opens no tab;
+  - Back on the close question is Cancel, and the next Back asks again.
+- **Sandbox** (9e00fdf + Mobile UI df420b5 + P-10): Debug and Release 0 warnings; manifest check passes (7 types × 2
+  filters, no permissions); Core 448 (+6), Hosting 103, MobileUi 16, WebUi 41.

@@ -38,6 +38,14 @@ public sealed class DocumentImport
 
         if (uri is null)
         {
+            // D-205: Share lists text types, so Android offers Chuvadi for shared links and snippets too, which carry
+            // no file. Say so rather than open nothing.
+            if (intent.Action == Intent.ActionSend && !string.IsNullOrEmpty(intent.GetStringExtra(Intent.ExtraText)))
+            {
+                global::Android.Util.Log.Info("Chuvadi", "Share: text without a file");
+                Tell(SharedTextMessage);
+            }
+
             return;
         }
 
@@ -88,6 +96,9 @@ public sealed class DocumentImport
             });
         });
     }
+
+    /// <summary>What a share of text or a link (no file) is answered with.</summary>
+    public const string SharedTextMessage = "Chuvadi opens shared files. Text or a link shared on its own isn't a file, so there is nothing to open.";
 
     private void Tell(string text) => MainThread.BeginInvokeOnMainThread(() => _shell.Notify(text, isError: true));
 }

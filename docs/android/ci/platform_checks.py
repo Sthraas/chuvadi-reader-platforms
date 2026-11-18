@@ -15,8 +15,8 @@ app produced. Screenshots and raw evidence go to the results folder.
      a custom range (2-3) gives a 2-page file; a PDF whose permissions forbid printing is locked (L-8)
   7. Back: closes an open card; on the phone closes a sheet (key and edge gesture); otherwise steps
      back through the app's screens and finally leaves the app; relaunch → same process, same tab
-  7f. Encoding picker (D-191) by touch: a Windows-1252 .txt, Document menu → Text encoding…, UTF-8,
-     Automatic, Back closes the card
+  7f. Encoding picker (D-191) by touch: a Windows-1252 .txt by Open with, Document menu → Text encoding…, UTF-8,
+     Automatic, Back closes the card; D-205: .md and .html by Open with, .md by Share, shared text answered in words
   8. Split screen → the app re-lays out to the half window, same process, no sideways overflow;
      back to full screen
 Writes platform.json; exits 1 if any check fails.
@@ -929,6 +929,15 @@ shot("p11b-close-question")
 check("the last Back with unsaved marks asks first, and the app stays (D-190)",
       drew and bool(q1) and resumed() == PKG and pid() == pid_mark, {"question": q1, "resumed": resumed(), "page": pg})
 if q1:
+    # D-205: Back while the question is on screen is Cancel (P-10): the question goes, the app and the marks stay.
+    key("KEYCODE_BACK")
+    time.sleep(1.5)
+    shot("p11b2-back-on-question")
+    check("Back on the close question is Cancel: the question goes, the app stays with the marks (D-205)",
+          resumed() == PKG and not closeq() and pid() == pid_mark, {"resumed": resumed(), "question": closeq()})
+    q1 = back_until_question()
+    check("…and the next Back that would leave asks again (D-205)", bool(q1) and resumed() == PKG, {"question": q1})
+if q1:
     tap_el(".closeq button", "Cancel")
     time.sleep(1.5)
     check("Cancel keeps the app open with the marks (D-190)", resumed() == PKG and not closeq(), {"resumed": resumed(), "question": closeq()})
@@ -951,17 +960,18 @@ launch()
 wait_for(lambda s: s.get("route") is not None, 30, "the app again")
 
 
-# ── 7f. D-191: the encoding picker for a text file, by touch ────────────────
-# A Windows-1252 .txt (accented letters and a euro sign). Open with lists only PDF, Word and Excel on
-# Android, so the file goes to the activity by name (as the in-app picker's result would arrive).
+# ── 7f. D-191: the encoding picker for a text file, by touch; D-205: text files by Open with and Share ──
+# A Windows-1252 .txt (accented letters and a euro sign), sent with Open with as a file manager would (D-205: the
+# filter now lists text/plain; before, Android resolved nothing for it).
 ENC_TXT, ENC_LINE = "chuvadi-1252.txt", "Café crème — €4.50"
 with open(os.path.join(OUT, ENC_TXT), "wb") as f:
     f.write(("\n".join([ENC_LINE, "Déjà vu à la française.", "Naïve façade, Zoë's reçu."]) + "\n").encode("cp1252"))
 adb("push", os.path.join(OUT, ENC_TXT), f"/sdcard/Download/{ENC_TXT}")
 enc_uri = media_uri(ENC_TXT)
-comp = (adb("shell", "cmd", "package", "resolve-activity", "--brief", "-c", "android.intent.category.LAUNCHER", PKG)
-        .strip().splitlines() or [""])[-1]
-am_as_shell("start", "-n", comp, "-a", "android.intent.action.VIEW", "-d", str(enc_uri), "-t", "text/plain",
+resolved = adb("shell", "cmd", "package", "query-activities", "--brief", "-a", "android.intent.action.VIEW",
+               "-d", str(enc_uri), "-t", "text/plain")
+check("Open with lists Chuvadi for a text file (D-205)", PKG in resolved, {"resolved": resolved.strip()[-200:]})
+am_as_shell("start", "-a", "android.intent.action.VIEW", "-d", str(enc_uri), "-t", "text/plain", "-p", PKG,
             "--grant-read-uri-permission")
 
 VIEWER_JS = "(document.querySelector('.rviewer')?.innerText || '').slice(0, 400)"
@@ -996,7 +1006,7 @@ def wait_text(pred, seconds, what):
 
 t0 = wait_text(lambda t: ENC_LINE in t, 45, "the 1252 text file")
 shot("p11d-text-file")
-check("a Windows-1252 text file reads right automatically (D-191)", ENC_LINE in t0, {"uri": enc_uri, "component": comp, "text": t0[:120]})
+check("a Windows-1252 text file opened with Open with reads right automatically (D-191, D-205)", ENC_LINE in t0, {"uri": enc_uri, "text": t0[:120]})
 
 if phone():
     for _ in range(2):
@@ -1038,6 +1048,47 @@ except SystemExit:
     enc_open = None
 check("Back closes the encoding card and stays in the app", enc_open is False and resumed() == PKG,
       {"open": enc_open, "resumed": resumed()})
+
+# D-205: Markdown and HTML by Open with, Markdown by Share, and a share of plain text (no file) said in words.
+MD, HTML, SHARE_MD = "chuvadi-notes.md", "chuvadi-page.html", "chuvadi-shared.md"
+for name, body in ((MD, "# Chuvadi notes\n\nA *Markdown* file.\n"), (HTML, "<!doctype html><title>Chuvadi page</title><h1>Chuvadi page</h1><p>An HTML file.</p>\n"),
+                   (SHARE_MD, "# Shared notes\n\nSent with Share.\n")):
+    with open(os.path.join(OUT, name), "w", encoding="utf-8") as f:
+        f.write(body)
+    adb("push", os.path.join(OUT, name), f"/sdcard/Download/{name}")
+for name, mime in ((MD, "text/markdown"), (HTML, "text/html")):
+    u = media_uri(name)
+    tabs0 = safe_state().get("tabs") or 0
+    am_as_shell("start", "-a", "android.intent.action.VIEW", "-d", str(u), "-t", mime, "-p", PKG, "--grant-read-uri-permission")
+    st = wait_for(lambda s, n=name: s.get("tab") == n, 45, f"{name} to open")
+    shot(f"p11h-{name}")
+    check(f"Open with opens {name} ({mime}) in a new tab (D-205)", st.get("tab") == name and (st.get("tabs") or 0) == tabs0 + 1,
+          {"uri": u, "tab": st.get("tab"), "tabs": [tabs0, st.get("tabs")]})
+u = media_uri(SHARE_MD)
+tabs0 = safe_state().get("tabs") or 0
+am_as_shell("start", "-a", "android.intent.action.SEND", "-t", "text/markdown", "-d", str(u),
+            "--eu", "android.intent.extra.STREAM", str(u), "-p", PKG, "--grant-read-uri-permission")
+st = wait_for(lambda s: s.get("tab") == SHARE_MD, 45, f"{SHARE_MD} to open")
+shot("p11i-shared-md")
+check("Share to Chuvadi opens a Markdown file in a new tab (D-205)", st.get("tab") == SHARE_MD and (st.get("tabs") or 0) == tabs0 + 1,
+      {"tab": st.get("tab"), "tabs": [tabs0, st.get("tabs")]})
+tabs0 = safe_state().get("tabs") or 0
+am_as_shell("start", "-a", "android.intent.action.SEND", "-t", "text/plain", "--es", "android.intent.extra.TEXT",
+            "https://example.org/a-link", "-p", PKG)
+SHARED_TEXT_MSG = "Chuvadi opens shared files."
+msg = None
+for _ in range(15):
+    time.sleep(1)
+    try:
+        msg = cdp.evaluate("[...document.querySelectorAll('.msg .msg-t')].map(e => e.textContent).join(' | ')")
+    except SystemExit:
+        msg = None
+    if msg and SHARED_TEXT_MSG in msg:
+        break
+shot("p11j-shared-text")
+check("sharing a link or text (no file) says Chuvadi opens files, and opens no tab (D-205)",
+      bool(msg) and SHARED_TEXT_MSG in msg and (safe_state().get("tabs") or 0) == tabs0 and resumed() == PKG,
+      {"message": msg, "tabs": [tabs0, safe_state().get("tabs")]})
 
 
 # ── 8. Split screen ──────────────────────────────────────────────────────────

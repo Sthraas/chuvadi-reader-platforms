@@ -24,17 +24,20 @@ namespace ChuvadiReader.Android;
     ConfigurationChanges = ConfigChanges.ScreenSize | ConfigChanges.Orientation | ConfigChanges.UiMode
                          | ConfigChanges.ScreenLayout | ConfigChanges.SmallestScreenSize | ConfigChanges.Density
                          | ConfigChanges.Keyboard | ConfigChanges.KeyboardHidden | ConfigChanges.Navigation)]
-// Open with… (file managers, mail, browsers' downloads).
+// Open with… (file managers, mail, browsers' downloads). D-205: text, Markdown and HTML too, as the in-app picker.
 [IntentFilter(
     new[] { Intent.ActionView },
     Categories = new[] { Intent.CategoryDefault, Intent.CategoryBrowsable },
     DataSchemes = new[] { "content" },
-    DataMimeTypes = new[] { DocumentTypes.Pdf, DocumentTypes.Docx, DocumentTypes.Xlsx })]
-// Share to Chuvadi.
+    DataMimeTypes = new[] { DocumentTypes.Pdf, DocumentTypes.Docx, DocumentTypes.Xlsx,
+                            DocumentTypes.Text, DocumentTypes.Markdown, DocumentTypes.MarkdownX, DocumentTypes.Html })]
+// Share to Chuvadi (D-205: text, Markdown and HTML files too; Android then also lists Chuvadi for shared links and text,
+// which DocumentImport answers in words).
 [IntentFilter(
     new[] { Intent.ActionSend },
     Categories = new[] { Intent.CategoryDefault },
-    DataMimeTypes = new[] { DocumentTypes.Pdf, DocumentTypes.Docx, DocumentTypes.Xlsx })]
+    DataMimeTypes = new[] { DocumentTypes.Pdf, DocumentTypes.Docx, DocumentTypes.Xlsx,
+                            DocumentTypes.Text, DocumentTypes.Markdown, DocumentTypes.MarkdownX, DocumentTypes.Html })]
 public sealed class MainActivity : MauiAppCompatActivity
 {
     private BackCallback? _back;

@@ -193,3 +193,34 @@ markup; it catches all five old lines and none of the new ones. Not an API chang
 
 **Verified (sandbox):** on 07ed3ca + Mobile UI a1dfb40 + this patch: Platforms solution `-warnaserror` 0 warnings;
 Hosting 92, MobileUi 16, WebUi 41 pass; Android Debug 0 warnings.
+
+## P-10 Back while a question is on screen is Cancel (D-205) — **decided by Arun (D-205); pending, for Foundation**
+Patch: [`proposal/P-10-back-cancels-question.patch`](proposal/P-10-back-cancels-question.patch). Written against
+platform/foundation-pr **5e63202** (patch 34) and also applies to 9e00fdf (patch 33). One file,
+`src/ChuvadiReader.Ui/Layout/MainLayout.razor`, +22 −0.
+
+Today, Android's Back while the close question is showing does nothing. The question stays, and the host sees that one
+is already asked. The Ui already treats Escape there as Cancel. The patch:
+- injects `IAppLifecycle`;
+- subscribes `OnBackOnQuestion` to `BackRequested` in `OnInitialized`, before the phone and tablet shells subscribe, so
+  a question is answered first; and unsubscribes in `DisposeAsync`.
+
+`OnBackOnQuestion`:
+- **Close question on screen** (`_closeAsk`): answers Cancel, unless a save is running (`_closeAskBusy`). Either way it
+  returns true, so the screen never moves under the question.
+- **Page-operation question on screen** (`_pageOpAsk`, patch 33): answers "don't go on", the same as Escape.
+- **Otherwise:** returns false, so nothing changes.
+
+Hosts without Back never raise the event, so desktops and the web are unchanged.
+
+If Foundation wants Back to cancel only the close question, drop the `_pageOpAsk` block. I recommend keeping it: the
+same reason applies, and Escape already does it.
+
+No API change: one more use of the existing `IAppLifecycle.BackRequested` seam. The Android host needs no change: its
+D-190 path already stays in the app when `ConfirmCloseAsync` returns false.
+
+**Verified:**
+- Sandbox, on 9e00fdf + Mobile UI df420b5 + this patch: Android Debug and Release `-warnaserror` 0 warnings; Core 448
+  (+6 skipped), Hosting 103, MobileUi 16, WebUi 41 pass.
+- On device: `platform_checks.py` 7e, "Back on the close question is Cancel" and "…the next Back asks again"
+  (see the build log for the run).

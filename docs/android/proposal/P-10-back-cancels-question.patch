@@ -1,0 +1,54 @@
+diff --git a/src/ChuvadiReader.Ui/Layout/MainLayout.razor b/src/ChuvadiReader.Ui/Layout/MainLayout.razor
+index 257ac7ac..841dd97a 100644
+--- a/src/ChuvadiReader.Ui/Layout/MainLayout.razor
++++ b/src/ChuvadiReader.Ui/Layout/MainLayout.razor
+@@ -17,6 +17,7 @@
+ @inject UserProfileService Profile
+ @inject ChuvadiReader.Platform.IPlatformInfo Platform
+ @inject ChuvadiReader.Platform.IPathLabels PathLabels
++@inject ChuvadiReader.Platform.IAppLifecycle Life
+ 
+ @*
+     D-10 shell. One thin 40 px top bar (wordmark · tabs · ‹ n / N › · Document ▾ · Ctrl K ·
+@@ -694,6 +695,25 @@
+         if (e.Key == "Escape" && !_closeAskBusy) AnswerClose(CloseAnswer.Cancel);
+     }
+ 
++    // D-205: Android's Back (button or gesture) while a question is on screen is Cancel, as Escape is. It is
++    // consumed even while a save runs, so the screen never moves under the question. Hosts without Back never raise it.
++    private bool OnBackOnQuestion()
++    {
++        if (_closeAsk is not null)
++        {
++            if (!_closeAskBusy) _ = InvokeAsync(() => AnswerClose(CloseAnswer.Cancel));
++            return true;
++        }
++
++        if (_pageOpAsk is not null)
++        {
++            _ = InvokeAsync(() => AnswerPageOp(false));
++            return true;
++        }
++
++        return false;
++    }
++
+     // D-191: one status-bar button the page in view owns (the Reader's encoding button).
+     private readonly StatusBarSlot _statusSlot = new();
+ 
+@@ -707,6 +727,7 @@
+         Tabs.CloseGuard = ConfirmCloseAsync;
+         Bench.CloseGuard = ConfirmArrangeCloseAsync;
+         Shell.PageOperationAskHandler = AskAboutPageOpAsync;
++        Life.BackRequested += OnBackOnQuestion;   // subscribed before the shells', so a question is answered first
+         Theme.Changed += OnThemeChanged;
+         Win.StateChanged += OnWinChanged;
+         Tabs.Changed += OnTabsChanged;
+@@ -1240,6 +1261,7 @@
+         if (Bench.CloseGuard == ConfirmArrangeCloseAsync) Bench.CloseGuard = null;
+         _closeAnswer?.TrySetResult(CloseAnswer.Cancel);
+         if (Shell.PageOperationAskHandler == AskAboutPageOpAsync) Shell.PageOperationAskHandler = null;
++        Life.BackRequested -= OnBackOnQuestion;
+         _pageOpAnswer?.TrySetResult(false);
+         Theme.Changed -= OnThemeChanged;
+         Win.StateChanged -= OnWinChanged;

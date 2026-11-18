@@ -24,13 +24,22 @@ for name in WebAuthenticatorIntermediateActivity '\.IntermediateActivity' micros
 done
 
 # Must stay: our own file provider (Share / clipboard), the main activity with Open-with and Share filters.
-for need in 'chuvadi.reader.SharedFileProvider' 'MainActivity' 'android.intent.action.VIEW' 'android.intent.action.SEND' \
-            'application/pdf' 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' \
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'; do
+for need in 'chuvadi.reader.SharedFileProvider' 'MainActivity' 'android.intent.action.VIEW' 'android.intent.action.SEND'; do
     if grep -Fq "$need" <<<"$TREE"; then
         echo "PASS declared: $need"
     else
         echo "FAIL missing: $need"; fail=1
+    fi
+done
+
+# Each type the app opens is in both filters, Open with (VIEW) and Share (SEND): D-205 added text, Markdown and HTML.
+for type in application/pdf application/vnd.openxmlformats-officedocument.wordprocessingml.document \
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet text/plain text/markdown text/x-markdown text/html; do
+    n="$(grep -cF "mimeType(0x01010026)=\"$type\"" <<<"$TREE" || true)"
+    if [ "$n" = 2 ]; then
+        echo "PASS in Open with and Share: $type"
+    else
+        echo "FAIL $type in $n of the 2 filters (Open with, Share)"; fail=1
     fi
 done
 
