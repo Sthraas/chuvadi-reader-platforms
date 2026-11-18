@@ -2032,6 +2032,70 @@ def m14():
 
 
 
+def m29_lines(tag):
+    t = axdump(tag)
+    out = []
+    for l in t.splitlines():
+        m = re.search(r'"(M29 \d+ [^"]*)"', l)
+        if m and m.group(1) not in out:
+            out.append(m.group(1))
+    return out
+
+
+@case("M-29 evidence: which mouse events reach the Excel sheet (test-side logging patch)")
+def m29_probe():
+    """Option 2 (coordinator, 18 Nov): needs the app built with tests/mac/patches/m29-pointer-log.patch."""
+    for it in range(1, A.runs + 1):
+        reset_state({"theme": "light"})
+        launch(settle=4)
+        open_doc(f"{FX}/formats.xlsx", settle=6)
+        t0 = axdump(f"m29-{it}-0")
+        def cx(t, letter):
+            m = re.search(r'AXStaticText desc="%s" @(-?\d+),(-?\d+) (\d+)x(\d+)' % letter, t)
+            return (int(m.group(1)), int(m.group(2)), int(m.group(3))) if m else None
+        a, b = cx(t0, "A"), cx(t0, "B")
+        ev = {"A": a, "B": b, "attached": [l for l in m29_lines(f"m29-{it}-attach") if "attached" in l][:2], "tries": []}
+        if not (a and b):
+            record(f"M-29 evidence run {it}", "fail", "column letters not found", **ev)
+            quit_app(); continue
+        mid = (a[0] + a[2] / 2 + b[0] + b[2] / 2) / 2   # halfway between the letters' centres
+        y = a[1] + 8
+        seen = set()
+        def attempt(label, x):
+            before = cx(axdump(f"m29-{it}-{label}-pre"), "B")
+            drive("drag", round(x), y, round(x) + 60, y)
+            time.sleep(1.5)
+            tt = axdump(f"m29-{it}-{label}-post")
+            after = cx(tt, "B")
+            lines = [l for l in m29_lines(f"m29-{it}-{label}-log") if l not in seen]
+            seen.update(lines)
+            moved = (after[0] - before[0]) if (after and before) else None
+            r = {"label": label, "x": round(x), "y": y, "moved_px": moved, "log": lines[-14:]}
+            ev["tries"].append(r)
+            if moved:
+                press("File's own sizes", role="AXButton"); time.sleep(1.5)
+            return r
+        r0 = attempt("p29-aim(+4)", mid + 4)
+        for off in (0, -3, 3):
+            attempt(f"mid{off:+d}", mid + off)
+        # exact edge from the app's own numbers: screen x of the edge = drag x - (clientX - edge)
+        exact = None
+        for r in ev["tries"]:
+            for l in r["log"]:
+                m = re.search(r'pointerdown .*hdr=(\d+) .*dFar=(-?[\d.]+) dNear=(-?[\d.]+)', l)
+                if m and exact is None:
+                    exact = r["x"] - float(m.group(2)) if m.group(1) == "1" else r["x"] - float(m.group(3))
+        ev["exact_edge_screen_x"] = exact
+        if exact is not None:
+            attempt("exact", exact)
+        ev["shot"] = shot(f"m29-{it}-end")
+        moved_any = [r["label"] for r in ev["tries"] if r["moved_px"]]
+        got_down = any("pointerdown" in l for r in ev["tries"] for l in r["log"])
+        record(f"M-29 evidence run {it}", "pass" if r0["moved_px"] else "fail",
+               f"P29 aim moved={r0['moved_px']}; resized on: {moved_any or 'none'}; pointerdown logged={got_down}; exact edge x={exact}", **ev)
+        quit_app()
+
+
 def main():
     if A.suite == "pw":
         t4_6()
@@ -2042,6 +2106,9 @@ def main():
         return
     if A.suite == "p29":
         p29()
+        return
+    if A.suite == "m29":
+        m29_probe()
         return
     if A.suite == "shared":
         m27()

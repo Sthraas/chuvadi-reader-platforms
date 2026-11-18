@@ -1,0 +1,48 @@
+diff --git a/src/ChuvadiReader.Ui/wwwroot/js/viewers.js b/src/ChuvadiReader.Ui/wwwroot/js/viewers.js
+index cd49c920..71f5f4c1 100644
+--- a/src/ChuvadiReader.Ui/wwwroot/js/viewers.js
++++ b/src/ChuvadiReader.Ui/wwwroot/js/viewers.js
+@@ -231,6 +231,7 @@ export function gridResize(el, dotnetRef) {
+         if (d.line) d.line.remove();
+         el.classList.remove('xv-resizing');
+         try { el.releasePointerCapture(d.id); } catch { }
++        try { m29(`finish commit=${commit} moved=${d.moved} col=${d.column} idx=${d.index}`); } catch { }
+         if (commit && d.moved) st.dotnet.invokeMethodAsync('OnGridResize', d.column, d.index, sizeNow(d, e)).catch(() => { });
+     };
+ 
+@@ -246,6 +247,35 @@ export function gridResize(el, dotnetRef) {
+         el.classList.add('xv-resizing');
+     };
+ 
++    // ── TEST-SIDE ONLY (Mac Test M-29 evidence, never shipped): log which pointer/mouse events reach the sheet ──
++    const m29box = (() => {
++        let b = document.getElementById('chvd-m29-log');
++        if (!b) {
++            b = document.createElement('div'); b.id = 'chvd-m29-log';
++            b.style.cssText = 'position:fixed;left:0;bottom:0;width:600px;max-height:260px;overflow:hidden;z-index:99999;font:9px monospace;background:#ffd;color:#000;pointer-events:none';
++            document.body.appendChild(b);
++        }
++        return b;
++    })();
++    let m29n = 0;
++    const m29 = (msg) => { const d = document.createElement('div'); d.textContent = 'M29 ' + (++m29n) + ' ' + msg; m29box.appendChild(d); while (m29box.childNodes.length > 24) m29box.removeChild(m29box.firstChild); };
++    const m29ev = (where) => (e) => {
++        if (e.type === 'pointermove' || e.type === 'mousemove') { if (!(e.buttons & 1)) return; if ((e.timeStamp | 0) % 4) return; }
++        const t = e.target && e.target.className ? String(e.target.className).slice(0, 24) : (e.target && e.target.nodeName);
++        let extra = '';
++        if (e.type === 'pointerdown') {
++            const hdr = e.target && e.target.closest ? e.target.closest('.xv-colhdr, .xv-rowhdr') : null;
++            if (hdr) { const r = screenRect(hdr); const g = hdr.getBoundingClientRect(); extra = ` hdr=${hdr.getAttribute('data-c') || 'r' + hdr.getAttribute('data-r')} sr=${r.left.toFixed(1)}..${(r.left + r.width).toFixed(1)} gbcr=${g.left.toFixed(1)}..${g.right.toFixed(1)} dFar=${(e.clientX - (r.left + r.width)).toFixed(1)} dNear=${(e.clientX - r.left).toFixed(1)} unz=${chvdUnzoomedRects}`; }
++            let ea = null; try { ea = edgeAt(e); } catch (x) { ea = 'ERR ' + x; }
++            extra += ` edge=${ea && ea.index !== undefined ? (ea.column ? 'c' : 'r') + ea.index : ea}`;
++            extra += ` dragBefore=${!!st.drag} dpr=${devicePixelRatio} zoomBody=${getComputedStyle(document.body).zoom}`;
++        }
++        m29(`${where} ${e.type} pt=${e.pointerType || '-'} b=${e.button} bs=${e.buttons} x=${e.clientX.toFixed(1)} y=${e.clientY.toFixed(1)} sx=${e.screenX} t=${t} trusted=${e.isTrusted}${extra}`);
++    };
++    for (const ty of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel', 'lostpointercapture', 'mousedown', 'mouseup']) document.addEventListener(ty, m29ev('doc'), true);
++    for (const ty of ['pointerdown', 'pointerup', 'pointercancel']) el.addEventListener(ty, m29ev('el'));
++    const m29finish = finish;
++    m29('gridResize attached unz=' + chvdUnzoomedRects + ' ua=' + navigator.userAgent.slice(-40));
+     el.addEventListener('pointerdown', (e) => {
+         // A second finger while an edge is held is a pinch (the sheet zooms): the resize is dropped, nothing changes size.
+         if (st.drag && e.pointerType === 'touch' && e.pointerId !== st.drag.id) { st.lastPress = null; finish(false, e); return; }
