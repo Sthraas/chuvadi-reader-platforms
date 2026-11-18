@@ -175,3 +175,48 @@ jobs:
             uitest
             deb
             deb-framework-dependent
+
+  # D-198 / D-202: Foundation's parse-process prototype bench (tools/ParseProcessPrototype, on platform/foundation)
+  # on the CI runners, for the numbers in docs/linux/D-198-PARSE-HELPER-LINUX.md. Runs only for a pushed commit
+  # whose message holds "[parse-bench]"; test only, nothing from it goes into the package.
+  parse-bench:
+    if: github.event_name == 'push' && contains(github.event.head_commit.message, '[parse-bench]')
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "1"
+    steps:
+      - uses: actions/checkout@v4
+      # The prototype as Foundation committed it with the design (82fe982f); Core is the same on both branches.
+      - name: Foundation's prototype
+        run: |
+          git fetch --depth 1 origin 82fe982f026c39b70070cf210c9fa5353b0ebb50
+          git checkout FETCH_HEAD -- tools/ParseProcessPrototype
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - name: Install the pinned workload set
+        run: dotnet workload update
+      - name: Package feed
+        run: bash scripts/setup-feed.sh
+      - name: Bench files (tools/linux/make-parse-bench-files.py)
+        run: python3 -I tools/linux/make-parse-bench-files.py "$PWD/parse-bench-files"
+      - name: Bench
+        run: |
+          dotnet run -c Release --project tools/ParseProcessPrototype -- bench "$PWD/parse-bench-files" | tee parse-bench.md
+          { echo; echo "runner: $(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | xargs) / $(nproc) cores / $(free -m | awk '/Mem:/ {print $2}') MB"; } | tee -a parse-bench.md
+          cat parse-bench.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: parse-bench-${{ matrix.arch }}
+          path: parse-bench.md
