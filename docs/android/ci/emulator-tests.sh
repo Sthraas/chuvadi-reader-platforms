@@ -41,7 +41,8 @@ fi
 if [ "${SUITE:-full}" = engine ]; then
     mkdir -p "$OUT"
     rc=0
-    for P in "$(dirname "$APK")"/chuvadi-reader-engine-probe*.apk; do
+    sleep 60   # let the emulator settle after boot, so the first build's cold starts aren't charged for it
+    for P in "$(dirname "$APK")"/chuvadi-reader-engine-probe.apk "$(dirname "$APK")"/chuvadi-reader-engine-probe-cap*.apk; do
         L="$(basename "$P" .apk)"; L="${L#chuvadi-reader-engine-probe}"; L="engine${L:-}"
         python3 "$HERE/engine_probe.py" "$P" "$L" "$OUT/engine" 10 || rc=1
     done

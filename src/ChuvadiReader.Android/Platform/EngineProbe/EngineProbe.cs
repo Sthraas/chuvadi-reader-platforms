@@ -92,12 +92,13 @@ internal sealed class EngineBinder(long createdAt, long boundAt) : Binder
                 {
                     var megabytes = data.ReadInt();
                     var ends = ParcelFileDescriptor.CreatePipe()!;
-                    var write = ends[1];
+                    // Plain file descriptors on both ends (no Java stream in the way), as the engine would do.
+                    var writeFd = ends[1].DetachFd();
                     new Thread(() =>
                     {
-                        using var stream = new ParcelFileDescriptor.AutoCloseOutputStream(write);
-                        var chunk = new byte[64 * 1024];
-                        for (var i = 0; i < megabytes * 16; i++)
+                        using var stream = new FileStream(new Microsoft.Win32.SafeHandles.SafeFileHandle((IntPtr)writeFd, true), FileAccess.Write, 0);
+                        var chunk = new byte[256 * 1024];
+                        for (var i = 0; i < megabytes * 4; i++)
                         {
                             chunk[0] = (byte)i;
                             stream.Write(chunk, 0, chunk.Length);
@@ -330,8 +331,8 @@ internal static class EngineClient
         binder.Transact(EngineBinder.Pipe, data, reply, 0);
         reply.ReadInt();
         var fd = (ParcelFileDescriptor)ParcelFileDescriptor.Creator!.CreateFromParcel(reply)!;
-        using var stream = new ParcelFileDescriptor.AutoCloseInputStream(fd);
-        var buffer = new byte[64 * 1024];
+        using var stream = new FileStream(new Microsoft.Win32.SafeHandles.SafeFileHandle((IntPtr)fd.DetachFd(), true), FileAccess.Read, 0);
+        var buffer = new byte[256 * 1024];
         long total = 0;
         int n;
         while ((n = stream.Read(buffer, 0, buffer.Length)) > 0)
