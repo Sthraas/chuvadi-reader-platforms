@@ -745,3 +745,8 @@ start-up code, a baked one is honoured but applies to the app too; stated 16 MB 
 under 10 MB; a stack overflow ends the process by signal (132/139) and leaves a crash report under the app's name.
 Trial patch kept as evidence: `docs/mac/trial-baked-heap-cap.patch` (not applied). Run 44260017671 (code 37c606d):
 **0 failed on all four runners**; zip handed out.
+
+### 2026-11-18 (evening) — patch 34
+Rebased onto foundation-pr 5e63202 (patch 34: M-29 Excel resize, D-203 Arrange keeps desks, greyed redaction). No Mac
+code needed changing. Run 44340514459 (code 57400e5), as pushed: **0 failed on all four runners**; Core 458 passed,
+6 skipped; Mac 23; zip handed out. The smoke has no Excel column-drag check: M-29 is Mac Test's to verify.
