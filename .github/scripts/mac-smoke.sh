@@ -583,7 +583,7 @@ open -n --env CHUVADI_SMOKE=1 --env CHUVADI_SMOKE_ENGINE=1 --stdout "$LOG" --std
 wait_for 'CHUVADI engine-probe done' 420 || fail "D-198 engine probes did not finish"
 echo "--- engine probes"
 grep -E "CHUVADI engine-probe" "$LOG" | sed -E 's/^.*CHUVADI engine-probe //; s/[0-9-]+ [0-9:.]+ [A-Za-z.]+\[[0-9:]+\] //' | grep -vE "alloc [0-9]+MB rss=[0-9]+MB$" | cut -c1-300
-grep -qE "engine-probe wire-pipe .*PROBE pong" "$LOG" && pass "D-198 the app starts its own program as a child and they talk over pipes" \
+grep -qE "engine-probe wire-pipe: ready=.*PROBE pong ping.*code=0" "$LOG" && pass "D-198 the app starts its own program as a child and they talk over pipes" \
   || fail "D-198 the app could not start its own program as a child and talk to it over pipes"
 quit_app || fail "engine-probe run did not quit"
 sleep 12   # ReportCrash writes a few seconds after the process ends
