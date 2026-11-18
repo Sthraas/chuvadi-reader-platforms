@@ -995,3 +995,4 @@ Step 68, result: run 43899989183 (head 60171388; Foundation 4b704c8d3d32c9c21c5c
   - Back on the close question is Cancel, and the next Back asks again.
 - **Sandbox** (9e00fdf + Mobile UI df420b5 + P-10): Debug and Release 0 warnings; manifest check passes (7 types × 2
   filters, no permissions); Core 448 (+6), Hosting 103, MobileUi 16, WebUi 41.
+- Result: run 44319208118 (head 4ee03610), all four green. Phone API 36: gestures 11/11, platform 46/46; tablet API 36: gestures 13/13, platform 44/44 (the eight D-205 checks pass on both); API 35 phone and tablet: WebView gate 4/4; Release manifest: 7 types in both filters, no permissions.
