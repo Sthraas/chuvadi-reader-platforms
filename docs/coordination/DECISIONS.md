@@ -583,5 +583,26 @@ Arun asked that all chats use Opus 5.5: the coordinator switched all twelve chat
 ## D-209 — Markdown and text viewers join the parse engine (BUG-14, BUG-15)
 24 Nov 2026, 01:11 IST. Arun agreed: D-202's separate parse engine also covers Markdown and plain text, so a hostile file ends the engine, not the app, and Stop opening really stops the work. Folded into the D-202 build order after Word/Excel.
 
+## D-210 — Locked files on save; text the file can't hold yet
+24 Nov 2026, 01:53 IST. Arun agreed to every lean. (1) When only the open password is known: library ask "save with the file's own lock" (same file key and the source's lock entries, so the owner password is never needed); until it lands, those saves are refused with an error that offers Save as, and when the user does know the owner password the Reader re-locks with it today. (2) RC4 sources: same passwords and permissions written as AES-128 count as the same lock. (3) Until the D-211 font work lands, Text marks, stamps, watermarks, page numbers and footers refuse to save letters the file can't hold, naming them ("These letters can't be saved into the file yet: ..."); the mark stays on screen, nothing garbled is written.
+
+## D-211 — Font for marks: the library's LiPi set, before production (amends D-208)
+24 Nov 2026, 01:53 IST. chuvadi-pdf already has subset embedding, ToUnicode, Tamil shaping (IndicShaper) and a bundled LiPi font set with Tamil; only the stamp, watermark and page-number writers don't use them. Arun chose: Latin and Tamil from the library's LiPi set, monochrome Noto Emoji only for emoji, routed through the existing shaping + subset-embed path. It lands before production, not later. The coordinator confirms the LiPi set's licence first.
+
+## D-212 — Library release scope
+24 Nov 2026, 01:53 IST. 3.35.1 stays the security set plus two additions: a graphics-state-depth cap (C20) and PdfWorkScope in the SVG renderer (C12, C13, C19, C21 via SVG). 3.36 follows right after with the D-211 font routing, the keep-the-lock save (D-210) and the Press fixes (keep-original guard, honest percentage). The Reader takes 3.35.1 and 3.36 together in one library move before production.
+
+## D-213 — Mac M-29: no Info.plist trial yet
+24 Nov 2026, 01:53 IST. Foundation's option 1 (patch 35) is tested first; the UIApplicationSupportsIndirectInputEvents trial only if it fails.
+
+## D-214 — Windows: hidden rows, columns and sheets; narrow window; code signing (amends D-172)
+24 Nov 2026, 01:53 IST. Hidden rows, columns and sheets are hidden by default, as in Excel; one "Show hidden rows, columns and sheets" switch reveals them greyed, for viewing only (nothing written to the file). Below about 760 px the side bar floats over the page and closes after a pick. Code signing: an OV certificate issued to Sthraas (about $150-300 a year), bought at Phase 2 before production; a Microsoft Store listing later.
+
+## D-215 — Web UI wording
+24 Nov 2026, 01:53 IST. "language" (not "the document's language"); "Read this file as..." (not "Text encoding...").
+
+## D-216 — Portal server answers; Windows user manual
+24 Nov 2026, 01:53 IST. Arun has no production server yet; he will host it today or tomorrow and then answer Web's questions. The Windows tester's 500-page manual is held until patch 35 and step 1 land, so its screenshots aren't redone.
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).
