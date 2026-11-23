@@ -380,3 +380,6 @@ Options:
 - **(d) Don't ask about Arrange at Sign out on the portal.** Pros: no false promise. Cons: the desks go silently.
 
 **My recommendation: (b).** I'll write the exact diff (Ui, through PlatformText; desktop and Windows proved unchanged) once you choose.
+
+## Decided: D-206 (coordinator 24 Nov 01:45) — my option (b) for the portal Arrange card
+The exact diff, with proofs that desktop is unchanged, is in HOOKS (`web-ui-portal-arrange-signout-download.patch`). Still with Arun: "language" vs "the document's language", and "Text encoding…" vs "Read this file as…".

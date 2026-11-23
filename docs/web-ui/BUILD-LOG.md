@@ -576,3 +576,18 @@ Three browsers × four profiles, all as designed. One finding: on the portal, Sa
 
 ### 5. Portal surfaces against patch 33's screenshots
 63 screenshots: pixel-identical (clock masked). Drop overlay 6 of 6, no console errors.
+
+## 2026-11-24 — session 31 (coordinator 01:45: D-206, write the exact diff for the portal Arrange card)
+
+### 1. Branches
+Checked all: `platform/foundation-pr` 5e63202 (unchanged), `platform/foundation` e2fb8c1, `main` 4ab431e (D-206 to D-209), `platform/web` 744be4f, `platform/web-test` 36bf031, `platform/mobile-ui` 135eb21. Last CI on 13d94e9: all nine jobs green.
+
+### 2. The diff
+`proposal/web-ui-portal-arrange-signout-download.patch` against 5e63202. Details and measurements in HOOKS. Web's Sign out already waits for the connection's downloads, so I expect no new host code.
+
+### 3. Proof
+- `d206.py` (in `/home/claude/wk`): three browsers × four profiles, run with the diff and again without it.
+- The portal changes as intended. The Windows profile gives identical results, and its card screenshots are pixel-identical apart from the clock.
+- `so.py`: Cancel keeps you signed in; Save session… signs out.
+- Tests: 614 pass with the diff (5 new). One Reader test failed once in the first full run; it passed in three reruns.
+- `src` is back to 5e63202 on this branch.

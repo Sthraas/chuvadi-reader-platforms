@@ -29,6 +29,29 @@ Measured (Chromium / Firefox / WebKit):
 
 Pros: the held tools explain themselves on touch, like the certificate; two small edits; nothing changes for a mouse. Cons: none found. The message comes as the app's usual note, which has a green tick (see OPTIONS).
 
+## Still to apply — D-206: on the portal the Arrange question at Sign out offers a download (written 24 Nov)
+**`proposal/web-ui-portal-arrange-signout-download.patch`**, against foundation-pr **5e63202** (applies cleanly). Three files, 68 lines added and 5 removed:
+- **`Ui/Components/Platform/PlatformText.cs`:** `ArrangeEndsWithSession(platform)` is true only for `PlatformKind.Web`; `ArrangeAtSignOut(desks)` gives the portal's sentence.
+- **`Ui/Layout/MainLayout.razor`:**
+  - On the portal, the card's text is "1 desk in Arrange has changed. Your desks go when you sign out. Save session… downloads them as a file you can open in Arrange again. Discard clears them." The title "Keep what you arranged?" is unchanged.
+  - The first button is "Save session…" instead of "Save".
+  - Its answer runs patch 32's route: `Picker.PickSaveSessionAsync` → `Sessions.SaveSessionAsync(path, Bench.ExportSession())` → `WriteBack.DeliverOrThrowAsync` → `Bench.MarkAllKept()`. This is the same as Arrange's own Save session. If the save is backed out, the question is asked again; if it fails, the card stays up and says "Couldn't save the session: …".
+  - The two injections patch 34 removed come back (`SessionService`, `IFileWriteBack`).
+  - Everywhere else the card and `Bench.KeepAsync()` are untouched.
+- **`tests/ChuvadiReader.WebUi.Tests/PortalWordingTests.cs`:** 5 new tests. D-203 stays on Windows, macOS, Linux and Android; the portal sentence is exact for 1 and 2 desks and never says "next time".
+
+Measured (Chromium / Firefox / WebKit; my preview with Sign out asking first and saves written to a folder):
+- **Portal desktop, tablet, phone:** the new text and buttons Save session… (main), Discard, Cancel, on one row, one line each, inside the screen (44 px on touch). The keyboard starts on Save session…; Tab cycles; Esc cancels and the person stays signed in.
+  - Save session… writes one `.chuvadi-session` file (the same format Arrange opens), writes **no** kept-desks file, and signs out.
+  - Cancel keeps the person signed in. Discard signs out and leaves no kept file. Two desks: "2 desks in Arrange have changed. …"
+- **Windows profile: unchanged.** All 12 checks give results identical to the run without the diff: card text, buttons, keyboard, Save writes `arrange-kept.json` and closes, Discard removes it. The card's screenshots are pixel-identical apart from the status-bar clock.
+- **Build and tests:** `-warnaserror` 0 warnings. Tests 449 + 16 + 46 + 103 = 614 pass, 6 skipped. In the first full run one Reader test failed once; it passed in three reruns of that project and my diff touches no Core code.
+- **Screenshots:** `screenshots/webkit-portal-arrange-signout-before-after-phone.png` (patch 34 left, with the diff right) and `screenshots/chromium-portal-arrange-signout-desktop.png`.
+
+**For Web:** no new host code should be needed. `WebPlatform.SignOutAsync` (744be4f) already waits after the card for the Ui's move Home, then `TransferRegistry.WaitForDownloadsAsync(connection)` before `/signout`. The session file goes through the same outbox as Save as. Please prove it with `close_card.py` on the real portal: arrange, Sign out, Save session…, and the file arrives before the session folder goes.
+
+Pros: the card tells the truth on the portal and the person keeps their work; nothing is stored per user on the server; desktop, Windows and Android are untouched. Cons: one portal-only branch in the card.
+
 ## Applied by the Foundation (patch 34, commit ea191cf, as sent; checked on 5e63202) — the close card's long button labels stay on one line on the phone (found 18 Nov, checking patch 32 / D-194, D-195)
 **`proposal/web-ui-close-card-phone-labels.patch`**, against foundation-pr **149f4fc** (applies cleanly). One line in `Ui/wwwroot/css/shell.css`:
 `html[data-shell="phone"] .closeq .fc-btn { min-height: 44px; flex: 1; }` → `{ min-height: 44px; flex: 1 1 auto; white-space: nowrap; }`

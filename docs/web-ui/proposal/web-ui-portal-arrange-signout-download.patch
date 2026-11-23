@@ -1,0 +1,131 @@
+diff --git a/src/ChuvadiReader.Ui/Components/Platform/PlatformText.cs b/src/ChuvadiReader.Ui/Components/Platform/PlatformText.cs
+index a454bd1e..8f8f13e0 100644
+--- a/src/ChuvadiReader.Ui/Components/Platform/PlatformText.cs
++++ b/src/ChuvadiReader.Ui/Components/Platform/PlatformText.cs
+@@ -67,4 +67,14 @@ public static class PlatformText
+     /// <summary>D-187: where there is a touch screen a tooltip can't be read, so the greyed control still answers a
+     /// tap and its card shows the reason in place of its fields.</summary>
+     public static bool ReasonOnTap(IPlatformInfo platform) => platform.Input.HasFlag(InputKinds.Touch);
++
++    /// <summary>D-206: on the portal Arrange's desks end with the session (the app's data folder is the session's
++    /// own, deleted at Sign out), so its question at Sign out offers a download instead of D-203's keep. Desktop
++    /// and Android keep D-203.</summary>
++    public static bool ArrangeEndsWithSession(IPlatformInfo platform) => platform.Kind == PlatformKind.Web;
++
++    /// <summary>D-206: what the portal's Arrange question says (the only place it is asked there is Sign out).</summary>
++    public static string ArrangeAtSignOut(int desks) =>
++        (desks == 1 ? "1 desk in Arrange has changed." : $"{desks} desks in Arrange have changed.")
++        + " Your desks go when you sign out. Save session… downloads them as a file you can open in Arrange again. Discard clears them.";
+ }
+diff --git a/src/ChuvadiReader.Ui/Layout/MainLayout.razor b/src/ChuvadiReader.Ui/Layout/MainLayout.razor
+index 257ac7ac..80125e23 100644
+--- a/src/ChuvadiReader.Ui/Layout/MainLayout.razor
++++ b/src/ChuvadiReader.Ui/Layout/MainLayout.razor
+@@ -14,6 +14,8 @@
+ @inject IAppStorage Storage
+ @inject ShellService Shell
+ @inject BenchService Bench
++@inject SessionService Sessions
++@inject ChuvadiReader.Platform.IFileWriteBack WriteBack
+ @inject UserProfileService Profile
+ @inject ChuvadiReader.Platform.IPlatformInfo Platform
+ @inject ChuvadiReader.Platform.IPathLabels PathLabels
+@@ -359,17 +361,29 @@
+                 @* D-203: Arrange's desks, changed since they were last kept. Save keeps them for the next start (no file
+                    dialog); Discard clears them; Cancel keeps the app open. *@
+                 <div class="closeq-title" id="closeq-title">Keep what you arranged?</div>
+-                <div class="closeq-text">
+-                    @(ask.Of == 1 ? "1 desk in Arrange has changed." : $"{ask.Of} desks in Arrange have changed.")
+-                    Save keeps your desks for the next time the app starts. Discard clears them.
+-                </div>
++                @if (ArrangeEndsWithSession)
++                {
++                    @* D-206: on the portal the desks end with the session, so the card offers a download. *@
++                    <div class="closeq-text">@ChuvadiReader.Ui.Components.Platform.PlatformText.ArrangeAtSignOut(ask.Of)</div>
++                }
++                else
++                {
++                    <div class="closeq-text">
++                        @(ask.Of == 1 ? "1 desk in Arrange has changed." : $"{ask.Of} desks in Arrange have changed.")
++                        Save keeps your desks for the next time the app starts. Discard clears them.
++                    </div>
++                }
+             }
+             @if (_closeAskError is { Length: > 0 } why)
+             {
+                 <div class="closeq-err">@why</div>
+             }
+             <div class="closeq-btns">
+-                @if (ask.Kind == CloseKind.Arrange)
++                @if (ask.Kind == CloseKind.Arrange && ArrangeEndsWithSession)
++                {
++                    <button class="fc-btn primary" @ref="_closeAskFirst" disabled="@_closeAskBusy" @onclick="() => AnswerClose(CloseAnswer.SaveAs)">Save session…</button>
++                }
++                else if (ask.Kind == CloseKind.Arrange)
+                 {
+                     <button class="fc-btn primary" @ref="_closeAskFirst" disabled="@_closeAskBusy" @onclick="() => AnswerClose(CloseAnswer.Save)">Save</button>
+                 }
+@@ -596,6 +610,25 @@
+ 
+                 _closeAskBusy = true;
+                 StateHasChanged();
++                if (answer == CloseAnswer.SaveAs)
++                {
++                    // D-206 (portal): the desks as a session file, downloaded; the host's Sign out waits for it.
++                    var path = await Picker.PickSaveSessionAsync("bench-session");
++                    if (string.IsNullOrEmpty(path)) continue;          // backed out of the save: ask again
++                    try
++                    {
++                        await Sessions.SaveSessionAsync(path, Bench.ExportSession());
++                        await WriteBack.DeliverOrThrowAsync(path);
++                        Bench.MarkAllKept();
++                    }
++                    catch (Exception ex)   // whatever stopped the save, the question stays up and says so
++                    {
++                        _closeAskError = $"Couldn't save the session: {ex.Message}";
++                    }
++
++                    continue;
++                }
++
+                 try
+                 {
+                     await Bench.KeepAsync();
+@@ -638,6 +671,8 @@
+ 
+     private void AnswerClose(CloseAnswer answer) => _closeAnswer?.TrySetResult(answer);
+ 
++    private bool ArrangeEndsWithSession => ChuvadiReader.Ui.Components.Platform.PlatformText.ArrangeEndsWithSession(Platform);
++
+     // D-198: the page-operation question (ShellService.ConfirmPageOperationAsync asks through here).
+     private IReadOnlyList<PageOperationFile>? _pageOpAsk;
+     private TaskCompletionSource<bool>? _pageOpAnswer;
+diff --git a/tests/ChuvadiReader.WebUi.Tests/PortalWordingTests.cs b/tests/ChuvadiReader.WebUi.Tests/PortalWordingTests.cs
+index 8e7351bb..a228e9f4 100644
+--- a/tests/ChuvadiReader.WebUi.Tests/PortalWordingTests.cs
++++ b/tests/ChuvadiReader.WebUi.Tests/PortalWordingTests.cs
+@@ -36,6 +36,24 @@ public class PortalWordingTests
+     public void The_portal_says_upload() =>
+         Assert.Equal("Upload a file", PlatformText.FetchOrUpload(new Platform(PlatformKind.Web), "Fetch a file", "Upload a file"));
+ 
++    [Theory]
++    [InlineData(PlatformKind.Windows)]
++    [InlineData(PlatformKind.MacOS)]
++    [InlineData(PlatformKind.Linux)]
++    [InlineData(PlatformKind.Android)]
++    public void Arrange_keeps_its_desks_off_the_portal(PlatformKind kind) =>   // D-203 stays as built
++        Assert.False(PlatformText.ArrangeEndsWithSession(new Platform(kind)));
++
++    [Fact]
++    public void On_the_portal_the_Arrange_question_offers_a_download_and_never_promises_a_keep()   // D-206
++    {
++        Assert.True(PlatformText.ArrangeEndsWithSession(new Platform(PlatformKind.Web)));
++        Assert.Equal("1 desk in Arrange has changed. Your desks go when you sign out. Save session… downloads them as a file you can open in Arrange again. Discard clears them.",
++            PlatformText.ArrangeAtSignOut(1));
++        Assert.StartsWith("2 desks in Arrange have changed. ", PlatformText.ArrangeAtSignOut(2));
++        Assert.DoesNotContain("next time", PlatformText.ArrangeAtSignOut(2));
++    }
++
+     [Fact]
+     public void Home_on_the_portal_speaks_of_this_session_only()
+     {
