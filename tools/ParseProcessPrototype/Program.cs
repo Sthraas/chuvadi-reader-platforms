@@ -10,16 +10,18 @@ using ParseProcessPrototype;
 
 if (args.Length > 0 && args[0] == "engine") return await Engine.RunAsync();
 if (args.Length > 1 && args[0] == "bench") return await Bench.RunAsync(args[1], args.Skip(2).ToArray());
+if (args.Length > 1 && args[0] == "makecad") return MakeCad.Run(args[1], args.Length > 2 ? int.Parse(args[2]) : 5, args.Length > 3 ? int.Parse(args[3]) : 30_000, args.Length > 4 ? int.Parse(args[4]) : 40);
 if (args.Length > 1 && args[0] == "coldfirst")
 {
     // The first document a running app opens today: library code loaded and compiled in the app's own process.
     long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
     using var s = await new ChuvadiPdfReader().OpenAsync(args[1], Path.GetFileName(args[1]));
-    await s.RenderPageSvgAsync(0);
+    var svg = await s.RenderPageSvgAsync(0);
     Console.WriteLine((System.Diagnostics.Stopwatch.GetElapsedTime(t0).TotalMilliseconds).ToString("0.0"));
+    if (Environment.GetEnvironmentVariable("CHVD_SVG_OUT") is { Length: > 0 } o) File.WriteAllText(o, svg);
     return 0;
 }
-Console.Error.WriteLine("usage: engine | bench <fixtures folder> [--heap-mb N] [--limit-s N]");
+Console.Error.WriteLine("usage: engine | makecad <out.pdf> | bench <fixtures folder> [--heap-mb N] [--limit-s N] [--job-mb N] [--no-crash-watch]");
 return 2;
 
 static class Engine
@@ -79,6 +81,7 @@ static class Engine
                         while (true) { var b = new byte[16 << 20]; Array.Fill(b, (byte)1); keep.Add(b); }
                     case Wire.Stacks: Wire.Write(output, Wire.Ok, Stacks.Describe()); break;
                     case Wire.Echo: Wire.Write(output, Wire.Ok, req.Payload); break;
+                    case Wire.Mem: Wire.Write(output, Wire.Ok, Engine.Memory()); break;
                     case Wire.Quit: session?.Dispose(); Wire.Write(output, Wire.Ok, ""); return 0;
                     default: Wire.Write(output, Wire.Failed, "unknown op"); break;
                 }
@@ -89,6 +92,19 @@ static class Engine
             }
         }
         return 0;
+    }
+
+    /// <summary>What the engine holds now and at most: the GC's view (heap, committed, fragmented, the hard limit)
+    /// and the process's (peak working set, private bytes). Reading it does a full collection first only for "heap
+    /// now", so the peak numbers are what drawing really reached.</summary>
+    internal static string Memory()
+    {
+        var me = Process.GetCurrentProcess();
+        var g = GC.GetGCMemoryInfo(GCKind.Any);
+        long mb(long b) => b >> 20;
+        return $"GC heap {mb(g.HeapSizeBytes)} MB, committed {mb(g.TotalCommittedBytes)} MB, fragmented {mb(g.FragmentedBytes)} MB, " +
+               $"GC limit {mb(g.TotalAvailableMemoryBytes)} MB, peak working set {mb(me.PeakWorkingSet64)} MB, private now {mb(me.PrivateMemorySize64)} MB, " +
+               $"allocated in all {mb(GC.GetTotalAllocatedBytes())} MB";
     }
 
     static int Recurse(int n) { Span<byte> pad = stackalloc byte[256]; pad[0] = (byte)n; return Recurse(n + 1) + pad[0]; }
@@ -174,6 +190,14 @@ sealed class EngineClient : IDisposable
     }
 
     public string CallText(byte op, string arg = "") => Encoding.UTF8.GetString(Call(op, arg));
+
+    /// <summary>The engine's own memory line, or why it could not be read (it may be gone).</summary>
+    public string MemoryLine()
+    {
+        string job = OperatingSystem.IsWindows() && _job != 0 ? $"; job peak {WindowsJob.PeakMb(_job)} MB" : "";
+        try { var l = Limit; Limit = TimeSpan.FromSeconds(10); try { return CallText(Wire.Mem) + job; } finally { Limit = l; } }
+        catch (Exception ex) { return "not readable (" + ex.GetType().Name + ")" + job; }
+    }
 
     public long RssKb()
     {

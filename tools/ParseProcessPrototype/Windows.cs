@@ -35,6 +35,16 @@ public static class WindowsJob
     [DllImport("kernel32", SetLastError = true)] private static extern bool SetInformationJobObject(nint job, int cls, ref ExtendedLimit info, int size);
     [DllImport("kernel32", SetLastError = true)] private static extern bool AssignProcessToJobObject(nint job, nint process);
     [DllImport("kernel32")] private static extern uint SetErrorMode(uint mode);
+    [DllImport("kernel32", SetLastError = true)] private static extern bool QueryInformationJobObject(nint job, int cls, out ExtendedLimit info, int size, nint ret);
+
+    /// <summary>The most private memory the engine in this job has committed (MB), as the job counts it against
+    /// its cap: the number that decides whether the cap is the one that bites.</summary>
+    public static long PeakMb(nint job)
+    {
+        if (!OperatingSystem.IsWindows() || job == 0) return -1;
+        return QueryInformationJobObject(job, JobObjectExtendedLimitInformation, out var info, Marshal.SizeOf<ExtendedLimit>(), 0)
+            ? (long)(info.PeakProcessMemoryUsed >> 20) : -1;
+    }
     [DllImport("wer")] private static extern int WerSetFlags(uint flags);
 
     /// <summary>Puts the process in a new job with a memory cap (0: none). Kept open by the app; closing it (the app
