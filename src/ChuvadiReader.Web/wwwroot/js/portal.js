@@ -325,6 +325,40 @@
     });
 
     // Leave for another portal address. Only same-origin paths; returns at once, navigates after.
+    // WT-31: Sign out in a fixed order. The page's own moves (the Ui going Home after the close card,
+    // Blazor's history changes, a download link just clicked) must be over before the full page load to the
+    // sign-out address starts, and nothing may start a move after it: in WebKit a later move cancelled that
+    // load ("Frame load interrupted", "Navigation canceled by policy check"). So: wait until the page has
+    // been quiet for a moment (capped), then stop all in-page moves and go.
+    var lastMove = 0, departing = false;
+    function noteMove() { lastMove = Date.now(); }
+    ['pushState', 'replaceState'].forEach(function (name) {
+        var original = history[name];
+        if (typeof original !== 'function') return;
+        history[name] = function () {
+            if (departing) return undefined; // the page is leaving for good: no in-page move may cancel that
+            noteMove();
+            return original.apply(this, arguments);
+        };
+    });
+    window.addEventListener('popstate', noteMove);
+    var plainDownload = download;
+    download = function (url, name) { noteMove(); return plainDownload(url, name); };
+    function leaveWhenSettled(path, quietMs, maxMs) {
+        if (typeof path !== 'string' || path.charAt(0) !== '/' || path.charAt(1) === '/') return Promise.resolve(false);
+        var quiet = Math.max(50, quietMs | 0), until = Date.now() + Math.max(quiet, maxMs | 0);
+        return new Promise(function (resolve) {
+            (function check() {
+                var now = Date.now();
+                if (now - lastMove < quiet && now < until) { setTimeout(check, 50); return; }
+                departing = true;
+                unsavedMarks = false; // the person has answered the card
+                window.location.assign(path);
+                resolve(true);
+            })();
+        });
+    }
+
     function leave(path) {
         if (typeof path !== 'string' || path.charAt(0) !== '/' || path.charAt(1) === '/') return;
         unsavedMarks = false; // the portal itself is leaving (the session ended): no question
@@ -458,5 +492,5 @@
         }
     }
 
-    window.chvdPortal = { guardLeave: guardLeave, pick: pick, download: download, print: print, copyImage: copyImage, copyText: copyText, openLink: openLink, watchViewport: watchViewport, leave: leave, trackActivity: trackActivity, stillHere: stillHere, dropCatcherLive: function () { return !!catcherInput(); } };
+    window.chvdPortal = { guardLeave: guardLeave, pick: pick, download: function (u, n) { return download(u, n); }, leaveWhenSettled: leaveWhenSettled, print: print, copyImage: copyImage, copyText: copyText, openLink: openLink, watchViewport: watchViewport, leave: leave, trackActivity: trackActivity, stillHere: stillHere, dropCatcherLive: function () { return !!catcherInput(); } };
 })();

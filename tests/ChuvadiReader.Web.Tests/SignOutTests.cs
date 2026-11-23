@@ -95,6 +95,41 @@ public sealed class SignOutTests : IDisposable
         Directory.Delete(_root, recursive: true);
     }
 
+    private sealed class LeavingJs : Microsoft.JSInterop.IJSRuntime
+    {
+        public List<string> Calls { get; } = [];
+
+        public bool Fail { get; set; }
+
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) => InvokeAsync<TValue>(identifier, CancellationToken.None, args);
+
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
+        {
+            Calls.Add(identifier + " " + string.Join(" ", args ?? []));
+            if (Fail)
+            {
+                throw new Microsoft.JSInterop.JSException("an older page without the function");
+            }
+
+            return ValueTask.FromResult((TValue)(object)true);
+        }
+    }
+
+    [Fact]
+    public async Task With_a_page_to_ask_sign_out_lets_the_page_go_once_it_has_settled_and_navigates_nothing_itself()
+    {
+        // WT-31: the page leaves for /signout only after its own moves are over, and makes none after.
+        var js = new LeavingJs();
+        using var services = new ServiceCollection().AddSingleton<IUnsavedWork>(_work).AddSingleton(new BrowserBridge(js)).BuildServiceProvider();
+        await new WebAccount(new SignedIn(), _nav, services).SignOutAsync();
+        Assert.Equal(["chvdPortal.leaveWhenSettled /signout 400 3000"], js.Calls);
+        Assert.Empty(_nav.Went);
+
+        js.Fail = true; // a page from before this build: the plain full load
+        await new WebAccount(new SignedIn(), _nav, services).SignOutAsync();
+        Assert.Equal(["/signout (full load)"], _nav.Went);
+    }
+
     [Fact]
     public async Task With_nothing_unsaved_sign_out_goes_straight_to_the_sign_out_address()
     {

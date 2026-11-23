@@ -222,18 +222,29 @@ public sealed class WebAccount : IAccount
             await registry.WaitForDownloadsAsync(space.ConnectionId, DownloadWait, DownloadWait, ct);
         }
 
+        // WT-31: the browser goes to /signout only once the page has stopped moving (the Ui's move Home,
+        // a download link) and makes no move after it, so the sign-out's page load is never cancelled.
         if (_services?.GetService<BrowserBridge>() is { } browser)
         {
             try
             {
-                await browser.SetLeaveGuardAsync(false);
+                if (await browser.LeaveWhenSettledAsync("/signout", SettledQuiet, SettledAtMost))
+                {
+                    return;
+                }
             }
             catch (Exception ex) when (ex is Microsoft.JSInterop.JSException or Microsoft.JSInterop.JSDisconnectedException or OperationCanceledException or InvalidOperationException)
             {
-                // The page is already going.
+                // The page couldn't be asked (gone, or an older page): the plain way below.
             }
         }
 
         _nav.NavigateTo("/signout", forceLoad: true);
     }
+
+    /// <summary>How long the page must have made no move before Sign out sends it on (WT-31).</summary>
+    internal static readonly TimeSpan SettledQuiet = TimeSpan.FromMilliseconds(400);
+
+    /// <summary>The longest Sign out waits for the page to stop moving.</summary>
+    internal static readonly TimeSpan SettledAtMost = TimeSpan.FromSeconds(3);
 }

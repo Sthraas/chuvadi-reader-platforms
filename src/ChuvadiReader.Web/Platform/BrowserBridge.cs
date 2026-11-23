@@ -41,6 +41,17 @@ public sealed class BrowserBridge
     public ValueTask SetLeaveGuardAsync(bool on)
         => _js.InvokeVoidAsync("chvdPortal.guardLeave", on);
 
+    /// <summary>
+    /// WT-31: sends the browser to <paramref name="path"/> once the page has made no move (a history change,
+    /// a download link) for <paramref name="quiet"/>, or after <paramref name="atMost"/>; from then on the
+    /// page makes no in-page move, so nothing can cancel the load. True when the browser was sent.
+    /// </summary>
+    public async Task<bool> LeaveWhenSettledAsync(string path, TimeSpan quiet, TimeSpan atMost)
+    {
+        using var cts = new CancellationTokenSource(atMost + TimeSpan.FromSeconds(5));
+        return await _js.InvokeAsync<bool>("chvdPortal.leaveWhenSettled", cts.Token, path, (int)quiet.TotalMilliseconds, (int)atMost.TotalMilliseconds).ConfigureAwait(false);
+    }
+
     public async Task LeaveAsync(string path, TimeSpan timeout)
     {
         using var cts = new CancellationTokenSource(timeout);
