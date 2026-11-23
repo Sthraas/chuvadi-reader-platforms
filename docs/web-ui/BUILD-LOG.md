@@ -591,3 +591,9 @@ Checked all: `platform/foundation-pr` 5e63202 (unchanged), `platform/foundation`
 - `so.py`: Cancel keeps you signed in; Save session… signs out.
 - Tests: 614 pass with the diff (5 new). One Reader test failed once in the first full run; it passed in three reruns.
 - `src` is back to 5e63202 on this branch.
+
+## 2026-11-24 — session 32 (coordinator 02:05: D-215 wording)
+Branches checked: `platform/foundation-pr` 5e63202, `platform/foundation` e2fb8c1, `main` 2320437, `platform/web` 744be4f, `platform/web-test` e186d3a, `platform/mobile-ui` 135eb21.
+- Wrote `proposal/web-ui-d215-wording.patch`: "language" in the page-operation question, and "Read this file as…" for the encoding command and the card's radio group, plus the tests and proofs that name them.
+- Checked with `d215.py` (in `/home/claude/wk`): three browsers × four profiles, 12 of 12. Tests: 609 pass.
+- It applies together with the D-206 diff. `src` is back to 5e63202.

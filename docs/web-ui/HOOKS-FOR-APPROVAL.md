@@ -29,6 +29,22 @@ Measured (Chromium / Firefox / WebKit):
 
 Pros: the held tools explain themselves on touch, like the certificate; two small edits; nothing changes for a mouse. Cons: none found. The message comes as the app's usual note, which has a green tick (see OPTIONS).
 
+## Still to apply — D-215 wording: "language" and "Read this file as…" (written 24 Nov)
+**`proposal/web-ui-d215-wording.patch`**, against foundation-pr **5e63202** (applies cleanly, also together with the D-206 diff). Six files, 8 lines changed:
+- **`Core/Documents/PageOperationCheck.cs`:** "the document's language" → "language". The question now reads "…the bookmarks, page labels and language of rich.pdf." and "rich.pdf: its bookmarks, page labels and language".
+- **`Ui/Pages/Reader.Shell.cs`:** the `doc.encoding` command's label is "Text encoding…" → "Read this file as…". This is the Document menu, the phone's ⋮ and Ctrl K. Its search words become "text encoding charset code page", so Ctrl K still finds it by "encoding".
+- **`Ui/Pages/Reader.razor`:** the card's radio group is named "Read this file as" (was "Text encoding"), so a screen reader hears the same name as the title.
+- **Tests and proofs naming the old words:** `tests/ChuvadiReader.Tests/PageOperationAskTests.cs`, `tools/PixelProof/encoding-picker.js`, `tools/PixelProof/library-holds.js`. The two .js proofs are edited to match but not run here.
+
+Measured (Chromium / Firefox / WebKit × portal desktop, tablet, phone and Windows, 12 of 12):
+- The Document menu (⋮ on the phone) shows one row, "Read this file as…", which opens the card; the radio group is named "Read this file as".
+- Ctrl K with "encoding" finds "Read this file as…" (desktop and Windows).
+- The page-operation question says "page labels and language" for one file and for two; "the document's" appears nowhere.
+- Build `-warnaserror` 0 warnings; tests 449 + 16 + 41 + 103 = 609 pass, 6 skipped.
+- Screenshot: `screenshots/webkit-read-this-file-as-menu-phone.png`.
+
+**For Mobile UI:** `tools/mobile-ui/encnote.py` (on `platform/mobile-ui`) names the ⋮ row "Text encoding…" and will need the new name.
+
 ## Still to apply — D-206: on the portal the Arrange question at Sign out offers a download (written 24 Nov)
 **`proposal/web-ui-portal-arrange-signout-download.patch`**, against foundation-pr **5e63202** (applies cleanly). Three files, 68 lines added and 5 removed:
 - **`Ui/Components/Platform/PlatformText.cs`:** `ArrangeEndsWithSession(platform)` is true only for `PlatformKind.Web`; `ArrangeAtSignOut(desks)` gives the portal's sentence.

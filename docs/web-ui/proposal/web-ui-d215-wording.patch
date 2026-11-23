@@ -1,0 +1,82 @@
+diff --git a/src/ChuvadiReader.Core/Documents/PageOperationCheck.cs b/src/ChuvadiReader.Core/Documents/PageOperationCheck.cs
+index acbd4503..244135e5 100644
+--- a/src/ChuvadiReader.Core/Documents/PageOperationCheck.cs
++++ b/src/ChuvadiReader.Core/Documents/PageOperationCheck.cs
+@@ -19,7 +19,7 @@ public static class PageOperationCheck
+ {
+     /// <summary>The things a page operation drops, in the order they are named.</summary>
+     public static IReadOnlyList<string> AllDropped { get; } =
+-        ["bookmarks", "form fields", "links to places in the file", "page labels", "the document's language", "accessibility tags"];
++        ["bookmarks", "form fields", "links to places in the file", "page labels", "language", "accessibility tags"];
+ 
+     private static readonly ConcurrentDictionary<string, (long Length, DateTime Written, PageOperationFile Result)> Seen = new(StringComparer.Ordinal);
+ 
+diff --git a/src/ChuvadiReader.Ui/Pages/Reader.Shell.cs b/src/ChuvadiReader.Ui/Pages/Reader.Shell.cs
+index 3ccce3ae..015a5a9a 100644
+--- a/src/ChuvadiReader.Ui/Pages/Reader.Shell.cs
++++ b/src/ChuvadiReader.Ui/Pages/Reader.Shell.cs
+@@ -461,7 +461,7 @@ public partial class Reader
+         yield return new("doc.print", "Print", "Document", "print", "Ctrl P", T(() => OpenCard("print")), notPdf);
+         if (HasEncoding(tab.Format))
+         {
+-            yield return new("doc.encoding", "Text encoding…", "Document", "text-box", null, OpenEncodingCard, null, "charset code page read as");
++            yield return new("doc.encoding", "Read this file as…", "Document", "text-box", null, OpenEncodingCard, null, "text encoding charset code page");
+         }
+ 
+         yield return Sep("1");
+diff --git a/src/ChuvadiReader.Ui/Pages/Reader.razor b/src/ChuvadiReader.Ui/Pages/Reader.razor
+index e011a188..b14a5d2f 100644
+--- a/src/ChuvadiReader.Ui/Pages/Reader.razor
++++ b/src/ChuvadiReader.Ui/Pages/Reader.razor
+@@ -923,7 +923,7 @@
+             var encAuto = _encDetectedFor == tab.Path ? _encDetected : null;
+             <FloatCard Title="Read this file as" Meta="@tab.Format.Label()" OnClose="CloseCard">
+                 <div class="fc-card-scroll">
+-                    <div class="enc-list" role="radiogroup" aria-label="Text encoding">
++                    <div class="enc-list" role="radiogroup" aria-label="Read this file as">
+                         @* One Tab stop (the marked row); the arrow keys, Home and End move and choose (shell.js). *@
+                         <button class="enc-row @(encChosen is null ? "on" : null)" role="radio" aria-checked="@(encChosen is null ? "true" : "false")" tabindex="@(encChosen is null ? 0 : -1)" @onclick="() => ChooseEncoding(null)">
+                             <span class="enc-dot"></span><span class="enc-n">Automatic</span><span class="enc-d">@encAuto</span>
+diff --git a/tests/ChuvadiReader.Tests/PageOperationAskTests.cs b/tests/ChuvadiReader.Tests/PageOperationAskTests.cs
+index 1a93c060..8fc68a7d 100644
+--- a/tests/ChuvadiReader.Tests/PageOperationAskTests.cs
++++ b/tests/ChuvadiReader.Tests/PageOperationAskTests.cs
+@@ -30,7 +30,7 @@ public class PageOperationAskTests
+             Assert.Empty(p.Lost);
+ 
+             var r = PageOperationCheck.Inspect(rich);
+-            Assert.Equal(["bookmarks", "form fields", "links to places in the file", "page labels", "the document's language"], r.Lost);
++            Assert.Equal(["bookmarks", "form fields", "links to places in the file", "page labels", "language"], r.Lost);
+             Assert.Equal(Path.GetFileName(rich), r.FileName);
+ 
+             var missing = PageOperationCheck.Inspect(Path.Combine(Path.GetTempPath(), "no-such-file-" + Guid.NewGuid().ToString("N") + ".pdf"));
+diff --git a/tools/PixelProof/encoding-picker.js b/tools/PixelProof/encoding-picker.js
+index 0f6174e5..c87cd215 100644
+--- a/tools/PixelProof/encoding-picker.js
++++ b/tools/PixelProof/encoding-picker.js
+@@ -51,9 +51,9 @@ const { chromium } = require('playwright');
+   // Document menu entry
+   await p.keyboard.press('Escape'); await p.click('.fcard-x').catch(() => {}); await p.waitForTimeout(300);
+   await p.click('.tb-doc'); await p.waitForTimeout(300);
+-  const has = await p.$$eval('.tb-docmenu .pop-item', e => e.map(x => x.innerText.trim()).filter(t => /encoding/i.test(t)));
+-  check('Document menu has Text encoding…', has.length === 1, has.join());
+-  await p.click('.tb-docmenu .pop-item:has-text("Text encoding")'); await p.waitForTimeout(400);
++  const has = await p.$$eval('.tb-docmenu .pop-item', e => e.map(x => x.innerText.trim()).filter(t => /Read this file as/.test(t)));
++  check('Document menu has Read this file as…', has.length === 1, has.join());
++  await p.click('.tb-docmenu .pop-item:has-text("Read this file as")'); await p.waitForTimeout(400);
+   check('menu entry opens the card', await p.$('.enc-list') !== null);
+   await p.click('.fcard-x'); await p.waitForTimeout(200);
+   // Ctrl F on a text tab
+diff --git a/tools/PixelProof/library-holds.js b/tools/PixelProof/library-holds.js
+index a2f02110..71ccd2a0 100644
+--- a/tools/PixelProof/library-holds.js
++++ b/tools/PixelProof/library-holds.js
+@@ -31,7 +31,7 @@ const post = (path) => fetch(base + path, { method: 'POST' }).then(r => r.json()
+ 
+   // A file holding bookmarks, page labels and a language: each is named.
+   await toBench(RICH); await bindLast(); c = await card();
+-  check(!!c && /The new file will not have the bookmarks, page labels and the document's language of rich\.pdf\./.test(c.text), 'a file with bookmarks, page labels and a language: each is named', c && c.text);
++  check(!!c && /The new file will not have the bookmarks, page labels and language of rich\.pdf\./.test(c.text), 'a file with bookmarks, page labels and a language: each is named', c && c.text);
+   await p.screenshot({ path: 'holds-pageop-card.png' });
+   await p.locator('.pageopq button', { hasText: 'Continue' }).click(); await p.waitForTimeout(2000);
+ 
