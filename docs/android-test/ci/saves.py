@@ -296,6 +296,12 @@ def card_away():
     c = cdp.js(FCARD)
     if not c:
         return "no card"
+    x = cdp.js("(() => { " + VIS + " const e = [...document.querySelectorAll('.fcard')].find(vis); const b = e && [...e.querySelectorAll('button')].find(b => /close|×|✕/i.test((b.getAttribute('aria-label') || '') + (b.title || '') + (b.innerText || '').trim())); if (!b) return null; const r = b.getBoundingClientRect(); return {x: r.left + r.width / 2, y: r.top + r.height / 2}; })()")
+    if x:
+        tap_xy(x["x"], x["y"])
+        time.sleep(1.2)
+        if not cdp.js(FCARD):
+            return "the card's own ×"
     a = to_screen(c[0] + c[2] / 2, c[1] + 14)
     b = to_screen(c[0] + c[2] / 2, c[1] + c[3] - 10)
     sh(f"input swipe {a[0]} {a[1]} {b[0]} {b[1]} 300")
@@ -895,10 +901,12 @@ def sv12_zoom():
             {"page": page_i + 1, "zoomed_page_css": [round(v) for v in r[:4]], "page_moved_during_draw": [round(v) for v in r2[:4]] != [round(v) for v in r[:4]], "drawn_pt": want, "saved_pt": got, "largest_offset_pt": off, "save": s})
     away = card_away() if phone() and cdp.js(FCARD) else None       # the phone's mark card lies over the middle of the screen
     c2 = to_screen(r0[4] / 2, r0[5] * 0.36)
+    k = span * 0.4 * r0[4] / to_screen(r0[4], 0)[0]       # half the finger spread, in page px
+    under = cdp.js(f"(() => [{r0[4] / 2 - k}, {r0[4] / 2 + k}].map(x => {{ const e = document.elementFromPoint(x, {r0[5] * 0.36}); return e ? (e.closest('.fcard') ? 'mark card' : e.closest('.mk-layer *, [data-mark], .mk-sel, .mk-handle') ? 'a mark or its handles' : e.closest('.rpage') ? 'page' : (e.className || e.tagName).toString().slice(0, 40)) : null; }}))()")
     touch("pinch", c2[0], c2[1], round(span * 0.8), round(span * 0.25), 600)
     time.sleep(2)
     r3 = cdp.js(PAGE0)
-    R.check("SV-12c pinch in makes it smaller again", r3[2] < r1[2] * 0.9, {"page_w_zoomed": round(r1[2]), "page_w_after_pinch_in": round(r3[2]), "mark_card_put_away_by": away, "mode": "Mark"})
+    R.check("SV-12c pinch in makes it smaller again", r3[2] < r1[2] * 0.9, {"page_w_zoomed": round(r1[2]), "page_w_after_pinch_in": round(r3[2]), "mark_card_put_away_by": away, "under_the_two_fingers": under, "mode": "Mark"})
 
 
 def sv15_pinch_modes():
