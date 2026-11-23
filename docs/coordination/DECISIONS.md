@@ -604,5 +604,8 @@ Arun asked that all chats use Opus 5.5: the coordinator switched all twelve chat
 ## D-216 — Portal server answers; Windows user manual
 24 Nov 2026, 01:53 IST. Arun has no production server yet; he will host it today or tomorrow and then answer Web's questions. The Windows tester's 500-page manual is held until patch 35 and step 1 land, so its screenshots aren't redone.
 
+## D-217 — PR #28 merged (Windows host fixes); Tamil page numbers now (font option a)
+24 Nov 2026, 02:24 IST. Arun merged PR #28 himself (Reader main 0d3c639, all five checks green): BUG-21/25 browser keys off and a Reopen panel when the page's browser stops, BUG-16 printing (pages handed as drawings, still raster per D-22), BUG-22 app name, SC27, SC20, ST16 tooltips, and the tab strip (shared Ui shell.css/shell.js). Foundation's patch 35 builds on it. Font, Foundation's option (a), Arun agreed: paths that already go through PdfDocumentBuilder (Arrange page numbering) switch to UseLipiFonts() now and write Tamil today, refusing emoji; stamps, watermarks, headers/footers and Text marks refuse Tamil and emoji until 3.36 (D-210, D-211). Bench re-run (Windows, e2fb8c1): watch-off run complete (overflows still 5.9-7.0 s); watch-on run died with an unhandled EngineFailed OOM drawing cad-floor-layout.pdf - bench fix asked of Foundation, Arun re-runs after.
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).
