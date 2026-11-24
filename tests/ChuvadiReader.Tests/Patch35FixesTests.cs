@@ -171,3 +171,19 @@ public class TextAndInfoTests
         Assert.Equal(("Discharge 4471", "Dr. A", "Ward 3", "oncology"), (o.Title, o.Author, o.Subject, o.Keywords));
     }
 }
+
+/// <summary>CR70 / CR71: damaged or enormous images are refused at the desk, in a sentence.</summary>
+public class DeskImageCheckTests
+{
+    [Fact]
+    public void A_whole_small_png_is_taken_and_cut_short_or_enormous_ones_are_refused()
+    {
+        var png = TestPdf.SolidPng(20, 10, 200, 30, 30);
+        Assert.Null(ImageCheck.Refusal(TestPdf.WriteTemp(png)));
+        Assert.Contains("cut short", ImageCheck.Refusal(TestPdf.WriteTemp(png[..(png.Length - 20)])));
+        var huge = (byte[])png.Clone();
+        huge[16] = 0; huge[17] = 0; huge[18] = 0xEA; huge[19] = 0x60;   // 60,000 px wide
+        Assert.Contains("too large", ImageCheck.Refusal(TestPdf.WriteTemp(huge)));
+        Assert.Contains("isn't an image", ImageCheck.Refusal(TestPdf.WriteTemp(System.Text.Encoding.ASCII.GetBytes("hello, not an image at all"))));
+    }
+}
