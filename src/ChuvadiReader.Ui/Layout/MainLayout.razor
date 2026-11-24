@@ -423,9 +423,28 @@
     private bool _docMenuOpen;
     private bool _leftOpen = true;
 
+    /// <summary>ST15 (D-214): the window is narrower than 760 px. The opened side bar then floats over the page
+    /// (it takes no room from it) and closes after a pick; the remembered choice is not changed.</summary>
+    private bool _narrow;
+
+    [JSInvokable]
+    public Task OnNarrow(bool narrow)
+    {
+        if (narrow == _narrow) return Task.CompletedTask;
+        _narrow = narrow;
+        if (narrow) _leftOpen = false;   // a narrow window starts with the page, not the bar over it
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private void CloseLeftIfNarrow()
+    {
+        if (_narrow) _leftOpen = false;
+    }
+
     private async Task ToggleLeft()
     {
         _leftOpen = !_leftOpen;
+        if (_narrow) return;   // ST15: opening it over a narrow window is for one pick, not a new choice
         try
         {
             await Storage.SetAsync("leftbar.open", _leftOpen ? "1" : "0");
@@ -778,7 +797,11 @@
         StateHasChanged();
     }
 
-    private void Go(string path) => Nav.NavigateTo(path);
+    private void Go(string path)
+    {
+        CloseLeftIfNarrow();
+        Nav.NavigateTo(path);
+    }
 
     // ── modes ─────────────────────────────────────────────────────────────
     private string? ModeDisabledReason(DocMode m)
@@ -794,6 +817,7 @@
 
     private async Task RequestMode(DocMode m)
     {
+        CloseLeftIfNarrow();   // ST15
         if (ModeDisabledReason(m) is not null)
         {
             return;
@@ -851,6 +875,7 @@
 
     private async Task FindNow()
     {
+        CloseLeftIfNarrow();   // ST15
         if (Shell.FindHandler is not null && OnDocView)
         {
             await Shell.FindHandler();
@@ -971,6 +996,7 @@
 
     private async Task AddTab()
     {
+        CloseLeftIfNarrow();   // ST15
         var path = await Picker.PickDocumentAsync();
         if (string.IsNullOrEmpty(path))
         {

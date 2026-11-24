@@ -74,7 +74,16 @@ export function init(dotnetRef) {
     document.addEventListener('keydown', handler, true);
     if (!wheel) { wheel = tabWheel; document.addEventListener('wheel', wheel, { passive: false }); }
     watchTabs();
+    // ST15 (D-214): below 760 px the opened side bar floats over the page; the layout hears when the window is
+    // that narrow, so a pick can close it. Nothing is sent while the window is wider.
+    if (!narrow && window.matchMedia) {
+        narrow = window.matchMedia('(max-width: 759px)');
+        narrowChange = () => { if (ref) ref.invokeMethodAsync('OnNarrow', narrow.matches).catch(() => { }); };
+        narrow.addEventListener('change', narrowChange);
+        if (narrow.matches) narrowChange();
+    }
 }
+let narrow = null, narrowChange = null;
 
 export function focusSelect(el) { try { el.focus(); el.select(); } catch { } }
 
@@ -113,5 +122,6 @@ export function dispose() {
     if (handler) document.removeEventListener('keydown', handler, true);
     if (wheel) document.removeEventListener('wheel', wheel, { passive: false });
     if (tabWatch) tabWatch.disconnect();
-    handler = null; ref = null; wheel = null; tabWatch = null; lastActive = null;
+    if (narrow && narrowChange) narrow.removeEventListener('change', narrowChange);
+    handler = null; ref = null; wheel = null; tabWatch = null; lastActive = null; narrow = null; narrowChange = null;
 }
