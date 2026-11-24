@@ -152,7 +152,10 @@ public sealed class CertificateSignService
 
                 // The library's rule: the first signature goes through PdfSigner; a file that is
                 // already signed gets its next signature appended, so the earlier ones stay valid.
-                signed = existing.Count == 0
+                // PR21: "already signed" is also a file that carries a signature's byte range though the reader lists
+                // none (signed by another tool); appending keeps its signature too.
+                bool signedAlready = existing.Count > 0 || source.AsSpan().IndexOf("/ByteRange"u8) >= 0;
+                signed = !signedAlready
                     ? PdfSigner.Sign(doc, signer, signOptions)
                     : PdfCounterSigner.AddSignature(source, signer, signOptions);
             }
