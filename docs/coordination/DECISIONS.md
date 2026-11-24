@@ -613,5 +613,8 @@ Arun asked that all chats use Opus 5.5: the coordinator switched all twelve chat
 ## D-219 — Engine memory limits: 1 GB heap, 1.5 GB hard cap (desktop)
 24 Nov 2026, 21:22 IST. Arun chose (a). On Windows, Mac and Linux each parse engine gets a 1 GB .NET heap cap and a 1.5 GB hard cap (Windows job object; the matching limit on Mac and Linux). Reason: real A1 CAD sheets drawn at 150 dpi peak near 560 MB, so 512 MB failed them at random. Bad files are still stopped and the app stays up. Drawing big sheets in strips (512 MB) is not taken now; it becomes a library ask only if memory becomes a real complaint. Android gets its own lower limit, proposed by Foundation.
 
+## D-220 — Windows ships both an MSIX package and a setup exe
+24 Nov 2026, 21:30 IST. Arun checked PR 28 on his PC (all good) and chose both installers. The Windows chat brings the tools, .NET and WebView2 bundling, install scope, file associations, signing (OV certificate at Phase 2, D-214) and the CI job, with pros, cons and a lean, before building. Vector printing (D-22): the coordinator asked the Chuvadi.Print chat for its release date and vector entry point on Windows, Mac and Linux.
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).
