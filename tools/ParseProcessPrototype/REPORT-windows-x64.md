@@ -7,13 +7,13 @@ engine process: main 1536 KB, thread pool 1536 KB, new Thread() 1536 KB
 
 ## 1. Starting the engine (process start to first answer)
 first 152.7 ms; then median 51.2 ms (min 49.3, max 52.8); engine memory idle 23 MB
-first document, open and page 1 (cad-floor-layout.pdf): today, in a running app 3288.7 ms; with an engine started for it (start included) 3385.4 ms; with an engine already running, see table 2
+first document, open and page 1 (a real A1 CAD drawing (not in repo)): today, in a running app 3288.7 ms; with an engine started for it (start included) 3385.4 ms; with an engine already running, see table 2
 wire, a payload sent and returned (twice the one-way cost): 1 KB 0.1 ms, 100 KB 0.2 ms, 1000 KB 1.3 ms, 6000 KB 7.1 ms
 
 ## 2. PDF pages (open, then the first 8 pages), warm: one file drawn first on both sides
 | file | pages | SVG KB/page | open in-process | open engine | page in-process (median) | page engine (median) | overhead/page |
 |---|---|---|---|---|---|---|---|
-| cad-floor-layout.pdf | 5 | 3272 | 6.6 ms | 6.9 ms | 3507.4 ms | 3321.7 ms | -185.7 ms |
+| a real A1 CAD drawing (not in repo) | 5 | 3272 | 6.6 ms | 6.9 ms | 3507.4 ms | 3321.7 ms | -185.7 ms |
 | inherited-cropbox.pdf | 1 | 0 | 0.2 ms | 0.3 ms | 0.3 ms | 0.4 ms | 0.1 ms |
 | journal-10p.pdf | 10 | 161 | 1.9 ms | 1.6 ms | 16.0 ms | 16.0 ms | -0.0 ms |
 engine memory after drawing: 71 MB
