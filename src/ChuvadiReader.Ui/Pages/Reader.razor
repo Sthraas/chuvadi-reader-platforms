@@ -1223,6 +1223,12 @@
                         <RailSep />
                         <RailButton Icon="list-view" Label="Wrap lines" Size="18" Active="_wrap" OnClick="() => _wrap = !_wrap" />
                     }
+                    @if (tab.Format == DocumentFormat.Xlsx)
+                    {
+                        @* D-214: hidden rows, columns and sheets stay hidden, as in Excel, unless this is on. *@
+                        <RailSep />
+                        <RailButton Icon="eye" Label="Show hidden rows, columns and sheets" Size="18" Active="tab.ShowHiddenParts" OnClick="() => tab.ShowHiddenParts = !tab.ShowHiddenParts" />
+                    }
                 </SideRail>
             }
             else if (_markup)
@@ -1593,7 +1599,6 @@
     private int _shownPageCount;
     private bool _restoreScroll;
     private int? _pendingJumpPage;
-    private readonly HashSet<string> _initiallyFitted = new();
     private DocProperties? _props;
     private bool _showProps;
     private static readonly ExportFormat[] _formats =
@@ -3870,12 +3875,14 @@
                 catch { }
             }
 
-            if (!_initiallyFitted.Contains(tab.Id))
+            if (!tab.FittedOnce)
             {
                 // First time this document is shown — open it fitted to the page; on a phone, fitted to
                 // the width (Portal & Android 12g–12j: the page fills the screen's width).
-                _initiallyFitted.Add(tab.Id);
+                tab.FittedOnce = true;   // HO16: on the tab, not this page, so Home and back keeps the place
                 _restoreScroll = false;
+                // HO16: a tab that comes back on a later page (from the last session, or Resume on Home) opens there.
+                if (tab.CurrentPage > 1 && _pendingJumpPage is null) _pendingJumpPage = tab.CurrentPage;
                 tab.TwoPage = false;
                 tab.Continuous = false;
                 // From its first page: the desk is shared by every tab, so it still had the last document's

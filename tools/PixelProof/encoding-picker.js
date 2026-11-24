@@ -27,7 +27,8 @@ const { chromium } = require('playwright');
   // remembered: switch tab away and back
   const tabs = await p.$$('[data-tab-id]');
   await tabs[tabs.length - 2].click(); await p.waitForTimeout(1200);
-  check('utf16 (no BOM) tab: not readable automatically, button still there', (await p.$eval('.sb-btn', e => e.innerText.trim())) === 'Automatic', await sb() + ' :: ' + await body());
+  // VW25: UTF-16 with no byte-order mark is now read automatically; the button still offers the choice.
+  check('utf16 (no BOM) tab: read automatically as UTF-16 LE (VW25), button still there', (await body()).includes('சுவடி') && /UTF-16 LE/.test(await sb()), await sb() + ' :: ' + await body());
   await p.click('.sb-btn'); await p.waitForTimeout(400);
   await p.click('.enc-row:has-text("UTF-16 LE")'); await p.waitForTimeout(900);
   check('UTF-16 LE by hand reads the Tamil text', (await body()).includes('சுவடி'), await body());
