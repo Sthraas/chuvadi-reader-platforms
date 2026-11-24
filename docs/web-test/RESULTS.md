@@ -401,3 +401,13 @@ Tooling fixed in this pass (stale selectors after the viewer changes, not produc
 | **Sessions, crashes** | ✅ `expiry.py` 12/12, `comeback.py` 5/5, `gone_browser.py` 4/4 + 4/4 — × 3; `linger.py` 38–42 s in six cases; `worker_crash.py` 11/11 Chrome, WebKit, Firefox 11/11 twice (once 10/11 — exit-code line missing while I ran other probes alongside); `cleanup_race.py` 5/5 × 3; first visit in Firefox 6/6 fresh portals; `early_drop.py` 5/5 × 4 |
 | **Regression** | ✅ `flows.py` 12/12, `page_images.py` 7/7, `reload.py` 11/11, `leave_guard.py` 7/7 (Firefox 6/6), `office_limits.py` 6/6, `mark_zoom.py` 8/8, `sangam_signin.py` 18/18 — × 3; `leave_prompt.py` 5/5, `reload_tabs.py` 11/11, `page_image_sec.py` 19/19 — × 3; `verify_fixes.py` 12/12, WebKit 10/10 (print checks can't run headless); fidelity 14/14 and 23/23 on four files × 3; large Excel and the four over-limit refusals as before; `sec_browser.py` no failures, second person 67–87 ms |
 | Not covered | the phone close card's labels on one line (needs a mark drawn by touch); Arrange's restore when some files are missing |
+
+## 24 Nov 2026 — `platform/web` @ **a70d6940** (Web step 47: WT-31 fix; D-206 host side ready, the card itself not yet in)
+**Build from clean:** 0 warnings; Reader **449** (+6 skipped), Hosting **103**, Mobile UI **16**, Web UI **41**; Web **211/211**; `check-package.sh` PASS.
+
+| Claim / area | Result |
+|---|---|
+| **WT-31** | ✅ `close_card.py` 19/19 × 8 runs in WebKit; `signout_reach.py` WebKit 8/8 (Save as…) + 6/6 (Discard), Chromium 3/3; no cut-off load |
+| **WT-30 / D-206** | not on this head yet (the card's wording is Web UI's diff through the Foundation) — still open |
+| **M-27** | ✅ Chromium, WebKit 26.6, WebKit 17.4 16/16; Firefox 14/16 (two `goto` time-outs, OBS-1); worst 0.9 px, 0.4 % |
+| **Regression** | ✅ fresh-portal set (`flows.py` Firefox first visit 6/6, `early_drop.py` 5/5 × 4, `worker_crash.py` 11/11 × 3); Web's suites × Chrome, Firefox, WebKit all clean (`flows`, `page_images`, `reload`, `leave_guard`, `close_card` 19/19, `mark_zoom`, `office_limits`, `sangam_signin`, `expiry`, `comeback`, `gone_browser`, `encoding_picker`); `linger.py` 40–42 s × 6; mine × 3: `zoom_tools`, `close_card_probe`, `excel_p29`, `holds_probe` 17/17 (Firefox once 16/17 at the sign-out page load, OBS-1, then 17/17 three times), `encoding_probe`, `leave_prompt`, `reload_tabs`, `page_image_sec`, fidelity 14/14 + 23/23 on four files; `verify_fixes.py` 12/12, WebKit 10/12 (the two print checks can't run headless, as always); large Excel and the four over-limit refusals as before; `sec_browser.py` 21 pass, second person's next page 72–89 ms; `cleanup_race.py` 5/5 × 3 |

@@ -1,5 +1,7 @@
 # Web — what remains for a Phase 1 sign-off (Web Test chat)
 
+> **24 Nov 2026, 07:00 IST — a70d6940 tested: WT-31 verified fixed, regression clean.** The sign-off still stays on 0e971fa3 only for **WT-30**, decided as D-206 (option a); its card change (Web UI's diff) is not on `platform/web` yet. When it lands and passes, the sign-off moves to that head.
+
 > **19 Nov 2026, 00:30 IST — patch 34 head 744be4f8 tested; the sign-off stays on 0e971fa3 for now.** Everything patch 34 claims holds except D-203 on the portal: **WT-30 (Medium)** — Save on the Sign out card promises to keep Arrange's desks and they are gone at the next sign-in. Also **WT-31 (Low)**, WebKit sign-out load still cut off now and then (the sign-out itself reaches the server every time). I move the sign-off to the patch 34 head once WT-30 is fixed or the coordinator rules on it (options in BUGS.md; I recommend (a)).
 
 > **Updated 18 Nov 2026, 05:30 IST** — head **0e971fa3** (patches 32 and 33; signed before on 21665a3 and 95c44b01). The section below supersedes everything after it.
