@@ -610,5 +610,8 @@ Arun asked that all chats use Opus 5.5: the coordinator switched all twelve chat
 ## D-218 — Arun's own files named in the public repos: reword going forward
 24 Nov 2026, 21:15 IST. Arun chose (a). Where the public repos name or describe his own files (Linux Test's RESULTS.md and BUGS.md call the KDMC drawing "Arun's KDMC LINAC site layout"; Foundation's two bench reports name cad-floor-layout.pdf), the text is reworded to "a real A1 CAD drawing (not in repo)". Git history is not rewritten. New entries never name or describe Arun's own files. Bench re-run on Windows with the crash watch on (6da01e1, synthetic drawing): stack overflow noticed in 38 ms (was 6,980 ms), c08/c09/c23 in 126-162 ms, every table finished, app stayed up.
 
+## D-219 — Engine memory limits: 1 GB heap, 1.5 GB hard cap (desktop)
+24 Nov 2026, 21:22 IST. Arun chose (a). On Windows, Mac and Linux each parse engine gets a 1 GB .NET heap cap and a 1.5 GB hard cap (Windows job object; the matching limit on Mac and Linux). Reason: real A1 CAD sheets drawn at 150 dpi peak near 560 MB, so 512 MB failed them at random. Bad files are still stopped and the app stays up. Drawing big sheets in strips (512 MB) is not taken now; it becomes a library ask only if memory becomes a real complaint. Android gets its own lower limit, proposed by Foundation.
+
 ## Blocker for Arun
 - GitHub Actions on Sthraas stopped ~20:10 UTC 6 Nov: "recent account payments have failed or your spending limit needs to be increased". Options: pay/raise limit, make the working repo public (free minutes), or move. **Update 04:46 IST:** Arun made it public; coordinator asked him to revert to private (library DLLs in ci/packages) and cut minutes (D-90).
