@@ -65,7 +65,7 @@ public sealed class TextViewService
         byte[] bytes;
         try
         {
-            bytes = File.ReadAllBytes(path);
+            bytes = SharedRead.AllBytes(path);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

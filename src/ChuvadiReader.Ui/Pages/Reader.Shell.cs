@@ -1287,11 +1287,28 @@ public partial class Reader
         }
     }
 
-    private Task OnViewerStatus(string status)
+    private async Task OnViewerStatus(string status)
     {
         _viewerStatus = status;
         PublishShell();
-        return Task.CompletedTask;
+        if (_openingNoted is not null)
+        {
+            _openingNoted = null;
+            await Tabs.OpenedAsync();   // HO33: the viewer got through its file
+        }
+    }
+
+    /// <summary>HO33: the viewer tab whose file is being opened now, noted so a crash while opening it is known at
+    /// the next start.</summary>
+    private string? _openingNoted;
+    private string? _openingSeen;
+
+    private async Task NoteViewerOpeningAsync()
+    {
+        if (Tab is not { } t || !t.Format.IsViewOnly() || t.Error is not null || t.Id == _openingSeen) return;
+        _openingSeen = t.Id;
+        _openingNoted = t.Id;
+        await Tabs.MarkOpeningAsync(t);
     }
 
     private async Task ViewerGoAnchor(string anchor)

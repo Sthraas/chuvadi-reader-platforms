@@ -43,9 +43,19 @@ public sealed class ChuvadiPdfReader : IPdfReader
     {
         // Open straight from the path with the library's async open, so it can read
         // the file efficiently instead of us buffering the whole thing into memory.
-        var document = string.IsNullOrEmpty(password)
-            ? await PdfDocument.OpenAsync(path, cancellationToken).ConfigureAwait(false)
-            : await PdfDocument.OpenAsync(path, password!, cancellationToken).ConfigureAwait(false);
+        // Shared for reading, writing and deleting, so a PDF another program holds open still opens; the document
+        // owns the stream and closes it with itself.
+        var stream = SharedRead.Open(path);
+        PdfDocument document;
+        try
+        {
+            document = await PdfDocument.OpenAsync(stream, new PdfOpenOptions { Password = string.IsNullOrEmpty(password) ? null : password }, cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            await stream.DisposeAsync().ConfigureAwait(false);
+            throw;
+        }
 
         var vm = new PdfDocumentVm
         {

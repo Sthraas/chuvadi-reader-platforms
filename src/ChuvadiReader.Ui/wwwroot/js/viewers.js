@@ -24,10 +24,14 @@ export function attach(el, dotnet, mode) {
         st.raf = requestAnimationFrame(() => { st.raf = 0; report(el, st); });
     };
     st.onClick = (e) => {
-        const a = e.target && e.target.closest ? e.target.closest('a[data-anchor-link]') : null;
+        const a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
         if (!a || !el.contains(a)) return;
-        e.preventDefault(); // keeps Blazor's router from treating "#slug" as a navigation
-        scrollToAnchor(el, a.getAttribute('data-anchor-link'));
+        e.preventDefault(); // keeps Blazor's router from treating "#slug" as a navigation, and stops every link
+        const anchor = a.getAttribute('data-anchor-link');
+        if (anchor !== null) { scrollToAnchor(el, anchor); return; }
+        // BUG-01: a web or mail link asks first (as the HTML viewer does); nothing opens on its own.
+        const href = a.getAttribute('href') || '';
+        if (/^(https?:|mailto:)/i.test(href)) dotnet.invokeMethodAsync('OnExternalLink', href).catch(() => { });
     };
     el.addEventListener('scroll', st.onScroll, { passive: true });
     el.addEventListener('click', st.onClick);

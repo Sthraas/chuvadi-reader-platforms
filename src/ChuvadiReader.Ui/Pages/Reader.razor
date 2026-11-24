@@ -324,6 +324,7 @@
             <div class="rempty-sub">Chuvadi couldn't read this file, maybe because a download or copy didn't finish. Chuvadi can try to rebuild it as a new copy.</div>
             <div class="rempty-acts">
                 <button class="rempty-btn" @onclick="TryRecovery" disabled="@_recovering">@(_recovering ? "Repairing…" : "Try to repair (new copy)")</button>
+                <button class="rempty-btn" @onclick="StopOpening">Close this tab</button>
                 @if (FileManager.IsAvailable)
                 {
                     <button class="rempty-btn" @onclick="() => FileManager.RevealAsync(tab.Path)">Show in folder</button>
@@ -344,7 +345,14 @@
         <div class="rempty">
             <Icon Name="file-pdf" Size="40" />
             <div class="rempty-t">@tab.Error</div>
-            <button class="rempty-btn" @onclick="OpenViaPicker">@OpenAnotherLabel</button>
+            <div class="rempty-acts">
+                @if (tab.HeldAfterCrash)
+                {
+                    <button class="rempty-btn" @onclick="() => Tabs.OpenHeldAsync(tab.Id)">Open it anyway</button>
+                }
+                <button class="rempty-btn" @onclick="StopOpening">Close this tab</button>
+                <button class="rempty-btn" @onclick="OpenViaPicker">@OpenAnotherLabel</button>
+            </div>
             @if (!string.IsNullOrEmpty(tab.ErrorDetail))
             {
                 <details class="rempty-sub"><summary>Details</summary>@tab.ErrorDetail</details>
@@ -365,7 +373,7 @@
                     <DocxView @key="tab.Id" @ref="_viewer" Path="@tab.Path" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" OnStopOpening="StopOpening" />
                     break;
                 case DocumentFormat.Xlsx:
-                    <XlsxView @key="tab.Id" @ref="_viewer" Path="@tab.Path" Sizes="@tab.SheetSizes" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" OnStopOpening="StopOpening" />
+                    <XlsxView @key="tab.Id" @ref="_viewer" Path="@tab.Path" Sizes="@tab.SheetSizes" ShowHidden="@tab.ShowHiddenParts" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" OnStopOpening="StopOpening" />
                     break;
                 case DocumentFormat.Markdown:
                     <MarkdownView @key="tab.Id" @ref="_viewer" Path="@tab.Path" CodePage="@EncodingFor(tab)" OnEncoding="OnViewerEncoding" OnCounter="OnViewerCounter" OnOutline="OnViewerOutline" FindQuery="@_viewerFind" OnFindCount="OnViewerFindCount" TextSizePct="@_textSize" ReadingWidth="@_readWidth" WrapLines="@_wrap" ShowSource="@_showSource" OnStatus="OnViewerStatus" OnStopOpening="StopOpening" />
@@ -989,6 +997,11 @@
                 <div class="fc-card-scroll">
                 @if (viewOnly)
                 {
+                    @if (tab.Format == DocumentFormat.Xlsx)
+                    {
+                        @* D-214: hidden rows, columns and sheets stay hidden, as in Excel, unless this is on. *@
+                        <label class="fc-toggle">Show hidden rows, columns and sheets <input type="checkbox" checked="@tab.ShowHiddenParts" @onchange="() => tab.ShowHiddenParts = !tab.ShowHiddenParts" /></label>
+                    }
                     <div class="fc-grp">Text size</div>
                     <div class="fc-seg">
                         @foreach (var sz in new[] { 85, 100, 115, 130, 150 })
@@ -3759,6 +3772,7 @@
         }
 
         PublishShell();
+        await NoteViewerOpeningAsync();   // HO33
         var tab = Tabs.Active;
 
         // The viewers' Find box takes the cursor when it opens, as the PDF one does (OpenFind), so the person can
