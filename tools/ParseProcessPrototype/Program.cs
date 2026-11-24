@@ -182,8 +182,10 @@ sealed class EngineClient : IDisposable
         }
         if (read.Result is not { } r)
         {
+            // The pipe can close (and the read finish empty) before the gone signal wins the wait: when the crash
+            // watch ended the engine, say so, rather than only the exit code its kill left (-1 on Windows).
             Process.WaitForExit(2000);
-            throw new EngineGone($"ended (exit code {(Process.HasExited ? Process.ExitCode : -1)})");
+            throw new EngineGone(_dying is { } why ? $"ended (the runtime said \"{why.Trim()}\"; ended at once)" : $"ended (exit code {(Process.HasExited ? Process.ExitCode : -1)})");
         }
         if (r.Code != Wire.Ok) throw new EngineFailed(Encoding.UTF8.GetString(r.Payload));
         return r.Payload;
