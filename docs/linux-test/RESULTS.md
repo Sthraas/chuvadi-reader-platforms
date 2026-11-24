@@ -119,7 +119,7 @@ Findings
 | T5.1f | Stuck open blocks later opens | ❌ **B-10** |
 | T5.1g | Missing `document.xml` docx, not-a-zip xlsx | ✅ no crash; docx: clear message naming the missing part; ❌ xlsx: "Couldn't open this workbook: **EOCDNotFound**" — resource key (B-17) |
 | T5.2 | Encrypted RC4-40 / RC4-128 / AES-128 / AES-256 | ❌ **B-07** (can't enter a password); no crash |
-| T5.3 | **7.9 MB vector CAD PDF** (Arun's KDMC LINAC site layout, attached 9 Nov 05:46; 8,294,223 bytes, 5 × A1, ~1.44 M path operators, 170 images, 38 fonts, produced by Chuvadi). **Not committed — the repo is public; no screenshots of it either.** Build e242d92 | ✅ opens and renders correctly (lines, hatching, labels crisp at 180 %); all 5 pages; zoom; no errors. Time from process start (UI-test build, incl. ~2.8 s driver launch): "Opening…" gone **6.0 s** warm / 6.6 s cold, page drawn **6.9 s** warm (worst 7.2) / **7.5 s** cold (worst 11.9) — i.e. ~3–4 s to open + ~1 s to draw (poppler draws page 1 in ~1 s). Memory: app 835 MB after page 1, **1.6 GB** after all 5 pages (+ WebKit ~480 MB) → **B-27**. Print: the app sends the file **byte-identical** to CUPS ✅; the cups-pdf output is 5 page rasters (0 fonts) — but so is `lp cad.pdf` with no app at all: cups-pdf's Ghostscript pass rasterises this file itself; a real PDF-capable printer gets the vector file. ⚠️ frame-watcher "settled" (1.3 s) was the steady "Opening…" card, not the page — CAD timings above come from `tools/t_cadtime.py` |
+| T5.3 | **7.9 MB vector CAD PDF** (a real A1 CAD drawing (not in repo); 8,294,223 bytes, 5 × A1, ~1.44 M path operators). **Not committed — the repo is public; no screenshots of it either.** Build e242d92 | ✅ opens and renders correctly (crisp at 180 %); all 5 pages; zoom; no errors. Time from process start (UI-test build, incl. ~2.8 s driver launch): "Opening…" gone **6.0 s** warm / 6.6 s cold, page drawn **6.9 s** warm (worst 7.2) / **7.5 s** cold (worst 11.9) — i.e. ~3–4 s to open + ~1 s to draw (poppler draws page 1 in ~1 s). Memory: app 835 MB after page 1, **1.6 GB** after all 5 pages (+ WebKit ~480 MB) → **B-27**. Print: the app sends the file **byte-identical** to CUPS ✅; the cups-pdf output is 5 page rasters (0 fonts) — but so is `lp cad.pdf` with no app at all: cups-pdf's Ghostscript pass rasterises this file itself; a real PDF-capable printer gets the vector file. ⚠️ frame-watcher "settled" (1.3 s) was the steady "Opening…" card, not the page — CAD timings above come from `tools/t_cadtime.py` |
 | T5.4 | 30 tabs | ✅ (T4.13) |
 | T5.5 | Low memory (600 MB cgroup) | ✅ starts, opens PDF, ~260 MB RSS |
 | T5.6 | Read-only home | ❌ **B-16** crash at startup |
@@ -178,7 +178,7 @@ CI artifact `linux-arm64/deb/chuvadi-reader_1.0.0~preview_arm64.deb` from run 42
 **O-4 B-17 — resource keys** — A. remove `UseSystemResourceKeys` (Linux-only, a few hundred KB, immediate); B. own messages for every exception shown (shared, larger). **Recommendation: A now; B later with the Reader chat for friendlier wording on every platform.**
 
 ## Questions for the coordinator / Arun
-1. The **7.9 MB vector CAD PDF** from the Reader chat's uploads — can Arun attach it here (or commit it to a test-fixtures path)? T5.3 is blocked without it.
+1. The **7.9 MB vector CAD PDF**, a real A1 CAD drawing (not in repo) — can Arun make it available here? T5.3 is blocked without it.
 2. ~~B-05 contract~~ — answered: on `platform/foundation` since 6 Nov; Linux builds against it. (My error.)
 3. Routing done in BUGS.md (Linux / shared Ui/Core / library).
 
@@ -192,7 +192,7 @@ CI artifact `linux-arm64/deb/chuvadi-reader_1.0.0~preview_arm64.deb` from run 42
 
 **Waiting on the library (via Arun):** B-08a Chuvadi.Docs input limits · B-09a Sheets range layout (app side fixed) — fixtures in `fixtures/` · B-11a chuvadi-pdf xref rebuild · Sheets 2.0.2 shared-string fix (D-87) · form filling and certificate signing (*Coming soon* in the Ui).
 
-**Waiting on Arun:** Windows end-to-end timings (D-51) for a side-by-side. (CAD PDF received and tested 9 Nov — T5.3.)
+**Waiting on Arun:** Windows end-to-end timings (D-51) for a side-by-side. (CAD PDF received and tested — T5.3.)
 
 **Manual items for a real machine** (not possible in this sandbox):
 1. Ubuntu 24.04 desktop with AppArmor on and a GPU: install the `.deb`, launch from the app grid, check the AppArmor profile loads and timings with a real GPU.
@@ -215,7 +215,7 @@ Waiting elsewhere, not Linux defects: **library** — B-08a (Docs limits; the ap
 ## Re-verification on 64c9c16 (10 Nov) — Foundation's patches 14–16: rendering off the Ui thread
 
 This build was made from source with `-p:UiTest=true` and run on 2 vCPU, with no GPU. The tools are
-`tools/t_final.py`, `t_multi.py`, `t_drag.py`, `t_print.py` and `t_render.py`. Arun's CAD file was run here only;
+`tools/t_final.py`, `t_multi.py`, `t_drag.py`, `t_print.py` and `t_render.py`. A real A1 CAD drawing (not in repo) was run here only;
 I've committed numbers only.
 
 **Regression ✅**
@@ -238,10 +238,10 @@ No new files appear in `/tmp`.
 |---|---|
 | 36a fast paging (400 pages) | ✅ The page answers in ≤ 0.18 s while paging. After 150 PageDowns, the view settles 13–19 s after the last key (WebKitGTK's smooth scroll, a separate Linux finding), and the landed page is already drawn. 40 jumps through the page box, 50 ms apart: the landed page draws in 0.03 s. Page 400 draws in 0.04–0.52 s. |
 | 36b closing a tab mid-render | Stand-in ✅: 3 of 3 closes, the next file draws in 0.33–0.37 s. Real CAD ⚠️: in 4 of 6 closes the next file draws in 0.17–0.62 s, but in the other 2 it takes **3.7 s and 4.6 s** (**B-29**). The page answers in ≤ 0.08 s throughout. |
-| 36c Arun's CAD, on its own, 3 runs | **Sheet 1 draws in 6.0 / 7.1 / 8.4 s.** Sheets 2–3 take **10.5–13.5 s each**; sheets 4–5 are drawn in the background by the time I reach them; paging back is instant. The page answers in ≤ 0.23 s (once 1.22 s). See the memory table below. |
+| 36c the real A1 CAD drawing (not in repo), on its own, 3 runs | **Sheet 1 draws in 6.0 / 7.1 / 8.4 s.** Sheets 2–3 take **10.5–13.5 s each**; sheets 4–5 are drawn in the background by the time I reach them; paging back is instant. The page answers in ≤ 0.23 s (once 1.22 s). See the memory table below. |
 | 36c Linux's stand-in | **Sheet 1: 53–55 s. Sheet 2: not drawn after 4 min** (busy in `PageRasterizer.PaintStrokeOp`). Poppler draws a sheet in 0.9 s. |
 
-Memory during 36c with Arun's CAD, app / WebKit, in MB:
+Memory during 36c with the real A1 CAD drawing (not in repo), app / WebKit, in MB:
 
 | Point | Memory |
 |---|---|
@@ -319,7 +319,7 @@ as on 64c9c16. Ready for Arun's check, with these known:
 **Build and CI.** Built from source. [CI run 42731544977](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/42731544977)
 is green on x64 and arm64; the red x64 36c from 8dcf4d8 is gone.
 
-**Rendering, with Arun's real CAD file** (2 vCPU, no GPU):
+**Rendering, with a real A1 CAD drawing (not in repo)** (2 vCPU, no GPU):
 
 | Item | Result |
 |---|---|
@@ -370,7 +370,7 @@ No files are left in `/tmp`.
 **Build and CI.** Built from source. [CI run 42756482625](https://github.com/Sthraas/chuvadi-reader-platforms/actions/runs/42756482625)
 is green on x64 and arm64. This replaces the d918161 sign-off above.
 
-**With Arun's real CAD file** (2 vCPU, no GPU):
+**With a real A1 CAD drawing (not in repo)** (2 vCPU, no GPU):
 
 | Item | Result |
 |---|---|
@@ -454,7 +454,7 @@ is green. This replaces the 90895ef sign-off above. Details and numbers are in B
 | Check | Result |
 |---|---|
 | M-27, marks by mouse (Mac S1) ✅ | Not on Linux. Rectangle and Text at 54–222 %, on an unrotated and a `/Rotate 90` page: 0 px off on screen, 1–3 pt off in the saved file |
-| B-32, `/Rotate` on screen ✅ | Fixed for 90, 180, 270; vector, cropped and heavy raster pages. Arun's CAD sheets (`/Rotate 270`) now show landscape |
+| B-32, `/Rotate` on screen ✅ | Fixed for 90, 180, 270; vector, cropped and heavy raster pages. The real A1 CAD drawing's sheets (not in repo; `/Rotate 270`) now show landscape |
 | Rotated pages in print (Mac's M-26) ✅ | Not clipped: all four pages print whole |
 | Excel grid ✅ | Widths, heights, merges, hidden rows, columns and sheets, right-to-left, gridlines and zoom match the file; Find works on the stored value and the shown text |
 | Excel time-only cells ✗ | **B-31 still open** (library) |
@@ -704,7 +704,7 @@ It appears in the app grid as **Chuvadi Reader**; it also installs and loads its
 1. **Start from the app grid**, cold and again warm — note how long until Home shows (here: about 1.5–2 s on 2 CPUs without a GPU). From the moment the window appears you should see a small progress bar on the theme's background, never a blank window; in the dark theme, no light flash.
 2. **Open a PDF by double-clicking it in Files**, then select **three files** → right-click → Open With → Chuvadi: each becomes its own tab in the one window.
 3. **Drag two files from Files onto the window** — two tabs.
-4. **The KDMC CAD drawing**: open it (the sheets should now show landscape, the right way up), page through all 5 sheets (try typing a sheet number, and jumping ahead then back), zoom in and out, close it. Note the time each sheet takes to draw, and the memory in System Monitor before opening, with 5 sheets, and just after closing. Here, on 2 CPUs with no GPU: sheet 1 takes ~6 s and each new sheet 4–6 s (B-27, known); the app goes from ~250 MB to ~0.9–1 GB with 5 sheets and back to ~270 MB on closing. Your real-hardware numbers are the useful ones. The window should stay responsive while it draws, and every sheet should draw and stay sharp. The rare fresh-open stall (a drawing stuck at 115 % with a tall blank page) is fixed on this head; if you ever see it, note what you did just before.
+4. **The real A1 CAD drawing (not in repo)**: open it (the sheets should now show landscape, the right way up), page through all 5 sheets (try typing a sheet number, and jumping ahead then back), zoom in and out, close it. Note the time each sheet takes to draw, and the memory in System Monitor before opening, with 5 sheets, and just after closing. Here, on 2 CPUs with no GPU: sheet 1 takes ~6 s and each new sheet 4–6 s (B-27, known); the app goes from ~250 MB to ~0.9–1 GB with 5 sheets and back to ~270 MB on closing. Your real-hardware numbers are the useful ones. The window should stay responsive while it draws, and every sheet should draw and stay sharp. The rare fresh-open stall (a drawing stuck at 115 % with a tall blank page) is fixed on this head; if you ever see it, note what you did just before.
 5. **Print to your real printer**: a mixed portrait/landscape file, 2 copies; check it's crisp (vector), and that a file whose permissions forbid printing is refused — then works when opened with its owner password. **New in build 65 (D-205):** Chuvadi prints only through this computer's own CUPS. If your computer is set to print through a print server on another machine, Print now says so and doesn't print; add the printer in Settings › Printers instead. Printers your own CUPS has found on the network still work.
 6. **A password-protected PDF**: wrong password, then the right one.
 7. **Mark → annotate → Save as.** **Protect (patch 33, 34):** Redaction and Save redacted copy are greyed and say, on hover or a click, that redaction comes back with the next update; Stamp, Watermark, Flatten, Password and signing are there as before. Open a **signed PDF**: it should show who signed and when, with "not checked in this version" and no valid / not valid verdict. **Merge, Split and Arrange's Bind** should each ask first ("The new file will not have everything") and name what each file loses, such as bookmarks or page labels, with a line about layers if the file has them. **New in patch 29:** draw marks on two files and switch tabs: each tab should keep its own marks. Then close a tab with unsaved marks, and try Close all tabs and the window's close button: each should ask Save / Save as… / Discard / Cancel, and Cancel should keep everything. A tab with no marks should close without asking. **New in build 62:** with a mark unsaved, choose **Log Out** from the desktop's menu, then try **Restart** and **Power Off**: the desktop should hold it and say that Chuvadi has work that is not saved, and the Chuvadi window should ask Save / Save as… / Discard / Cancel. Cancel should keep the mark; Save should write the file and let the sign-out go on. Please note what your desktop shows and whether it waits: I can't run a desktop session here. The desktop should hold the sign-out from the moment you draw the mark, and not after you save or discard it. **New in patch 32:** add a bookmark (Ctrl B), then close the tab: it should ask Save bookmarks / Discard / Cancel. **New in patch 34:** put pages on a desk in Arrange, then close the app: it should ask "Keep what you arranged?" (Save / Discard / Cancel) before anything else. Save should keep the desk with no file dialog, and it should be back when you start the app again; Discard clears it.

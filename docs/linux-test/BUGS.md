@@ -41,7 +41,7 @@ Every bug gets fixed; I re-verify on the fixing commit and mark it here.
 | B-29 | S3 | **shared Ui/Core** (render queue) | Closing the CAD tab mid-render: the next file sometimes waits 3.7–4.6 s for its first page (2 of 6 closes) | **verified fixed 8dcf4d8; re-verified d918161, bf60da9, 90895ef** — 6 of 6 mid-render closes: next file drawn in 0.27–0.30 s |
 | B-30 | S2 (perf) | **shared Ui/Core + Foundation** | Memory isn't given back after closing the CAD drawing: 1.43–1.77 GB stays for 60 s+, and 680 MB of managed heap is still live after a full collection | **verified fixed bf60da9; re-verified 90895ef, 7cd960c** — app 249 MB before, 937 MB with 5 sheets, 265 MB 2 s after closing. Recorded: WebKit 221 → ~587 MB and stays |
 | B-31 | S2 | **library** (Chuvadi.Sheets, SH-L1) | Excel time-only cells (stored 0 to 1, e.g. 6:00 PM) show `########`, and the stored value on hover, in the value bar and in copy is wrong (0.75 reads as -0.25). On bf60da9 they showed `1899-12-30 18:00` | **open** — still on 7cd960c: `########`, stored value shown as -0.25 for 0.75 |
-| B-32 | S2 | **library + shared Ui/Core** | A PDF page's `/Rotate` (90, 180, 270) is ignored on screen: the page shows unrotated. Same on bf60da9 | **verified fixed 7cd960c** (86996dd) — 90, 180 and 270 turned as the file says, on vector pages, on a cropped page and on heavy raster sheets (Arun's CAD sheets are `/Rotate 270` and now show landscape) |
+| B-32 | S2 | **library + shared Ui/Core** | A PDF page's `/Rotate` (90, 180, 270) is ignored on screen: the page shows unrotated. Same on bf60da9 | **verified fixed 7cd960c** (86996dd) — 90, 180 and 270 turned as the file says, on vector pages, on a cropped page and on heavy raster sheets (the sheets of a real A1 CAD drawing (not in repo) are `/Rotate 270` and now show landscape) |
 | B-33 | S2 | **shared Ui/Core** (Foundation's B-33) | Excel: the title bar's sheet arrows do nothing, and typing a sheet number moves the number but not the sheet shown. Patch 29 says this is fixed; on Linux it is not | **verified fixed b08b0e5** (patch 31, 6c85f06) — Next, Previous and a typed number change the sheet from Home, after a PDF tab, on a second workbook and back on the first; the same test fails on fc20516 |
 | B-34 | S3 | Linux | D-194, first part: after a sign-out is held and cancelled, the lock on the session stays when the work is later saved or discarded, so the desktop still lists Chuvadi as having unsaved work until the next sign-out notice | **verified fixed ca415af** (3406c868) — the lock is taken when the mark is drawn and given up on Discard, through the portal (`Request.Close`) and through the GNOME session manager (`Uninhibit`); a new mark takes it again |
 | B-35 | S4 | Linux | D-194: when the desktop's portal accepts the `Inhibit` call but then refuses the lock (its request ends with Response 2), the app counts the lock as held and doesn't try the GNOME session manager | **verified fixed ca415af** (3406c868) — refused with no GNOME session manager: hold state 0; refused with one: the GNOME lock is taken at once (hold state 3) |
@@ -292,7 +292,7 @@ The tenth patch moved the load off-thread, but adding the tab raises `TabsChange
 **Actual.** `1234.5`, `0.125`, `2023-03-15`, `1.2345678901234567E+19`. `XlsxViewService.FormatValue` shows values as-is by design, waiting for "Chuvadi.Sheets [to expose] a formatted display string per cell" — Sheets 2.0.2 now has `Cell.GetDisplayText(NumberFormatOptions)` and `NumberFormatter.FormatDetailed(...)`. All text cells come through exactly (see RESULTS).
 
 ## B-27 — Large vector CAD PDF: slow to open, heavy on memory (S3 perf, library + shared Ui/Core) — e242d92
-**File.** Arun's 7.9 MB KDMC LINAC site layout (5 × A1, ~1.44 M path operators, 170 images, 38 fonts; produced by Chuvadi). **Not committed (public repo)** — the library team should get it from Arun directly.
+**File.** A real A1 CAD drawing (not in repo), 7.9 MB (5 × A1, ~1.44 M path operators). **Not committed (public repo)** — the library team should get it from Arun directly.
 **Measured** (2 vCPU, no GPU; `tools/t_cadtime.py`, `tools/t_cad.py`): from process start, "Opening…" clears at 6.0 s warm / 6.6 s cold and page 1 is fully drawn at 6.9 s warm (worst 7.2) / 7.5 s cold (worst 11.9); the UI-test launch accounts for ~2.8 s, so **~3–4 s to open + ~1 s to draw**. Poppler draws page 1 in ~1 s on the same machine. App memory: 835 MB after page 1, **1,607 MB after paging through all 5** (not released while open), WebKit ~480 MB at 180 %.
 **Expected.** Arun's bar is "loads in milliseconds"; at minimum a first page in ~1–2 s and memory that doesn't grow with every page viewed.
 **Notes.** Rendering is correct (crisp vector at 180 %). Printing sends the file byte-identical (✅). Where the time and memory go (parse vs. render vs. page cache) needs a profile on the library side — I can run `dotnet-trace` here if wanted.
@@ -320,7 +320,7 @@ Re-verify on 64c9c16:
 
 ---
 ## Linux Test — 10 Nov, re-verification on `platform/linux` 64c9c16 (B-28 to B-30, and an update to B-27)
-Built from source (`-p:UiTest=true`); 2 vCPU, no GPU, Xvfb + mutter. Tool: `tools/t_render.py`. Arun's CAD file is
+Built from source (`-p:UiTest=true`); 2 vCPU, no GPU, Xvfb + mutter. Tool: `tools/t_render.py`. A real A1 CAD drawing (not in repo) is
 run locally only. **Nothing from it is committed** (no file, screenshot or text); numbers and stack frames only.
 
 ## B-28 — UI tests 36a–36c count the loading icon as a drawn page (S2, Linux UI test)
@@ -336,7 +336,7 @@ sets an attribute on the page as the drawing lands. Then raise 36c's limits to w
 mark it as reported until B-27 lands.
 
 ## B-29 — Closing the CAD tab mid-render sometimes delays the next file (S3, shared Ui/Core)
-**Steps.** Open Arun's CAD PDF and close its tab after 0.3 s, while sheet 1 is still drawing. Then open `five-pages.pdf`.
+**Steps.** Open a real A1 CAD drawing (not in repo) and close its tab after 0.3 s, while sheet 1 is still drawing. Then open `five-pages.pdf`.
 **Result.** 6 closes, all mid-render, over two app runs. The next file's page 1 drew in 0.17, 0.53, 0.62 and 0.36 s
 in four of them, and in **3.66 s and 4.62 s** in the other two. The page itself kept answering in ≤ 0.02 s
 throughout. The stand-in: 3 of 3 closes drew the next file in 0.33–0.37 s.
@@ -345,7 +345,7 @@ throughout. The stand-in: 3 of 3 closes drew the next file in 0.33–0.37 s.
 on the next head.
 
 ## B-30 — Memory not given back after closing the CAD drawing (S2 perf, shared Ui/Core + Foundation)
-**Steps.** Fresh app. Open Arun's CAD PDF, visit sheets 1–5 and back, close the tab, then wait 60 s.
+**Steps.** Fresh app. Open a real A1 CAD drawing (not in repo), visit sheets 1–5 and back, close the tab, then wait 60 s.
 **Result.** Three runs. Memory as app/WebKit, in MB:
 
 | Point | Memory (app / WebKit, MB) |
@@ -395,7 +395,7 @@ B-28 fixed). Please re-verify B-28, B-29, B-30, 36c's memory on the real CAD PDF
 
 ---
 ## Linux Test — 10 Nov, re-verification on `platform/linux` 8dcf4d8 (B-28, B-29, B-30; B-27 update)
-Built from source (`-p:UiTest=true`); 2 vCPU, no GPU. Arun's CAD file is run locally only; numbers are committed, nothing from the file.
+Built from source (`-p:UiTest=true`); 2 vCPU, no GPU. A real A1 CAD drawing (not in repo) is run locally only; numbers are committed, nothing from the file.
 `tools/t_render.py` now waits for the page heights to hold before moving to a page (Linux finding 2).
 
 - **B-28 ✅.** `tools/linux/uitest.py` `rendered()` counts a page only when its svg's viewBox is wider than 100.
@@ -453,7 +453,7 @@ memory, and a quick regression.
 
 ---
 ## Linux Test — 10 Nov, last pass on `platform/linux` d918161 (Foundation's nineteenth patch + glibc trim)
-These results are on my real CAD file. Nothing from the file is committed; `tools/t_render.py` modes are `jumps`, `solo` and `close`.
+These results are on a real A1 CAD drawing (not in repo). Nothing from the file is committed; `tools/t_render.py` modes are `jumps`, `solo` and `close`.
 
 **Linux findings 1 and 2 ✅** (`jumps`, 3 runs).
 - *Typing 2 as sheet 1 lands.* The page box reads 2 and sheet 2 is in view every time, drawn in 2.6–3.1 s.
@@ -498,7 +498,7 @@ green on x64 and ARM64; local full pass 122/122. Please re-check 36c, page image
 
 ---
 ## Linux Test — 10 Nov, quick re-check on `platform/linux` bf60da9 (Foundation's patches 20–21)
-These results are on my real CAD file. Nothing from the file is committed: hashes, sizes and timings only.
+These results are on a real A1 CAD drawing (not in repo). Nothing from the file is committed: hashes, sizes and timings only.
 Tools: `tools/t_render.py`, `t_pages.py`, `t_stall.py`.
 
 **36c memory ✅ (B-30 fixed).** Three runs, app / WebKit, in MB:
@@ -723,9 +723,9 @@ New tools: `tools/t_mark.py`, `t_mark_saved.py`, `t_grid.py`, `t_startmark.py`. 
 | page 4 (270) | 842 × 595, red bottom-right, blue top-left | ✅ |
 | `crop.pdf` page 2 (CropBox + 90) | 500 × 400, cropped and turned | ✅ |
 | Heavy stand-in sheet turned with `qpdf --rotate=+90` | Portrait 1684 × 2384 raster | ✅ |
-| Arun's CAD file (all 5 sheets are `/Rotate 270`) | Each sheet image is now 4967 × 3508 (landscape); on every earlier head it was 3508 × 4967 | ✅ |
+| A real A1 CAD drawing (not in repo); all 5 sheets are `/Rotate 270` | Each sheet image is now 4967 × 3508 (landscape); on every earlier head it was 3508 × 4967 | ✅ |
 
-Arun's drawing was shown turned on its side on every head before this one. The ink count per sheet is unchanged
+The drawing was shown turned on its side on every head before this one. The ink count per sheet is unchanged
 (for example 647,248 pixels on sheet 1), so it is the same picture, turned.
 
 **Rotated pages in print (Mac's M-26): not clipped on Linux.** `rot4.pdf` goes to CUPS byte-identical. In the

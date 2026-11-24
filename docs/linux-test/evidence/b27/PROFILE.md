@@ -1,6 +1,6 @@
 # B-27 profile — large vector CAD PDF (numbers and code paths only)
 
-File: Arun's 7.9 MB site layout (5 × A1, ~1.44 M path operators, 170 images, 38 fonts). **Not in this repo**; no text or image from it is recorded here.
+File: a real A1 CAD drawing (not in repo), 7.9 MB (5 × A1, ~1.44 M path operators). **Not in this repo**; no text or image from it is recorded here.
 Machine: 2 vCPU, no GPU. Build: `platform/linux` e242d92 (Chuvadi.Pdf 3.31.2 family, Core as shipped).
 Tools (test-only): `tools/b27-profiler.cs` (calls Core/library directly, per stage), `dotnet-trace` sampled thread time, `tools/t_uifreeze.py`.
 
