@@ -2043,6 +2043,9 @@
 
     private async Task SendPageToNewDesk(int page)
     {
+        // RD47: the kept desks (D-203) come back on the bench's first use; a desk added before that was replaced by
+        // them, so the page went nowhere. Restore first, then add.
+        await Bench.EnsureRestoredAsync();
         if (!Bench.CanAddDesk) return;
         var desk = Bench.AddDesk();
         await SendPageToDesk(page, desk.Id);
@@ -2228,6 +2231,7 @@
 
     private async Task SnapshotToDesk(Guid deskId)
     {
+        await Bench.EnsureRestoredAsync();   // RD47
         var path = await SaveSnapTempAsync();
         if (path is null) { StateHasChanged(); return; }
         try
@@ -2242,6 +2246,7 @@
 
     private async Task SnapshotToNewDesk()
     {
+        await Bench.EnsureRestoredAsync();   // RD47
         if (!Bench.CanAddDesk) return;
         var desk = Bench.AddDesk();
         await SnapshotToDesk(desk.Id);
@@ -2598,21 +2603,40 @@
         var tab = Tab;
         var path = tab?.Path;
         if (tab is null || path is null || _bmTree is null) return;
+        // RD35: a desk opened in the Reader is a working copy in the scratch folder, not the person's file: the
+        // bookmarks go into a copy they choose (with the desk's pages), never silently into the hidden file.
+        string target = path;
+        if (ScratchFiles.IsWorkingCopy(Paths, path))
+        {
+            var picked = await Picker.PickSavePdfAsync(tab.FileName);
+            if (string.IsNullOrWhiteSpace(picked)) return;
+            target = picked!;
+        }
+
         _bmBusy = true; _bmStatus = null; StateHasChanged();
         try
         {
             var tree = _bmTree;
             // D-210: into the file only while it is still the one opened; D-207: it keeps its lock.
-            var (source, saveLock) = await Task.Run(() => TabSave.Prepare(tab, intoSource: true));
+            bool into = target == path;
+            var (source, saveLock) = await Task.Run(() => TabSave.Prepare(tab, intoSource: into));
             var bytes = await Task.Run(() => SourceLock.Lock(_outline.Write(SourceLock.Plain(source, saveLock.OpenPassword), tree), saveLock));
-            await Tabs.ReloadActiveAsync(() =>
+            if (into)
             {
-                SourceGuard.ReplaceAtomically(path, bytes);
-                return Task.CompletedTask;
-            });
-            await WriteBack.DeliverOrThrowAsync(path);
-            _bmEdits.InFile = BookmarkEdits.Signature(_bmTree);   // the file holds them now
-            _bmStatus = $"Saved {BmFlat().Count()} bookmark(s)";
+                await Tabs.ReloadActiveAsync(() =>
+                {
+                    SourceGuard.ReplaceAtomically(path, bytes);
+                    return Task.CompletedTask;
+                });
+                _bmEdits.InFile = BookmarkEdits.Signature(_bmTree);   // the file holds them now
+            }
+            else
+            {
+                await Task.Run(() => SourceGuard.ReplaceAtomically(target, bytes));
+            }
+
+            await WriteBack.DeliverOrThrowAsync(target);
+            _bmStatus = $"Saved {BmFlat().Count()} bookmark(s)" + (into ? "" : $" → {System.IO.Path.GetFileName(target)}");
         }
         catch (LockNeedsPasswordException lk)
         {
