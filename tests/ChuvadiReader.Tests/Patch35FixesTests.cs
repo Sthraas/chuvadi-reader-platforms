@@ -187,3 +187,25 @@ public class DeskImageCheckTests
         Assert.Contains("isn't an image", ImageCheck.Refusal(TestPdf.WriteTemp(System.Text.Encoding.ASCII.GetBytes("hello, not an image at all"))));
     }
 }
+
+/// <summary>PR21, with the Windows test's own files (23 Nov package): F08 signed by another tool (pyHanko, field
+/// "Sig1") takes a second signature and keeps the first.</summary>
+public class CountersignOtherToolTests
+{
+    [Fact]
+    public async Task A_file_signed_elsewhere_is_countersigned_and_its_signature_stays()
+    {
+        var dir = Path.Combine(AppContext.BaseDirectory, "Fixtures", "Signing");
+        var output = TestPdf.TempOutput();
+        await TestSigning.SignWithPfxAsync(Path.Combine(dir, "F08-signed-valid.pdf"), output, Path.Combine(dir, "S01-test-rsa-pw-sign123.pfx"), "sign123",
+            new CertificateSignOptions { Reason = "Countersigned" });
+
+        var report = await new SignatureCheckService().CheckAsync(output);
+        Assert.Equal(2, report.Signatures.Count);
+        Assert.Equal("Sig1", report.Signatures[0].FieldName);
+        Assert.True(report.Signatures[0].IntegrityVerified);   // the first signature's bytes are untouched
+        Assert.True(report.Signatures[1].IntegrityVerified);
+        var original = File.ReadAllBytes(Path.Combine(dir, "F08-signed-valid.pdf"));
+        Assert.True(File.ReadAllBytes(output).AsSpan(0, original.Length).SequenceEqual(original));   // appended, not rewritten
+    }
+}

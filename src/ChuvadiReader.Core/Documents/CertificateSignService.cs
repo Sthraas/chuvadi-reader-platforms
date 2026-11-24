@@ -134,9 +134,11 @@ public sealed class CertificateSignService
             using var signer = new BclCmsSigner(certificate);
             byte[] signed;
             string fieldName;
+            int signaturesBefore;
             using (var doc = PdfDocument.Open(new MemoryStream(source, writable: false), leaveOpen: false))
             {
                 var existing = SignatureReader.Read(doc.Catalog, doc.Objects);
+                signaturesBefore = existing.Count;
                 fieldName = string.IsNullOrWhiteSpace(options.FieldName) ? NextFieldName(existing) : options.FieldName!.Trim();
                 var signOptions = new PdfSigningOptions
                 {
@@ -160,18 +162,22 @@ public sealed class CertificateSignService
                     : PdfCounterSigner.AddSignature(source, signer, signOptions);
             }
 
-            VerifyNewSignature(signed, fieldName);
+            VerifyNewSignature(signed, fieldName, signaturesBefore);
 
             ct.ThrowIfCancellationRequested();
             PasswordService.WriteAtomically(outputPath, s => s.Write(signed, 0, signed.Length), ct);
         }, ct);
     }
 
-    private static void VerifyNewSignature(byte[] signed, string fieldName)
+    private static void VerifyNewSignature(byte[] signed, string fieldName, int signaturesBefore)
     {
         using var doc = PdfDocument.Open(new MemoryStream(signed, writable: false), leaveOpen: false);
-        var sig = SignatureReader.Read(doc.Catalog, doc.Objects)
-            .LastOrDefault(s => string.Equals(s.FieldName, fieldName, StringComparison.Ordinal))
+        var all = SignatureReader.Read(doc.Catalog, doc.Objects);
+        // PR21: the countersigner names the field it appends itself ("Signature" + its count: F08's "Sig1" plus
+        // "Signature2"), so the new signature is the one asked for or, failing that, the last one, when there is now
+        // one more than before.
+        var sig = all.LastOrDefault(s => string.Equals(s.FieldName, fieldName, StringComparison.Ordinal))
+            ?? (all.Count > signaturesBefore ? all[^1] : null)
             ?? throw new InvalidOperationException("Signing didn't produce a signature field.");
         var r = sig.Verify(doc, SignatureVerifyOptions.Default);
         if (!r.IntegrityVerified)
