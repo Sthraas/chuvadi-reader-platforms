@@ -641,7 +641,29 @@
     }
 
     <div class="fcards">
-        @if (_markup && doc is not null)
+        @if (_lockNeed is { } lockNeed)
+        {
+            @* D-207 / D-210: a password the change needs so the file keeps its lock. *@
+            <FloatCard Title="@(lockNeed == LockNeed.OwnerPassword ? "Permissions password" : "Open password")" Meta="keeps the file's lock" OnClose="CancelLock">
+                <div class="fc-status">@_lockMsg</div>
+                <div class="fc-row">
+                    <input class="fc-grow" type="password" autocomplete="off" placeholder="Password" aria-label="Password"
+                           @bind="_lockPw" @bind:event="oninput" @onkeydown="LockKey" />
+                </div>
+                @if (_lockErr is not null)
+                {
+                    <div class="fc-status err">@_lockErr</div>
+                }
+                <div class="fc-foot">
+                    <button class="fc-btn fc-grow" @onclick="SubmitLockAsync" disabled="@(string.IsNullOrEmpty(_lockPw) || _lockBusy)">Continue</button>
+                    @if (_lockSaveAs is not null)
+                    {
+                        <button class="fc-btn fc-grow" @onclick="LockSaveAs">Save as…</button>
+                    }
+                </div>
+            </FloatCard>
+        }
+        else if (_markup && doc is not null)
         {
             @if (_sigOpen)
             {
@@ -782,6 +804,10 @@
             {
                 <FloatCard Title="Marks" Meta="@MarkCountLabel" OnClose="() => { _mkStatus = null; _mkSavedPath = null; }">
                     <div class="fc-status @(_mkError ? "err" : null)">@_mkStatus</div>
+                    @if (_mkOfferSaveAs)
+                    {
+                        <button class="fc-btn" @onclick="SaveMarkup">Save as…</button>
+                    }
                     @if (_mkSavedPath is not null)
                     {
                         <button class="fc-btn" @onclick="OpenRedacted">Open it</button>
@@ -2035,12 +2061,10 @@
     {
         var active = Tabs.Active;
         if (active?.Path is null || !HasStamp) return;
-        var dir = System.IO.Path.GetDirectoryName(active.Path) ?? "";
-        var temp = System.IO.Path.Combine(dir, "~" + System.IO.Path.GetFileNameWithoutExtension(active.Path) + ".stamp-tmp.pdf");
-        await RunStamp(temp, inPlace: true, finalPath: active.Path);
+        await RunStamp(active.Path, inPlace: true);
     }
 
-    private async Task RunStamp(string output, bool inPlace, string? finalPath = null)
+    private async Task RunStamp(string output, bool inPlace)
     {
         var active = Tabs.Active;
         if (active?.Path is null) return;
@@ -2052,36 +2076,39 @@
         {
             var wm = string.IsNullOrWhiteSpace(active.Watermark.Text) ? null : active.Watermark;
             var hf = active.HeaderFooter.HasAnyContent ? active.HeaderFooter : null;
-            await Stamp.ApplyToFileAsync(active.Path, output, wm, hf, active.FileName);
+            var into = inPlace || string.Equals(System.IO.Path.GetFullPath(output), System.IO.Path.GetFullPath(active.Path), StringComparison.OrdinalIgnoreCase);
+            // D-210: never onto a file that moved or changed since it was opened; D-207: the same lock.
+            var (source, saveLock) = await Task.Run(() => TabSave.Prepare(active, intoSource: into));
+            var bytes = await Stamp.ApplyAsync(source, saveLock, wm, hf, active.FileName);
 
-            if (inPlace && finalPath is not null)
+            if (into)
             {
-                await Tabs.ReloadActiveAsync(async () =>
+                var finalPath = active.Path;
+                await Tabs.ReloadActiveAsync(() =>
                 {
-                    try
-                    {
-                        if (System.IO.File.Exists(finalPath)) System.IO.File.Replace(output, finalPath, null);
-                        else System.IO.File.Move(output, finalPath);
-                    }
-                    catch
-                    {
-                        System.IO.File.Copy(output, finalPath, true);
-                        try { System.IO.File.Delete(output); } catch { }
-                    }
-                    await Task.CompletedTask;
+                    SourceGuard.ReplaceAtomically(finalPath, bytes);
+                    return Task.CompletedTask;
                 });
                 // The stamp is now baked into the file; retire the live preview so it doesn't
                 // double over the reloaded page, and confirm with a toast.
                 active.StampOpen = false;
                 _stampStatus = null;
+                await WriteBack.DeliverOrThrowAsync(finalPath);
                 ShowToast($"Saved → {System.IO.Path.GetFileName(finalPath)}");
             }
             else
             {
-                _stampStatus = $"Saved → {System.IO.Path.GetFileName(output)}";
+                await Task.Run(() => SourceGuard.ReplaceAtomically(output, bytes));
+                await WriteBack.DeliverOrThrowAsync(output);
+                _stampStatus = $"Saved → {System.IO.Path.GetFileName(output)}" + (saveLock.NewOwnerPassword ? ". " + SourceLock.NewOwnerNote : "");
             }
-            await WriteBack.DeliverOrThrowAsync(inPlace ? finalPath : output);
             _stampError = false;
+        }
+        catch (LockNeedsPasswordException lk)
+        {
+            _stampStatus = lk.Message;
+            _stampError = true;
+            AskLock(lk.Need, lk.Message, () => RunStamp(output, inPlace), lk.Need == LockNeed.OwnerPassword && inPlace ? StampSaveAs : null);
         }
         catch (Exception ex)
         {
@@ -2536,30 +2563,29 @@
 
     private async Task BmSave()
     {
-        var path = Tab?.Path;
-        if (path is null || _bmTree is null) return;
+        var tab = Tab;
+        var path = tab?.Path;
+        if (tab is null || path is null || _bmTree is null) return;
         _bmBusy = true; _bmStatus = null; StateHasChanged();
         try
         {
-            var output = System.IO.Path.Combine(ScratchFiles.Folder(Paths), $"chuvadi-toc-{Guid.NewGuid():N}.pdf");
-            await _outline.WriteToFileAsync(path, output, _bmTree);
-            await Tabs.ReloadActiveAsync(async () =>
+            var tree = _bmTree;
+            // D-210: into the file only while it is still the one opened; D-207: it keeps its lock.
+            var (source, saveLock) = await Task.Run(() => TabSave.Prepare(tab, intoSource: true));
+            var bytes = await Task.Run(() => SourceLock.Lock(_outline.Write(SourceLock.Plain(source, saveLock.OpenPassword), tree), saveLock));
+            await Tabs.ReloadActiveAsync(() =>
             {
-                try
-                {
-                    if (System.IO.File.Exists(path)) System.IO.File.Replace(output, path, null);
-                    else System.IO.File.Move(output, path);
-                }
-                catch
-                {
-                    System.IO.File.Copy(output, path, true);
-                    try { System.IO.File.Delete(output); } catch { }
-                }
-                await Task.CompletedTask;
+                SourceGuard.ReplaceAtomically(path, bytes);
+                return Task.CompletedTask;
             });
             await WriteBack.DeliverOrThrowAsync(path);
             _bmEdits.InFile = BookmarkEdits.Signature(_bmTree);   // the file holds them now
             _bmStatus = $"Saved {BmFlat().Count()} bookmark(s)";
+        }
+        catch (LockNeedsPasswordException lk)
+        {
+            _bmStatus = lk.Message;
+            AskLock(lk.Need, lk.Message, BmSave, null);
         }
         catch (Exception ex) { _bmStatus = ex.Message; }
         finally { _bmBusy = false; StateHasChanged(); }
@@ -2594,6 +2620,7 @@
         _selText = null; _selShape = null; _selImage = null;
         if (_markup)
         {
+            _ = BeginMarkWorkAsync();   // D-207 / D-210
             _ = CheckTaggedAsync();
             if (_js is not null) _ = _js.InvokeVoidAsync("enableImageDrops");
         }
@@ -3368,7 +3395,7 @@
         // Overlay-only save.
         if (active?.Path is null || OverlayCount == 0) return;
 
-        _mkSaving = true; _mkStatus = null; _mkSavedPath = null; _mkError = false;
+        _mkSaving = true; _mkStatus = null; _mkSavedPath = null; _mkError = false; _mkOfferSaveAs = false;
         StateHasChanged();
         await Task.Yield();
         try
@@ -3377,26 +3404,16 @@
             var texts = BuildTextsDict();
             var imgs = BuildImagesDict();
             var shps = BuildShapesDict();
-            var dir = System.IO.Path.GetDirectoryName(src) ?? "";
-            var temp = System.IO.Path.Combine(dir, "~" + System.IO.Path.GetFileNameWithoutExtension(src) + ".chuvadi-tmp.pdf");
 
-            // Build the edited file beside the original (no redactions here).
-            await Redact.FlattenToFileAsync(src, temp, new Dictionary<int, PageRedaction>(), _mkColor, texts, imgs, shps);
+            // D-210: the file must still be the one the marks were placed on, and (D-207) it keeps its lock.
+            var (source, saveLock) = await Task.Run(() => TabSave.Prepare(active, intoSource: true));
+            var bytes = await Redact.FlattenAsync(source, saveLock, new Dictionary<int, PageRedaction>(), _mkColor, texts, imgs, shps);
 
-            // Release the open document, swap the file in, then reopen in place.
-            await Tabs.ReloadActiveAsync(async () =>
+            // Release the open document, swap the file in (through a temporary file beside it), then reopen in place.
+            await Tabs.ReloadActiveAsync(() =>
             {
-                try
-                {
-                    if (System.IO.File.Exists(src)) System.IO.File.Replace(temp, src, null);
-                    else System.IO.File.Move(temp, src);
-                }
-                catch
-                {
-                    System.IO.File.Copy(temp, src, true);
-                    try { System.IO.File.Delete(temp); } catch { }
-                }
-                await Task.CompletedTask;
+                SourceGuard.ReplaceAtomically(src, bytes);
+                return Task.CompletedTask;
             });
 
             await WriteBack.DeliverOrThrowAsync(src);
@@ -3408,10 +3425,18 @@
             _mkStatus = $"Saved to {System.IO.Path.GetFileName(src)}";
             _mkError = false;
         }
+        catch (LockNeedsPasswordException lk)
+        {
+            ShowMarkSaveError(lk.Message, offerSaveAs: lk.Need == LockNeed.OwnerPassword);
+            AskLock(lk.Need, lk.Message, SaveInPlace, lk.Need == LockNeed.OwnerPassword ? SaveMarkup : null);
+        }
+        catch (SourceChangedException ex)
+        {
+            ShowMarkSaveError(ex.Message, offerSaveAs: true);
+        }
         catch (Exception ex)
         {
-            _mkStatus = ex.Message;
-            _mkError = true;
+            ShowMarkSaveError(ex.Message, offerSaveAs: false);
         }
         finally
         {
@@ -3428,8 +3453,13 @@
         var suggested = System.IO.Path.GetFileNameWithoutExtension(active.Path) + "-edited.pdf";
         var output = await Picker.PickSavePdfAsync(suggested);
         if (string.IsNullOrWhiteSpace(output)) return;
+        if (string.Equals(System.IO.Path.GetFullPath(output!), System.IO.Path.GetFullPath(active.Path), StringComparison.OrdinalIgnoreCase))
+        {
+            await SaveInPlace();   // the same file chosen: the into-the-source checks apply
+            return;
+        }
 
-        _mkSaving = true; _mkStatus = null; _mkSavedPath = null; _mkError = false;
+        _mkSaving = true; _mkStatus = null; _mkSavedPath = null; _mkError = false; _mkOfferSaveAs = false;
         StateHasChanged();
         await Task.Yield();
         try
@@ -3438,17 +3468,24 @@
             var imgs = BuildImagesDict();
             var shps = BuildShapesDict();
 
-            await Redact.FlattenToFileAsync(active.Path, output!, new Dictionary<int, PageRedaction>(), _mkColor, texts, imgs, shps);
+            // D-210: from the source as it was when the marks began (it may have moved since); D-207: same lock.
+            var (source, saveLock) = await Task.Run(() => TabSave.Prepare(active, intoSource: false));
+            var bytes = await Redact.FlattenAsync(source, saveLock, new Dictionary<int, PageRedaction>(), _mkColor, texts, imgs, shps);
+            await Task.Run(() => SourceGuard.ReplaceAtomically(output!, bytes));
             await WriteBack.DeliverOrThrowAsync(output);
             _mkSavedPath = output;
             _marks.SavedAs = _marks.Signature(); // these marks are in a file now; closing need not ask until they change
-            _mkStatus = $"Saved → {System.IO.Path.GetFileName(output)}";
+            _mkStatus = $"Saved → {System.IO.Path.GetFileName(output)}" + (saveLock.NewOwnerPassword ? ". " + SourceLock.NewOwnerNote : "");
             _mkError = false;
+        }
+        catch (LockNeedsPasswordException lk)
+        {
+            ShowMarkSaveError(lk.Message, offerSaveAs: false);
+            AskLock(lk.Need, lk.Message, SaveMarkup, null);
         }
         catch (Exception ex)
         {
-            _mkStatus = ex.Message;
-            _mkError = true;
+            ShowMarkSaveError(ex.Message, offerSaveAs: false);
         }
         finally
         {
