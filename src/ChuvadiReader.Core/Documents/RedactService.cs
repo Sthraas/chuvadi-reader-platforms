@@ -483,7 +483,7 @@ public sealed class RedactService
     {
         try
         {
-            using var doc = PdfDocument.Open(sourcePath);
+            using var doc = PdfFiles.Open(sourcePath);
             var catalog = doc.Catalog;
             return catalog is not null
                 && catalog.Keys.Any(k => (k?.ToString() ?? string.Empty)
@@ -529,7 +529,7 @@ public sealed class RedactService
         var results = new List<RedactSearchMatch>();
         if (string.IsNullOrEmpty(query)) return results;
 
-        using var doc = PdfDocument.Open(sourcePath);
+        using var doc = PdfFiles.Open(sourcePath);
         var opts = new SearchOptions
         {
             CaseSensitive = caseSensitive,

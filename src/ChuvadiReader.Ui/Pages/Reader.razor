@@ -272,8 +272,16 @@
                 @if (_pressResult is not null)
                 {
                     <div style="background:var(--chvd-surface-lo);border:var(--chvd-stroke) solid var(--chvd-border-soft);border-radius:10px;padding:12px 14px;margin-bottom:14px">
-                        <div style="font-size:15px;margin-bottom:6px">@SizeOf(_pressResult.BeforeBytes) → <span style="color:var(--chvd-binding)">@SizeOf(_pressResult.AfterBytes)</span> <span style="font-family:var(--chvd-mono);font-size:12px;color:var(--chvd-ink-muted)">(@_pressResult.SavedPercent.ToString("0.#")% smaller)</span></div>
+                        <div style="font-size:15px;margin-bottom:6px">@SizeOf(_pressResult.BeforeBytes) → <span style="color:var(--chvd-binding)">@SizeOf(_pressResult.AfterBytes)</span> <span style="font-family:var(--chvd-mono);font-size:12px;color:var(--chvd-ink-muted)">(@_pressResult.SavedLabel)</span></div>
                         <div style="font-family:var(--chvd-mono);font-size:11px;color:var(--chvd-ink-muted)">@_pressResult.ImagesRecompressed images · @_pressResult.StreamsCompressed streams · @_pressResult.ObjectsRemoved objects removed</div>
+                        @if (_pressResult.TargetMissed)
+                        {
+                            <div style="font-family:var(--chvd-serif-body);font-size:12px;margin-top:6px">The target size couldn't be reached; this is the smallest Press could make it.</div>
+                        }
+                        @if (_pressResult.NewOwnerPassword)
+                        {
+                            <div style="font-family:var(--chvd-serif-body);font-size:12px;margin-top:6px">@SourceLock.NewOwnerNote</div>
+                        }
                         <button @onclick="OpenPressResult" class="rdlg-open" style="margin-top:10px;font-family:var(--chvd-mono);font-size:12px;color:var(--chvd-binding);background:none;border:var(--chvd-stroke) solid var(--chvd-binding);border-radius:6px;padding:5px 12px;cursor:pointer">open pressed file</button>
                     </div>
                 }

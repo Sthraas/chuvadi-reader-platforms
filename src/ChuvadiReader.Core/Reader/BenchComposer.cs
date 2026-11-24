@@ -44,7 +44,7 @@ public sealed class BenchComposer
         try
         {
             foreach (var path in inputPaths)
-                docs.Add(await PdfDocument.OpenAsync(path, ct).ConfigureAwait(false));
+                docs.Add(await PdfFiles.OpenForNewFileAsync(path, ct).ConfigureAwait(false));
             var array = docs.ToArray();
             await Task.Run(() =>
             {
@@ -66,7 +66,7 @@ public sealed class BenchComposer
         => Task.Run(() =>
         {
             rows = Math.Max(1, rows); cols = Math.Max(1, cols);
-            using var src = PdfDocument.Open(inputPath);
+            using var src = PdfFiles.OpenForNewFile(inputPath);
             int per = rows * cols, total = src.PageCount;
             double cellW = (sheetW - 2 * margin - (cols - 1) * gutter) / cols;
             double cellH = (sheetH - 2 * margin - (rows - 1) * gutter) / rows;
@@ -97,7 +97,7 @@ public sealed class BenchComposer
         double sheetW, double sheetH, double gutter, double margin, CancellationToken ct = default)
         => Task.Run(() =>
         {
-            using var src = PdfDocument.Open(inputPath);
+            using var src = PdfFiles.OpenForNewFile(inputPath);
             int n = src.PageCount;
             int padded = ((n + 3) / 4) * 4;
 
@@ -200,7 +200,7 @@ public sealed class BenchComposer
             {
                 foreach (var path in sourceOrder)
                 {
-                    docs.Add(await PdfDocument.OpenAsync(path, ct).ConfigureAwait(false));
+                    docs.Add(await PdfFiles.OpenForNewFileAsync(path, ct).ConfigureAwait(false));
                 }
 
                 var offset = new Dictionary<string, int>(sourceOrder.Count);

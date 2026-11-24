@@ -1,3 +1,4 @@
+using ChuvadiReader.Core.Documents;
 using Chuvadi.Pdf.Authoring;
 using Chuvadi.Pdf.Documents;
 using Chuvadi.Pdf.Operations;
@@ -488,7 +489,7 @@ public sealed class BenchService
                                                     && string.Equals(s.Path, path, StringComparison.OrdinalIgnoreCase));
         if (existing is null)
         {
-            var session = await _reader.OpenAsync(path, fileName, null, ct).ConfigureAwait(false);
+            var session = await _reader.OpenAsync(path, fileName, PdfPasswords.For(path), ct).ConfigureAwait(false);   // BUG-19
             _sources.Add(new BenchSource
             {
                 Index = (_sources.Count == 0 ? 0 : _sources.Max(s => s.Index) + 1),
@@ -596,7 +597,7 @@ public sealed class BenchService
         if (s is null || string.IsNullOrWhiteSpace(query)) return System.Array.Empty<int>();
         var pages = new SortedSet<int>();
         var opts = new Chuvadi.Pdf.Rendering.DisplayList.SearchOptions { CaseSensitive = false, WholeWord = false };
-        using var doc = PdfDocument.Open(s.Path);
+        using var doc = PdfFiles.Open(s.Path);
         await foreach (var m in Chuvadi.Pdf.Rendering.DisplayList.DocumentSearch.SearchAsync(doc, query, opts, ct).WithCancellation(ct))
         {
             if (m.PageNumber >= 0 && m.PageNumber < s.PageCount) pages.Add(m.PageNumber);
@@ -1813,7 +1814,7 @@ public sealed class BenchService
                     throw new FileNotFoundException(sd.Path);
                 }
 
-                var pdfSession = await _reader.OpenAsync(sd.Path, sd.FileName, null, ct).ConfigureAwait(false);
+                var pdfSession = await _reader.OpenAsync(sd.Path, sd.FileName, PdfPasswords.For(sd.Path), ct).ConfigureAwait(false);   // BUG-19
                 var src = new BenchSource
                 {
                     Index = _sources.Count == 0 ? 0 : _sources.Max(s => s.Index) + 1,

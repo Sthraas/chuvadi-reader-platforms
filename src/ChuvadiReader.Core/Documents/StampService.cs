@@ -171,7 +171,7 @@ public sealed class StampService
         var bytes = await File.ReadAllBytesAsync(srcPath, ct).ConfigureAwait(false);
 
         int total;
-        using (var doc = PdfDocument.Open(srcPath))
+        using (var doc = PdfFiles.Open(srcPath))
         {
             total = doc.PageCount;
         }

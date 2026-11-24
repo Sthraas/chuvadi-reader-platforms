@@ -50,6 +50,7 @@ public static class TabSave
         var source = tab.WorkSource?.Bytes ?? File.ReadAllBytes(tab.Path);
         if (SourceLock.Kind(source, password) != Chuvadi.Pdf.Encryption.PdfPasswordKind.Owner) return SourceLock.NotOwnerPassword;
         tab.OwnerPassword = password;
+        PdfPasswords.Remember(tab.Path, tab.Password, password);
         return null;
     }
 
@@ -67,6 +68,7 @@ public static class TabSave
         }
 
         tab.Password = password;
+        PdfPasswords.Remember(tab.Path, password, tab.OwnerPassword);
         return null;
     }
 }

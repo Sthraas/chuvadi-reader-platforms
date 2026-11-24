@@ -36,7 +36,7 @@ public static class PageOperationCheck
 
             var lost = new List<string>();
             bool layers;
-            using (var doc = PdfDocument.Open(path))
+            using (var doc = PdfFiles.Open(path))
             {
                 var catalog = doc.Catalog;
                 PdfDictionary? Dict(PdfDictionary? from, string key) =>
