@@ -955,7 +955,7 @@
                 </div>
                 @if (_pressResult is { } r)
                 {
-                    <div class="press-result">Saved <b>@r.SavedPercent.ToString("0.#")%</b> · @Fmt(r.BeforeBytes) → @Fmt(r.AfterBytes)</div>
+                    <div class="press-result"><b>@r.SavedLabel</b> · @Fmt(r.BeforeBytes) → @Fmt(r.AfterBytes)</div>
                 }
                 <div class="modal-foot">
                     @if (_pressResult is not null)

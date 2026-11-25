@@ -752,6 +752,7 @@ public sealed class TabsService : IDisposable
             }
 
             tab.Session = session;
+            PdfPasswords.Remember(path, password, tab.OwnerPassword);   // BUG-19: every tool reuses it
             tab.Opened = stamp;
             tab.WorkSource = null;
             tab.NeedsPassword = false;
