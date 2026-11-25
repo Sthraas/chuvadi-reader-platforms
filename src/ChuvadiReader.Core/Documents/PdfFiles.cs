@@ -38,6 +38,22 @@ public static class PdfPasswords
     public static void ForgetAll() => Known.Clear();
 }
 
+/// <summary>Reading a file another program has open (Excel keeps its workbook open for writing, Word its
+/// document): shared for reading, writing and deleting, so the open never fails with "used by another process".</summary>
+public static class SharedRead
+{
+    public static FileStream Open(string path) =>
+        new(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, 1 << 16, FileOptions.SequentialScan);
+
+    public static byte[] AllBytes(string path)
+    {
+        using var f = Open(path);
+        using var ms = new MemoryStream(f.CanSeek ? (int)Math.Min(f.Length, int.MaxValue) : 0);
+        f.CopyTo(ms);
+        return ms.ToArray();
+    }
+}
+
 /// <summary>Opening a PDF by its path, with the password given for it in this run (<see cref="PdfPasswords"/>).
 /// Tools use this instead of <see cref="PdfDocument.Open(string)"/>.</summary>
 public static class PdfFiles

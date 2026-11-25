@@ -30,7 +30,7 @@
     <ChuvadiReader.Ui.Components.Settings.PreferencesHost />
     @if (ShellLayout is ChuvadiReader.Platform.ShellLayout.Tablet or ChuvadiReader.Platform.ShellLayout.Phone)
     {
-        <ChuvadiReader.Ui.Components.Platform.Phone.TouchSupport />
+        <ChuvadiReader.Ui.Components.Platform.Phone.TouchSupport StatusSlot="_statusSlot" />
     }
     @if (IsPortal && Platform.Capabilities.DropFiles)
     {
@@ -45,7 +45,8 @@
                                                                Open="AddTab" Find="FindNow" Go="Go" OnDocView="OnDocView"
                                                                SwitchTab="SwitchTab" CloseTab="CloseTab"
                                                                OpenLabel="@(IsPortal ? "Upload" : "Open")" OpenIcon="@(IsPortal ? "upload" : "folder")"
-                                                               MenuFooter="@(Platform.Chrome.AccountMenu ? PortalMenuFooter : null)">
+                                                               MenuFooter="@(Platform.Chrome.AccountMenu ? PortalMenuFooter : null)"
+                                                               StatusSlot="_statusSlot">
             <CascadingValue Value="_statusSlot" IsFixed="true">@Body</CascadingValue>
         </ChuvadiReader.Ui.Components.Platform.Phone.PhoneShell>
     }
