@@ -2537,7 +2537,8 @@
         await GoTo(n.PageIndex + 1, n.TopFraction);
     }
 
-    private void BmBeginRename(BookmarkNode n) { _bmSel = n; _bmRenaming = n; }
+    private void BmBeginRename(BookmarkNode n) { _bmSel = n; _bmRenaming = n; _bmFocusRename = true; }
+    private bool _bmFocusRename;   // BUG-02: the rename field takes the caret after the render that draws it
     private void BmEndRename() => _bmRenaming = null;
     private void BmRenameKey(KeyboardEventArgs e) { if (e.Key is "Enter" or "Escape") _bmRenaming = null; }
 
@@ -2547,7 +2548,7 @@
         var page = Math.Max(0, (Tab?.CurrentPage ?? 1) - 1);
         var node = new BookmarkNode($"Page {page + 1}", page);
         _bmTree.Add(node);
-        _bmSel = node; _bmRenaming = node;
+        _bmSel = node; _bmRenaming = node; _bmFocusRename = true;
     }
 
     private bool BmLocate(BookmarkNode target, List<BookmarkNode> list, BookmarkNode? owner,
@@ -3773,6 +3774,8 @@
             _renderFailed = false;
             _recoverBannerDismissed = false;
             _recoverStatus = null;
+            // UI30: Press belongs to the file it was opened on; another tab doesn't keep it (with that file's result).
+            if (!_pressBusy) { _showPress = false; _pressResult = null; _pressStatus = null; }
             if (tab?.Path != _pageBgPath) _ = LoadPageBgAsync(tab?.Path);
             bool otherFile = tab?.Path != _mkDocPath;
             if (UseMarksOf(tab) || otherFile)
@@ -3864,6 +3867,13 @@
             {
                 await _js.InvokeVoidAsync("fitEachPage", _desk, tab.FitMode switch { ReaderFitMode.Width => "width", ReaderFitMode.Page => "page", _ => "" });
             }
+            catch { }
+        }
+
+        if (_bmFocusRename && _bmRenaming is not null)
+        {
+            _bmFocusRename = false;
+            try { await _js.InvokeVoidAsync("focusQuery", ".bm-rename"); }
             catch { }
         }
 
@@ -4346,6 +4356,13 @@
     [JSInvokable]
     public async Task OnEscape()
     {
+        if (_showPress && !_pressBusy)   // UI30: Esc closes Press like the other cards
+        {
+            ClosePress();
+            StateHasChanged();
+            return;
+        }
+
         if (_measureOn)
         {
             CloseMeasure();
