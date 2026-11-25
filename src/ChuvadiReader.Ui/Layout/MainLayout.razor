@@ -890,10 +890,12 @@
 
     private void OnShellChanged()
     {
-        foreach (var m in Shell.Messages.Where(m => !m.IsError && _fading.Add(m.Id)).ToList())
+        // UI31: error messages used to stay until closed, stacking over the desk's Bind button. They stay longer
+        // than a success (15 s, time to read) and then go; one carrying an action (Undo, Open) still goes after 15 s.
+        foreach (var m in Shell.Messages.Where(m => _fading.Add(m.Id)).ToList())
         {
             var id = m.Id;
-            _ = Task.Delay(6000).ContinueWith(_ => InvokeAsync(() => Shell.Dismiss(id)));
+            _ = Task.Delay(m.IsError || m.ActionLabel is not null ? 15000 : 6000).ContinueWith(_ => InvokeAsync(() => Shell.Dismiss(id)));
         }
 
         _ = InvokeAsync(StateHasChanged);
