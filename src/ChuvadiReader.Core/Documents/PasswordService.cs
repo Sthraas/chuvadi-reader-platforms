@@ -188,7 +188,7 @@ public sealed class PasswordService
     // ── helpers ───────────────────────────────────────────────────────────────
 
     private static PdfDocument Open(string path, string? password) =>
-        string.IsNullOrEmpty(password) ? PdfFiles.Open(path) : PdfDocument.Open(path, password);
+        PdfFiles.Open(path, password);
 
     internal static void GuardPaths(string sourcePath, string outputPath)
     {

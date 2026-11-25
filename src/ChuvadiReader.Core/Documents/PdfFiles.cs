@@ -58,11 +58,39 @@ public static class SharedRead
 /// Tools use this instead of <see cref="PdfDocument.Open(string)"/>.</summary>
 public static class PdfFiles
 {
-    public static PdfDocument Open(string path) =>
-        PdfPasswords.For(path) is { Length: > 0 } pw ? PdfDocument.Open(path, pw) : PdfDocument.Open(path);
+    /// <summary>Opens through <see cref="SharedRead"/>, so a file another program holds open for writing still
+    /// opens on Windows (the library's own path open lets only other readers in). The document owns the stream.
+    /// <paramref name="password"/> overrides the one kept for the path.</summary>
+    public static PdfDocument Open(string path, string? password = null)
+    {
+        var pw = string.IsNullOrEmpty(password) ? PdfPasswords.For(path) : password;
+        var stream = SharedRead.Open(path);
+        try
+        {
+            return string.IsNullOrEmpty(pw) ? PdfDocument.Open(stream, leaveOpen: false) : PdfDocument.Open(stream, pw, false);
+        }
+        catch
+        {
+            stream.Dispose();
+            throw;
+        }
+    }
 
-    public static Task<PdfDocument> OpenAsync(string path, CancellationToken ct = default) =>
-        PdfPasswords.For(path) is { Length: > 0 } pw ? PdfDocument.OpenAsync(path, pw, ct) : PdfDocument.OpenAsync(path, ct);
+    /// <summary>As <see cref="Open"/>.</summary>
+    public static async Task<PdfDocument> OpenAsync(string path, CancellationToken ct = default)
+    {
+        var pw = PdfPasswords.For(path);
+        var stream = SharedRead.Open(path);
+        try
+        {
+            return await PdfDocument.OpenAsync(stream, new PdfOpenOptions { Password = string.IsNullOrEmpty(pw) ? null : pw }, ct).ConfigureAwait(false);
+        }
+        catch
+        {
+            await stream.DisposeAsync().ConfigureAwait(false);
+            throw;
+        }
+    }
 
     /// <summary>D-207: a new file made from a locked file's pages (merge, split, desk Bind and Lift, flatten) must
     /// not come out unlocked, and how such a file is locked is still to be decided, so these tools stop here.</summary>
