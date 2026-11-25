@@ -19,7 +19,7 @@ public static class PageOperationCheck
 {
     /// <summary>The things a page operation drops, in the order they are named.</summary>
     public static IReadOnlyList<string> AllDropped { get; } =
-        ["bookmarks", "form fields", "links to places in the file", "page labels", "the document's language", "accessibility tags"];
+        ["bookmarks", "form fields", "links to places in the file", "page labels", "language", "accessibility tags"];
 
     private static readonly ConcurrentDictionary<string, (long Length, DateTime Written, PageOperationFile Result)> Seen = new(StringComparer.Ordinal);
 

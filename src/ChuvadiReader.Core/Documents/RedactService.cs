@@ -158,7 +158,7 @@ public sealed class RedactService
         {
             var plain = SourceLock.Plain(source, saveLock.OpenPassword);
             ct.ThrowIfCancellationRequested();
-            var done = Flatten(plain, redactions, overlayHex, texts, images, shapes);
+            var done = SourceLock.KeepInfo(plain, Flatten(plain, redactions, overlayHex, texts, images, shapes));   // BUG-03
             return SourceLock.Lock(done, saveLock);
         }, ct);
     }
@@ -175,6 +175,7 @@ public sealed class RedactService
         var hasText = texts.Any(kv => kv.Value.Items.Count > 0);
         var hasImages = images.Any(kv => kv.Value.Items.Count > 0);
         var hasShapes = shapes.Any(kv => kv.Value.Items.Count > 0);
+        LibraryHolds.CheckTextHeld(texts.Values.SelectMany(p => p.Items).Select(i => i.Text));   // D-210: refuse, never garble
         {
             var mappedRects = new Dictionary<int, List<RectangleF>>();
 

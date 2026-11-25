@@ -461,7 +461,7 @@ public partial class Reader
         yield return new("doc.print", "Print", "Document", "print", "Ctrl P", T(() => OpenCard("print")), notPdf);
         if (HasEncoding(tab.Format))
         {
-            yield return new("doc.encoding", "Text encoding…", "Document", "text-box", null, OpenEncodingCard, null, "charset code page read as");
+            yield return new("doc.encoding", "Read this file as…", "Document", "text-box", null, OpenEncodingCard, null, "charset code page read as");
         }
 
         yield return Sep("1");

@@ -163,6 +163,25 @@ public static class SourceLock
     public const string NewOwnerNote =
         "The copy opens with the same password and keeps the same permissions; its permissions password is new, and no one holds it.";
 
+    /// <summary>BUG-03: what a rewrite (marks, stamps) dropped of the source's document information comes back:
+    /// Title, Author, Subject and Keywords, as the source holds them. (Its dates can't be written back with
+    /// Chuvadi.Pdf 3.32.0; the library is asked.)</summary>
+    public static byte[] KeepInfo(byte[] plainSource, byte[] result)
+    {
+        string? t, a, su, k;
+        using (var src = PdfDocument.Open(new MemoryStream(plainSource, writable: false)))
+        {
+            (t, a, su, k) = (src.Title, src.Author, src.Subject, src.Keywords);
+        }
+
+        if (t is null && a is null && su is null && k is null) return result;
+        using var doc = PdfDocument.Open(new MemoryStream(result, writable: false));
+        if (doc.Title == t && doc.Author == a && doc.Subject == su && doc.Keywords == k) return result;
+        using var ms = new MemoryStream();
+        Chuvadi.Pdf.Operations.DocumentInfo.Apply(ms, doc, t, a, su, k);
+        return ms.ToArray();
+    }
+
     private static PdfDocument Open(byte[] source, string? password) =>
         string.IsNullOrEmpty(password)
             ? PdfDocument.Open(new MemoryStream(source, writable: false))

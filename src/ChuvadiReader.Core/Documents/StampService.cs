@@ -34,6 +34,8 @@ public sealed class StampService
             return src;
         }
 
+        LibraryHolds.CheckTextHeld([wm.Text]);   // D-210: refuse, never garble
+
         // D-207: opened from memory, never from a scratch file: a locked source's pages are decrypted here and must
         // not reach the disk unlocked.
         {
@@ -61,6 +63,8 @@ public sealed class StampService
         {
             return src;
         }
+
+        LibraryHolds.CheckTextHeld([hf.HeaderLeft, hf.HeaderCenter, hf.HeaderRight, hf.FooterLeft, hf.FooterCenter, hf.FooterRight]);   // D-210
 
         // D-207: from memory, never a scratch file (a locked source is decrypted here).
         {
@@ -116,6 +120,7 @@ public sealed class StampService
             return src;
         }
 
+        LibraryHolds.CheckTextHeld(plan.Select(p => p.Item2));   // D-210 / D-217: see the note to the coordinator
         var bytes = src;
         foreach (var (pageIndex, text) in plan)
         {
@@ -198,7 +203,8 @@ public sealed class StampService
         DeskWatermark? wm, DeskHeaderFooter? hf,
         string filePath, CancellationToken ct = default) => Task.Run(() =>
     {
-        var bytes = SourceLock.Plain(source, saveLock.OpenPassword);
+        var plain = SourceLock.Plain(source, saveLock.OpenPassword);
+        var bytes = plain;
         int total;
         using (var doc = PdfDocument.Open(new MemoryStream(bytes, writable: false)))
         {
@@ -216,7 +222,7 @@ public sealed class StampService
             bytes = ApplyHeaderFooter(bytes, hf, ResolveRange(hf.AllPages, hf.FromPage, hf.ToPage, total), filePath, DateTimeOffset.Now);
         }
 
-        return SourceLock.Lock(bytes, saveLock);
+        return SourceLock.Lock(SourceLock.KeepInfo(plain, bytes), saveLock);   // BUG-03
     }, ct);
 
     /// <summary>Resolve a 1-based inclusive AllPages / From..To range to 0-based page indices.</summary>

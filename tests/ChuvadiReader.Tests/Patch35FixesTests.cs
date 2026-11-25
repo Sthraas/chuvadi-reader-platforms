@@ -101,3 +101,73 @@ public class WordMergedCellsTests
         Assert.Equal(new[] { 3, 3, 2 }, table.Rows.Select(r => r.Cells.Sum(c => c.ColSpan)).ToArray());
     }
 }
+
+/// <summary>D-210 / D-211 (BUG-11, BUG-18): text the saved file can't hold yet is refused, naming the letters; plain
+/// Latin is written as typed.</summary>
+public class TextNotHeldTests
+{
+    [Fact]
+    public void Plain_Latin_is_held_and_the_rest_is_named()
+    {
+        Assert.Null(LibraryHolds.TextNotHeld("Café Ñandú, straße 12 × 3 ½"));
+        var letters = LibraryHolds.LettersNotHeld("Test தமிழ் 😀 café – €");
+        Assert.Contains("😀", letters);
+        Assert.Contains("–", letters);
+        Assert.Contains("€", letters);
+        Assert.DoesNotContain("é", letters);
+        Assert.StartsWith("These letters can't be saved into the file yet:", LibraryHolds.TextNotHeld("DRAFT வரைவு"));
+    }
+
+    [Fact]
+    public async Task A_text_mark_with_letters_not_held_is_refused_before_anything_is_written()
+    {
+        var src = File.ReadAllBytes(TestPdf.BlankPage(300, 200));
+        var texts = new Dictionary<int, PageText> { [0] = new(0, new[] { new TextAnno(0.1, 0.1, 0.8, 0.3, "Test தமிழ் 😀", "Helvetica", false, false, 12, "#000000", "left", 0, 1.2) }) };
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => new RedactService().FlattenAsync(src, SaveLock.None,
+            new Dictionary<int, PageRedaction>(), "#000000", texts, new Dictionary<int, PageImage>(), new Dictionary<int, PageShape>()));
+        Assert.Contains("😀", ex.Message);
+    }
+
+    [Fact]
+    public void A_watermark_in_Tamil_is_refused_and_one_in_plain_Latin_is_written()
+    {
+        var src = File.ReadAllBytes(TestPdf.BlankPage(300, 200));
+        var st = new StampService();
+        Assert.Throws<InvalidOperationException>(() => st.ApplyWatermark(src, new DeskWatermark { Text = "DRAFT வரைவு" }, new[] { 0 }));
+        Assert.NotEqual(src, st.ApplyWatermark(src, new DeskWatermark { Text = "BROUILLON é" }, new[] { 0 }));
+    }
+}
+
+/// <summary>VW25 and BUG-03.</summary>
+public class TextAndInfoTests
+{
+    [Fact]
+    public void UTF16_with_no_byte_order_mark_reads_as_text_and_binary_stays_refused()
+    {
+        var be = System.Text.Encoding.BigEndianUnicode.GetBytes("Discharge summary\nNo BOM here.");
+        Assert.Equal("Discharge summary\nNo BOM here.", TextViewService.Decode(be, out var name));
+        Assert.Equal("UTF-16 BE", name);
+        var le = System.Text.Encoding.Unicode.GetBytes("Plain words, little end first.");
+        Assert.Equal("Plain words, little end first.", TextViewService.Decode(le, out name));
+        Assert.Equal("UTF-16 LE", name);
+        var bin = new byte[64]; new Random(3).NextBytes(bin); bin[5] = 0; bin[9] = 0;
+        Assert.Throws<DocumentViewException>(() => TextViewService.Decode(bin, out _));
+    }
+
+    [Fact]
+    public async Task Marks_keep_the_files_title_author_subject_and_keywords()
+    {
+        byte[] src;
+        using (var doc = Chuvadi.Pdf.Documents.PdfDocument.Open(TestPdf.TextPage("Report")))
+        using (var ms = new MemoryStream())
+        {
+            Chuvadi.Pdf.Operations.DocumentInfo.Apply(ms, doc, "Discharge 4471", "Dr. A", "Ward 3", "oncology");
+            src = ms.ToArray();
+        }
+
+        var texts = new Dictionary<int, PageText> { [0] = new(0, new[] { new TextAnno(0.1, 0.1, 0.5, 0.2, "Seen", "Helvetica", false, false, 12, "#000000", "left", 0, 1.2) }) };
+        var outBytes = await new RedactService().FlattenAsync(src, SaveLock.None, new Dictionary<int, PageRedaction>(), "#000000", texts, new Dictionary<int, PageImage>(), new Dictionary<int, PageShape>());
+        using var o = Chuvadi.Pdf.Documents.PdfDocument.Open(new MemoryStream(outBytes));
+        Assert.Equal(("Discharge 4471", "Dr. A", "Ward 3", "oncology"), (o.Title, o.Author, o.Subject, o.Keywords));
+    }
+}
