@@ -258,3 +258,23 @@ public class WorkingCopyTests
         Assert.False(ChuvadiReader.Core.Storage.ScratchFiles.IsWorkingCopy(null, Path.Combine(Path.GetTempPath(), "elsewhere", "Desk 1-" + Guid.NewGuid().ToString("N") + ".pdf")));
     }
 }
+
+/// <summary>BUG-20: a PDF tab keeps the drawn pages near the one in view, not every page ever drawn.</summary>
+public class DrawnPagesKeptTests
+{
+    [Fact]
+    public async Task Scrolling_through_a_long_file_keeps_only_pages_near_the_view()
+    {
+        var b = Chuvadi.Pdf.Authoring.PdfDocumentBuilder.Create();
+        for (int i = 0; i < 60; i++)
+            b.AddPage(new Chuvadi.Pdf.Authoring.PageSize(300, 400)).DrawText($"Page {i + 1}", 40, 40, "Helvetica", 14, Chuvadi.Pdf.Authoring.Color.FromHex("#000000"));
+        var path = TestPdf.WriteTemp(b.ToByteArray());
+        using var s = (ChuvadiPdfSession)await new ChuvadiPdfReader().OpenAsync(path, "long.pdf", null);
+        for (int n = 0; n < 60; n++) await s.RenderPageSvgAsync(n);
+        Assert.True(s.CachedPageCountForTests <= ChuvadiPdfSession.KeepPages, $"{s.CachedPageCountForTests} kept");
+        Assert.True(s.TryGetRenderedSvg(59, out _));    // the page just drawn
+        Assert.True(s.TryGetRenderedSvg(50, out _));    // its neighbours
+        Assert.False(s.TryGetRenderedSvg(0, out _));    // far behind: dropped, drawn again when it comes back
+        Assert.False(string.IsNullOrEmpty(await s.RenderPageSvgAsync(0)));
+    }
+}
