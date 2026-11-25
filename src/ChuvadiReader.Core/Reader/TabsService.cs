@@ -75,6 +75,17 @@ public sealed class ReaderTab
     /// <summary>The password that opened this tab's PDF. Memory only, for this tab (as Word/Excel); never persisted.</summary>
     public string? Password { get; set; }
 
+    /// <summary>D-207: the file's permissions (owner) password, when the person gave it so a change could keep the
+    /// file's lock. Memory only, for this tab; never persisted.</summary>
+    public string? OwnerPassword { get; set; }
+
+    /// <summary>D-210: the source's size and time when this tab opened it; a save into the source checks it first.</summary>
+    public FileStamp? Opened { get; set; }
+
+    /// <summary>D-210: the source as it was when unsaved work began (marks, stamps), kept in memory: Save as writes
+    /// from it, and Save into the source checks the file still matches it.</summary>
+    public SourceCopy? WorkSource { get; set; }
+
     /// <summary>Set when the last password tried didn't open the file.</summary>
     public string? PasswordError { get; set; }
 
@@ -717,6 +728,7 @@ public sealed class TabsService : IDisposable
         var path = tab.Path;
         var password = tab.Password;
         var token = cancel.Token;
+        FileStamp? stamp = null;
         var open = Task.Run(
             async () =>
             {
@@ -725,6 +737,7 @@ public sealed class TabsService : IDisposable
                     throw new FileNotFoundException(null, path);
                 }
 
+                stamp = FileStamp.Of(path);
                 return await _reader.OpenAsync(path, tab.FileName, password, token, transparentBackground: true).ConfigureAwait(false);
             },
             CancellationToken.None);
@@ -739,6 +752,8 @@ public sealed class TabsService : IDisposable
             }
 
             tab.Session = session;
+            tab.Opened = stamp;
+            tab.WorkSource = null;
             tab.NeedsPassword = false;
             tab.PasswordError = null;
             if (tab.CurrentPage > tab.Session.Document.PageCount)

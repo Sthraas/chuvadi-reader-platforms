@@ -130,7 +130,52 @@ public sealed class RedactService
 
         await Task.Run(() =>
         {
-            byte[] current = File.ReadAllBytes(sourcePath);
+            var current = Flatten(File.ReadAllBytes(sourcePath), redactions, overlayHex, texts, images, shapes);
+            File.WriteAllBytes(outputPath, current);
+        }, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>D-207: the same work on a source already in memory, through its lock: <paramref name="source"/> is read
+    /// with <paramref name="saveLock"/>'s open password (decrypted in memory only) and the result comes back with the
+    /// same lock (<see cref="SourceLock"/>). Nothing is written to disk here.</summary>
+    public Task<byte[]> FlattenAsync(
+        byte[] source,
+        SaveLock saveLock,
+        IReadOnlyDictionary<int, PageRedaction> redactions,
+        string overlayHex,
+        IReadOnlyDictionary<int, PageText> texts,
+        IReadOnlyDictionary<int, PageImage> images,
+        IReadOnlyDictionary<int, PageShape> shapes,
+        CancellationToken ct = default)
+    {
+        if (!redactions.Any(kv => kv.Value.Boxes.Count > 0) && !texts.Any(kv => kv.Value.Items.Count > 0)
+            && !images.Any(kv => kv.Value.Items.Count > 0) && !shapes.Any(kv => kv.Value.Items.Count > 0))
+        {
+            throw new InvalidOperationException("Nothing to save — no redactions, shapes, images or text.");
+        }
+
+        return Task.Run(() =>
+        {
+            var plain = SourceLock.Plain(source, saveLock.OpenPassword);
+            ct.ThrowIfCancellationRequested();
+            var done = Flatten(plain, redactions, overlayHex, texts, images, shapes);
+            return SourceLock.Lock(done, saveLock);
+        }, ct);
+    }
+
+    private byte[] Flatten(
+        byte[] current,
+        IReadOnlyDictionary<int, PageRedaction> redactions,
+        string overlayHex,
+        IReadOnlyDictionary<int, PageText> texts,
+        IReadOnlyDictionary<int, PageImage> images,
+        IReadOnlyDictionary<int, PageShape> shapes)
+    {
+        var hasRedactions = redactions.Any(kv => kv.Value.Boxes.Count > 0);
+        var hasText = texts.Any(kv => kv.Value.Items.Count > 0);
+        var hasImages = images.Any(kv => kv.Value.Items.Count > 0);
+        var hasShapes = shapes.Any(kv => kv.Value.Items.Count > 0);
+        {
             var mappedRects = new Dictionary<int, List<RectangleF>>();
 
             // 1) Redactions — true removal.
@@ -210,8 +255,8 @@ public sealed class RedactService
                 }
             }
 
-            File.WriteAllBytes(outputPath, current);
-        }, ct).ConfigureAwait(false);
+            return current;
+        }
     }
 
     private static byte[] StampText(byte[] source, int pageIndex, int viewRotation, TextAnno item)
