@@ -59,6 +59,10 @@ public sealed class ReaderTab
     public bool HasUnsavedWork =>
         Marks?.HasUnsaved == true || Bookmarks?.HasUnsaved == true || Redactions?.HasUnsaved == true;
 
+    /// <summary>HO16: the Reader has shown this tab once this run (fitted it to the window); showing it again keeps its
+    /// place instead of starting again from page 1.</summary>
+    public bool FittedOnce { get; set; }
+
     /// <summary>D-214: this Excel tab shows the workbook's hidden rows, columns and sheets (greyed). Off by default.</summary>
     public bool ShowHiddenParts { get; set; }
 
