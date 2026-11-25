@@ -1388,6 +1388,12 @@
                 null, null, null, null, null, null, null, null,
                 active.Session?.Document.PageCount ?? 0, "—", false, null, false, false, 0);
         }
+        finally
+        {
+            // RD51: opened from Ctrl K (not a click on this page), nothing re-drew the card after the read, so it
+            // stayed on "reading…".
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private void CloseProperties()

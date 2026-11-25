@@ -845,6 +845,8 @@ public sealed class BenchService
 
     /// <summary>Drops a raw image straight into a desk as an image page. It is not
     /// converted to PDF until Bind.</summary>
+    /// <exception cref="InvalidOperationException">CR70 / CR71: the image is damaged, not one Chuvadi reads, or
+    /// too large; the message says which (<see cref="ImageCheck"/>). Nothing is added.</exception>
     public void AddImageToDesk(Guid deskId, string imagePath, int insertIndex = -1)
     {
         var desk = FindDesk(deskId);
@@ -852,6 +854,8 @@ public sealed class BenchService
         {
             return;
         }
+
+        if (ImageCheck.Refusal(imagePath) is { } why) throw new InvalidOperationException(why);
 
         var page = new BenchPage
         {
@@ -1267,6 +1271,7 @@ public sealed class BenchService
         }
         finally { try { File.Delete(flat); } catch { /* best effort */ } }
 
+        _madeHere.Add(nup);   // SC14
         var idx = await EnsureSourceAsync(nup, $"{SafeName(desk.Name)}-{cols}x{rows}up.pdf", ct).ConfigureAwait(false);
         if (idx < 0) return null;
         var newDesk = AddDesk();
@@ -1293,6 +1298,7 @@ public sealed class BenchService
         }
         finally { try { File.Delete(flat); } catch { /* best effort */ } }
 
+        _madeHere.Add(bk);   // SC14
         var idx = await EnsureSourceAsync(bk, $"{SafeName(desk.Name)}-booklet.pdf", ct).ConfigureAwait(false);
         if (idx < 0) return null;
         var newDesk = AddDesk();
@@ -1964,12 +1970,23 @@ public sealed class BenchService
         Raise();
     }
 
+    /// <summary>SC14: the N-up and booklet files Arrange made in the working folder this run. Reset deletes them
+    /// (desks kept for the next start may still use them, so closing the app doesn't).</summary>
+    private readonly List<string> _madeHere = new();
+
     public void Reset()
     {
         foreach (var source in _sources)
         {
             source.Session.Dispose();
         }
+
+        foreach (var made in _madeHere)
+        {
+            try { if (File.Exists(made)) File.Delete(made); } catch { /* best effort */ }
+        }
+
+        _madeHere.Clear();
 
         _sources.Clear();
         _desks.Clear();
