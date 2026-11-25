@@ -209,3 +209,52 @@ public class CountersignOtherToolTests
         Assert.True(File.ReadAllBytes(output).AsSpan(0, original.Length).SequenceEqual(original));   // appended, not rewritten
     }
 }
+
+/// <summary>RD47: a new desk made from the Reader before Arrange was used survives the kept desks coming back.</summary>
+public class SendToNewDeskTests
+{
+    private sealed class Folder(string root) : ChuvadiReader.Platform.IAppPaths
+    {
+        public string AppDataFolder { get; } = Path.Combine(root, "data");
+        public string WorkingFolder { get; } = Path.Combine(root, "work");
+        public string? DefaultSaveFolder => null;
+    }
+
+    [Fact]
+    public async Task A_page_sent_to_a_new_desk_stays_when_kept_desks_come_back()
+    {
+        var paths = new Folder(Path.Combine(Path.GetTempPath(), "chvd-rd47-" + Guid.NewGuid().ToString("N")));
+        var src = TestPdf.TextPage("Kept");
+        BenchService Bench() => new(new PlaceholderPdfReader(), new BenchComposer(), new ExportService(), paths, new SessionService(paths));
+
+        // A previous run kept one desk with a page.
+        var before = Bench();
+        await before.EnsureRestoredAsync();
+        before.EnsureDesk();
+        var i0 = await before.EnsureSourceAsync(src, "kept.pdf");
+        before.AddPageToDesk(before.Desks[0].Id, i0, 0);
+        await before.KeepAsync();
+
+        // This run, the Reader's way: restore first, then add the new desk and the page.
+        var now = Bench();
+        await now.EnsureRestoredAsync();
+        var desk = now.AddDesk();
+        var idx = await now.EnsureSourceAsync(src, "kept.pdf");
+        now.AddPageToDesk(desk.Id, idx, 0);
+        Assert.Contains(now.Desks, d => d.Id == desk.Id && d.Pages.Count == 1);
+        Assert.Contains(now.Desks, d => d.Id != desk.Id && d.Pages.Count == 1);   // the kept one is back too
+    }
+}
+
+/// <summary>RD35: a desk's working copy is told from the person's own files.</summary>
+public class WorkingCopyTests
+{
+    [Fact]
+    public void Only_a_desk_working_copy_in_the_scratch_folder_counts()
+    {
+        var scratch = ChuvadiReader.Core.Storage.ScratchFiles.Folder(null);
+        Assert.True(ChuvadiReader.Core.Storage.ScratchFiles.IsWorkingCopy(null, Path.Combine(scratch, "Desk 1-" + Guid.NewGuid().ToString("N") + ".pdf")));
+        Assert.False(ChuvadiReader.Core.Storage.ScratchFiles.IsWorkingCopy(null, Path.Combine(scratch, "report.pdf")));
+        Assert.False(ChuvadiReader.Core.Storage.ScratchFiles.IsWorkingCopy(null, Path.Combine(Path.GetTempPath(), "elsewhere", "Desk 1-" + Guid.NewGuid().ToString("N") + ".pdf")));
+    }
+}
